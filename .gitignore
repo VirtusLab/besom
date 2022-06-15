@@ -1,0 +1,13 @@
+.bsp
+.scala-build
+.bloop
+.idea
+.metals
+.vscode
+*.jar
+*.iml
+target/
+.DS_Store
+
+# generated sources, run `scala-cli run ./scripts -M proto -- all`
+src/main/scala/besom/rpc 
