@@ -39,8 +39,12 @@ jobs:
     - uses: arduino/setup-protoc@v1
 
     - name: Clean workspace
+      uses: JesseTG/rm@v1.0.2
+      with:
+        path: target
       run: |
-        scala-cli clean . && rm -fr ./target
+        scala-cli clean .
+
 
     - name: Fetch & compile protobuf 
       run: |
