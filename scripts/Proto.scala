@@ -68,9 +68,9 @@ def fetch(cwd: os.Path): Unit =
             println("You need git installed for this to work!")
             sys.exit(1)
 
-        val pat = sys.env.getOrElse("PAT", sys.error("Personal Access Token has to be defined!"))
+        val token = sys.env.getOrElse("TOKEN", sys.error("Access Token has to be defined!"))
 
-        os.proc("git", "clone", s"https://$pat@github.com/pulumi/pulumi.git", targetPath).call(
+        os.proc("git", "clone", s"https://$token@github.com/pulumi/pulumi.git", targetPath).call(
             stdin = os.Inherit, 
             stdout = os.Inherit, 
             stderr = os.Inherit

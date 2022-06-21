@@ -5,7 +5,7 @@ on:
     branches: [ develop ]
 
 env:
-  PAT: ${{ secrets.PAT }}
+  TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
 
