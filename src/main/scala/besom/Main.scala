@@ -29,16 +29,8 @@ object netty {
 
     import io.grpc.ManagedChannel
     import io.grpc.netty.NettyChannelBuilder
-    import io.netty.channel.epoll.{
-      Epoll,
-      EpollDomainSocketChannel,
-      EpollEventLoopGroup
-    }
-    import io.netty.channel.kqueue.{
-      KQueue,
-      KQueueDomainSocketChannel,
-      KQueueEventLoopGroup
-    }
+    import io.netty.channel.epoll.{Epoll, EpollDomainSocketChannel, EpollEventLoopGroup}
+    import io.netty.channel.kqueue.{KQueue, KQueueDomainSocketChannel, KQueueEventLoopGroup}
     import io.netty.channel.unix.DomainSocketAddress
 
     import java.io.IOException
@@ -82,8 +74,8 @@ object Main {
 
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val project = sys.env("PULUMI_PROJECT")
-    val stack = sys.env("PULUMI_STACK")
+    val project       = sys.env("PULUMI_PROJECT")
+    val stack         = sys.env("PULUMI_STACK")
     val monitorTarget = sys.env("PULUMI_MONITOR")
     println("PULUMI_MONITOR=" + monitorTarget)
 
@@ -97,21 +89,23 @@ object Main {
     val rootStackName = s"$project-$stack"
 
     val engineChannel: ManagedChannel = netty.channel.build(pulumiEngine)
-    val engineStub = EngineGrpc.blockingStub(engineChannel)
+    val engineStub                    = EngineGrpc.blockingStub(engineChannel)
 
-    val setRootResourceRequest = SetRootResourceRequest(urn(project, stack, rootStackType, rootStackName))
+    val setRootResourceRequest = SetRootResourceRequest(
+      urn(project, stack, rootStackType, rootStackName)
+    )
 
     println("SetRootResourceRequest=" + setRootResourceRequest)
     val setRootResourceResponse = engineStub.setRootResource(setRootResourceRequest)
     println("SetRootResourceResponse=" + setRootResourceResponse)
 
     val monitorChannel: ManagedChannel = netty.channel.build(monitorTarget)
-    val monitorStub = ResourceMonitorGrpc.blockingStub(monitorChannel)
-    
+    val monitorStub                    = ResourceMonitorGrpc.blockingStub(monitorChannel)
+
     val randomIntRegistrationRequest = RegisterResourceRequest(
       `type` = "random:index/randomInteger:RandomInteger",
       name = "my-int",
-    //   version = randomVersion,
+      //   version = randomVersion,
       custom = true,
       `object` = Some(
         Struct.of(

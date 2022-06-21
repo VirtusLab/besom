@@ -6,6 +6,6 @@
 package com.pulumi.bootstrap.internal
 
 object Main:
-    def main(args: Array[String]): Unit = 
-        val foundPlugins = PulumiPlugins.fromClasspath
-        print(ujson.Arr.from(foundPlugins.values))
+  def main(args: Array[String]): Unit =
+    val foundPlugins = PulumiPlugins.fromClasspath
+    print(ujson.Arr.from(foundPlugins.values))
