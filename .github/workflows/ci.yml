@@ -4,6 +4,9 @@ on:
   push:
     branches: [ develop ]
 
+env:
+  PAT: ${{ secrets.PAT }}
+
 jobs:
 
   format:
