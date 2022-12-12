@@ -53,14 +53,14 @@ final case class ComponentResourceOptions[F[+_]] private[internal] (
   export common.*
 
 object CustomResourceOptions:
-  def apply[F[+_]](using Monad[F], Context[F]): CustomResourceOptionsPartiallyApplied[F] =
+  def apply[F[+_]](using Monad[F], Context): CustomResourceOptionsPartiallyApplied[F] =
     new CustomResourceOptionsPartiallyApplied[F]
 
 object ComponentResourceOptions:
-  def apply[F[+_]](using Monad[F], Context[F]): ComponentResourceOptionsPartiallyApplied[F] =
+  def apply[F[+_]](using Monad[F], Context): ComponentResourceOptionsPartiallyApplied[F] =
     new ComponentResourceOptionsPartiallyApplied[F]
 
-class CustomResourceOptionsPartiallyApplied[F[+_]](using F: Monad[F], ctx: Context[F]):
+class CustomResourceOptionsPartiallyApplied[F[+_]](using F: Monad[F], ctx: Context):
   def apply(
       id: Output[F, NonEmptyString] | NotProvided = NotProvided,
       parent: Resource | NotProvided = NotProvided,
@@ -101,7 +101,7 @@ class CustomResourceOptionsPartiallyApplied[F[+_]](using F: Monad[F], ctx: Conte
       importId = importId.asOption
     )
 
-class ComponentResourceOptionsPartiallyApplied[F[+_]](using F: Monad[F], ctx: Context[F]):
+class ComponentResourceOptionsPartiallyApplied[F[+_]](using F: Monad[F], ctx: Context):
   def apply(
       providers: List[String] = List.empty, // ProviderResource // TODO
       id: Output[F, NonEmptyString] | NotProvided = NotProvided,

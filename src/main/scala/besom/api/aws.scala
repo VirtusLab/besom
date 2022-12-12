@@ -14,8 +14,8 @@ object aws:
     def apply[F[+_]](
         name: NonEmptyString | Output[F, NonEmptyString],
         ingress: List[IngressRule] | Output[F, List[IngressRule]] | NotProvided
-    )(using ctx: Context[F]): SecurityGroupOptions[F] =
-      given Monad[F] = ctx.monad
+    )(using ctx: Context): SecurityGroupOptions[ctx.F] =
+      given Monad[ctx.F] = ctx.monad
       ???
 
   case class IngressRule(protocol: Protocol, fromPort: Int, toPort: Int, cidrBlocks: List[String])
