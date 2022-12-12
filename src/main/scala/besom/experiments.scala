@@ -1,6 +1,53 @@
 package besom
 
-// import besom.experimental.*
+import scala.concurrent.*, ExecutionContext.Implicits.global
+
+object providers:
+  import besom.*
+  import besom.api.*
+
+  def sgOptions(using Context) = aws.SecurityGroupOptions[Future](
+    name = "web-sg-62a569b",
+    ingress = List(
+      aws.IngressRule(protocol = Protocol.TCP, fromPort = 80, toPort = 80, cidrBlocks = List("0.0.0.0/0"))
+    )
+  )
+
+  def exports(): Output[Map[String, Output[Any]]] = ???
+
+@main
+def main(): Unit = Pulumi.run {
+  import providers.*
+  val opts = sgOptions
+
+  exports()
+}
+
+// def instanceOptions(groupName: Output[String]) = aws.InstanceOptions(
+//   ami = "ami-6869aa05",
+//   instanceType = "t2.micro",
+//   securityGroups = List(groupName)
+// )
+
+// @main
+// def main(): Unit = Pulumi.run {
+//   for
+//     group <- aws.ec2.securityGroup("web-sg", sgOptions, CustomResourceOptions(importId = "sg-04aeda9a214730248"))
+//     server <- aws.ec2.instance(
+//       "web-server",
+//       instanceOptions(group.name),
+//       CustomResourceOptions(importId = "i-06a1073de86f4adef")
+//     )
+//   yield exports()
+// }
+
+// @main
+// def main(): Unit =
+//   Pulumi.run {
+//     Output(Map.empty)
+//   }
+
+// import besom.api.experimental.*
 // val podOutput: Output[Pod] = Output(Pod(Output("abc"), Output(List(1, 2, 3))))
 // val id = podOutput.id
 // val ports: Output[List[Int]] = podOutput.ports

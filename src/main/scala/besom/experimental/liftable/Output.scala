@@ -1,4 +1,4 @@
-package besom.experimental
+package besom.api.experimental.liftable
 
 import scala.language.implicitConversions
 
@@ -39,8 +39,7 @@ object Output:
       quotes: Quotes
   ): Expr[Any] =
     import quotes.reflect.*
-    def selectName(inner: Expr[A]) =
-      Select.unique(inner.asTerm, name.valueOrAbort).asExprOf[Output[Any]]
+    def selectName(inner: Expr[A]) = Select.unique(inner.asTerm, name.valueOrAbort).asExprOf[Output[Any]]
     '{ ${ output }.flatMap(inner => ${ selectName('{ inner }) }) }
 
 def refineType(using quotes: Quotes)(

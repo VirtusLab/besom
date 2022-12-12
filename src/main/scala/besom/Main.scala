@@ -1,4 +1,4 @@
-//> using scala "3.1.2"
+//> using scala "3.2.0"
 
 //> using lib "com.thesamet.scalapb::scalapb-runtime:0.11.10"
 //> using lib "io.grpc:grpc-netty:1.45.0"
@@ -90,13 +90,14 @@ object Main {
 
     val engineChannel: ManagedChannel = netty.channel.build(pulumiEngine)
     val engineStub                    = EngineGrpc.blockingStub(engineChannel)
+    val engineAsyncStub               = EngineGrpc.stub(engineChannel) 
 
     val setRootResourceRequest = SetRootResourceRequest(
       urn(project, stack, rootStackType, rootStackName)
     )
 
     println("SetRootResourceRequest=" + setRootResourceRequest)
-    val setRootResourceResponse = engineStub.setRootResource(setRootResourceRequest)
+    val setRootResourceResponse = engineAsyncStub.setRootResource(setRootResourceRequest)
     println("SetRootResourceResponse=" + setRootResourceResponse)
 
     val monitorChannel: ManagedChannel = netty.channel.build(monitorTarget)
