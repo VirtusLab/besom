@@ -71,7 +71,11 @@ class ResourceManager[F[+_]](private val resources: Ref[F, Map[Resource, Resourc
 
 trait Context {
   type F[+A]
-  // given F: Monad[F]
+
+  def projectName: NonEmptyString
+  def stackName: NonEmptyString
+  def config: Config
+
   private[besom] val runInfo: RunInfo
   private[besom] val keepResources: Boolean
   private[besom] val keepOutputValues: Boolean
@@ -92,10 +96,12 @@ trait Context {
 }
 
 object Context:
+  type Of[M[+_]] = Context { type F[+A] = M[A] }
+
   def apply[M[+_]](
-      runInfo: RunInfo,
-      keepResources: Boolean,
-      keepOutputValues: Boolean,
+      _runInfo: RunInfo,
+      _keepResources: Boolean,
+      _keepOutputValues: Boolean,
       monitorF0: Monitor[M],
       engineF0: Engine[M],
       workgroupF0: WorkGroup[M]
@@ -103,14 +109,15 @@ object Context:
     new Context:
       type F[+A] = M[A]
 
-      val projectName: NonEmptyString       = projectName
-      val stackName: NonEmptyString         = stackName
-      val config: Config                    = config
-      private val keepResources: Boolean    = keepResources
-      private val keepOutputValues: Boolean = keepOutputValues
-      private val monitor: Monitor[F]       = monitorF0
-      private val engine: Engine[F]         = engineF0
-      private val workgroup: WorkGroup[F]   = workgroupF0
+      val projectName: NonEmptyString              = _runInfo.project
+      val stackName: NonEmptyString                = _runInfo.stack
+      val config: Config                           = _runInfo.config
+      private[besom] val runInfo: RunInfo          = _runInfo
+      private[besom] val keepResources: Boolean    = _keepResources
+      private[besom] val keepOutputValues: Boolean = _keepOutputValues
+      private[besom] val monitor: Monitor[F]       = monitorF0
+      private[besom] val engine: Engine[F]         = engineF0
+      private[besom] val workgroup: WorkGroup[F]   = workgroupF0
 
       override private[besom] def registerTask[A](fa: => F[A]): F[A] = workgroup.runInWorkGroup(fa)
 

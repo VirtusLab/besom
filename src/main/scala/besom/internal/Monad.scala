@@ -83,6 +83,8 @@ trait Monad[F[+_]]:
 object Monad:
   def apply[F[+_]: Monad]: Monad[F] = summon[Monad[F]]
 
+  inline given fromContext[F[+_]](using ctx: Context.Of[F]): Monad[F] = ctx.monad
+
 extension [F[+_], A](fa: F[A])
   inline def map[B](f: A => B)(using F: Monad[F]): F[B]                = F.map(fa)(f)
   inline def flatMap[B](f: A => F[B])(using F: Monad[F]): F[B]         = F.flatMap(fa)(f)
