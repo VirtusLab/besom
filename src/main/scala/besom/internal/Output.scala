@@ -74,38 +74,20 @@ trait OutputFactory:
   def secret[A](value: A)(using ctx: Context): Output[ctx.F, A] = Output.secret(value)
 
 object Output:
+  // should be NonEmptyString
+  def traverseMap[A](using ctx: Context)(map: Map[String, Output[ctx.F, A]]): Output[ctx.F, Map[String, A]] =
+    sequence(map.map((key, value) => value.map(result => (key, result))).toVector).map(_.toMap)
+
+  def sequence[A](using ctx: Context)(v: Vector[Output[ctx.F, A]]): Output[ctx.F, Vector[A]] =
+    v.foldLeft[Output[ctx.F, Vector[A]]](Output(Vector.empty[A])) { case (out, curr) =>
+      curr.flatMap(a => out.map(_ appended a))
+    }
+
   def empty(using ctx: Context): Output[ctx.F, Nothing] =
     new Output(ctx.registerTask(ctx.monad.eval(OutputData.empty[Nothing]())))
 
-  // my aliases
-  // def wrap[A](using ctx: Context)(value: A)(using ev: Not[IsOutputData[A]]): Output[ctx.F, A] =
-  //   new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(OutputData(value))))
-  // def eval[A](using ctx: Context)(value: => ctx.F[OutputData[A]]): Output[ctx.F, A] =
-  //   new Output[ctx.F, A](ctx.registerTask((value)))
-  // def lift[A](using ctx: Context)(data: OutputData[A]): Output[ctx.F, A] =
-  //   new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(data)))
-
-  // def liftF[A](using ctx: Context)(value: => ctx.F[OutputData[A]]): Output[ctx.F, A] =
-  //   new Output[ctx.F, A](ctx.registerTask((value)))
-
-  // def apply[A](value: A)(using ev: Not[IsOutputData[A]], ctx: Context): Output[ctx.F, A] =
-  // new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(OutputData(value))))
-
-  // def apply[A](using ctx: Context)(value: => ctx.F[A])(using ev: Not[IsOutputData[A]]): Output[ctx.F, A] =
-  // new Output[ctx.F, A](ctx.registerTask(value.map(OutputData(_))))
-
-  // def apply[A](using ctx: Context)(value: => ctx.F[OutputData[A]]): Output[ctx.F, A] =
-  //   new Output[ctx.F, A](ctx.registerTask((value)))
-
-  // def apply[A](data: OutputData[A])(using ctx: Context): Output[ctx.F, A] =
-  //   new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(data)))
-
-  // from Kubuszok
   def apply[A](value: A)(using ctx: Context, ev: Not[IsOutputData[A]], ev2: Not[IsFData[ctx.F, A]]): Output[ctx.F, A] =
     new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(OutputData(value))))
-
-  // def apply[F[+_], A](value: => F[A])(using ctx: Context.Of[F], ev: Not[IsOutputData[A]]): Output[F, A] =
-  // new Output[F, A](ctx.registerTask(value.map(OutputData(_))))
 
   def apply[A](data: OutputData[A])(using ctx: Context): Output[ctx.F, A] =
     new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(data)))
@@ -115,23 +97,3 @@ object Output:
 
   def secret[A](using ctx: Context)(value: A): Output[ctx.F, A] =
     new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(OutputData(value))))
-
-  // def apply(using ctx: Context): OutputPartiallyApplied =
-  // new OutputPartiallyApplied
-
-// class OutputPartiallyApplied(using val ctx: Context):
-//   def apply[A](value: A)(using ev: Not[IsOutputData[A]]): Output[ctx.F, A] =
-//     new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(OutputData(value))))(using ctx.monad)
-
-//   def apply[A](value: => ctx.F[A])(using ev: Not[IsOutputData[A]]): Output[ctx.F, A] =
-//     given Monad[ctx.F] = ctx.monad
-//     new Output[ctx.F, A](ctx.registerTask(value.map(OutputData(_))))(using ctx.monad)
-
-//   def apply[A](data: OutputData[A]): Output[ctx.F, A] =
-//     new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(data)))(using ctx.monad)
-
-//   def apply[A](value: => ctx.F[OutputData[A]]): Output[ctx.F, A] =
-//     new Output[ctx.F, A](ctx.registerTask((value)))(using ctx.monad)
-
-//   def secret[A](value: A): Output[ctx.F, A] =
-//     new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(OutputData(value))))(using ctx.monad)

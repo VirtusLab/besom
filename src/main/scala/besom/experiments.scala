@@ -1,24 +1,31 @@
 package besom
 
 import scala.concurrent.*, ExecutionContext.Implicits.global
+import besom.util.Protocol
 
 object providers:
   import besom.*
-  import besom.api.*
 
-  def sgOptions(using Context) = aws.SecurityGroupOptions[Future](
+  // def sgOptions(using Context) =
+
+  def exports(): Output[Map[String, Output[Any]]] = ???
+
+@main
+def main(): Unit = Pulumi.run {
+  import besom.api.*
+  import providers.*
+  val opts = aws.SecurityGroupOptions(
     name = "web-sg-62a569b",
     ingress = List(
       aws.IngressRule(protocol = Protocol.TCP, fromPort = 80, toPort = 80, cidrBlocks = List("0.0.0.0/0"))
     )
   )
 
-  def exports(): Output[Map[String, Output[Any]]] = ???
-
-@main
-def main(): Unit = Pulumi.run {
-  import providers.*
-  val opts = sgOptions
+  def instanceOptions(groupName: Output[String]) = aws.InstanceOptions(
+    ami = "ami-6869aa05",
+    instanceType = "t2.micro",
+    securityGroups = List(groupName)
+  )
 
   exports()
 }
