@@ -28,30 +28,3 @@ extension [F[+_], A](v: Map[String, A] | Map[String, Output[F, A]] | Output[F, M
         if m.exists((_, v) => v.isInstanceOf[Output[_, _]]) then
           Output.traverseMap(m.asInstanceOf[Map[String, Output[F, A]]])
         else Output(m.asInstanceOf[Map[String, A]])
-
-// prototype, not really useful, sadly
-extension [F[+_], A](value: A) def toOutput(using ol: OutputLifter[F, A], ctx: Context.Of[F]): ol.Out = ol.lift(value)
-
-trait OutputLifter[F[+_], A]:
-  type Out
-  def lift(a: A)(using Context.Of[F]): Out
-
-object OutputLifter extends OutputLifterGiven0:
-  type Aux[F[+_], A, O] = OutputLifter[F, A] { type Out = O }
-
-trait OutputLifterGiven0 extends OutputLifterGiven1:
-  self: OutputLifter.type =>
-
-  given [F[+_], A]: Aux[F, Output[F, A], Output[F, A]] = new OutputLifter[F, Output[F, A]]:
-    type Out = Output[F, A]
-    def lift(a: Output[F, A])(using Context.Of[F]): Output[F, A] = a
-
-  given [F[+_], A]: Aux[F, NotProvided, Output[F, A]] = new OutputLifter[F, NotProvided]:
-    type Out = Output[F, A]
-    def lift(a: NotProvided)(using ctx: Context.Of[F]): Output[F, A] = Output.empty
-
-trait OutputLifterGiven1:
-  self: OutputLifter.type =>
-  given [F[+_], A]: OutputLifter.Aux[F, A, Output[F, A]] = new OutputLifter[F, A]:
-    type Out = Output[F, A]
-    def lift(a: A)(using ctx: Context.Of[F]): Output[F, A] = Output(a)

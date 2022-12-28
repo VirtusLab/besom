@@ -88,3 +88,6 @@ object OutputData:
 
   def empty[A](resources: Set[Resource] = Set.empty, isSecret: Boolean = false): OutputData[A] =
     Known(resources, isSecret, None)
+
+  def traverseM[A](using ctx: Context)(value: => ctx.F[A]): ctx.F[OutputData[A]] =
+    empty[A]().traverseM(_ => value)

@@ -86,14 +86,52 @@ object Output:
   def empty(using ctx: Context): Output[ctx.F, Nothing] =
     new Output(ctx.registerTask(ctx.monad.eval(OutputData.empty[Nothing]())))
 
-  def apply[A](value: A)(using ctx: Context, ev: Not[IsOutputData[A]], ev2: Not[IsFData[ctx.F, A]]): Output[ctx.F, A] =
+  def apply[F[+_]](using ctx: Context.Of[F]) = new PartiallyAppliedOutput[ctx.F]
+
+  def secret[A](using ctx: Context)(value: A): Output[ctx.F, A] =
     new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(OutputData(value))))
+
+class PartiallyAppliedOutput[F[+_]](using ctx: Context.Of[F]):
+  def apply[A](using ev: Not[IsOutputData[A]])(value: => F[A]): Output[ctx.F, A] =
+    new Output[ctx.F, A](ctx.registerTask(OutputData.traverseM(value)))
+
+  def apply[A](value: A)(using ev: Not[IsOutputData[A]], ev2: Not[IsFData[ctx.F, A]]): Output[ctx.F, A] =
+    new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(OutputData(value))))
+
+  def apply[A](value: => F[OutputData[A]]): Output[F, A] =
+    new Output[ctx.F, A](ctx.registerTask((value)))
 
   def apply[A](data: OutputData[A])(using ctx: Context): Output[ctx.F, A] =
     new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(data)))
 
-  def apply[F[+_], A](value: => F[OutputData[A]])(using ctx: Context.Of[F]): Output[F, A] =
-    new Output[F, A](ctx.registerTask((value)))
+// prototype, not really useful, sadly
+object OutputLift extends OutputGiven0:
 
-  def secret[A](using ctx: Context)(value: A): Output[ctx.F, A] =
-    new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(OutputData(value))))
+  def lift[F[+_], A, In <: Output[F, A] | F[A] | A](using ctx: Context.Of[F])(
+    value: In
+  )(using ol: OutputLifter[ctx.F, In, A]): Output[ctx.F, A] = ol.lift(value)
+
+  trait OutputLifter[F[+_], In, A]:
+    def lift(in: => In): Output[F, A]
+
+trait OutputGiven0 extends OutputGiven1:
+  self: OutputLift.type =>
+
+  given [F[+_], A](using Context.Of[F]): OutputLifter[F, Output[F, A], A] =
+    new OutputLifter[F, Output[F, A], A]:
+      def lift(in: => Output[F, A]): Output[F, A] = in
+
+trait OutputGiven1 extends OutputGiven2:
+  self: OutputLift.type =>
+
+  import scala.util.{NotGiven => Not}
+
+  given [F[+_], A0, A >: A0](using ctx: Context.Of[F], ev: Not[IsOutputData[A0]]): OutputLifter[F, F[A0], A] =
+    new OutputLifter[F, F[A0], A]:
+      def lift(in: => F[A0]): Output[F, A0] = Output.apply[ctx.F].apply(using ev)(in)
+
+trait OutputGiven2:
+  self: OutputLift.type =>
+  given [F[+_], A](using Context.Of[F]): OutputLifter[F, A, A] =
+    new OutputLifter[F, A, A]:
+      def lift(in: => A): Output[F, A] = Output(in)
