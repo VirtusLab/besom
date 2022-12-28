@@ -14,3 +14,5 @@ trait BesomModule:
   object Output extends OutputFactory
 
   def run(program: Context ?=> Output[Outputs]): M[Unit] = ???
+
+  def exports(outputs: (String, Output[Any])*): Output[Map[String, Output[Any]]] = ???
