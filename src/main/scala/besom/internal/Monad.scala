@@ -1,6 +1,7 @@
 package besom.internal
 
 import scala.util.Try
+import scala.concurrent.Future
 
 trait Queue[F[+_], A]:
   def offer(a: A): F[Unit]
