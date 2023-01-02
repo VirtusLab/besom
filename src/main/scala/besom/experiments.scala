@@ -4,34 +4,34 @@ import scala.concurrent.*, ExecutionContext.Implicits.global
 import besom.util.Protocol
 import besom.internal.CustomResourceOptions
 
-// @main
-// def main(): Unit = Pulumi.run {
-//   import besom.api.kubernetes.*
+@main
+def main(): Unit = Pulumi.run {
+  import besom.api.kubernetes.*
 
-//   val labels = Map("app" -> "nginx")
+  val labels = Map("app" -> "nginx")
 
-//   val dplmnt = deployment(
-//     "app",
-//     DeploymentArgs(
-//       spec = DeploymentSpecArgs(
-//         selector = LabelSelectorArgs(labels),
-//         replicas = 1,
-//         template = PodTemplateSpecArgs(
-//           metadata = ObjectMetaArgs(labels),
-//           spec = PodSpecArgs(
-//             ContainerArgs(
-//               name = "nginx",
-//               image = "nginx",
-//               ports = ContainerPortArgs(80)
-//             )
-//           )
-//         )
-//       )
-//     )
-//   )
+  val dplmnt = deployment(
+    "app",
+    DeploymentArgs(
+      spec = DeploymentSpecArgs(
+        selector = LabelSelectorArgs(labels),
+        replicas = 1,
+        template = PodTemplateSpecArgs(
+          metadata = ObjectMetaArgs(labels),
+          spec = PodSpecArgs(
+            ContainerArgs(
+              name = "nginx",
+              image = "nginx",
+              ports = ContainerPortArgs(80)
+            )
+          )
+        )
+      )
+    )
+  )
 
-//   Pulumi.exports("name" -> dplmnt.flatMap(_.metadata.map(_.name)))
-// }
+  Pulumi.exports("name" -> dplmnt.flatMap(_.metadata.map(_.name)))
+}
 
 // def instanceOptions(groupName: Output[String]) = aws.InstanceOptions(
 //   ami = "ami-6869aa05",

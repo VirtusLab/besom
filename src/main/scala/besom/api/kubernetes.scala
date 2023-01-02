@@ -18,22 +18,19 @@ object kubernetes:
   )(
     name: String,
     args: DeploymentArgs,
-    opts: ResourceOptions = CustomResourceOptions(using ctx)()
+    opts: ResourceOptions = CustomResourceOptions()
   ): Output[Deployment] =
     ???
 
   case class DeploymentArgs(spec: DeploymentSpecArgs)
-  object DeploymentArgs:
-    def apply(using ctx: Context)(spec: DeploymentSpecArgs): DeploymentArgs =
-      new DeploymentArgs(spec)
 
   case class LabelSelectorArgs(
     matchLabels: Output[Map[String, String]]
   )
   object LabelSelectorArgs:
-    def apply(using ctx: Context)(
+    def apply(
       matchLabels: Map[String, String] | Map[String, Output[String]] | Output[Map[String, String]] | NotProvided
-    ): LabelSelectorArgs = new LabelSelectorArgs(matchLabels.asOutputMap)
+    )(using ctx: Context): LabelSelectorArgs = new LabelSelectorArgs(matchLabels.asOutputMap)
 
   case class DeploymentSpecArgs(
     selector: LabelSelectorArgs,
@@ -41,31 +38,26 @@ object kubernetes:
     template: PodTemplateSpecArgs
   )
   object DeploymentSpecArgs:
-    def apply(using ctx: Context)(
+    def apply(
       selector: LabelSelectorArgs,
       replicas: Int | Output[Int],
       template: PodTemplateSpecArgs
-    ): DeploymentSpecArgs =
+    )(using ctx: Context): DeploymentSpecArgs =
       new DeploymentSpecArgs(selector, replicas.asOutput, template)
 
   case class PodTemplateSpecArgs(metadata: ObjectMetaArgs, spec: PodSpecArgs)
-  object PodTemplateSpecArgs:
-    def apply(using
-      ctx: Context
-    )(metadata: ObjectMetaArgs, spec: PodSpecArgs): PodTemplateSpecArgs =
-      new PodTemplateSpecArgs(metadata, spec)
 
   case class ObjectMetaArgs(
     labels: Output[Map[String, String]]
   )
   object ObjectMetaArgs:
-    def apply(using ctx: Context)(
+    def apply(
       labels: Map[String, String] | Map[String, Output[String]] | Output[Map[String, String]] | NotProvided
-    ): ObjectMetaArgs = new ObjectMetaArgs(labels.asOutputMap)
+    )(using ctx: Context): ObjectMetaArgs = new ObjectMetaArgs(labels.asOutputMap)
 
   case class PodSpecArgs(containers: List[ContainerArgs])
   object PodSpecArgs:
-    def apply(using ctx: Context)(containers: ContainerArgs*): PodSpecArgs =
+    def apply(containers: ContainerArgs*)(using ctx: Context): PodSpecArgs =
       new PodSpecArgs(containers.toList)
 
   case class ContainerArgs(
@@ -74,15 +66,15 @@ object kubernetes:
     ports: Option[ContainerPortArgs]
   )
   object ContainerArgs:
-    def apply(using ctx: Context)(
+    def apply(
       name: NonEmptyString | Output[NonEmptyString],
       image: NonEmptyString | Output[NonEmptyString],
       ports: ContainerPortArgs | NotProvided = NotProvided
-    ): ContainerArgs = new ContainerArgs(name.asOutput, image.asOutput, ports.asOption)
+    )(using ctx: Context): ContainerArgs = new ContainerArgs(name.asOutput, image.asOutput, ports.asOption)
 
   case class ContainerPortArgs(containerPort: Output[Int])
   object ContainerPortArgs:
-    def apply(using ctx: Context)(containerPort: Int | Output[Int] | NotProvided): ContainerPortArgs =
+    def apply(containerPort: Int | Output[Int] | NotProvided)(using ctx: Context): ContainerPortArgs =
       new ContainerPortArgs(containerPort.asOutput)
 
   // case class ContainerArgs(

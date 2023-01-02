@@ -53,15 +53,7 @@ final case class ComponentResourceOptions private[internal] (
   export common.*
 
 object CustomResourceOptions:
-  def apply(using Context): CustomResourceOptionsPartiallyApplied =
-    new CustomResourceOptionsPartiallyApplied
-
-object ComponentResourceOptions:
-  def apply(using Context): ComponentResourceOptionsPartiallyApplied =
-    new ComponentResourceOptionsPartiallyApplied
-
-class CustomResourceOptionsPartiallyApplied(using ctx: Context):
-  def apply(
+  def apply(using Context)(
     id: Output[NonEmptyString] | NotProvided = NotProvided,
     parent: Resource | NotProvided = NotProvided,
     dependsOn: Output[List[Resource]] = Output(List.empty[Resource]),
@@ -101,8 +93,8 @@ class CustomResourceOptionsPartiallyApplied(using ctx: Context):
       importId = importId.asOption
     )
 
-class ComponentResourceOptionsPartiallyApplied(using ctx: Context):
-  def apply(
+object ComponentResourceOptions:
+  def apply(using Context)(
     providers: List[String] = List.empty, // ProviderResource // TODO
     id: Output[NonEmptyString] | NotProvided = NotProvided,
     parent: Resource | NotProvided = NotProvided,
@@ -132,7 +124,3 @@ class ComponentResourceOptionsPartiallyApplied(using ctx: Context):
       pluginDownloadUrl = pluginDownloadUrl.asOption
     )
     new ComponentResourceOptions(common, providers)
-
-// def test[F[+_]: Monad: Context]: Unit =
-// CustomResourceOptions(urn = "sdsds", version = "dfsd")
-// ComponentResourceOptions(customTimeouts = "works")

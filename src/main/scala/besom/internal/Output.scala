@@ -2,15 +2,6 @@ package besom.internal
 
 import scala.util.{NotGiven => Not}
 
-// trait Output[F[+_], A](using M: Monad[F]):
-//   def map[B](f: A => B): Output[F, B]
-//   def flatMap[B](f: A => Output[F, B]): Output[F, B]
-//   def asPlaintext: Output[F, A]
-//   def asSecret: Output[F, A]
-//   private[internal] def getData: F[OutputData[A]]
-
-// extends Output[F, A]:
-
 /** Output is a wrapper for a monadic effect used to model async execution that allows Pulumi to track information about
   * dependencies between resources and properties of data (whether it's known or a secret for instance).
   *

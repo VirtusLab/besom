@@ -67,7 +67,7 @@ case class ProviderResourceState(
 ) extends ResourceState:
   export custom.*
 
-class ResourceManager(private val resources: Result.Ref[Map[Resource, ResourceState]])
+class ResourceManager(private val resources: Ref[Map[Resource, ResourceState]])
 
 trait Context {
 
@@ -80,7 +80,7 @@ trait Context {
   private[besom] val keepOutputValues: Boolean
   private[besom] val monitor: Monitor
   private[besom] val engine: Engine
-  private[besom] val workgroup: Result.WorkGroup
+  private[besom] val workgroup: WorkGroup
 
   private[besom] def registerTask[A](fa: => Result[A]): Result[A]
 
@@ -101,18 +101,18 @@ object Context:
     _keepOutputValues: Boolean,
     monitor: Monitor,
     engine: Engine,
-    workgroup: Result.WorkGroup
+    workgroup: WorkGroup
   ): Context =
     new Context:
-      val projectName: NonEmptyString                = _runInfo.project
-      val stackName: NonEmptyString                  = _runInfo.stack
-      val config: Config                             = _runInfo.config
-      private[besom] val runInfo: RunInfo            = _runInfo
-      private[besom] val keepResources: Boolean      = _keepResources
-      private[besom] val keepOutputValues: Boolean   = _keepOutputValues
-      private[besom] val monitor: Monitor            = monitor
-      private[besom] val engine: Engine              = engine
-      private[besom] val workgroup: Result.WorkGroup = workgroup
+      val projectName: NonEmptyString              = _runInfo.project
+      val stackName: NonEmptyString                = _runInfo.stack
+      val config: Config                           = _runInfo.config
+      private[besom] val runInfo: RunInfo          = _runInfo
+      private[besom] val keepResources: Boolean    = _keepResources
+      private[besom] val keepOutputValues: Boolean = _keepOutputValues
+      private[besom] val monitor: Monitor          = monitor
+      private[besom] val engine: Engine            = engine
+      private[besom] val workgroup: WorkGroup      = workgroup
 
       override private[besom] def registerTask[A](fa: => Result[A]): Result[A] = workgroup.runInWorkGroup(fa)
 
@@ -135,7 +135,7 @@ object Context:
     keepResources: Boolean,
     keepOutputValues: Boolean
   ): Result[Context] =
-    Result.WorkGroup().map { wg =>
+    WorkGroup().map { wg =>
       apply(runInfo, keepResources, keepOutputValues, monitor, engine, wg)
     }
 
