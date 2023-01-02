@@ -1,7 +1,13 @@
+//> using lib "com.lihaoyi::sourcecode:0.3.0"
+
 package besom.internal
 
 import scala.util.Try
 import scala.concurrent.*
+import scala.util.Failure
+import scala.util.Success
+import besom.internal.Result.Fiber
+import scala.concurrent.duration.Duration
 
 trait Runtime[F[+_]]:
   def pure[A](a: A): F[A]
@@ -9,83 +15,121 @@ trait Runtime[F[+_]]:
   def defer[A](thunk: => A): F[A]
   def flatMapBoth[A, B](fa: F[A])(f: Either[Throwable, A] => F[B]): F[B]
   def fromFuture[A](f: => scala.concurrent.Future[A]): F[A]
-  def fork[A](fa: => F[A]): F[Unit]
+  def fork[A](fa: => F[A]): F[Result.Fiber[A]]
+
+  private[besom] def debugEnabled: Boolean
 
   private[besom] def unsafeRunSync[A](fa: F[A]): Either[Throwable, A]
 
-class FutureRuntime(using ExecutionContext) extends Runtime[Future]:
+class FutureRuntime(val debugEnabled: Boolean = false)(using ExecutionContext) extends Runtime[Future]:
   def pure[A](a: A): Future[A]              = Future.successful(a)
   def fail(err: Throwable): Future[Nothing] = Future.failed(err)
   def defer[A](thunk: => A): Future[A]      = Future(thunk)
   def flatMapBoth[A, B](fa: Future[A])(f: Either[Throwable, A] => Future[B]): Future[B] =
     fa.transformWith(t => f(t.toEither))
   def fromFuture[A](f: => scala.concurrent.Future[A]): Future[A] = Future(f).flatten
-  def fork[A](fa: => Future[A]): Future[Unit]                    = Future.unit.flatMap(_ => fa.map(_ => ()))
+  def fork[A](fa: => Future[A]): Future[Result.Fiber[A]] =
+    val p = scala.concurrent.Promise[A]()
+    fa.onComplete(p.complete)
+    Future(
+      new Result.Fiber[A]:
+        def join: Result[A] = Result.deferFuture(p.future)
+    )
 
-  private[besom] def unsafeRunSync[A](fa: Future[A]): Either[Throwable, A] = ???
+  private[besom] def unsafeRunSync[A](fa: Future[A]): Either[Throwable, A] = Try(
+    Await.result(fa, Duration.Inf)
+  ).toEither
+
+import sourcecode.*
+
+case class Debug(name: FullName, file: File, line: Line):
+  override def toString: String = s"${name.value} at ${file.value}:${line.value}"
+object Debug:
+  def !(using name: FullName, file: File, line: Line): Debug = new Debug(name, file, line)
 
 enum Result[+A]:
-  case Suspend(thunk: () => Future[A])
-  case Pure(a: A)
-  case Defer(a: () => A)
-  case Fail(t: Throwable) extends Result[Nothing]
-  case BiFlatMap[B, A](r: Result[B], f: Either[Throwable, B] => Result[A]) extends Result[A]
-  case Fork(r: Result[Unit]) extends Result[Unit]
+  case Suspend(thunk: () => Future[A], debug: Debug)
+  case Pure(a: A, debug: Debug)
+  case Defer(a: () => A, debug: Debug)
+  case Fail(t: Throwable, debug: Debug) extends Result[Nothing]
+  case BiFlatMap[B, A](r: Result[B], f: Either[Throwable, B] => Result[A], debug: Debug) extends Result[A]
+  case Fork[A](r: Result[A], debug: Debug) extends Result[Result.Fiber[A]]
 
-  def flatMap[B](f: A => Result[B]): Result[B] = BiFlatMap(
+  def flatMap[B](f: A => Result[B])(using FullName, File, Line): Result[B] = BiFlatMap(
     this,
     {
       case Right(a) => f(a)
-      case Left(t)  => Fail(t)
-    }
+      case Left(t)  => Fail(t, Debug.!)
+    },
+    Debug.!
   )
 
-  def recover[A2 >: A](f: Throwable => Result[A2]): Result[A2] = BiFlatMap(
+  def recover[A2 >: A](f: Throwable => Result[A2])(using FullName, File, Line): Result[A2] = BiFlatMap(
     this,
     {
-      case Right(a) => Pure(a)
+      case Right(a) => Pure(a, Debug.!)
       case Left(t)  => f(t)
-    }
+    },
+    Debug.!
   )
 
-  def transform[B](f: Either[Throwable, A] => Either[Throwable, B]): Result[B] = BiFlatMap(
+  def transform[B](f: Either[Throwable, A] => Either[Throwable, B])(using FullName, File, Line): Result[B] = BiFlatMap(
     this,
-    e => Result.evalEither(f(e))
+    e => Result.evalEither(f(e)),
+    Debug.!
   )
 
-  def map[B](f: A => B): Result[B]                      = flatMap(a => Pure(f(a)))
-  def product[B](rb: Result[B]): Result[(A, B)]         = flatMap(a => rb.map(b => (a, b)))
-  def zip[B](rb: => Result[B])(using z: Zippable[A, B]) = product(rb).map((a, b) => z.zip(a, b))
-  def void: Result[Unit]                                = flatMap(_ => Result.unit)
-  def fork: Result[Unit]                                = Result.Fork(this.void)
-  def tap(f: A => Result[Unit]): Result[A]              = flatMap(a => f(a).flatMap(_ => Result.pure(a)))
+  def map[B](f: A => B)(using FullName, File, Line): Result[B]              = flatMap(a => Pure(f(a), Debug.!))
+  def product[B](rb: Result[B])(using FullName, File, Line): Result[(A, B)] = flatMap(a => rb.map(b => (a, b)))
+  def zip[B](rb: => Result[B])(using z: Zippable[A, B])(using FullName, File, Line) =
+    product(rb).map((a, b) => z.zip(a, b))
+  def void(using FullName, File, Line): Result[Unit]                   = flatMap(_ => Result.unit)
+  def fork[A2 >: A](using FullName, File, Line): Result[Fiber[A2]]     = Result.Fork(this, Debug.!)
+  def tap(f: A => Result[Unit])(using FullName, File, Line): Result[A] = flatMap(a => f(a).flatMap(_ => Result.pure(a)))
 
   def run[F[+_]](using F: Runtime[F]): F[A] = this match
-    case Suspend(thunk)   => F.fromFuture(thunk())
-    case Pure(value)      => F.pure(value)
-    case Fail(err)        => F.fail(err).asInstanceOf[F[A]]
-    case Defer(thunk)     => F.defer(thunk())
-    case BiFlatMap(fa, f) => F.flatMapBoth(fa.run[F])(either => f(either).run[F])
-    case Fork(fa)         => F.fork(fa.run[F])
+    case Suspend(thunk, debug) =>
+      if (F.debugEnabled) (s"interpreting Suspend from $debug")
+      F.fromFuture(thunk())
+    case Pure(value, debug) =>
+      if (F.debugEnabled) println(s"interpreting Pure from $debug")
+      F.pure(value)
+    case Fail(err, debug) =>
+      if (F.debugEnabled) println(s"interpreting Fail from $debug")
+      F.fail(err).asInstanceOf[F[A]]
+    case Defer(thunk, debug) =>
+      if (F.debugEnabled) println(s"interpreting Defer from $debug")
+      F.defer(thunk())
+    case BiFlatMap(fa, f, debug) =>
+      if (F.debugEnabled) println(s"interpreting BiFlatMap from $debug")
+      F.flatMapBoth(fa.run[F])(either => f(either).run[F])
+    case Fork(fa, debug) =>
+      if (F.debugEnabled) println(s"interpreting Fork from $debug")
+      F.fork(fa.run[F])
 
 object Result:
   import scala.collection.BuildFrom
 
-  def apply[A](a: => A): Result[A]                           = defer(a)
-  def defer[A](a: => A): Result[A]                           = Result.Defer(() => a)
-  def pure[A](a: A): Result[A]                               = Result.Pure(a)
-  def eval[F[_], A](fa: => F[A])(tf: ToFuture[F]): Result[A] = Result.Suspend(tf.eval(fa))
-  def evalTry[A](tryA: => Try[A]): Result[A]                 = Result.Suspend(() => Future.fromTry(tryA))
+  def apply[A](a: => A)(using FullName, File, Line): Result[A] = defer(a)
+  def defer[A](a: => A)(using FullName, File, Line): Result[A] = Result.Defer(() => a, Debug.!)
+  def pure[A](a: A)(using FullName, File, Line): Result[A]     = Result.Pure(a, Debug.!)
+  def eval[F[_], A](fa: => F[A])(tf: ToFuture[F])(using FullName, File, Line): Result[A] =
+    Result.Suspend(tf.eval(fa), Debug.!)
+  def evalTry[A](tryA: => Try[A])(using FullName, File, Line): Result[A] =
+    Result.Suspend(() => Future.fromTry(tryA), Debug.!)
 
-  def evalEither[A](eitherA: => Either[Throwable, A]): Result[A] = Result.Suspend(() =>
-    eitherA match
-      case Right(r) => Future.successful(r)
-      case Left(l)  => Future.failed(l)
+  def evalEither[A](eitherA: => Either[Throwable, A]): Result[A] = Result.Suspend(
+    () =>
+      eitherA match
+        case Right(r) => Future.successful(r)
+        case Left(l)  => Future.failed(l)
+    ,
+    Debug.!
   )
 
-  def fail[A](err: Throwable): Result[A] = Result.Fail(err)
+  def fail[A](err: Throwable)(using FullName, File, Line): Result[A] = Result.Fail(err, Debug.!)
 
-  final val unit: Result[Unit] = Result.Pure(())
+  def unit(using FullName, File, Line): Result[Unit] = Result.Pure((), Debug.!)
 
   def sequence[A, CC[X] <: IterableOnce[X], To](
     coll: CC[Result[A]]
@@ -96,14 +140,17 @@ object Result:
       }
       .map(_.result())
 
-  def deferFuture[A](thunk: => Future[A]): Result[A] = Result.Suspend(() => thunk)
+  def deferFuture[A](thunk: => Future[A])(using FullName, File, Line): Result[A] = Result.Suspend(() => thunk, Debug.!)
+
+  trait Fiber[A]:
+    def join: Result[A]
 
   trait WorkGroup:
     def runInWorkGroup[A](eff: => Result[A]): Result[A]
     def waitForAll: Result[Unit]
 
   object WorkGroup:
-    def apply(): Result[WorkGroup] = pure {
+    def apply(): Result[WorkGroup] = defer {
       new WorkGroup:
         val semaphore = java.util.concurrent.Semaphore(Int.MaxValue, false)
 
@@ -114,7 +161,7 @@ object Result:
               res
             }
           }
-        override def waitForAll: Result[Unit] = defer(semaphore.acquire(Int.MaxValue)).fork.void
+        override def waitForAll: Result[Unit] = defer(semaphore.acquire(Int.MaxValue)).void
     }
 
   trait Promise[A]:
@@ -123,17 +170,11 @@ object Result:
     def fail(t: Throwable): Result[Unit]
 
   object Promise:
-    def apply[A]: Result[Promise[A]] = pure {
+    def apply[A]: Result[Promise[A]] = defer {
       new Promise:
-        val internal = scala.concurrent.Promise[A]()
-        override def get: Result[A] = deferFuture {
-          println(s"Getting result of $this on thread ${Thread.currentThread()}")
-          internal.future
-        }
-        override def fulfill(a: A): Result[Unit] = defer {
-          println(s"Fulfilling $this with $a on thread ${Thread.currentThread()}")
-          internal.success(a)
-        }
+        val internal                                  = scala.concurrent.Promise[A]()
+        override def get: Result[A]                   = deferFuture(internal.future)
+        override def fulfill(a: A): Result[Unit]      = defer(internal.success(a))
         override def fail(t: Throwable): Result[Unit] = defer(internal.failure(t))
     }
 
@@ -144,7 +185,7 @@ object Result:
   object Ref:
     import java.util.concurrent.atomic.AtomicReference
 
-    def apply[A](initialValue: => A): Result[Ref[A]] = pure {
+    def apply[A](initialValue: => A): Result[Ref[A]] = defer {
       new Ref:
         val internalRef = new AtomicReference[A](initialValue)
 

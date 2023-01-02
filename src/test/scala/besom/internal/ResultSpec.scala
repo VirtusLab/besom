@@ -40,53 +40,48 @@ class ResultSpec extends munit.FunSuite:
   // flaky
   // test("forking") {
   //   def getThreadId = Thread.currentThread().getId()
-  //   def forked(ref: Ref[F, Set[Long]], done: Promise[F, Unit]): F[Unit] =
+  //   def forked(ref: Result.Ref[Set[Long]], done: Result.Promise[Unit]): Result[Unit] =
   //     for
-  //       forkedThreadId <- F.eval(getThreadId).tap(id => F.eval(println(s"forked thread $id")))
+  //       forkedThreadId <- Result.defer(getThreadId).tap(id => Result.defer(println(s"forked thread $id")))
   //       _              <- ref.update(s => s + forkedThreadId)
   //       _              <- done.fulfill(())
   //     yield ()
 
-  //   val program = Ref[F, Set[Long]](Set.empty[Long]).flatMap { ref =>
+  //   val program = Result.Ref[Set[Long]](Set.empty[Long]).flatMap { ref =>
   //     for
-  //       mainThreadId <- F.eval(getThreadId).tap(id => F.eval(println(s"main thread $id")))
+  //       mainThreadId <- Result.defer(getThreadId).tap(id => Result.defer(println(s"main thread $id")))
   //       _            <- ref.update(s => s + mainThreadId)
-  //       promise      <- Promise[F, Unit]
+  //       promise      <- Result.Promise[Unit]
   //       _            <- forked(ref, promise).fork
   //       _            <- promise.get
   //       s            <- ref.get
   //     yield s
   //   }
 
-  //   val set          = run(program).get
+  //   val set          = run(program)
   //   val expectedSize = 2
   //   val finalSize    = set.size
   //   assert(finalSize == expectedSize, s"Got $finalSize when expected $expectedSize")
   // }
 
-  // this would hang if tasks didn't go through some kind of trampoline
+  // this hangs if tasks didn't go through some kind of trampoline
   // there's no easy way to make this test fail, sadly
   test("inter-locking forking") {
     def interlock(p1: Result.Promise[Unit], p2: Result.Promise[Unit]): Result[Unit] =
       for
-        _ <- Result(println(s"fulfilling $p1 and waiting for $p2 on thread ${Thread.currentThread()}"))
         _ <- p1.fulfill(())
         _ <- p2.get
       yield ()
 
     val program =
       for
-        p1 <- Result.Promise[Unit]
-        p2 <- Result.Promise[Unit]
-        _  <- Result(println(s"Promise1: $p1, Promise2: $p2"))
-        _  <- Result(println(s"Going to interlock on thread ${Thread.currentThread()}"))
-        _  <- interlock(p1, p2).fork
-        _  <- interlock(p2, p1).fork
-      // _  <- fib1.join
-      // _  <- fib2.join
+        p1   <- Result.Promise[Unit]
+        p2   <- Result.Promise[Unit]
+        fib1 <- interlock(p1, p2).fork
+        fib2 <- interlock(p2, p1).fork
+        _    <- fib1.join
+        _    <- fib2.join
       yield ()
-
-    println(s"Constructed program")
 
     run(program)
   }
@@ -96,9 +91,9 @@ class ResultSpec extends munit.FunSuite:
       Result.sequence {
         (1 to 30).map { idx =>
           val napTime = scala.util.Random.between(10, 20)
-          wg.runInWorkGroup(
+          wg.runInWorkGroup {
             sleep(napTime).tap(_ => ref.update(i => i + idx))
-          ).fork
+          }.fork
         }.toVector
       }.void
 
