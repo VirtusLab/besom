@@ -70,12 +70,11 @@ enum OutputData[+A]:
       case Unknown(resources, _)      => Unknown(resources, isSecret)
       case Known(resources, _, value) => Known(resources, isSecret, value)
 
-  def traverseM[B](using ctx: Context)(f: A => ctx.F[B]): ctx.F[OutputData[B]] =
-    val M = ctx.monad
+  def traverseM[B](using ctx: Context)(f: A => Result[B]): Result[OutputData[B]] =
     this match
-      case u @ Unknown(_, _)                       => M.eval(u)
-      case k @ Known(resources, isSecret, None)    => M.eval(k.asInstanceOf[OutputData[B]])
-      case Known(resources, isSecret, Some(value)) => M.map(f(value))(b => Known(resources, isSecret, Some(b)))
+      case u @ Unknown(_, _)                       => Result.pure(u)
+      case k @ Known(resources, isSecret, None)    => Result.pure(k.asInstanceOf[OutputData[B]])
+      case Known(resources, isSecret, Some(value)) => f(value).map(b => Known(resources, isSecret, Some(b)))
 
 object OutputData:
   def unknown(isSecret: Boolean = false): OutputData[Nothing] = Unknown(Set.empty, isSecret)
@@ -89,5 +88,5 @@ object OutputData:
   def empty[A](resources: Set[Resource] = Set.empty, isSecret: Boolean = false): OutputData[A] =
     Known(resources, isSecret, None)
 
-  def traverseM[A](using ctx: Context)(value: => ctx.F[A]): ctx.F[OutputData[A]] =
+  def traverseM[A](using ctx: Context)(value: => Result[A]): Result[OutputData[A]] =
     empty[A]().traverseM(_ => value)

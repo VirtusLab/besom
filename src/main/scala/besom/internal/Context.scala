@@ -28,9 +28,9 @@ trait ProviderResource
 // 	remoteComponent bool
 // }
 
-sealed trait ResourceState[F[+_]]:
-  def urn: Output[F, String]
-  def rawOutputs: Output[F, _]
+sealed trait ResourceState:
+  def urn: Output[String]
+  def rawOutputs: Output[_]
   def children: Set[Resource]
   def providers: Map[String, ProviderResource]
   def provider: ProviderResource
@@ -41,36 +41,35 @@ sealed trait ResourceState[F[+_]]:
   // def transformations: List[ResourceTransformation]
   def remoteComponent: Boolean
 
-case class CommonResourceState[F[+_]](
-    urn: Output[F, String],
-    rawOutputs: Output[F, _],
-    children: Set[Resource],
-    providers: Map[String, ProviderResource],
-    provider: ProviderResource,
-    version: String,
-    pluginDownloadURL: String,
-    // aliases: List[Output[F, String]],
-    name: String,
-    // transformations: List[ResourceTransformation],
-    remoteComponent: Boolean
-) extends ResourceState[F]
+case class CommonResourceState(
+  urn: Output[String],
+  rawOutputs: Output[_],
+  children: Set[Resource],
+  providers: Map[String, ProviderResource],
+  provider: ProviderResource,
+  version: String,
+  pluginDownloadURL: String,
+  // aliases: List[Output[F, String]],
+  name: String,
+  // transformations: List[ResourceTransformation],
+  remoteComponent: Boolean
+) extends ResourceState
 
-case class CustomResourceState[F[+_]](
-    common: ResourceState[F],
-    id: Output[F, String]
-) extends ResourceState[F]:
+case class CustomResourceState(
+  common: ResourceState,
+  id: Output[String]
+) extends ResourceState:
   export common.*
 
-case class ProviderResourceState[F[+_]](
-    custom: CustomResourceState[F],
-    pkg: String
-) extends ResourceState[F]:
+case class ProviderResourceState(
+  custom: CustomResourceState,
+  pkg: String
+) extends ResourceState:
   export custom.*
 
-class ResourceManager[F[+_]](private val resources: Ref[F, Map[Resource, ResourceState[F]]])
+class ResourceManager(private val resources: Result.Ref[Map[Resource, ResourceState]])
 
 trait Context {
-  type F[+A]
 
   def projectName: NonEmptyString
   def stackName: NonEmptyString
@@ -79,77 +78,71 @@ trait Context {
   private[besom] val runInfo: RunInfo
   private[besom] val keepResources: Boolean
   private[besom] val keepOutputValues: Boolean
-  private[besom] val monitor: Monitor[F]
-  private[besom] val engine: Engine[F]
-  private[besom] val workgroup: WorkGroup[F]
+  private[besom] val monitor: Monitor
+  private[besom] val engine: Engine
+  private[besom] val workgroup: Result.WorkGroup
 
-  private[besom] def registerTask[A](fa: => F[A]): F[A]
+  private[besom] def registerTask[A](fa: => Result[A]): Result[A]
 
-  private[besom] def waitForAllTasks: F[Unit]
+  private[besom] def waitForAllTasks: Result[Unit]
 
-  private[besom] def readOrRegisterResource[A](): F[RawResourceResult]
-  private[besom] def registerResource[A](): F[RawResourceResult]
-  private[besom] def readResource[A](): F[RawResourceResult]
+  private[besom] def readOrRegisterResource[A](): Result[RawResourceResult]
+  private[besom] def registerResource[A](): Result[RawResourceResult]
+  private[besom] def readResource[A](): Result[RawResourceResult]
 
-  private[besom] def close: F[Unit]
-  private[besom] def monad: Monad[F]
+  private[besom] def close: Result[Unit]
 }
 
 object Context:
-  type Of[M[+_]] = Context { type F[+A] = M[A] }
 
-  def apply[M[+_]](
-      _runInfo: RunInfo,
-      _keepResources: Boolean,
-      _keepOutputValues: Boolean,
-      monitorF0: Monitor[M],
-      engineF0: Engine[M],
-      workgroupF0: WorkGroup[M]
-  )(using F: Monad[M]): Context { type F[A] = M[A] } =
+  def apply(
+    _runInfo: RunInfo,
+    _keepResources: Boolean,
+    _keepOutputValues: Boolean,
+    monitor: Monitor,
+    engine: Engine,
+    workgroup: Result.WorkGroup
+  ): Context =
     new Context:
-      type F[+A] = M[A]
+      val projectName: NonEmptyString                = _runInfo.project
+      val stackName: NonEmptyString                  = _runInfo.stack
+      val config: Config                             = _runInfo.config
+      private[besom] val runInfo: RunInfo            = _runInfo
+      private[besom] val keepResources: Boolean      = _keepResources
+      private[besom] val keepOutputValues: Boolean   = _keepOutputValues
+      private[besom] val monitor: Monitor            = monitor
+      private[besom] val engine: Engine              = engine
+      private[besom] val workgroup: Result.WorkGroup = workgroup
 
-      val projectName: NonEmptyString              = _runInfo.project
-      val stackName: NonEmptyString                = _runInfo.stack
-      val config: Config                           = _runInfo.config
-      private[besom] val runInfo: RunInfo          = _runInfo
-      private[besom] val keepResources: Boolean    = _keepResources
-      private[besom] val keepOutputValues: Boolean = _keepOutputValues
-      private[besom] val monitor: Monitor[F]       = monitorF0
-      private[besom] val engine: Engine[F]         = engineF0
-      private[besom] val workgroup: WorkGroup[F]   = workgroupF0
+      override private[besom] def registerTask[A](fa: => Result[A]): Result[A] = workgroup.runInWorkGroup(fa)
 
-      override private[besom] def registerTask[A](fa: => F[A]): F[A] = workgroup.runInWorkGroup(fa)
+      override private[besom] def waitForAllTasks: Result[Unit] = workgroup.waitForAll
 
-      override private[besom] def waitForAllTasks: F[Unit] = workgroup.waitForAll
-
-      override private[besom] def close: F[Unit] =
+      override private[besom] def close: Result[Unit] =
         for
           _ <- monitor.close()
           _ <- engine.close()
         yield ()
 
-      override private[besom] def readOrRegisterResource[A](): F[RawResourceResult] = ???
-      override private[besom] def registerResource[A](): F[RawResourceResult]       = ???
-      override private[besom] def readResource[A](): F[RawResourceResult]           = ???
+      override private[besom] def readOrRegisterResource[A](): Result[RawResourceResult] = ???
+      override private[besom] def registerResource[A](): Result[RawResourceResult]       = ???
+      override private[besom] def readResource[A](): Result[RawResourceResult]           = ???
 
-      override private[besom] def monad: Monad[F] = F
-
-  def apply[F[+_]](
-      runInfo: RunInfo,
-      monitor: Monitor[F],
-      engine: Engine[F],
-      keepResources: Boolean,
-      keepOutputValues: Boolean
-  )(using F: Monad[F]): F[Context] =
-    WorkGroup[F].map { wg =>
+  def apply(
+    runInfo: RunInfo,
+    monitor: Monitor,
+    engine: Engine,
+    keepResources: Boolean,
+    keepOutputValues: Boolean
+  ): Result[Context] =
+    Result.WorkGroup().map { wg =>
       apply(runInfo, keepResources, keepOutputValues, monitor, engine, wg)
     }
 
-  def apply[F[+_]](runInfo: RunInfo)(using F: Monad[F]): F[Context] =
+  def apply(runInfo: RunInfo): Result[Context] =
     for
-      monitor          <- Monitor[F](runInfo.monitorAddress)
-      engine           <- Engine[F](runInfo.engineAddress)
+      monitor          <- Monitor(runInfo.monitorAddress)
+      engine           <- Engine(runInfo.engineAddress)
       keepResources    <- monitor.supportsFeature(SupportsFeatureRequest("resourceReferences")).map(_.hasSupport)
       keepOutputValues <- monitor.supportsFeature(SupportsFeatureRequest("outputValues")).map(_.hasSupport)
       ctx              <- apply(runInfo, monitor, engine, keepResources, keepOutputValues)

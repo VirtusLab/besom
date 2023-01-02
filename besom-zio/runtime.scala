@@ -4,6 +4,7 @@ import zio.{Runtime => _, *}
 import besom.internal.*
 import zio.Promise
 
+// TODO it would be good to make effects uninterruptible
 class ZIORuntime(val debugEnabled: Boolean = false)(using rt: zio.Runtime[Any]) extends Runtime[Task]:
   override def pure[A](a: A): Task[A]                                                      = ZIO.succeed(a)
   override def fail(err: Throwable): Task[Nothing]                                         = ZIO.die(err)

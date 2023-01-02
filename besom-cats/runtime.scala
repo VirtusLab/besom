@@ -5,6 +5,7 @@ import besom.internal.*
 import cats.effect.unsafe.IORuntime
 import cats.effect.kernel.Outcome.*
 
+// TODO it would be good to make effects uncancelable
 class CatsRuntime(val debugEnabled: Boolean = false)(using ioRuntime: IORuntime) extends Runtime[IO]:
   override def pure[A](a: A): IO[A]                                                  = IO(a)
   override def fail(err: Throwable): IO[Nothing]                                     = IO.raiseError(err)
