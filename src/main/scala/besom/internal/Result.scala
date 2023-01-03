@@ -8,7 +8,7 @@ import scala.util.Failure
 import scala.util.Success
 import scala.concurrent.duration.Duration
 
-trait Fiber[A]:
+trait Fiber[+A]:
   def join: Result[A]
 
 trait WorkGroup:
@@ -38,7 +38,7 @@ trait Promise[A]:
 object Promise:
   def apply[A]: Result[Promise[A]] = Result.defer {
     new Promise:
-      val internal                                  = scala.concurrent.Promise[A]()
+      private val internal                          = scala.concurrent.Promise[A]()
       override def get: Result[A]                   = Result.deferFuture(internal.future)
       override def fulfill(a: A): Result[Unit]      = Result.defer(internal.success(a))
       override def fail(t: Throwable): Result[Unit] = Result.defer(internal.failure(t))
@@ -53,7 +53,7 @@ object Ref:
 
   def apply[A](initialValue: => A): Result[Ref[A]] = Result.defer {
     new Ref:
-      val internalRef = new AtomicReference[A](initialValue)
+      private val internalRef = new AtomicReference[A](initialValue)
 
       override def get: Result[A] = Result.defer(internalRef.get)
 
@@ -84,7 +84,9 @@ import sourcecode.*
 case class Debug(name: FullName, file: File, line: Line):
   override def toString: String = s"${name.value} at ${file.value}:${line.value}"
 object Debug:
-  def !(using name: FullName, file: File, line: Line): Debug = new Debug(name, file, line)
+  inline given (using inline fullName: FullName, inline file: File, inline line: Line): Debug =
+    new Debug(fullName, file, line)
+  def apply()(using d: Debug): Debug = d
 
 enum Result[+A]:
   case Suspend(thunk: () => Future[A], debug: Debug)
@@ -92,41 +94,52 @@ enum Result[+A]:
   case Defer(a: () => A, debug: Debug)
   case Fail(t: Throwable, debug: Debug) extends Result[Nothing]
   case BiFlatMap[B, A](r: Result[B], f: Either[Throwable, B] => Result[A], debug: Debug) extends Result[A]
-  case Fork[A](r: Result[A], debug: Debug) extends Result[Fiber[A]]
+  case Fork(r: Result[A], debug: Debug) extends Result[Fiber[A]]
   case Sleep(r: () => Result[A], duration: Long, debug: Debug)
 
-  def flatMap[B](f: A => Result[B])(using FullName, File, Line): Result[B] = BiFlatMap(
+  def flatMap[B](f: A => Result[B])(using Debug): Result[B] = BiFlatMap(
     this,
     {
       case Right(a) => f(a)
-      case Left(t)  => Fail(t, Debug.!)
+      case Left(t)  => Fail(t, Debug())
     },
-    Debug.!
+    Debug()
   )
 
-  def recover[A2 >: A](f: Throwable => Result[A2])(using FullName, File, Line): Result[A2] = BiFlatMap(
+  def recover[A2 >: A](f: Throwable => Result[A2])(using Debug): Result[A2] = BiFlatMap(
     this,
     {
-      case Right(a) => Pure(a, Debug.!)
+      case Right(a) => Pure(a, Debug())
       case Left(t)  => f(t)
     },
-    Debug.!
+    Debug()
   )
 
-  def transform[B](f: Either[Throwable, A] => Either[Throwable, B])(using FullName, File, Line): Result[B] = BiFlatMap(
+  def transform[B](f: Either[Throwable, A] => Either[Throwable, B])(using Debug): Result[B] = BiFlatMap(
     this,
     e => Result.evalEither(f(e)),
-    Debug.!
+    Debug()
   )
 
-  def map[B](f: A => B)(using FullName, File, Line): Result[B]              = flatMap(a => Pure(f(a), Debug.!))
-  def product[B](rb: Result[B])(using FullName, File, Line): Result[(A, B)] = flatMap(a => rb.map(b => (a, b)))
-  def zip[B](rb: => Result[B])(using z: Zippable[A, B])(using FullName, File, Line) =
+  def transformM[B](f: Either[Throwable, A] => Result[Either[Throwable, B]])(using Debug): Result[B] = BiFlatMap(
+    this,
+    e => f(e).flatMap(Result.evalEither),
+    Debug()
+  )
+
+  def map[B](f: A => B)(using Debug): Result[B]              = flatMap(a => Pure(f(a), Debug()))
+  def product[B](rb: Result[B])(using Debug): Result[(A, B)] = flatMap(a => rb.map(b => (a, b)))
+  def zip[B](rb: => Result[B])(using z: Zippable[A, B])(using Debug) =
     product(rb).map((a, b) => z.zip(a, b))
-  def void(using FullName, File, Line): Result[Unit]                   = flatMap(_ => Result.unit)
-  def fork[A2 >: A](using FullName, File, Line): Result[Fiber[A2]]     = Result.Fork(this, Debug.!)
-  def tap(f: A => Result[Unit])(using FullName, File, Line): Result[A] = flatMap(a => f(a).flatMap(_ => Result.pure(a)))
-  def delay(duration: Long)(using FullName, File, Line): Result[A]     = Result.Sleep(() => this, duration, Debug.!)
+  def void(using Debug): Result[Unit]                   = flatMap(_ => Result.unit)
+  def fork[A2 >: A](using Debug): Result[Fiber[A2]]     = Result.Fork(this, Debug())
+  def tap(f: A => Result[Unit])(using Debug): Result[A] = flatMap(a => f(a).flatMap(_ => Result.pure(a)))
+  def tapBoth(f: Either[Throwable, A] => Result[Unit])(using Debug): Result[A] =
+    transformM(e => f(e) *> Result.pure(e))
+  def delay(duration: Long)(using Debug): Result[A] = Result.Sleep(() => this, duration, Debug())
+
+  inline def *>[B](rb: => Result[B])(using Debug): Result[B] = flatMap(_ => rb)
+  inline def <*[B](rb: => Result[B])(using Debug): Result[A] = rb.flatMap(_ => this)
 
   def run[F[+_]](using F: Runtime[F]): F[A] = this match
     case Suspend(thunk, debug) =>
@@ -154,39 +167,39 @@ enum Result[+A]:
 object Result:
   import scala.collection.BuildFrom
 
-  def apply[A](a: => A)(using FullName, File, Line): Result[A] = defer(a)
-  def defer[A](a: => A)(using FullName, File, Line): Result[A] = Result.Defer(() => a, Debug.!)
-  def pure[A](a: A)(using FullName, File, Line): Result[A]     = Result.Pure(a, Debug.!)
-  def eval[F[_], A](fa: => F[A])(tf: ToFuture[F])(using FullName, File, Line): Result[A] =
-    Result.Suspend(tf.eval(fa), Debug.!)
-  def evalTry[A](tryA: => Try[A])(using FullName, File, Line): Result[A] =
-    Result.Suspend(() => Future.fromTry(tryA), Debug.!)
+  def apply[A](a: => A)(using Debug): Result[A] = defer(a)
+  def defer[A](a: => A)(using Debug): Result[A] = Result.Defer(() => a, Debug())
+  def pure[A](a: A)(using Debug): Result[A]     = Result.Pure(a, Debug())
+  def eval[F[_], A](fa: => F[A])(tf: ToFuture[F])(using Debug): Result[A] =
+    Result.Suspend(tf.eval(fa), Debug())
+  def evalTry[A](tryA: => Try[A])(using Debug): Result[A] =
+    Result.Suspend(() => Future.fromTry(tryA), Debug())
 
-  def evalEither[A](eitherA: => Either[Throwable, A]): Result[A] = Result.Suspend(
+  def evalEither[A](eitherA: => Either[Throwable, A])(using Debug): Result[A] = Result.Suspend(
     () =>
       eitherA match
         case Right(r) => Future.successful(r)
         case Left(l)  => Future.failed(l)
     ,
-    Debug.!
+    Debug()
   )
 
-  def sleep(duration: Long): Result[Unit] = Result.Sleep(() => unit, duration, Debug.!)
+  def sleep(duration: Long)(using Debug): Result[Unit] = Result.Sleep(() => unit, duration, Debug())
 
-  def fail[A](err: Throwable)(using FullName, File, Line): Result[A] = Result.Fail(err, Debug.!)
+  def fail[A](err: Throwable)(using Debug): Result[A] = Result.Fail(err, Debug())
 
-  def unit(using FullName, File, Line): Result[Unit] = Result.Pure((), Debug.!)
+  def unit(using Debug): Result[Unit] = Result.Pure((), Debug())
 
   def sequence[A, CC[X] <: IterableOnce[X], To](
     coll: CC[Result[A]]
-  )(using bf: BuildFrom[CC[Result[A]], A, To]): Result[To] =
+  )(using bf: BuildFrom[CC[Result[A]], A, To], d: Debug): Result[To] =
     coll.iterator
       .foldLeft(pure(bf.newBuilder(coll))) { (acc, curr) =>
         acc.product(curr).map { case (b, r) => b += r }
       }
       .map(_.result())
 
-  def deferFuture[A](thunk: => Future[A])(using FullName, File, Line): Result[A] = Result.Suspend(() => thunk, Debug.!)
+  def deferFuture[A](thunk: => Future[A])(using Debug): Result[A] = Result.Suspend(() => thunk, Debug())
 
   trait ToFuture[F[_]]:
     def eval[A](fa: => F[A]): () => Future[A]
@@ -206,7 +219,7 @@ class FutureRuntime(val debugEnabled: Boolean = false)(using ExecutionContext) e
         def join: Result[A] = Result.deferFuture(p.future)
     )
 
-  def sleep[A](fa: => Future[A], duration: Long): Future[A] = Future(Thread.sleep(duration)).flatMap(_ => fa)
+  def sleep[A](fa: => Future[A], duration: Long): Future[A] = Future(blocking(Thread.sleep(duration))).flatMap(_ => fa)
 
   private[besom] def unsafeRunSync[A](fa: Future[A]): Either[Throwable, A] = Try(
     Await.result(fa, Duration.Inf)

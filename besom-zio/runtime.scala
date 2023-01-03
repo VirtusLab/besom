@@ -8,7 +8,7 @@ import zio.Promise
 class ZIORuntime(val debugEnabled: Boolean = false)(using rt: zio.Runtime[Any]) extends Runtime[Task]:
   override def pure[A](a: A): Task[A]                                                      = ZIO.succeed(a)
   override def fail(err: Throwable): Task[Nothing]                                         = ZIO.die(err)
-  override def defer[A](thunk: => A): Task[A]                                              = ZIO.succeed(thunk)
+  override def defer[A](thunk: => A): Task[A]                                              = ZIO.attempt(thunk)
   override def flatMapBoth[A, B](fa: Task[A])(f: Either[Throwable, A] => Task[B]): Task[B] = fa.either.flatMap(f)
   override def fromFuture[A](f: => scala.concurrent.Future[A]): Task[A]                    = ZIO.fromFuture(_ => f)
   override def fork[A](fa: => Task[A]): Task[Fiber[A]] =

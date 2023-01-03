@@ -114,6 +114,17 @@ trait ResultSpec extends munit.FunSuite:
     assert(finalResult == expectedResult, s"Expected $expectedResult as final result, got $finalResult")
   }
 
+  // more of an interactive test
+  // test("sleep works as intended") {
+  //   val program =
+  //     Result
+  //       .defer(println("before sleep"))
+  //       .flatMap(_ => Result.sleep(3000L))
+  //       .tap(_ => Result.defer(println("after sleep")))
+
+  //   run(program)
+  // }
+
 // TODO test laziness of operators (for Future mostly) somehow
 // TODO zip should be probably parallelised
 // TODO test cancellation doesn't break anything for product, fork etc
