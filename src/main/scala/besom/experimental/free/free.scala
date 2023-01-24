@@ -39,20 +39,20 @@ enum Output[+Out]:
   def fork: Output[Out] = Fork(this)
 
   // def lifted[F[+_], Out2](f: Out => F[Out2])(using Lift[F]): Output[Out2] =
-    // Lifted(this, f, summon[Lift[F]])
+  // Lifted(this, f, summon[Lift[F]])
 
   def run[F[+_]](using F: Runtime[F]): F[Out] = this match
-    case Pure(value)         => F.pure(value)
-    case Fail(err)           => F.fail(err).asInstanceOf[F[Out]]
-    case Defer(thunk)        => F.defer(thunk())
-    case FlatMap(fa, f)      => F.flatMap(fa.run[F])(a => f(a).run[F])
-    case Recover(fa, f)      => F.recover(fa.run[F])(err => f(err).run[F])
-    case FromFuture(fut)     => F.fromFuture(fut())
-    case Fork(fa)            => F.fork(fa.run[F])
+    case Pure(value)     => F.pure(value)
+    case Fail(err)       => F.fail(err).asInstanceOf[F[Out]]
+    case Defer(thunk)    => F.defer(thunk())
+    case FlatMap(fa, f)  => F.flatMap(fa.run[F])(a => f(a).run[F])
+    case Recover(fa, f)  => F.recover(fa.run[F])(err => f(err).run[F])
+    case FromFuture(fut) => F.fromFuture(fut())
+    case Fork(fa)        => F.fork(fa.run[F])
     // case Lifted(fa, f, lift) => F.flatMap(fa.run[F])(f)
 
 object Output:
-  def pure[Out](value: Out): Output[Out] = Output.Pure(value)
-  def fail(err: Throwable): Output[Nothing] = Output.Fail(err)
-  def defer[Out](thunk: => Out): Output[Out] = Output.Defer(() => thunk)
+  def pure[Out](value: Out): Output[Out]                                   = Output.Pure(value)
+  def fail(err: Throwable): Output[Nothing]                                = Output.Fail(err)
+  def defer[Out](thunk: => Out): Output[Out]                               = Output.Defer(() => thunk)
   def fromFuture[Out](thunk: => scala.concurrent.Future[Out]): Output[Out] = Output.FromFuture(() => thunk)

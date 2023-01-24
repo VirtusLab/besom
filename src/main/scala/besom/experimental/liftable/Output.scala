@@ -36,16 +36,16 @@ object Output:
     output.asInstanceOf[or.Refined]
 
   def selectDynamicImpl[A: Type](output: Expr[Output[A]], name: Expr[String])(using
-      quotes: Quotes
+    quotes: Quotes
   ): Expr[Any] =
     import quotes.reflect.*
     def selectName(inner: Expr[A]) = Select.unique(inner.asTerm, name.valueOrAbort).asExprOf[Output[Any]]
     '{ ${ output }.flatMap(inner => ${ selectName('{ inner }) }) }
 
 def refineType(using quotes: Quotes)(
-    base: quotes.reflect.TypeRepr,
-    mirroredElemLabels: Type[?],
-    mirroredElemTypes: Type[?]
+  base: quotes.reflect.TypeRepr,
+  mirroredElemLabels: Type[?],
+  mirroredElemTypes: Type[?]
 ): quotes.reflect.TypeRepr =
   import quotes.reflect.*
 

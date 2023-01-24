@@ -10,11 +10,7 @@ package besom
 
 import com.google.protobuf.struct.Value.Kind.NumberValue
 import com.google.protobuf.struct.{Struct, Value}
-import pulumirpc.resource.{
-  RegisterResourceOutputsRequest,
-  RegisterResourceRequest,
-  RegisterResourceResponse
-}
+import pulumirpc.resource.{RegisterResourceOutputsRequest, RegisterResourceRequest, RegisterResourceResponse}
 import pulumirpc.engine.SetRootResourceRequest
 import pulumirpc.engine.EngineGrpc.EngineStub
 import pulumirpc.engine.EngineGrpc
@@ -90,7 +86,7 @@ object Main {
 
     val engineChannel: ManagedChannel = netty.channel.build(pulumiEngine)
     val engineStub                    = EngineGrpc.blockingStub(engineChannel)
-    val engineAsyncStub               = EngineGrpc.stub(engineChannel) 
+    val engineAsyncStub               = EngineGrpc.stub(engineChannel)
 
     val setRootResourceRequest = SetRootResourceRequest(
       urn(project, stack, rootStackType, rootStackName)

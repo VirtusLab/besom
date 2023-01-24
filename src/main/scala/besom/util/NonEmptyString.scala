@@ -6,7 +6,7 @@ import scala.language.implicitConversions
 opaque type NonEmptyString <: String = String
 
 object NonEmptyString:
-  def apply(s: String): Option[NonEmptyString] = 
+  def apply(s: String): Option[NonEmptyString] =
     if s.isEmpty then None else Some(s)
 
   inline def from(inline s: String): NonEmptyString =
