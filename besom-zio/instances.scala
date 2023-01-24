@@ -76,8 +76,8 @@ class ZIOMonad extends Monad[Task] {
 }
 
 trait ZIOEffectMonadModule extends BesomModule:
-  type F[A] = zio.Task[A]
-  val F: Monad[F] = ZIOMonad()
+  override final type M[+A] = zio.Task[A]
+  override val F: Monad[M] = new ZIOMonad
 
   // def run(program: Context ?=> Output[Outputs]): Task[Unit] = ???
 

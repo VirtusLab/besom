@@ -70,7 +70,8 @@ enum OutputData[+A]:
       case Unknown(resources, _)      => Unknown(resources, isSecret)
       case Known(resources, _, value) => Known(resources, isSecret, value)
 
-  def traverseM[F[+_], B](f: A => F[B])(using M: Monad[F]): F[OutputData[B]] =
+  def traverseM[B](using ctx: Context)(f: A => ctx.F[B]): ctx.F[OutputData[B]] =
+    val M = ctx.monad
     this match
       case u @ Unknown(_, _)                       => M.eval(u)
       case k @ Known(resources, isSecret, None)    => M.eval(k.asInstanceOf[OutputData[B]])
@@ -87,3 +88,6 @@ object OutputData:
 
   def empty[A](resources: Set[Resource] = Set.empty, isSecret: Boolean = false): OutputData[A] =
     Known(resources, isSecret, None)
+
+  def traverseM[A](using ctx: Context)(value: => ctx.F[A]): ctx.F[OutputData[A]] =
+    empty[A]().traverseM(_ => value)

@@ -69,45 +69,84 @@ case class ProviderResourceState[F[+_]](
 
 class ResourceManager[F[+_]](private val resources: Ref[F, Map[Resource, ResourceState[F]]])
 
-class Context[F[+_]] private (
-    val projectName: NonEmptyString,
-    val stackName: NonEmptyString,
-    val config: Config,
-    private val keepResources: Boolean,
-    private val keepOutputValues: Boolean,
-    private val monitor: Monitor[F],
-    private val engine: Engine[F],
-    private val workgroup: WorkGroup[F]
-)(using F: Monad[F]):
-  private[besom] def registerTask[A](fa: => F[A]): F[A] = workgroup.runInWorkGroup(fa)
+trait Context {
+  type F[+A]
 
-  private[besom] def waitForAllTasks: F[Unit] = workgroup.waitForAll
+  def projectName: NonEmptyString
+  def stackName: NonEmptyString
+  def config: Config
 
-  private[besom] def close: F[Unit] =
-    for
-      _ <- monitor.close()
-      _ <- engine.close()
-    yield ()
+  private[besom] val runInfo: RunInfo
+  private[besom] val keepResources: Boolean
+  private[besom] val keepOutputValues: Boolean
+  private[besom] val monitor: Monitor[F]
+  private[besom] val engine: Engine[F]
+  private[besom] val workgroup: WorkGroup[F]
 
-  private[besom] def readOrRegisterResource[A](): F[RawResourceResult] = ???
-  private[besom] def registerResource[A](): F[RawResourceResult]       = ???
-  private[besom] def readResource[A](): F[RawResourceResult]           = ???
+  private[besom] def registerTask[A](fa: => F[A]): F[A]
 
-  def monad: Monad[F] = F
+  private[besom] def waitForAllTasks: F[Unit]
+
+  private[besom] def readOrRegisterResource[A](): F[RawResourceResult]
+  private[besom] def registerResource[A](): F[RawResourceResult]
+  private[besom] def readResource[A](): F[RawResourceResult]
+
+  private[besom] def close: F[Unit]
+  private[besom] def monad: Monad[F]
+}
 
 object Context:
+  type Of[M[+_]] = Context { type F[+A] = M[A] }
+
+  def apply[M[+_]](
+      _runInfo: RunInfo,
+      _keepResources: Boolean,
+      _keepOutputValues: Boolean,
+      monitorF0: Monitor[M],
+      engineF0: Engine[M],
+      workgroupF0: WorkGroup[M]
+  )(using F: Monad[M]): Context { type F[A] = M[A] } =
+    new Context:
+      type F[+A] = M[A]
+
+      val projectName: NonEmptyString              = _runInfo.project
+      val stackName: NonEmptyString                = _runInfo.stack
+      val config: Config                           = _runInfo.config
+      private[besom] val runInfo: RunInfo          = _runInfo
+      private[besom] val keepResources: Boolean    = _keepResources
+      private[besom] val keepOutputValues: Boolean = _keepOutputValues
+      private[besom] val monitor: Monitor[F]       = monitorF0
+      private[besom] val engine: Engine[F]         = engineF0
+      private[besom] val workgroup: WorkGroup[F]   = workgroupF0
+
+      override private[besom] def registerTask[A](fa: => F[A]): F[A] = workgroup.runInWorkGroup(fa)
+
+      override private[besom] def waitForAllTasks: F[Unit] = workgroup.waitForAll
+
+      override private[besom] def close: F[Unit] =
+        for
+          _ <- monitor.close()
+          _ <- engine.close()
+        yield ()
+
+      override private[besom] def readOrRegisterResource[A](): F[RawResourceResult] = ???
+      override private[besom] def registerResource[A](): F[RawResourceResult]       = ???
+      override private[besom] def readResource[A](): F[RawResourceResult]           = ???
+
+      override private[besom] def monad: Monad[F] = F
+
   def apply[F[+_]](
       runInfo: RunInfo,
       monitor: Monitor[F],
       engine: Engine[F],
       keepResources: Boolean,
       keepOutputValues: Boolean
-  )(using F: Monad[F]): F[Context[F]] =
+  )(using F: Monad[F]): F[Context] =
     WorkGroup[F].map { wg =>
-      new Context(runInfo.project, runInfo.stack, runInfo.config, keepResources, keepOutputValues, monitor, engine, wg)
+      apply(runInfo, keepResources, keepOutputValues, monitor, engine, wg)
     }
 
-  def apply[F[+_]](runInfo: RunInfo)(using F: Monad[F]): F[Context[F]] =
+  def apply[F[+_]](runInfo: RunInfo)(using F: Monad[F]): F[Context] =
     for
       monitor          <- Monitor[F](runInfo.monitorAddress)
       engine           <- Engine[F](runInfo.engineAddress)

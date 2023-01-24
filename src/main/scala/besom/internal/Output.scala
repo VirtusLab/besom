@@ -22,7 +22,7 @@ import scala.util.{NotGiven => Not}
   * @param ctx
   *   Context
   */
-class Output[F[+_], +A] private[internal] (val dataMonad: F[OutputData[A]])(using F: Monad[F], ctx: Context[F]):
+class Output[F[+_], +A] private[internal] (using val ctx: Context.Of[F])(private val dataMonad: F[OutputData[A]]):
   import IsOutputData.given
 
   def map[B](f: A => B): Output[F, B] = Output(dataMonad.map(_.map(f)))
@@ -30,8 +30,8 @@ class Output[F[+_], +A] private[internal] (val dataMonad: F[OutputData[A]])(usin
   def flatMap[B](f: A => Output[F, B]): Output[F, B] =
     Output(
       for
-        data   <- dataMonad
-        nested <- data.traverseM(f.andThen(o => o.getData))
+        data: OutputData[A]               <- dataMonad
+        nested: OutputData[OutputData[B]] <- data.traverseM(a => f(a).getData)
       yield nested.flatten
     )
 
@@ -40,9 +40,9 @@ class Output[F[+_], +A] private[internal] (val dataMonad: F[OutputData[A]])(usin
 
   def flatten[B](using ev: A <:< Output[F, B]): Output[F, B] = flatMap(identity)
 
-  def asPlaintext: Output[F, A] = withIsSecret(F.eval(false))
+  def asPlaintext: Output[F, A] = withIsSecret(ctx.monad.eval(false))
 
-  def asSecret: Output[F, A] = withIsSecret(F.eval(true))
+  def asSecret: Output[F, A] = withIsSecret(ctx.monad.eval(true))
 
   private[internal] def getData: F[OutputData[A]] = dataMonad
 
@@ -58,37 +58,80 @@ sealed trait IsOutputData[A]
 object IsOutputData:
   given [A](using A =:= OutputData[_]): IsOutputData[OutputData[_]] = null
 
+sealed trait IsFData[F[+_], A]
+object IsFData:
+  given [F[+_], A]: IsFData[F, F[A]] = null
+
 /** These factory methods should be the only way to create Output instances!
   */
 
-trait OutputFactory[F[+_]](using F: Monad[F]):
-  def apply[A](value: A)(using ctx: Context[F], ev: Not[IsOutputData[A]]): Output[F, A] = Output(value)
-  def apply[A](value: => F[A])(using ctx: Context[F], ev: Not[IsOutputData[A]]): Output[F, A] =
-    Output(value)
-  def apply[A](data: OutputData[A])(using ctx: Context[F]): Output[F, A]        = Output(data)
-  def apply[A](value: => F[OutputData[A]])(using ctx: Context[F]): Output[F, A] = Output(value)
+trait OutputFactory:
+  def apply[A](value: A)(using ctx: Context, ev: Not[IsOutputData[A]]): Output[ctx.F, A] = Output(value)
+  // def apply[A](using ctx: Context, ev: Not[IsOutputData[A]])(value: => ctx.F[A]): Output[ctx.F, A] = Output(value)
+  def apply[A](data: OutputData[A])(using ctx: Context): Output[ctx.F, A]            = Output(data)
+  def apply[A](using ctx: Context)(value: => ctx.F[OutputData[A]]): Output[ctx.F, A] = Output(value)
 
-  def secret[A](value: A)(using ctx: Context[F]): Output[F, A] = Output[F].secret(value)
+  def secret[A](value: A)(using ctx: Context): Output[ctx.F, A] = Output.secret(value)
 
 object Output:
-  def empty[F[+_]](using ctx: Context[F], F: Monad[F]): Output[F, Nothing] =
-    new Output(ctx.registerTask(F.eval(OutputData.empty[Nothing]())))
+  // should be NonEmptyString
+  def traverseMap[A](using ctx: Context)(map: Map[String, Output[ctx.F, A]]): Output[ctx.F, Map[String, A]] =
+    sequence(map.map((key, value) => value.map(result => (key, result))).toVector).map(_.toMap)
 
-  def apply[F[+_]](using ctx: Context[F], F: Monad[F]): OutputPartiallyApplied[F] =
-    new OutputPartiallyApplied[F](using ctx, F)
+  def sequence[A](using ctx: Context)(v: Vector[Output[ctx.F, A]]): Output[ctx.F, Vector[A]] =
+    v.foldLeft[Output[ctx.F, Vector[A]]](Output(Vector.empty[A])) { case (out, curr) =>
+      curr.flatMap(a => out.map(_ appended a))
+    }
 
-class OutputPartiallyApplied[F[+_]](using ctx: Context[F], F: Monad[F]):
-  def apply[A](value: A)(using ev: Not[IsOutputData[A]]): Output[F, A] =
-    new Output[F, A](ctx.registerTask(F.eval(OutputData(value))))
+  def empty(using ctx: Context): Output[ctx.F, Nothing] =
+    new Output(ctx.registerTask(ctx.monad.eval(OutputData.empty[Nothing]())))
 
-  def apply[A](value: => F[A])(using ev: Not[IsOutputData[A]]): Output[F, A] =
-    new Output[F, A](ctx.registerTask(value.map(OutputData(_))))
+  def apply[F[+_]](using ctx: Context.Of[F]) = new PartiallyAppliedOutput[ctx.F]
 
-  def apply[A](data: OutputData[A]): Output[F, A] =
-    new Output[F, A](ctx.registerTask(F.eval(data)))
+  def secret[A](using ctx: Context)(value: A): Output[ctx.F, A] =
+    new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(OutputData(value))))
+
+class PartiallyAppliedOutput[F[+_]](using ctx: Context.Of[F]):
+  def apply[A](using ev: Not[IsOutputData[A]])(value: => F[A]): Output[ctx.F, A] =
+    new Output[ctx.F, A](ctx.registerTask(OutputData.traverseM(value)))
+
+  def apply[A](value: A)(using ev: Not[IsOutputData[A]], ev2: Not[IsFData[ctx.F, A]]): Output[ctx.F, A] =
+    new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(OutputData(value))))
 
   def apply[A](value: => F[OutputData[A]]): Output[F, A] =
-    new Output[F, A](ctx.registerTask((value)))
+    new Output[ctx.F, A](ctx.registerTask((value)))
 
-  def secret[A](value: A): Output[F, A] =
-    new Output[F, A](ctx.registerTask(F.eval(OutputData(value))))
+  def apply[A](data: OutputData[A])(using ctx: Context): Output[ctx.F, A] =
+    new Output[ctx.F, A](ctx.registerTask(ctx.monad.eval(data)))
+
+// prototype, not really useful, sadly
+object OutputLift extends OutputGiven0:
+
+  def lift[F[+_], A, In <: Output[F, A] | F[A] | A](using ctx: Context.Of[F])(
+    value: In
+  )(using ol: OutputLifter[ctx.F, In, A]): Output[ctx.F, A] = ol.lift(value)
+
+  trait OutputLifter[F[+_], In, A]:
+    def lift(in: => In): Output[F, A]
+
+trait OutputGiven0 extends OutputGiven1:
+  self: OutputLift.type =>
+
+  given [F[+_], A](using Context.Of[F]): OutputLifter[F, Output[F, A], A] =
+    new OutputLifter[F, Output[F, A], A]:
+      def lift(in: => Output[F, A]): Output[F, A] = in
+
+trait OutputGiven1 extends OutputGiven2:
+  self: OutputLift.type =>
+
+  import scala.util.{NotGiven => Not}
+
+  given [F[+_], A0, A >: A0](using ctx: Context.Of[F], ev: Not[IsOutputData[A0]]): OutputLifter[F, F[A0], A] =
+    new OutputLifter[F, F[A0], A]:
+      def lift(in: => F[A0]): Output[F, A0] = Output.apply[ctx.F].apply(using ev)(in)
+
+trait OutputGiven2:
+  self: OutputLift.type =>
+  given [F[+_], A](using Context.Of[F]): OutputLifter[F, A, A] =
+    new OutputLifter[F, A, A]:
+      def lift(in: => A): Output[F, A] = Output(in)

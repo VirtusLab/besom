@@ -79,8 +79,8 @@ class IOMonad extends Monad[IO]:
   }
 
 trait CatsEffectMonadModule extends BesomModule:
-  type F[A] = cats.effect.IO[A]
-  val F: Monad[F] = IOMonad()
+  override final type M[+A] = cats.effect.IO[A]
+  override val F: Monad[M] = new IOMonad
 
   // def run(program: Context ?=> Output[Outputs]): IO[Unit] = ???
 

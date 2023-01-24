@@ -1,26 +1,36 @@
 package besom
 
 import scala.concurrent.*, ExecutionContext.Implicits.global
-
-object providers:
-  import besom.*
-  import besom.api.*
-
-  def sgOptions(using Context) = aws.SecurityGroupOptions[Future](
-    name = "web-sg-62a569b",
-    ingress = List(
-      aws.IngressRule(protocol = Protocol.TCP, fromPort = 80, toPort = 80, cidrBlocks = List("0.0.0.0/0"))
-    )
-  )
-
-  def exports(): Output[Map[String, Output[Any]]] = ???
+import besom.util.Protocol
+import besom.internal.CustomResourceOptions
 
 @main
 def main(): Unit = Pulumi.run {
-  import providers.*
-  val opts = sgOptions
+  import besom.api.kubernetes.*
 
-  exports()
+  val labels = Map("app" -> "nginx")
+
+  val dplmnt = deployment(
+    "app",
+    DeploymentArgs(
+      spec = DeploymentSpecArgs(
+        selector = LabelSelectorArgs(labels),
+        replicas = 1,
+        template = PodTemplateSpecArgs(
+          metadata = ObjectMetaArgs(labels),
+          spec = PodSpecArgs(
+            ContainerArgs(
+              name = "nginx",
+              image = "nginx",
+              ports = ContainerPortArgs(80)
+            )
+          )
+        )
+      )
+    )
+  )
+
+  Pulumi.exports("name" -> dplmnt.flatMap(_.metadata.map(_.name)))
 }
 
 // def instanceOptions(groupName: Output[String]) = aws.InstanceOptions(

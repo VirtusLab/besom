@@ -66,7 +66,7 @@ class FutureMonad(using ec: ExecutionContext) extends Monad[Future]:
         Future.fromTry(maybeFail.map(_ => ()))
   }
 
-  override def ref[A](initial: => A): F[Ref[Future, A]] = Future.successful {
+  override def ref[A](initial: => A): Future[Ref[Future, A]] = Future.successful {
     new internal.Ref[Future, A]:
       val internalRef = new AtomicReference[A](initial)
 
@@ -93,9 +93,9 @@ class FutureMonad(using ec: ExecutionContext) extends Monad[Future]:
   }
 
 trait FutureMonadModule extends BesomModule:
-  type F[A] = scala.concurrent.Future[A]
+  override final type M[+A] = scala.concurrent.Future[A]
   given ExecutionContext = scala.concurrent.ExecutionContext.global
-  given F: Monad[F]      = FutureMonad()
+  override val F: Monad[M]      = new FutureMonad
 
   // override def run(program: Context ?=> Output[Outputs]): Future[Unit] = ???
 
