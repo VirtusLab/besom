@@ -5,17 +5,17 @@ import besom.internal.*
 
 object aws:
 
-  case class SecurityGroupOptions[F[+_]](name: Output[F, NonEmptyString], ingress: Output[F, List[IngressRule]])
+  case class SecurityGroupOptions(name: Output[NonEmptyString], ingress: Output[List[IngressRule]])
   object SecurityGroupOptions:
     def apply(using ctx: Context)(
-      name: NonEmptyString | Output[ctx.F, NonEmptyString],
-      ingress: List[IngressRule] | Output[ctx.F, List[IngressRule]] | NotProvided
-    ): SecurityGroupOptions[ctx.F] = new SecurityGroupOptions(name.asOutput, ingress.asOutput)
+      name: NonEmptyString | Output[NonEmptyString],
+      ingress: List[IngressRule] | Output[List[IngressRule]] | NotProvided
+    ): SecurityGroupOptions = new SecurityGroupOptions(name.asOutput, ingress.asOutput)
 
   case class IngressRule(protocol: Protocol, fromPort: Int, toPort: Int, cidrBlocks: List[String])
 
-  case class InstanceOptions[F[+_]](
-    ami: NonEmptyString | Output[F, NonEmptyString],
-    instanceType: NonEmptyString | Output[F, NonEmptyString] | NotProvided,
-    securityGroups: List[String] | Output[F, List[String]] | List[Output[F, String]] | NotProvided
+  case class InstanceOptions(
+    ami: NonEmptyString | Output[NonEmptyString],
+    instanceType: NonEmptyString | Output[NonEmptyString] | NotProvided,
+    securityGroups: List[String] | Output[List[String]] | List[Output[String]] | NotProvided
   )

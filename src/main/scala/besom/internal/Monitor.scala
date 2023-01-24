@@ -7,40 +7,39 @@ import pulumirpc.provider.CallRequest
 import pulumirpc.provider.CallResponse
 import pulumirpc.provider.InvokeResponse
 
-trait Monitor[F[+_]]:
-  def call(callRequest: CallRequest): F[CallResponse]
-  def invoke(invokeRequest: ResourceInvokeRequest): F[InvokeResponse]
-  def readResource(readResourceRequest: ReadResourceRequest): F[ReadResourceResponse]
-  def registerResource(registerResourceRequest: RegisterResourceRequest): F[RegisterResourceResponse]
-  def registerResourceOutputs(registerResourceOutputsRequest: RegisterResourceOutputsRequest): F[Unit]
-  def supportsFeature(supportsFeatureRequest: SupportsFeatureRequest): F[SupportsFeatureResponse]
-  def close(): F[Unit]
+trait Monitor:
+  def call(callRequest: CallRequest): Result[CallResponse]
+  def invoke(invokeRequest: ResourceInvokeRequest): Result[InvokeResponse]
+  def readResource(readResourceRequest: ReadResourceRequest): Result[ReadResourceResponse]
+  def registerResource(registerResourceRequest: RegisterResourceRequest): Result[RegisterResourceResponse]
+  def registerResourceOutputs(registerResourceOutputsRequest: RegisterResourceOutputsRequest): Result[Unit]
+  def supportsFeature(supportsFeatureRequest: SupportsFeatureRequest): Result[SupportsFeatureResponse]
+  def close(): Result[Unit]
 
-class MonitorImpl[F[+_]](private val stub: ResourceMonitorStub, private val closeF: () => F[Unit])(using F: Monad[F])
-    extends Monitor[F]:
+class MonitorImpl(private val stub: ResourceMonitorStub, private val closeFn: () => Result[Unit]) extends Monitor:
 
-  def call(callRequest: CallRequest): F[CallResponse] = F.fromFuture(stub.call(callRequest))
+  def call(callRequest: CallRequest): Result[CallResponse] = Result.deferFuture(stub.call(callRequest))
 
-  def invoke(invokeRequest: ResourceInvokeRequest): F[InvokeResponse] =
-    F.fromFuture(stub.invoke(invokeRequest))
+  def invoke(invokeRequest: ResourceInvokeRequest): Result[InvokeResponse] =
+    Result.deferFuture(stub.invoke(invokeRequest))
 
-  def readResource(readResourceRequest: ReadResourceRequest): F[ReadResourceResponse] =
-    F.fromFuture(stub.readResource(readResourceRequest))
+  def readResource(readResourceRequest: ReadResourceRequest): Result[ReadResourceResponse] =
+    Result.deferFuture(stub.readResource(readResourceRequest))
 
-  def registerResource(registerResourceRequest: RegisterResourceRequest): F[RegisterResourceResponse] =
-    F.fromFuture(stub.registerResource(registerResourceRequest))
+  def registerResource(registerResourceRequest: RegisterResourceRequest): Result[RegisterResourceResponse] =
+    Result.deferFuture(stub.registerResource(registerResourceRequest))
 
-  def registerResourceOutputs(registerResourceOutputsRequest: RegisterResourceOutputsRequest): F[Unit] =
-    F.fromFuture(stub.registerResourceOutputs(registerResourceOutputsRequest)).void
+  def registerResourceOutputs(registerResourceOutputsRequest: RegisterResourceOutputsRequest): Result[Unit] =
+    Result.deferFuture(stub.registerResourceOutputs(registerResourceOutputsRequest)).void
 
-  def supportsFeature(supportsFeatureRequest: SupportsFeatureRequest): F[SupportsFeatureResponse] =
-    F.fromFuture(stub.supportsFeature(supportsFeatureRequest))
+  def supportsFeature(supportsFeatureRequest: SupportsFeatureRequest): Result[SupportsFeatureResponse] =
+    Result.deferFuture(stub.supportsFeature(supportsFeatureRequest))
 
-  def close(): F[Unit] = closeF()
+  def close(): Result[Unit] = closeFn()
 
 object Monitor:
-  def apply[F[+_]](monitorAddr: NonEmptyString)(using F: Monad[F]): F[Monitor[F]] = F.evalTry {
+  def apply(monitorAddr: NonEmptyString): Result[Monitor] = Result.evalTry {
     netty.channel.build(monitorAddr).map { channel =>
-      new MonitorImpl(ResourceMonitorStub(channel), () => F.eval(channel.shutdown()).void)
+      new MonitorImpl(ResourceMonitorStub(channel), () => Result.defer(channel.shutdown()).void)
     }
   }

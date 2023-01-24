@@ -6,16 +6,16 @@ import scala.util.Try
 type Config = Map[NonEmptyString, String] // TODO replace
 
 case class RunInfo(
-    project: NonEmptyString,
-    stack: NonEmptyString,
-    config: Config,
-    configSecretKeys: List[NonEmptyString],
-    parallel: Int,
-    dryRun: Boolean,
-    monitorAddress: NonEmptyString,
-    engineAddress: NonEmptyString
-    // mocks: MockResourceMonitor, // TODO is this necessary?
-    // engineConn: Option[grpc.Connection] // TODO is this necessary?
+  project: NonEmptyString,
+  stack: NonEmptyString,
+  config: Config,
+  configSecretKeys: List[NonEmptyString],
+  parallel: Int,
+  dryRun: Boolean,
+  monitorAddress: NonEmptyString,
+  engineAddress: NonEmptyString
+  // mocks: MockResourceMonitor, // TODO is this necessary?
+  // engineConn: Option[grpc.Connection] // TODO is this necessary?
 )
 
 object RunInfo:
@@ -55,7 +55,7 @@ object RunInfo:
   private inline def getSecretConfigKeys(key: String): Try[List[NonEmptyString]] =
     Try { sys.env.get(key).map(read[List[NonEmptyString]](_)).getOrElse(List.empty) }
 
-  def fromEnv[F[+_]](using F: Monad[F]): F[RunInfo] = F.evalTry(Try {
+  def fromEnv: Result[RunInfo] = Result.evalTry(Try {
     RunInfo(
       project = get(EnvProject),
       stack = get(EnvStack),

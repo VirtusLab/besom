@@ -4,33 +4,57 @@ import scala.concurrent.*, ExecutionContext.Implicits.global
 import besom.util.Protocol
 import besom.internal.CustomResourceOptions
 
-@main
+// @main
 def main(): Unit = Pulumi.run {
-  import besom.api.kubernetes.*
+
+  import besom.api.k8s, k8s.*
+  import besom.internal.{Context, ResourceDecoder, Output}
+
+  case class IncomingPhoneNumber(smsUrl: Output[String]) derives ResourceDecoder
 
   val labels = Map("app" -> "nginx")
 
-  val dplmnt = deployment(
+  // val compo = ctx.component("my:component", "an-instance-of-my-component") {
+  //   k8s.pod(???, ???)
+  // }
+
+  // val nginxDeployment = k8s.deployment(
+  //   "nginx",
+  //   DeploymentArgs(
+  //     spec = DeploymentSpecArgs(
+  //       selector = LabelSelectorArgs(labels),
+  //       replicas = 1,
+  //       template = PodTemplateSpecArgs(
+  //         metadata = ObjectMetaArgs(labels),
+  //         spec = PodSpecArgs(
+  //           containers = ContainerArgs(
+  //             name = "nginx",
+  //             image = "nginx",
+  //             ports = ContainerPortArgs(80)
+  //           ) :: Nil
+  //         )
+  //       )
+  //     )
+  //   )
+  // )
+
+  val pod = k8s.pod(
     "app",
-    DeploymentArgs(
-      spec = DeploymentSpecArgs(
-        selector = LabelSelectorArgs(labels),
-        replicas = 1,
-        template = PodTemplateSpecArgs(
-          metadata = ObjectMetaArgs(labels),
-          spec = PodSpecArgs(
-            ContainerArgs(
-              name = "nginx",
-              image = "nginx",
-              ports = ContainerPortArgs(80)
-            )
-          )
-        )
+    PodArgs(
+      spec = PodSpecArgs(
+        containers = ContainerArgs(
+          name = "nginx",
+          image = "nginx",
+          ports = ContainerPortArgs(80)
+        ) :: Nil
       )
     )
   )
 
-  Pulumi.exports("name" -> dplmnt.flatMap(_.metadata.map(_.name)))
+  for {
+    nginx   <- pod
+    exports <- Pulumi.exports("name" -> nginx.metadata.map(_.flatMap(_.name)))
+  } yield exports
 }
 
 // def instanceOptions(groupName: Output[String]) = aws.InstanceOptions(
