@@ -1,13 +1,40 @@
 package besom.internal
 
 import besom.util.*
-import com.google.protobuf.Struct
+import com.google.protobuf.*
 import ujson.Bool
 import pulumirpc.resource.SupportsFeatureRequest
 
 case class RawResourceResult(urn: String, id: String, data: Struct, dependencies: Map[String, Set[Resource]])
 
 case class Stack()
+
+trait Fulfillable[A]:
+  def tryFulfill(value: Value): Result[Unit]
+
+trait ResourceDecoder[A]:
+  def makeFulfillable(using Context): (A, Fulfillable[A])
+
+object ResourceDecoder:
+  inline def derived[A]: ResourceDecoder[A] =
+    new ResourceDecoder[A]:
+      def makeFulfillable(using Context): (A, Fulfillable[A]) = ???
+
+trait ResourceOutputDecoder[A]:
+  def decode[A](value: Value): Result[A]
+
+  object ResourceOutputDecoder:
+    inline def derived[A]: ResourceOutputDecoder[A] =
+      new ResourceOutputDecoder[A]:
+        def decode[A](value: Value): Result[A] = ???
+
+trait ArgsEncoder[A]:
+  def encode(a: A): Result[Struct]
+
+object ArgsEncoder:
+  inline def derived[A]: ArgsEncoder[A] =
+    new ArgsEncoder[A]:
+      def encode(a: A): Result[Struct] = ???
 
 trait ProviderResource
 // type ResourceState struct {
@@ -67,13 +94,17 @@ case class ProviderResourceState(
 ) extends ResourceState:
   export custom.*
 
-class ResourceManager(private val resources: Ref[Map[Resource, ResourceState]])
+class ResourceManager(private val resources: Ref[Map[AnyRef, ResourceState]])
 
 trait Context {
 
   def projectName: NonEmptyString
   def stackName: NonEmptyString
   def config: Config
+
+  def component[Args: ArgsEncoder, Out](tpe: NonEmptyString, name: NonEmptyString, args: Args)(
+    block: => Output[Out]
+  ): Output[Out] = ???
 
   private[besom] val runInfo: RunInfo
   private[besom] val keepResources: Boolean
@@ -86,9 +117,11 @@ trait Context {
 
   private[besom] def waitForAllTasks: Result[Unit]
 
-  private[besom] def readOrRegisterResource[A](): Result[RawResourceResult]
-  private[besom] def registerResource[A](): Result[RawResourceResult]
-  private[besom] def readResource[A](): Result[RawResourceResult]
+  private[besom] def readOrRegisterResource[A](typ: NonEmptyString, name: NonEmptyString): Result[RawResourceResult]
+  private[besom] def registerResource[A](typ: NonEmptyString, name: NonEmptyString): Result[RawResourceResult]
+  private[besom] def readResource[A](typ: NonEmptyString, name: NonEmptyString): Result[RawResourceResult]
+
+  private[besom] def createResourceState(typ: NonEmptyString, name: NonEmptyString): Result[ResourceState]
 
   private[besom] def close: Result[Unit]
 }
@@ -99,9 +132,9 @@ object Context:
     _runInfo: RunInfo,
     _keepResources: Boolean,
     _keepOutputValues: Boolean,
-    monitor: Monitor,
-    engine: Engine,
-    workgroup: WorkGroup
+    _monitor: Monitor,
+    _engine: Engine,
+    _workgroup: WorkGroup
   ): Context =
     new Context:
       val projectName: NonEmptyString              = _runInfo.project
@@ -110,9 +143,9 @@ object Context:
       private[besom] val runInfo: RunInfo          = _runInfo
       private[besom] val keepResources: Boolean    = _keepResources
       private[besom] val keepOutputValues: Boolean = _keepOutputValues
-      private[besom] val monitor: Monitor          = monitor
-      private[besom] val engine: Engine            = engine
-      private[besom] val workgroup: WorkGroup      = workgroup
+      private[besom] val monitor: Monitor          = _monitor
+      private[besom] val engine: Engine            = _engine
+      private[besom] val workgroup: WorkGroup      = _workgroup
 
       override private[besom] def registerTask[A](fa: => Result[A]): Result[A] = workgroup.runInWorkGroup(fa)
 
@@ -124,9 +157,23 @@ object Context:
           _ <- engine.close()
         yield ()
 
-      override private[besom] def readOrRegisterResource[A](): Result[RawResourceResult] = ???
-      override private[besom] def registerResource[A](): Result[RawResourceResult]       = ???
-      override private[besom] def readResource[A](): Result[RawResourceResult]           = ???
+      override private[besom] def readOrRegisterResource[A](
+        typ: NonEmptyString,
+        name: NonEmptyString
+      ): Result[RawResourceResult] = ???
+      override private[besom] def registerResource[A](
+        typ: NonEmptyString,
+        name: NonEmptyString
+      ): Result[RawResourceResult] = ???
+      override private[besom] def readResource[A](
+        typ: NonEmptyString,
+        name: NonEmptyString
+      ): Result[RawResourceResult] = ???
+
+      override private[besom] def createResourceState(
+        typ: NonEmptyString,
+        name: NonEmptyString
+      ): Result[ResourceState] = ???
 
   def apply(
     runInfo: RunInfo,

@@ -2,25 +2,24 @@ package besom.internal
 
 import scala.concurrent.{Promise => stdPromise, *}, ExecutionContext.Implicits.global, duration.*
 import scala.util.Try
+import RunResult.*
 
-trait ResultSpec extends munit.FunSuite:
-
-  def run[A](result: Result[A]): A
+trait ResultSpec[F[+_]: RunResult] extends munit.FunSuite:
 
   test("left identity") {
     val a                        = 23
     val f: Int => Result[String] = i => Result(s"$i")
 
-    val lhs = run(Result.pure(a).flatMap(f))
-    val rhs = run(f(a))
+    val lhs = Result.pure(a).flatMap(f).unsafeRunSync()
+    val rhs = f(a).unsafeRunSync()
 
     assert(lhs == rhs)
   }
 
   test("right identity") {
     val m   = Result.pure(23)
-    val lhs = run(m.flatMap(Result(_)))
-    val rhs = run(m)
+    val lhs = m.flatMap(Result(_)).unsafeRunSync()
+    val rhs = m.unsafeRunSync()
 
     assert(lhs == rhs)
   }
@@ -30,8 +29,8 @@ trait ResultSpec extends munit.FunSuite:
     val f: Int => Result[String] = i => Result(s"$i")
     val g: String => Result[Int] = s => Result.evalTry(Try(s.toInt))
 
-    val lhs = run(m.flatMap(f).flatMap(g))
-    val rhs = run(m.flatMap(s => f(s).flatMap(g)))
+    val lhs = m.flatMap(f).flatMap(g).unsafeRunSync()
+    val rhs = m.flatMap(s => f(s).flatMap(g)).unsafeRunSync()
 
     assert(lhs == rhs)
   }
@@ -82,7 +81,7 @@ trait ResultSpec extends munit.FunSuite:
         _    <- fib2.join
       yield ()
 
-    run(program)
+    program.unsafeRunSync()
   }
 
   test("workgroup allows to wait until all tasks complete") {
@@ -106,7 +105,7 @@ trait ResultSpec extends munit.FunSuite:
         finalRes   <- ref.get
       yield (pendingRes, finalRes)
 
-    val (pending, finalResult) = run(program)
+    val (pending, finalResult) = program.unsafeRunSync()
 
     val expectedResult = (1 to 30).sum
 
@@ -129,7 +128,6 @@ trait ResultSpec extends munit.FunSuite:
 // TODO zip should be probably parallelised
 // TODO test cancellation doesn't break anything for product, fork etc
 // TODO test that forking never swallows errors (ZIO.die / fiber failure is caught mostly)
-// TODO test sleep delays effect for all effect types
 // TODO
 // TODO
 // TODO

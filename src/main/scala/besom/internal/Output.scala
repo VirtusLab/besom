@@ -1,6 +1,7 @@
 package besom.internal
 
 import scala.util.{NotGiven => Not}
+import besom.util.NotProvided
 
 /** Output is a wrapper for a monadic effect used to model async execution that allows Pulumi to track information about
   * dependencies between resources and properties of data (whether it's known or a secret for instance).
@@ -22,7 +23,7 @@ class Output[+A] private[internal] (using val ctx: Context)(private val dataResu
     Output(
       for
         outputData: OutputData[A]         <- dataResult
-        nested: OutputData[OutputData[B]] <- outputData.traverseM(a => f(a).getData)
+        nested: OutputData[OutputData[B]] <- outputData.traverseResult(a => f(a).getData)
       yield nested.flatten
     )
 
@@ -49,10 +50,6 @@ sealed trait IsOutputData[A]
 object IsOutputData:
   given [A](using A =:= OutputData[_]): IsOutputData[OutputData[_]] = null
 
-sealed trait IsFData[F[+_], A]
-object IsFData:
-  given [F[+_], A]: IsFData[F, F[A]] = null
-
 /** These factory methods should be the only way to create Output instances!
   */
 
@@ -77,23 +74,37 @@ object Output:
   def empty(using ctx: Context): Output[Nothing] =
     new Output(ctx.registerTask(Result.pure(OutputData.empty[Nothing]())))
 
-  def apply(using ctx: Context) = new PartiallyAppliedOutput
+  def apply[A](using ev: Not[IsOutputData[A]])(value: => Result[A])(using ctx: Context): Output[A] =
+    new Output[A](ctx.registerTask(OutputData.traverseResult(value)))
 
-  def secret[A](using ctx: Context)(value: A): Output[A] =
+  def apply[A](value: A)(using ev: Not[IsOutputData[A]])(using ctx: Context): Output[A] =
     new Output[A](ctx.registerTask(Result.pure(OutputData(value))))
 
-class PartiallyAppliedOutput(using ctx: Context):
-  def apply[A](using ev: Not[IsOutputData[A]])(value: => Result[A]): Output[A] =
-    new Output[A](ctx.registerTask(OutputData.traverseM(value)))
-
-  def apply[A](value: A)(using ev: Not[IsOutputData[A]]): Output[A] =
-    new Output[A](ctx.registerTask(Result.pure(OutputData(value))))
-
-  def apply[A](value: => Result[OutputData[A]]): Output[A] =
+  def apply[A](value: => Result[OutputData[A]])(using ctx: Context): Output[A] =
     new Output[A](ctx.registerTask((value)))
 
   def apply[A](data: OutputData[A])(using ctx: Context): Output[A] =
     new Output[A](ctx.registerTask(Result.pure(data)))
+
+  def secret[A](using ctx: Context)(value: A): Output[A] =
+    new Output[A](ctx.registerTask(Result.pure(OutputData(value))))
+
+  extension [A](v: A | Output[A] | NotProvided)
+    def asOutput(using ctx: Context): Output[A] =
+      v match
+        case NotProvided     => Output.empty
+        case out: Output[_]  => out.asInstanceOf[Output[A]] // TODO TypeTest?
+        case a: A @unchecked => Output(a)
+
+  extension [A](v: Map[String, A] | Map[String, Output[A]] | Output[Map[String, A]] | NotProvided)
+    def asOutputMap(using ctx: Context): Output[Map[String, A]] =
+      v match
+        case NotProvided    => Output.empty
+        case out: Output[_] => out.asInstanceOf[Output[Map[String, A]]] // TODO TypeTest?
+        case m: Map[_, _] @unchecked =>
+          if m.exists((_, v) => v.isInstanceOf[Output[_]]) then
+            Output.traverseMap(m.asInstanceOf[Map[String, Output[A]]])
+          else Output(m.asInstanceOf[Map[String, A]])
 
 // prototype, not really useful, sadly
 // object OutputLift extends OutputGiven0:

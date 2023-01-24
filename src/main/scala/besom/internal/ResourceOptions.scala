@@ -71,7 +71,7 @@ object CustomResourceOptions:
     deleteBeforeReplace: Boolean = false,
     additionalSecretOutputs: List[String] = List.empty,
     importId: String | NotProvided = NotProvided
-  ): ResourceOptions =
+  ): CustomResourceOptions =
     val common = CommonResourceOptionsImpl(
       id = id.asOption,
       parent = parent.asOption,
@@ -109,7 +109,7 @@ object ComponentResourceOptions:
     replaceOnChanges: List[String] = List.empty, // TODO?
     retainOnDelete: Boolean = false,
     pluginDownloadUrl: String | NotProvided = NotProvided
-  ): ResourceOptions =
+  ): ComponentResourceOptions =
     val common = CommonResourceOptionsImpl(
       id = id.asOption,
       parent = parent.asOption,

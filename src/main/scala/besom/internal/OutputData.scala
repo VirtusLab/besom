@@ -1,5 +1,7 @@
 package besom.internal
 
+import scala.collection.BuildFrom
+
 trait Resource
 
 enum OutputData[+A]:
@@ -70,11 +72,16 @@ enum OutputData[+A]:
       case Unknown(resources, _)      => Unknown(resources, isSecret)
       case Known(resources, _, value) => Known(resources, isSecret, value)
 
-  def traverseM[B](using ctx: Context)(f: A => Result[B]): Result[OutputData[B]] =
+  def traverseResult[B](using ctx: Context)(f: A => Result[B]): Result[OutputData[B]] =
     this match
       case u @ Unknown(_, _)                       => Result.pure(u)
       case k @ Known(resources, isSecret, None)    => Result.pure(k.asInstanceOf[OutputData[B]])
       case Known(resources, isSecret, Some(value)) => f(value).map(b => Known(resources, isSecret, Some(b)))
+
+  def isEmpty: Boolean =
+    this match
+      case Unknown(_, _)         => true
+      case Known(_, _, optValue) => optValue.isEmpty
 
 object OutputData:
   def unknown(isSecret: Boolean = false): OutputData[Nothing] = Unknown(Set.empty, isSecret)
@@ -88,5 +95,14 @@ object OutputData:
   def empty[A](resources: Set[Resource] = Set.empty, isSecret: Boolean = false): OutputData[A] =
     Known(resources, isSecret, None)
 
-  def traverseM[A](using ctx: Context)(value: => Result[A]): Result[OutputData[A]] =
-    empty[A]().traverseM(_ => value)
+  def traverseResult[A](using ctx: Context)(value: => Result[A]): Result[OutputData[A]] =
+    empty[A]().traverseResult(_ => value)
+
+  def sequence[A, CC[X] <: IterableOnce[X], To](
+    coll: CC[OutputData[A]]
+  )(using bf: BuildFrom[CC[OutputData[A]], A, To]): OutputData[To] =
+    coll.iterator
+      .foldLeft(OutputData(bf.newBuilder(coll))) { (acc, curr) =>
+        acc.zip(curr).map { case (b, r) => b += r }
+      }
+      .map(_.result())
