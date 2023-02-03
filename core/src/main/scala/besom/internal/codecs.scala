@@ -40,7 +40,7 @@ case class DecodingError(message: String, cause: Throwable = null) extends Excep
  *
  * [ ][ ] TODO: a better way than current Try/throw combo to traverse OutputData's lack of error channel
  * [✓][ ] TODO: Decoder[A] where A <: Product - derivation
- * [ ][ ] TODO: Decoder[Enum]
+ * [✓][ ] TODO: Decoder[Enum]
  * [ ][ ] TODO: Decoders for dependency resources (interesting problem, what about Context? shouldn't they use ResourceDecoder?)
  * [ ][ ] TODO: Decoder[Output[A]] (interesting problem, possibly unnecessary, what about Context?)
  * [ ][ ] TODO: Decoder[Asset]
@@ -326,7 +326,7 @@ object Decoder:
  * [✓][ ] TODO String
  * [✓][ ] TODO JsValue
  * [✓][ ] TODO *Args Product - derivation
- * [ ][ ] TODO Enums/ADTs - derivation
+ * [✓][ ] TODO Enums/ADTs - derivation
  * [✓][ ] TODO CustomResource
  * [✓][ ] TODO ComponentResource
  * [ ][ ] TODO Asset/Archive
@@ -350,9 +350,8 @@ object Encoder:
 
   def encoderSum[A](mirror: Mirror.SumOf[A], nameEncoderPairs: List[String -> Encoder[?]]): Encoder[A] =
     new Encoder[A]:
-      private val encoderMap = nameEncoderPairs.toMap
-      override def encode(a: A): Result[(Set[Resource], Value)] =
-        encoderMap(a.toString()).asInstanceOf[Encoder[A]].encode(a)
+      private val encoderMap                                    = nameEncoderPairs.toMap
+      override def encode(a: A): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> a.toString.asValue)
 
   def encoderProduct[A](nameEncoderPairs: List[String -> Encoder[?]]): Encoder[A] =
     new Encoder[A]:

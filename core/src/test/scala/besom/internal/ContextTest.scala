@@ -54,6 +54,7 @@ class ContextTest extends munit.FunSuite:
       TestEnum.`weird-test`
     )
 
-    println(res)
-    println(value)
+    assert(res.isEmpty)
+    assert(value.kind.isStringValue)
+    assert(value.getStringValue == "weird-test")
   }
