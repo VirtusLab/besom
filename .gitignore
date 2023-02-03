@@ -8,6 +8,10 @@
 *.iml
 target/
 .DS_Store
+*.tmp
+*.schema.json
+
+coverage/
 
 # generated sources, run `scala-cli run ./scripts -M proto -- all`
 src/main/scala/besom/rpc 
