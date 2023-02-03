@@ -20,8 +20,11 @@ class DecoderTest extends munit.FunSuite:
 
   test("decode enum") {
     val v = "A".asValue
-    // val d = summon[Decoder[TestEnum2]]
-    val d = Decoder.derived[TestEnum2]
+    val d = summon[Decoder[TestEnum2]]
 
-    println(d.decode(v))
+    d.decode(v) match
+      case Left(ex)                                      => throw ex
+      case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some(TestEnum2.A))
+      case Right(_)                                      => throw Exception("Unexpected unknown!")
+
   }

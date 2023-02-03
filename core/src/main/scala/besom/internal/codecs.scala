@@ -1,9 +1,9 @@
 package besom.internal
 
 import com.google.protobuf.struct.*, Value.Kind
+import besom.internal.ProtobufUtil.*
 import scala.util.*
 import besom.util.*
-import com.google.protobuf.StringValue
 
 object Constants:
   final val UnknownValue           = "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
@@ -89,7 +89,9 @@ object Decoder:
     new Decoder[A]:
       private val enumNameToDecoder = elems.toMap
       override def decode(value: Value): Either[DecodingError, OutputData[A]] =
-        if value.kind.isStringValue then enumNameToDecoder(value.getStringValue).asInstanceOf[Decoder[A]].decode(value)
+        println(s"decoding enum: $value, elems: $elems")
+        if value.kind.isStringValue then
+          enumNameToDecoder(value.getStringValue).asInstanceOf[Decoder[A]].decode(Map.empty.asValue)
         else errorLeft("Value was not a string, Enums should be serialized as strings")
 
       override def mapping(value: Value): A = ???
@@ -131,7 +133,7 @@ object Decoder:
 
       override def mapping(value: Value): A = ???
 
-  inline def derived[A](using m: Mirror.Of[A]): Decoder[A] =
+  inline given derived[A](using m: Mirror.Of[A]): Decoder[A] =
     lazy val labels           = CodecMacros.summonLabels[m.MirroredElemLabels]
     lazy val instances        = CodecMacros.summonDecoders[m.MirroredElemTypes]
     lazy val nameDecoderPairs = labels.zip(instances)
@@ -373,7 +375,7 @@ object Encoder:
                   (allResources ++ fieldResources) -> (props + (label -> value))
               }
 
-            resources -> Value(Kind.StructValue(Struct(labelsToValuesMap)))
+            resources -> labelsToValuesMap.asValue
           }
 
   inline given derived[A](using m: Mirror.Of[A]): Encoder[A] =
@@ -397,19 +399,13 @@ object Encoder:
                 if idValue.kind.isStringValue && idValue.getStringValue == UnknownValue then Value(Kind.StringValue(""))
                 else idValue
 
-              val result = Value(
-                Kind.StructValue(
-                  Struct(
-                    Map(
-                      SpecialSigKey -> Value(Kind.StringValue(SpecialResourceSig)),
-                      ResourceUrnName -> urnValue,
-                      ResourceIdName -> fixedIdValue
-                    )
-                  )
-                )
+              val result = Map(
+                SpecialSigKey -> Value(Kind.StringValue(SpecialResourceSig)),
+                ResourceUrnName -> urnValue,
+                ResourceIdName -> fixedIdValue
               )
 
-              Result.pure((idResources ++ urnResources) -> result)
+              Result.pure((idResources ++ urnResources) -> result.asValue)
             }
           else Result.pure(idResources -> idValue)
         }
@@ -422,50 +418,44 @@ object Encoder:
       def encode(a: A): Result[(Set[Resource], Value)] =
         outputStringEnc.encode(a.urn).flatMap { (urnResources, urnValue) =>
           if ctx.keepResources then
-            val result = Value(
-              Kind.StructValue(
-                Struct(
-                  Map(
-                    SpecialSigKey -> Value(Kind.StringValue(SpecialResourceSig)),
-                    ResourceUrnName -> urnValue
-                  )
-                )
-              )
+            val result = Map(
+              SpecialSigKey -> Value(Kind.StringValue(SpecialResourceSig)),
+              ResourceUrnName -> urnValue
             )
 
-            Result.pure(urnResources -> result)
+            Result.pure(urnResources -> result.asValue)
           else Result.pure(urnResources -> urnValue)
         }
 
   given Encoder[String] with
-    def encode(str: String): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> Value(Kind.StringValue(str)))
+    def encode(str: String): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> str.asValue)
 
   given Encoder[NonEmptyString] with
     def encode(nestr: NonEmptyString): Result[(Set[Resource], Value)] =
       Result.pure(Set.empty -> Value(Kind.StringValue(nestr.asString)))
 
   given Encoder[Int] with
-    def encode(int: Int): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> Value(Kind.NumberValue(int)))
+    def encode(int: Int): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> int.asValue)
 
   given Encoder[Double] with
-    def encode(dbl: Double): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> Value(Kind.NumberValue(dbl)))
+    def encode(dbl: Double): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> dbl.asValue)
 
   given Encoder[Value] with
     def encode(vl: Value): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> vl)
 
   given Encoder[Boolean] with
-    def encode(bool: Boolean): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> Value(Kind.BoolValue(bool)))
+    def encode(bool: Boolean): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> bool.asValue)
 
   given Encoder[JsValue] with
     def encodeInternal(json: JsValue): Value =
       json match
-        case JsObject(fields)  => Value(Kind.StructValue(Struct(fields.view.mapValues(encodeInternal(_)).toMap)))
-        case JsArray(elements) => Value(Kind.ListValue(ListValue(elements.map(encodeInternal(_)))))
-        case JsString(str)     => Value(Kind.StringValue(str))
-        case JsNumber(num)     => Value(Kind.NumberValue(num.toDouble)) // TODO unsafe but oh well
-        case JsTrue            => Value(Kind.BoolValue(true))
-        case JsFalse           => Value(Kind.BoolValue(false))
-        case JsNull            => Value(Kind.NullValue(NullValue.NULL_VALUE))
+        case JsObject(fields)  => fields.view.mapValues(encodeInternal(_)).toMap.asValue
+        case JsArray(elements) => elements.map(encodeInternal(_)).asValue
+        case JsString(str)     => str.asValue
+        case JsNumber(num)     => num.toDouble.asValue // TODO unsafe but oh well
+        case JsTrue            => true.asValue
+        case JsFalse           => false.asValue
+        case JsNull            => Null
 
     def encode(json: JsValue): Result[(Set[Resource], Value)] =
       Result.pure(Set.empty -> encodeInternal(json))
@@ -474,24 +464,24 @@ object Encoder:
     def encode(optA: Option[A]): Result[(Set[Resource], Value)] =
       optA match
         case Some(value) => inner.encode(value)
-        case None        => Result.pure(Set.empty -> Value(Kind.NullValue(NullValue.NULL_VALUE)))
+        case None        => Result.pure(Set.empty -> Null)
 
   // TODO pass keepResources from ctx
   given outputEncoder[A](using inner: Encoder[Option[A]]): Encoder[Output[A]] = new Encoder[Output[A]]:
     def encode(outA: Output[A]): Result[(Set[Resource], Value)] = outA.getData.flatMap { oda =>
       oda match
         case OutputData.Unknown(resources, isSecret) => // TODO Resource propagation
-          Result.pure(Set.empty -> Value(Kind.StringValue(UnknownValue))) // TODO Resource propagation
+          Result.pure(Set.empty -> UnknownValue.asValue) // TODO Resource propagation
 
         case OutputData.Known(resources, isSecret, maybeValue) => // TODO Resource propagation
           inner.encode(maybeValue).map { (innerResources, serializedValue) => // TODO Resource propagation
             if isSecret then
               val secretStruct = Map(
-                SpecialSigKey -> Value(Kind.StringValue(SpecialSecretSig)),
+                SpecialSigKey -> SpecialSecretSig.asValue,
                 SecretValueName -> serializedValue
               )
 
-              Set.empty -> Value(Kind.StructValue(Struct(secretStruct))) // TODO Resource propagation
+              Set.empty -> secretStruct.asValue // TODO Resource propagation
             else Set.empty -> serializedValue // TODO Resource propagation
           }
     }
@@ -503,9 +493,8 @@ object Encoder:
         .map { lst =>
           val (resources, values) = lst.unzip
           val joinedResources     = resources.foldLeft(Set.empty[Resource])(_ ++ _)
-          val listValue           = ListValue(values)
 
-          joinedResources -> Value(Kind.ListValue(listValue))
+          joinedResources -> values.asValue
         }
 
   // TODO is this ever necessary?
@@ -529,7 +518,7 @@ object Encoder:
               (allResources ++ resources) -> (map + (key -> value))
           }
 
-          resources -> Value((Kind.StructValue(Struct(map))))
+          resources -> map.asValue
         }
 
   // Support for Scala 3 Union Types or Tagged Unions vel Either below:
@@ -570,7 +559,7 @@ object Encoder:
 // ProviderArgsEncoder summoning JsonEncoder instances instead of Encoder (because all
 // of the fields in provider arguments are serialized to JSON strings)
 trait ArgsEncoder[A]:
-  def encode(a: A): Result[(Map[String, Set[Resource]], Value)]
+  def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Value)]
 
 object ArgsEncoder:
   import scala.deriving.Mirror
@@ -579,7 +568,7 @@ object ArgsEncoder:
     elems: List[String -> Encoder[?]]
   ): ArgsEncoder[A] =
     new ArgsEncoder[A]:
-      override def encode(a: A): Result[(Map[String, Set[Resource]], Value)] =
+      override def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Value)] =
         Result
           .sequence {
             a.asInstanceOf[Product]
@@ -595,10 +584,11 @@ object ArgsEncoder:
             val (mapOfResources, mapOfValues) =
               serializedMap.foldLeft[(Map[String, Set[Resource]], Map[String, Value])](Map.empty -> Map.empty) {
                 case ((mapOfResources, mapOfValues), (label, (resources, value))) =>
-                  (mapOfResources + (label -> resources), mapOfValues + (label -> value))
+                  if filterOut(label) then (mapOfResources, mapOfValues) // skip filtered
+                  else (mapOfResources + (label -> resources), mapOfValues + (label -> value))
               }
 
-            val struct = Value(Kind.StructValue(Struct(mapOfValues)))
+            val struct = mapOfValues.asValue
 
             mapOfResources -> struct
           }
@@ -611,7 +601,7 @@ object ArgsEncoder:
     argsEncoderProduct(nameEncoderPairs)
 
 trait ProviderArgsEncoder[A]:
-  def encode(a: A): Result[(Map[String, Set[Resource]], Value)]
+  def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Value)]
 
 object ProviderArgsEncoder:
   import scala.deriving.Mirror
@@ -620,7 +610,7 @@ object ProviderArgsEncoder:
     elems: List[String -> JsonEncoder[?]]
   ): ProviderArgsEncoder[A] =
     new ProviderArgsEncoder[A]:
-      override def encode(a: A): Result[(Map[String, Set[Resource]], Value)] =
+      override def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Value)] =
         Result
           .sequence {
             a.asInstanceOf[Product]
@@ -636,10 +626,11 @@ object ProviderArgsEncoder:
             val (mapOfResources, mapOfValues) =
               serializedMap.foldLeft[(Map[String, Set[Resource]], Map[String, Value])](Map.empty -> Map.empty) {
                 case ((mapOfResources, mapOfValues), (label, (resources, value))) =>
-                  (mapOfResources + (label -> resources), mapOfValues + (label -> value))
+                  if filterOut(label) then (mapOfResources, mapOfValues)
+                  else (mapOfResources + (label -> resources), mapOfValues + (label -> value))
               }
 
-            val struct = Value(Kind.StructValue(Struct(mapOfValues)))
+            val struct = mapOfValues.asValue
 
             mapOfResources -> struct
           }
@@ -662,9 +653,7 @@ object JsonEncoder:
       def encode(a: A): Result[(Set[Resource], Value)] = enc.encode(a).flatMap { case (resources, value) =>
         Result.evalEither(value.asJsonString).transform {
           case Left(ex) =>
-            Left(
-              RuntimeException("Encountered a malformed protobuf Value that could not be serialized to JSON", ex)
-            )
-          case Right(jsonString) => Right(resources -> Value(Kind.StringValue(jsonString)))
+            Left(Exception("Encountered a malformed protobuf Value that could not be serialized to JSON", ex))
+          case Right(jsonString) => Right(resources -> jsonString.asValue)
         }
       }

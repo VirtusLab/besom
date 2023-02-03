@@ -15,6 +15,12 @@ object ProtobufUtil:
 
   extension (d: Double) def asValue: Value = Value(Kind.NumberValue(d))
 
+  extension (b: Boolean) def asValue: Value = Value(Kind.BoolValue(b))
+
   extension (m: Map[String, Value]) def asValue: Value = Value(Kind.StructValue(Struct(m)))
 
   extension (l: List[Value]) def asValue: Value = Value(Kind.ListValue(ListValue(l)))
+
+  extension (v: Vector[Value]) def asValue: Value = Value(Kind.ListValue(ListValue(v)))
+
+  val Null: Value = Value(Kind.NullValue(NullValue.NULL_VALUE))

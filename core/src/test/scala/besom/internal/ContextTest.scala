@@ -24,10 +24,10 @@ class ContextTest extends munit.FunSuite:
   }
 
   def encodeProviderArgs[A: ProviderArgsEncoder](a: A): (Map[String, Set[Resource]], Value) =
-    summon[ProviderArgsEncoder[A]].encode(a).unsafeRunSync()
+    summon[ProviderArgsEncoder[A]].encode(a, filterOut = _ => false).unsafeRunSync()
 
   def encodeArgs[A: ArgsEncoder](a: A)(): (Map[String, Set[Resource]], Value) =
-    summon[ArgsEncoder[A]].encode(a).unsafeRunSync()
+    summon[ArgsEncoder[A]].encode(a, filterOut = _ => false).unsafeRunSync()
 
   def encode[A: Encoder](a: A): (Set[Resource], Value) =
     summon[Encoder[A]].encode(a).unsafeRunSync()
