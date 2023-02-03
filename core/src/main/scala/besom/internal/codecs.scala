@@ -87,11 +87,10 @@ object Decoder:
   // this is, effectively, Decoder[Enum]
   def decoderSum[A](s: Mirror.SumOf[A], elems: => List[String -> Decoder[?]]): Decoder[A] =
     new Decoder[A]:
-      private val enumNameToDecoder = elems.toMap
+      private val enumNameToDecoder                   = elems.toMap
+      private def getDecoder(key: String): Decoder[A] = enumNameToDecoder(key).asInstanceOf[Decoder[A]]
       override def decode(value: Value): Either[DecodingError, OutputData[A]] =
-        println(s"decoding enum: $value, elems: $elems")
-        if value.kind.isStringValue then
-          enumNameToDecoder(value.getStringValue).asInstanceOf[Decoder[A]].decode(Map.empty.asValue)
+        if value.kind.isStringValue then getDecoder(value.getStringValue).decode(Map.empty.asValue)
         else errorLeft("Value was not a string, Enums should be serialized as strings")
 
       override def mapping(value: Value): A = ???
