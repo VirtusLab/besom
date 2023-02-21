@@ -11,7 +11,7 @@ object Test {
     val destinationDir = new File("./.codegen-out")
     destinationDir.delete()
 
-    val k8sPackage = PulumiPackage.fromFile(filePath)
+    val k8sPackage = metaschema.PulumiPackage.fromFile(filePath)
 
     CodeGen.sourcesFromPulumiPackage(k8sPackage).foreach { sourceFile =>
       val absolutePath = destinationDir.toPath.resolve(sourceFile.relativePath).toAbsolutePath.normalize

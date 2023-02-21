@@ -1,5 +1,9 @@
 //> using scala "3.2.0"
 
+//> using publish.organization "org.virtuslab"
+//> using publish.name "besom-core"
+//> using publish.version "0.0.1-SNAPSHOT"
+
 //> using lib "org.scalameta::munit::1.0.0-M1"
 
 //> using lib "com.lihaoyi::sourcecode:0.3.0"
