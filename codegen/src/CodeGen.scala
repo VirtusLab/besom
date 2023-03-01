@@ -25,12 +25,23 @@ object CodeGen {
 
   private[codegen] case class TypeTokenStruct(providerName: String, packageSuffix: String, typeName: String)
 
-  class TypeMapper(moduleToPackage: String => String, enumTypeTokens: Set[String], moduleFormat: Regex) {
+  class TypeMapper(
+    moduleToPackage: String => String,
+    enumTypeTokens: Set[String],
+    objectTypeTokens: Set[String],
+    resourceTypeTokens: Set[String],
+    moduleFormat: Regex
+  ) {
     def parseTypeToken(typeToken: String): TypeTokenStruct = {
       val Array(providerName, modulePortion, typeName) = typeToken.split(":")
-      val moduleName = moduleFormat.findFirstIn(modulePortion).get
-      val packageSuffix = moduleToPackage(moduleName)
-      TypeTokenStruct(providerName = providerName, packageSuffix = packageSuffix, typeName = typeName)
+      val moduleName = modulePortion match {
+        case moduleFormat(name) => name
+      }
+      TypeTokenStruct(
+        providerName = moduleToPackage(providerName),
+        packageSuffix = moduleToPackage(moduleName),
+        typeName = typeName
+      )
     }
 
     def asScalaType(typeRef: TypeReference, asArgsType: Boolean = false): Type = typeRef match {
@@ -54,23 +65,37 @@ object CodeGen {
             t"besom.types.PulumiJson"
 
           case typeUri =>
-            // Example URI:
-            // #/types/kubernetes:rbac.authorization.k8s.io%2Fv1beta1:Subject
+            // Example URIs:
             // "/provider/vX.Y.Z/schema.json#/types/pulumi:type:token"
+            // #/types/kubernetes:rbac.authorization.k8s.io%2Fv1beta1:Subject
+            // "aws:iam/documents:PolicyDocument"
 
-            val Array(fileUri, typePath) = typeUri.split("#")
+            val (fileUri, typePath) = typeUri.split("#") match {
+              case Array(typePath) => ("", typePath)
+              case Array(fileUri, typePath) => (fileUri, typePath)
+              case _ => throw new Exception(s"Unexpected type URI format: ${typeUri}") 
+            }
 
             assert(fileUri == "", s"Invalid type URI: $typeUri - referencing other schemas is not supported")
 
-            val escapedTypeToken = typePath match {
-              case s"/types/${token}" => token
-              case s"/resources/${token}" => token
+            val (escapedTypeToken, isResource) = typePath match {
+              case s"/types/${token}" => (token, false)
+              case s"/resources/${token}" => (token, true)
+              case _ =>
+                //  TODO does typePath need URL escaping in this case too?
+                if (objectTypeTokens.contains(typePath) || enumTypeTokens.contains(typePath))
+                  (typePath, false)
+                else if (resourceTypeTokens.contains(typePath))
+                  (typePath, true)
+                else
+                  return asScalaType(namedType.`type`.get, asArgsType = asArgsType)
             }
             val typeToken = escapedTypeToken.replace("%2F", "/") // TODO: Proper URL unescaping ?
             val typeTokenStruct = parseTypeToken(typeToken)
-            val typeNameSuffix = if (enumTypeTokens.contains(typeToken)) "Args" else ""
+            val typeNameSuffix = if (asArgsType && !enumTypeTokens.contains(typeToken)) "Args" else ""
             val typeName = s"${typeTokenStruct.typeName}${typeNameSuffix}"
-            val packageParts = basePackage.split("\\.") ++ Seq(typeTokenStruct.providerName) ++ typeTokenStruct.packageSuffix.split("\\.")
+            val resourcePackagePart = if (isResource) Seq("resources") else Seq.empty
+            val packageParts = basePackage.split("\\.") ++ Seq(typeTokenStruct.providerName) ++ typeTokenStruct.packageSuffix.split("\\.") ++ resourcePackagePart
             val packageRef = packageParts.toList.foldLeft[Term.Ref](q"_root_")((acc, name) => Term.Select(acc, Term.Name(name)))
 
             t"${packageRef}.${Type.Name(typeName)}"
@@ -84,13 +109,23 @@ object CodeGen {
   }
 
   def sourcesFromPulumiPackage(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
-    val enumTypeTokens = pulumiPackage.types.collect { case (typeToken, _: EnumTypeDefinition) =>
-      typeToken  
-    }.toSet
+    val enumTypeTokensBuffer = collection.mutable.ListBuffer.empty[String]
+    val objectTypeTokensBuffer = collection.mutable.ListBuffer.empty[String]
+    
+    pulumiPackage.types.foreach {
+      case (typeToken, _: EnumTypeDefinition) => enumTypeTokensBuffer += typeToken  
+      case (typeToken, _: ObjectTypeDefinition) => objectTypeTokensBuffer += typeToken  
+    }
+
+    val enumTypeTokens = enumTypeTokensBuffer.toSet
+    val objectTypeTokens = objectTypeTokensBuffer.toSet
+    val resourceTypeTokens = pulumiPackage.resources.keySet
 
     implicit val typeMapper: TypeMapper = new TypeMapper(
       moduleToPackage = pulumiPackage.language.java.packages.withDefault(x => x),
       enumTypeTokens = enumTypeTokens,
+      objectTypeTokens = objectTypeTokens,
+      resourceTypeTokens = resourceTypeTokens,
       moduleFormat = pulumiPackage.meta.moduleFormat.r
     )
 
@@ -106,6 +141,10 @@ object CodeGen {
     val fileContent =
       s"""|//> using scala "3.2.2"
           |//> using lib "org.virtuslab::besom-core:0.0.1-SNAPSHOT"
+          |
+          |//> using publish.organization "org.virtuslab"
+          |//> using publish.name "besom-kubernetes"
+          |//> using publish.version "0.0.1-SNAPSHOT"
           |""".stripMargin
 
     val pathParts = basePackage.split("\\.") ++ Seq(providerName, "project.scala")
@@ -115,13 +154,16 @@ object CodeGen {
   }
 
   def sourceFileFromPulumiProvider(pulumiPackage: PulumiPackage)(implicit typeMapper: TypeMapper): SourceFile = {
+    val asPackageName = pulumiPackage.language.java.packages.withDefault(x => x)
+
     val providerName = pulumiPackage.name
-    val pathPrefixParts = basePackage.split("\\.") ++ Seq(providerName)
+    val providerPackageSuffix = asPackageName(providerName)
+    val pathPrefixParts = basePackage.split("\\.") ++ Seq(providerPackageSuffix, "resources")
     val filePathPrefix = Paths.get(pathPrefixParts.head, pathPrefixParts.tail.toArray: _*)
     sourceFileForResource(
       resourceName = "Provider",
       resourceDefinition = pulumiPackage.provider,
-      fullPackageName = s"${basePackage}.${providerName}",
+      fullPackageName = s"${basePackage}.${providerPackageSuffix}",
       filePathPrefix = filePathPrefix,
       isProvider = true
     )
@@ -129,18 +171,22 @@ object CodeGen {
 
 
   def sourceFilesForNonResourceTypes(pulumiPackage: PulumiPackage)(implicit typeMapper: TypeMapper): Seq[SourceFile] = {
-    val packageMappings = pulumiPackage.language.java.packages
-
+    val asPackageName = pulumiPackage.language.java.packages.withDefault(x => x)
+    
     pulumiPackage.types.collect { case (typeToken, typeDefinition) =>
       val typeTokenStruct = typeMapper.parseTypeToken(typeToken)
       val providerName = typeTokenStruct.providerName
       val packageSuffix = typeTokenStruct.packageSuffix
       val typeName = typeTokenStruct.typeName
 
-      val pathParts = basePackage.split("\\.") ++ Seq(providerName) ++ packageSuffix.split("\\.") ++ Seq(s"${typeName}.scala")
+      val providerPackageSuffix = asPackageName(providerName)
+
+      val pathParts = basePackage.split("\\.") ++ Seq(providerPackageSuffix) ++ packageSuffix.split("\\.") ++ Seq(s"${typeName}.scala")
       val filePath = Paths.get(pathParts.head, pathParts.tail.toArray: _*)
 
-      val packageDecl = s"package ${basePackage}.${providerName}.${packageSuffix}"
+
+
+      val packageDecl = s"package ${basePackage}.${providerPackageSuffix}.${packageSuffix}"
       val specificFileContent = typeDefinition match {
         case enumDef: EnumTypeDefinition => sourceForEnum(enumName = typeName, enumDefinition = enumDef)
         case objectDef: ObjectTypeDefinition => sourceForObjectType(typeName = typeName, objectTypeDefinition = objectDef)
@@ -152,8 +198,17 @@ object CodeGen {
   }
 
   def sourceForEnum(enumName: String, enumDefinition: EnumTypeDefinition): String = {
-    val importedIdentifiers = Seq.empty
+    val importedIdentifiers = Seq(
+      "besom.internal.Decoder"
+    )
     val imports = importedIdentifiers.map(id => s"import $id").mkString("\n")
+
+    val superclass = enumDefinition.`type` match {
+      case BooleanType => "besom.internal.BooleanEnum"
+      case IntegerType => "besom.internal.IntegerEnum"
+      case NumberType => "besom.internal.NumberEnum"
+      case StringType => "besom.internal.StringEnum"
+    }
 
     val enumCases = enumDefinition.`enum`.map { valueDefinition =>
       val caseRawName = valueDefinition.name.getOrElse(valueDefinition.value)
@@ -164,7 +219,7 @@ object CodeGen {
     val fileContent =
       s"""|${imports}
           |
-          |enum ${enumName}:
+          |enum ${enumName} extends ${superclass} derives Decoder:
           |${enumCases.map(arg => s"  ${arg}").mkString("\n")}
           |""".stripMargin
 
@@ -244,6 +299,8 @@ object CodeGen {
   }
 
   def sourceFilesForCustomResources(pulumiPackage: PulumiPackage)(implicit typeMapper: TypeMapper): Seq[SourceFile] = {
+    val asPackageName = pulumiPackage.language.java.packages.withDefault(x => x)
+
     pulumiPackage.resources.collect { case (typeToken, resourceDefinition) if !resourceDefinition.isOverlay =>
       
       val typeTokenStruct = typeMapper.parseTypeToken(typeToken)
@@ -252,8 +309,10 @@ object CodeGen {
       val packageSuffix = typeTokenStruct.packageSuffix
       val resourceName = typeTokenStruct.typeName
 
-      val fullPackageName = s"${basePackage}.${providerName}.${packageSuffix}"
-      val pathPrefixParts = basePackage.split("\\.") ++ Seq(providerName) ++ packageSuffix.split("\\.")
+      val providerPackageSuffix = asPackageName(providerName)
+
+      val fullPackageName = s"${basePackage}.${providerPackageSuffix}.${packageSuffix}.resources"
+      val pathPrefixParts = basePackage.split("\\.") ++ Seq(providerPackageSuffix) ++ packageSuffix.split("\\.") ++ Seq("resources") // TODO
     
       val filePathPrefix = Paths.get(pathPrefixParts.head, pathPrefixParts.tail.toArray: _*)
       
@@ -429,3 +488,7 @@ case class SourceFile(
   relativePath: Path,
   sourceCode: String
 )
+
+
+// TODOs:
+// * Can providerPackageSuffix be multipart with doty inside?

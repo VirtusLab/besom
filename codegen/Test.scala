@@ -6,9 +6,10 @@ import java.nio.file.Files
 
 object Test {
   def main(args: Array[String]): Unit = {
-    val filePath = "/tmp/k8s.json"
+    val packageName = "k8s"
+    val filePath = s"/tmp/${packageName}.json"
     val packagePrefix = "besom.api"
-    val destinationDir = new File("./.codegen-out")
+    val destinationDir = new File(s"./.out/codegen/${packageName}")
     destinationDir.delete()
 
     val k8sPackage = metaschema.PulumiPackage.fromFile(filePath)

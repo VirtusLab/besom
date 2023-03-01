@@ -35,7 +35,7 @@ object ResourceDefinition {
   implicit val reader: Reader[ResourceDefinition] = macroR 
 }
 
-case class Language(java: Java)
+case class Language(java: Java = Java(packages = Map.empty))
 object Language {
   implicit val reader: Reader[Language] = macroR 
 }
@@ -60,11 +60,18 @@ trait ObjectTypeDetails {
   def required: List[String]
 }
 
+case class Discriminator(propertyName: String, mapping: Map[String, String] = Map.empty)
+
+object Discriminator {
+  implicit val reader: Reader[Discriminator] = macroR
+}
+
 trait TypeReferenceProtoLike {
   def `type`: Option[String]
   def additionalProperties: Option[TypeReference]
   def items: Option[TypeReference]
   def oneOf: List[TypeReference]
+  def discriminator: Option[Discriminator]
   @fieldKey("$ref")
   def ref: Option[String]
 
@@ -74,7 +81,9 @@ trait TypeReferenceProtoLike {
       UnionType(oneOf = oneOf, `type` = primitiveType)
     } else {
       ref match {
-        case Some(typeUri) => NamedType(typeUri = typeUri)
+        case Some(typeUri) =>
+          val primitiveType = `type`.map(PrimitiveType.fromString)
+          NamedType(typeUri = typeUri, `type` = primitiveType)
         case None =>
           `type`.map {
             case "string" => StringType
@@ -96,6 +105,7 @@ case class TypeReferenceProto(
   additionalProperties: Option[TypeReference] = None,
   items: Option[TypeReference] = None,
   oneOf: List[TypeReference] = Nil,
+  discriminator: Option[Discriminator] = None,
   @fieldKey("$ref") ref: Option[String] = None
 ) extends TypeReferenceProtoLike
 object TypeReferenceProto {
@@ -130,13 +140,14 @@ case class ArrayType(items: TypeReference) extends TypeReference
 case class MapType(additionalProperties: TypeReference) extends TypeReference
 case class UnionType(oneOf: List[TypeReference], `type`: Option[PrimitiveType]) extends TypeReference
 
-case class NamedType(typeUri: String) extends TypeReference
+case class NamedType(typeUri: String, `type`: Option[PrimitiveType]) extends TypeReference
 
 case class PropertyDefinitionProto(
   `type`: Option[String] = None,
   additionalProperties: Option[TypeReference] = None,
   items: Option[TypeReference] = None,
   oneOf: List[TypeReference] = Nil,
+  discriminator: Option[Discriminator] = None,
   @fieldKey("$ref") ref: Option[String] = None,
 
   /* const, default, defaultInfo */
