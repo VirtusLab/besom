@@ -12,8 +12,6 @@
 //> using lib "com.thesamet.scalapb::scalapb-runtime-grpc:0.11.10"
 //> using lib "io.spray::spray-json:1.3.6"
 
-//> using lib "io.github.classgraph:classgraph:4.8.146" // FOR BOOTSTRAP ONLY, DON'T HATE ME
-
 //#> using options "-Xmax-inlines:64"
 
 //#> using options "-coverage-out:coverage"

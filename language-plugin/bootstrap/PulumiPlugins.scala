@@ -1,16 +1,19 @@
-package com.pulumi.bootstrap.internal
+package besom.bootstrap
 
 import scala.util.Using
+import scala.jdk.CollectionConverters.*
 import io.github.classgraph.ClassGraph
-import io.github.classgraph.Resource
-import spray.json._
+import spray.json.*
 
-object PulumiPlugins:
-  import scala.jdk.CollectionConverters._
+object PulumiPluginsDiscoverer:
+  def main(args: Array[String]): Unit =
+    val foundPlugins = pluginsFromClasspath
+    print(JsArray(foundPlugins.values.toVector).compactPrint)
 
-  final private val PluginRegex = "^(com/pulumi/(.+))/plugin.json$".r
+  
+  private val PluginRegex = "^(com/pulumi/(.+))/plugin.json$".r
 
-  def fromClasspath: Map[String, JsValue] =
+  private def pluginsFromClasspath: Map[String, JsValue] =
     Using.resource(startClasspathScan) { scanResult =>
       scanResult.getAllResources.asScala.flatMap { resource =>
         resource.getPath match
