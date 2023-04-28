@@ -34,6 +34,8 @@ type ScalaExecutorOptions struct {
 	// Current working directory. Abstract to enable testing.
 	WD fsys.ParentFS
 
+	// The absolute path to the bootstrap library jar
+	// which should be shipped together with the main language host binary
 	BootstrapLibJarPath string
 
 	// The value of `runtime.options.binary` setting from
