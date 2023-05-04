@@ -75,6 +75,6 @@ run-language-plugin-tests:
 test-language-plugin: build-language-plugin run-language-plugin-tests
 
 # Installs the scala language plugin locally
-install-language-plugin: build-bootstrap build-language-host
+install-language-plugin: build-language-plugin
 	pulumi plugin rm language scala
 	pulumi plugin install language scala {{publish-version}} --file {{language-plugin-output-dir}}

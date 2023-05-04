@@ -32,6 +32,20 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
 
     assert(clue(pulumiUpOutput).contains(expectedError))
 
+    val aboutInfoLines = os.proc("pulumi", "about").call(cwd = executorDir, env = env).out.lines()
+    val pluginsInfo = aboutInfoLines
+      .dropWhile(_ != "Plugins") // Find the plugins section
+      .drop(2) // Drop headers
+      .takeWhile(_.nonEmpty) // Empty line separates sections
+      .map { line =>
+        val lineParts = line.split("""\s+""") // Parse each plugin line splitting on whitespace
+        lineParts(0) -> lineParts(1) // plugin name -> plugin version
+      }
+      .toMap
+
+    val expectedPluginsInfo = Map("scala" -> "unknown", "random" -> "4.3.1")
+
+    assert(clue(pluginsInfo) == expectedPluginsInfo)
   
   override def beforeAll() =
     publishLocalCustomResourcePlugin()
