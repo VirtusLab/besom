@@ -25,7 +25,7 @@ func (s scalacli) NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, e
 func (scalacli) newScalaCliExecutor(cmd string, bootstrapLibJarPath string) (*ScalaExecutor, error) {
 	return &ScalaExecutor{
 		Cmd:        cmd,
-		BuildArgs:  []string{"build", "."},
+		BuildArgs:  []string{"compile", "."},
 		RunArgs:    []string{"run", "."},
 		PluginArgs: []string{"run", ".", "--jar", bootstrapLibJarPath, "--main-class", "besom.bootstrap.PulumiPluginsDiscoverer"},
 	}, nil
