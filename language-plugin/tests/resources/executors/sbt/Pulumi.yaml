@@ -1,0 +1,4 @@
+name: language-plugin-test
+description: sbt executor test
+runtime:
+  name: scala
