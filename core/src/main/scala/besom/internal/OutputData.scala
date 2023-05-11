@@ -60,6 +60,9 @@ enum OutputData[+A]:
       case (_, _) =>
         Unknown(combinedResources, combinedSecret)
 
+  def withDependencies(resources: Set[Resource]): OutputData[A] = 
+     resources.foldLeft(this)((acc, curr) => acc.withDependency(curr))
+
   def withDependency(resource: Resource): OutputData[A] =
     this match
       case Unknown(resources, isSecret)      => Unknown(resources + resource, isSecret)

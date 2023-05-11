@@ -28,6 +28,7 @@ object WorkGroup:
       override def waitForAll: Result[Unit] = Result.defer(semaphore.acquire(Int.MaxValue)).void
   }
 
+// TODO: implementations of Promise for CE and ZIO?
 trait Promise[A]:
   def get: Result[A]
   def fulfill(a: A): Result[Unit]
