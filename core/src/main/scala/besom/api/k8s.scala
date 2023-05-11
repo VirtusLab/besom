@@ -446,9 +446,132 @@ object k8s:
   ) extends CustomResource
       derives ResourceDecoder
 
+  object Pod:
+    import com.google.protobuf.struct.Value
+
+    given ResourceDecoder[Pod] with
+      def makeResolver(using Context): Result[(Pod, ResourceResolver[Pod])] =
+        Promise[OutputData[String]] zip
+          Promise[OutputData[String]] zip
+          Promise[OutputData[Option[String]]] zip
+          Promise[OutputData[Option[String]]] zip
+          Promise[OutputData[Option[ObjectMeta]]] zip
+          Promise[OutputData[Option[PodSpec]]] zip
+          Promise[OutputData[Option[PodStatus]]] map { 
+            case (urnPromise, idPromise, apiVersionPromise, kindPromise, metadataPromise, specPromise, statusPromise) =>
+              val resource = Pod(
+                urn = Output(urnPromise.get),
+                id = Output(idPromise.get),
+                apiVersion = Output(apiVersionPromise.get),
+                kind = Output(kindPromise.get),
+                metadata = Output(metadataPromise.get),
+                spec = Output(specPromise.get),
+                status = Output(statusPromise.get)
+              )
+
+              def failAllPromises(err: Throwable): Result[Unit] =
+                for
+                  _ <- urnPromise.fail(err)
+                  _ <- idPromise.fail(err)
+                  _ <- apiVersionPromise.fail(err)
+                  _ <- kindPromise.fail(err)
+                  _ <- metadataPromise.fail(err)
+                  _ <- specPromise.fail(err)
+                  _ <- statusPromise.fail(err)
+                  _ <- Result.fail(err) // todo validate that resolve also bubbles up errors in other sdks
+                yield ()
+
+              val fulfillable = new ResourceResolver[Pod]:
+                def resolve(errorOrResourceResult: Either[Throwable, RawResourceResult])(using ctx: Context): Result[Unit] =
+                  errorOrResourceResult match
+                    case Left(err) => failAllPromises(err)
+
+                    case Right(rawResourceResult) =>
+                      val apiVersionDecoder = summon[Decoder[Option[String]]]
+                      val kindDecoder = summon[Decoder[Option[String]]]
+                      val metadataDecoder = summon[Decoder[Option[ObjectMeta]]]
+                      // val specDecoder = summon[Decoder[Option[PodSpec]]] // fails to compile
+                      val statusDecoder = summon[Decoder[Option[PodStatus]]]
+
+                      val urnOutputData = OutputData(rawResourceResult.urn).withDependency(resource)
+
+                      val idOutputData = rawResourceResult.id.map(OutputData(_).withDependency(resource)).getOrElse {
+                        OutputData.unknown().withDependency(resource)
+                      }
+
+                      val fields = rawResourceResult.data.fields
+
+                      try 
+                        val apiVersionOutputData = fields.get("apiVersion").map { value =>
+                          apiVersionDecoder.decode(value).map(_.withDependency(resource)) match
+                            case Left(err) => throw err 
+                            case Right(value) => value
+                        }.getOrElse {
+                          if ctx.isDryRun then OutputData.unknown().withDependency(resource) 
+                          else OutputData.empty(Set(resource))
+                        }
+
+                        val kindOutputData = fields.get("kind").map { value =>
+                          kindDecoder.decode(value).map(_.withDependency(resource)) match
+                            case Left(err) => throw err 
+                            case Right(value) => value
+                        }.getOrElse {
+                          if ctx.isDryRun then OutputData.unknown().withDependency(resource) 
+                          else OutputData.empty(Set(resource))
+                        }
+
+                        val metadataOutputData = fields.get("metadata").map { value =>
+                          metadataDecoder.decode(value).map(_.withDependency(resource)) match
+                            case Left(err) => throw err 
+                            case Right(value) => value
+                        }.getOrElse {
+                          if ctx.isDryRun then OutputData.unknown().withDependency(resource) 
+                          else OutputData.empty(Set(resource))
+                        }
+
+                        val specOutputData = fields.get("spec").map { value =>
+                          // specDecoder.decode(value).map(_.withDependency(resource)) match
+                          //   case Left(err) => throw err 
+                          //   case Right(value) => value
+                          OutputData.unknown().withDependency(resource) // TODO FIX
+                        }.getOrElse {
+                          if ctx.isDryRun then OutputData.unknown().withDependency(resource) 
+                          else OutputData.empty(Set(resource))
+                        }
+
+                        val statusOutputData = fields.get("status").map { value =>
+                          statusDecoder.decode(value).map(_.withDependency(resource)) match
+                            case Left(err) => throw err 
+                            case Right(value) => value
+                        }.getOrElse {
+                          if ctx.isDryRun then OutputData.unknown().withDependency(resource) 
+                          else OutputData.empty(Set(resource))
+                        }
+
+                        for
+                          urn <- urnPromise.fulfill(urnOutputData)
+                          id <- idPromise.fulfill(idOutputData)
+                          apiVersion <- apiVersionPromise.fulfill(apiVersionOutputData)
+                          kind <- kindPromise.fulfill(kindOutputData)
+                          metadata <- metadataPromise.fulfill(metadataOutputData)
+                          spec <- specPromise.fulfill(specOutputData)
+                          status <- statusPromise.fulfill(statusOutputData)
+                        yield ()
+                      catch 
+                        case err: DecodingError => failAllPromises(err)                      
+              
+              (resource, fulfillable)
+          }
+
   def pod(using
     ctx: Context
-  )(name: String, args: PodArgs, opts: CustomResourceOptions = CustomResourceOptions()): Output[Pod] = ???
+  )(name: String, args: PodArgs, opts: CustomResourceOptions = CustomResourceOptions()): Output[Pod] = 
+
+    // ctx.readOrRegisterResource[Pod](name, typ, args, opts)
+    // val (pod, fulfillableForThisPod) = summon[ResourceDecoder[Pod]].makeFulfillable
+
+    // Output(pod)
+    ???
 
   case class Provider(
     urn: Output[String],
@@ -463,7 +586,8 @@ object k8s:
     args: ProviderArgs,
     options: CustomResourceOptions = CustomResourceOptions()
   ): Output[Provider] =
-    ctx.registerProvider("kubernetes", name, args, options)
+    summon[ProviderArgsEncoder[ProviderArgs]]
+    ctx.registerProvider("pulumi:providers:kubernetes", name, args, options)
 
   case class ProviderArgs(`type`: Output[String], metadata: Output[ObjectMetaArgs]) derives ProviderArgsEncoder
 
@@ -471,7 +595,8 @@ object k8s:
     urn: Output[NonEmptyString],
     id: Output[NonEmptyString],
     metadata: Output[ObjectMeta]
-  ) derives ResourceDecoder
+  ) extends CustomResource
+      derives ResourceDecoder
 
   // def deployment(using
   //   ctx: Context

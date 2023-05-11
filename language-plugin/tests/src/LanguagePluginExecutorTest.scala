@@ -3,7 +3,7 @@
 
 //> using dep "org.scalameta::munit::0.7.29"
 //> using lib "com.lihaoyi::sourcecode:0.3.0"
-
+//> using options "-java-output-version:8"
 
 class LanguagePluginExecutorTest extends munit.FunSuite {
   val resourcesDir = os.Path(sourcecode.File()) / os.up / os.up / "resources"

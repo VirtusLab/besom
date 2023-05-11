@@ -2,7 +2,7 @@ package besom
 
 import scala.concurrent.*, ExecutionContext.Implicits.global
 import besom.util.Protocol
-import besom.internal.CustomResourceOptions
+import besom.internal.{CustomResourceOptions, CustomResource}
 
 // @main
 def main(): Unit = Pulumi.run {
@@ -10,7 +10,8 @@ def main(): Unit = Pulumi.run {
   import besom.api.k8s, k8s.*
   import besom.internal.{Context, ResourceDecoder, Output}
 
-  case class IncomingPhoneNumber(smsUrl: Output[String]) derives ResourceDecoder
+  case class IncomingPhoneNumber(urn: Output[String], id: Output[String], smsUrl: Output[String]) extends CustomResource
+      derives ResourceDecoder
 
   val labels = Map("app" -> "nginx")
 

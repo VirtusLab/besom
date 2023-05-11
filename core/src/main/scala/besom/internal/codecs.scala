@@ -445,6 +445,7 @@ object Encoder:
     def encode(bool: Boolean): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> bool.asValue)
 
   given Encoder[JsValue] with
+    // TODO not stack-safe
     def encodeInternal(json: JsValue): Value =
       json match
         case JsObject(fields)  => fields.view.mapValues(encodeInternal(_)).toMap.asValue

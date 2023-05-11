@@ -1,23 +1,25 @@
 package besom.internal
 
 import besom.util.*
-import com.google.protobuf.*
+import com.google.protobuf.struct.Struct
 import pulumirpc.resource.SupportsFeatureRequest
+import besom.util.Types.ProviderType
+import io.grpc.internal.DnsNameResolver.ResourceResolver
 
-case class RawResourceResult(urn: String, id: String, data: Struct, dependencies: Map[String, Set[Resource]])
+case class RawResourceResult(urn: String, id: Option[String], data: Struct, dependencies: Map[String, Set[Resource]])
 
 case class Stack()
 
-trait Fulfillable[A]:
-  def tryFulfill(value: Value): Result[Unit]
+trait ResourceResolver[A]:
+  def resolve(errorOrResourceResult: Either[Throwable, RawResourceResult])(using Context): Result[Unit]
 
-trait ResourceDecoder[A]:
-  def makeFulfillable(using Context): (A, Fulfillable[A])
+trait ResourceDecoder[A <: Resource]: // TODO rename to something more sensible
+  def makeResolver(using Context): Result[(A, ResourceResolver[A])]
 
 object ResourceDecoder:
-  inline def derived[A]: ResourceDecoder[A] =
+  inline def derived[A <: Resource]: ResourceDecoder[A] =
     new ResourceDecoder[A]:
-      def makeFulfillable(using Context): (A, Fulfillable[A]) = ???
+      def makeResolver(using Context): Result[(A, ResourceResolver[A])] = ???
 
 // type ResourceState struct {
 // 	m sync.RWMutex
@@ -38,10 +40,10 @@ object ResourceDecoder:
 // }
 
 sealed trait ResourceState:
-  def urn: Output[String]
-  def rawOutputs: Output[_]
+  def urn: Output[String] // TODO BALEET, URN is in custom resource anyway
+  def rawOutputs: Output[_] // TODO BALEET this is for StackReference only and is a hack used by pulumi-go, we'll use the non-hacky way from pulumi-java
   def children: Set[Resource]
-  def providers: Map[String, ProviderResource]
+  def providers: Map[String, ProviderResource] // TODO: Move to ComponentResourceState
   def provider: ProviderResource
   def version: String
   def pluginDownloadURL: String
@@ -51,8 +53,8 @@ sealed trait ResourceState:
   def remoteComponent: Boolean
 
 case class CommonResourceState(
-  urn: Output[String],
-  rawOutputs: Output[_],
+  urn: Output[String], // TODO BALEET, URN is in custom resource anyway
+  rawOutputs: Output[_], // TODO BALEET this is for StackReference only and is a hack used by pulumi-go, we'll use the non-hacky way from pulumi-java
   children: Set[Resource],
   providers: Map[String, ProviderResource],
   provider: ProviderResource,
@@ -70,13 +72,17 @@ case class CustomResourceState(
 ) extends ResourceState:
   export common.*
 
+case class ComponentResourceState(
+)
+
 case class ProviderResourceState(
   custom: CustomResourceState,
   pkg: String
 ) extends ResourceState:
   export custom.*
 
-class ResourceManager(private val resources: Ref[Map[AnyRef, ResourceState]])
+// needed for parent/child relationship tracking
+class ResourceManager(private val resources: Ref[Map[Resource, ResourceState]])
 
 trait Resource:
   def urn: Output[String]
@@ -106,19 +112,33 @@ trait Context {
   private[besom] val engine: Engine
   private[besom] val workgroup: WorkGroup
 
+  private[besom] def isDryRun: Boolean = runInfo.dryRun
+
   private[besom] def registerTask[A](fa: => Result[A]): Result[A]
 
   private[besom] def waitForAllTasks: Result[Unit]
 
-  private[besom] def registerProvider[R: ResourceDecoder, A: ProviderArgsEncoder](
-    typ: NonEmptyString,
+  private[besom] def registerProvider[R <: Resource: ResourceDecoder, A: ProviderArgsEncoder](
+    typ: ProviderType, // TODO: ProviderType
     name: NonEmptyString,
     args: A,
     options: CustomResourceOptions
   ): Output[R]
-  private[besom] def readOrRegisterResource[A](typ: NonEmptyString, name: NonEmptyString): Result[RawResourceResult]
-  private[besom] def registerResource[A](typ: NonEmptyString, name: NonEmptyString): Result[RawResourceResult]
-  private[besom] def readResource[A](typ: NonEmptyString, name: NonEmptyString): Result[RawResourceResult]
+
+  private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder](
+    typ: NonEmptyString,
+    name: NonEmptyString
+  ): Output[R]
+
+  private[besom] def registerResource[R <: Resource: ResourceDecoder](
+    typ: NonEmptyString,
+    name: NonEmptyString
+  ): Output[R]
+
+  private[besom] def readResource[R <: Resource: ResourceDecoder](
+    typ: NonEmptyString,
+    name: NonEmptyString
+  ): Output[R]
 
   private[besom] def createResourceState(typ: NonEmptyString, name: NonEmptyString): Result[ResourceState]
 
@@ -146,8 +166,8 @@ object Context:
       private[besom] val engine: Engine            = _engine
       private[besom] val workgroup: WorkGroup      = _workgroup
 
-      private[besom] def registerProvider[R: ResourceDecoder, A: ProviderArgsEncoder](
-        typ: NonEmptyString,
+      private[besom] def registerProvider[R <: Resource: ResourceDecoder, A: ProviderArgsEncoder](
+        typ: ProviderType, // TODO: ProviderType
         name: NonEmptyString,
         args: A,
         options: CustomResourceOptions
@@ -163,18 +183,21 @@ object Context:
           _ <- engine.close()
         yield ()
 
-      override private[besom] def readOrRegisterResource[A](
+      override private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder](
         typ: NonEmptyString,
         name: NonEmptyString
-      ): Result[RawResourceResult] = ???
-      override private[besom] def registerResource[A](
+      ): Output[R] = ???
+      
+      override private[besom] def registerResource[R <: Resource: ResourceDecoder](
         typ: NonEmptyString,
         name: NonEmptyString
-      ): Result[RawResourceResult] = ???
-      override private[besom] def readResource[A](
+      ): Output[R] = ???
+      override private[besom] def readResource[R <: Resource: ResourceDecoder](
         typ: NonEmptyString,
         name: NonEmptyString
-      ): Result[RawResourceResult] = ???
+      ): Output[R] = ???
+      // summon[ResourceDecoder[R]].makeFulfillable(using this) match
+      //  case (r, fulfillable) =>
 
       override private[besom] def createResourceState(
         typ: NonEmptyString,

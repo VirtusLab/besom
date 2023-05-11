@@ -3,7 +3,7 @@ package besom.internal
 import besom.util.*
 
 trait CommonResourceOptions:
-  def id: Option[Output[NonEmptyString]]
+  def id: Option[Output[NonEmptyString]] // TODO: This is only for StackReferenceResourceOptions
   def parent: Option[Resource]
   def dependsOn: Output[List[Resource]]
   def protect: Boolean
@@ -12,7 +12,7 @@ trait CommonResourceOptions:
   def customTimeouts: Option[String] // CustomTimeouts // TODO
   // def resourceTransformations: List[ResourceTransformation], // TODO
   // def aliases: List[Output[Alias]], // TODO
-  def urn: Option[String] // TODO better type
+  def urn: Option[String] // TODO this is only necessary for Resource deserialization, dependency resources and multi-language remote components
   def replaceOnChanges: List[String] // TODO?
   def retainOnDelete: Boolean
   def pluginDownloadUrl: Option[String]
@@ -37,7 +37,7 @@ sealed trait ResourceOptions
 
 final case class CustomResourceOptions private[internal] (
   common: CommonResourceOptions,
-  provider: Option[String], // ProviderResource // TODO
+  provider: Option[ProviderResource],
   deleteBeforeReplace: Boolean,
   additionalSecretOutputs: List[String],
   importId: Option[String]
@@ -47,7 +47,7 @@ final case class CustomResourceOptions private[internal] (
 
 final case class ComponentResourceOptions private[internal] (
   common: CommonResourceOptions,
-  providers: List[String] // ProviderResource // TODO
+  providers: List[ProviderResource]
 ) extends ResourceOptions,
       CommonResourceOptions:
   export common.*
@@ -60,7 +60,7 @@ object CustomResourceOptions:
     protect: Boolean = false,
     ignoreChanges: List[String] = List.empty,
     version: NonEmptyString | NotProvided = NotProvided, // TODO? UGLY AF
-    provider: String | NotProvided = NotProvided, // ProviderResource // TODO
+    provider: ProviderResource | NotProvided = NotProvided,
     customTimeouts: String | NotProvided = NotProvided, // CustomTimeouts // TODO
     // resourceTransformations: List[ResourceTransformation], // TODO
     // aliases: List[Output[Alias]], // TODO
@@ -95,7 +95,7 @@ object CustomResourceOptions:
 
 object ComponentResourceOptions:
   def apply(using Context)(
-    providers: List[String] = List.empty, // ProviderResource // TODO
+    providers: List[ProviderResource] = List.empty,
     id: Output[NonEmptyString] | NotProvided = NotProvided,
     parent: Resource | NotProvided = NotProvided,
     dependsOn: Output[List[Resource]] = Output(List.empty[Resource]),

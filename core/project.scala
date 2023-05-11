@@ -12,6 +12,8 @@
 //> using lib "com.thesamet.scalapb::scalapb-runtime-grpc:0.11.10"
 //> using lib "io.spray::spray-json:1.3.6"
 
+//> using options "-java-output-version:8"
+
 //#> using options "-Xmax-inlines:64"
 
 //#> using options "-coverage-out:coverage"
