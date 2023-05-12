@@ -197,6 +197,8 @@ trait ComponentResource extends Resource
 
 trait ProviderResource extends CustomResource
 
+case class DependencyResource(urn: Output[String]) extends Resource
+
 trait Context {
 
   def projectName: NonEmptyString

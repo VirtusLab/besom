@@ -207,6 +207,32 @@ object Decoder extends DecoderInstancesLowPrio:
       }
     def mapping(value: Value): Map[String, A] = Map.empty
 
+  // wondering if this works, it's a bit of a hack
+  given dependencyResourceDecoder(using Context): Decoder[DependencyResource] = new Decoder[DependencyResource]:
+    override def decode(value: Value): Either[DecodingError, OutputData[DependencyResource]] =
+      decodeAsPossibleSecret(value).flatMap { odv =>
+        Try {
+          odv.flatMap { innerValue =>
+            extractSpecialStructSignature(innerValue) match
+              case None => error("Expected a special struct signature!")
+              case Some(specialSig) =>
+                if specialSig != Constants.SpecialSecretSig then error("Expected a special resource signature!")
+                else
+                  val structValue = innerValue.getStructValue
+                  val urn = structValue.fields
+                    .get(Constants.ResourceUrnName)
+                    .map(_.getStringValue)
+                    .getOrElse(error("Expected a resource urn in resource struct!"))
+
+                  OutputData(DependencyResource(Output(urn)))
+          }
+        } match
+          case Failure(exception) => errorLeft("Encountered an error", exception)
+          case Success(value)     => Right(value)
+      }
+
+    override def mapping(value: Value): DependencyResource = ???
+
   // TODO is this required at all?
   // given outputDecoder[A](using innerDecoder: Decoder[A], ctx: Context): Decoder[Output[A]] = new Decoder[Output[A]]:
   //   override def decode(value: Value): Either[DecodingError, OutputData[Output[A]]] =
