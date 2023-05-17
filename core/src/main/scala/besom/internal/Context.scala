@@ -10,7 +10,11 @@ import io.grpc.internal.DnsNameResolver.ResourceResolver
 
 case class RawResourceResult(urn: String, id: Option[String], data: Struct, dependencies: Map[String, Set[Resource]])
 
-case class Stack()
+case class EmptyArgs() derives ArgsEncoder
+
+case class Stack(urn: Output[String]) extends ComponentResource derives ResourceDecoder
+object Stack:
+  val RootPulumiStackTypeName: NonEmptyString = "pulumi:pulumi:Stack"
 
 trait ResourceResolver[A]:
   def resolve(errorOrResourceResult: Either[Throwable, RawResourceResult])(using Context): Result[Unit]
@@ -143,10 +147,9 @@ object ResourceDecoder:
 // }
 
 sealed trait ResourceState:
-  def urn: Output[String] // TODO BALEET, URN is in custom resource anyway
-  def rawOutputs: Output[_] // TODO BALEET this is for StackReference only and is a hack used by pulumi-go, we'll use the non-hacky way from pulumi-java
+  // def urn: Output[String] // TODO BALEET, URN is in resource anyway
+  // def rawOutputs: Output[_] // TODO BALEET this is for StackReference only and is a hack used by pulumi-go, we'll use the non-hacky way from pulumi-java
   def children: Set[Resource]
-  def providers: Map[String, ProviderResource] // TODO: Move to ComponentResourceState
   def provider: ProviderResource
   def version: String
   def pluginDownloadURL: String
@@ -156,10 +159,9 @@ sealed trait ResourceState:
   def remoteComponent: Boolean
 
 case class CommonResourceState(
-  urn: Output[String], // TODO BALEET, URN is in custom resource anyway
-  rawOutputs: Output[_], // TODO BALEET this is for StackReference only and is a hack used by pulumi-go, we'll use the non-hacky way from pulumi-java
+  // urn: Output[String], // TODO BALEET, URN is in custom resource anyway
+  // rawOutputs: Output[_], // TODO BALEET this is for StackReference only and is a hack used by pulumi-go, we'll use the non-hacky way from pulumi-java
   children: Set[Resource],
-  providers: Map[String, ProviderResource],
   provider: ProviderResource,
   version: String,
   pluginDownloadURL: String,
@@ -167,22 +169,25 @@ case class CommonResourceState(
   name: String,
   // transformations: List[ResourceTransformation],
   remoteComponent: Boolean
-) extends ResourceState
+)
 
 case class CustomResourceState(
-  common: ResourceState,
+  common: CommonResourceState,
   id: Output[String]
 ) extends ResourceState:
   export common.*
-
-case class ComponentResourceState(
-)
 
 case class ProviderResourceState(
   custom: CustomResourceState,
   pkg: String
 ) extends ResourceState:
   export custom.*
+
+case class ComponentResourceState(
+  common: CommonResourceState,
+  providers: Map[String, ProviderResource]
+) extends ResourceState:
+  export common.*
 
 // needed for parent/child relationship tracking
 class ResourceManager(private val resources: Ref[Map[Resource, ResourceState]])
@@ -217,6 +222,10 @@ trait Context {
   private[besom] val engine: Engine
   private[besom] val workgroup: WorkGroup
 
+  private[besom] def initializeStack: Result[Unit]
+
+  private[besom] def getStack: Result[Stack]
+
   private[besom] def isDryRun: Boolean = runInfo.dryRun
 
   private[besom] def registerTask[A](fa: => Result[A]): Result[A]
@@ -245,69 +254,134 @@ trait Context {
     name: NonEmptyString
   ): Output[R]
 
-  private[besom] def createResourceState(typ: NonEmptyString, name: NonEmptyString): Result[ResourceState]
+  private[besom] def createResourceState(
+    typ: NonEmptyString,
+    name: NonEmptyString,
+    resourceOptions: ResourceOptions
+  ): Result[ResourceState]
 
   private[besom] def close: Result[Unit]
 }
 
 object Context:
 
+  private[besom] class ContextImpl(
+    private[besom] val runInfo: RunInfo,
+    private[besom] val keepResources: Boolean,
+    private[besom] val keepOutputValues: Boolean,
+    private[besom] val monitor: Monitor,
+    private[besom] val engine: Engine,
+    private[besom] val workgroup: WorkGroup,
+    private[besom] val stackPromise: Promise[Stack]
+  ) extends Context:
+
+    val projectName: NonEmptyString = runInfo.project
+    val stackName: NonEmptyString   = runInfo.stack
+    val config: Config              = runInfo.config
+
+    private[besom] def getStack: Result[Stack] = stackPromise.get
+
+    private[besom] def initializeStack: Result[Unit] =
+      val rootPulumiStackName = projectName +++ "-" +++ stackName
+      for
+        stack <- registerResourceInternal[Stack, EmptyArgs](
+          Stack.RootPulumiStackTypeName,
+          rootPulumiStackName,
+          EmptyArgs(),
+          ComponentResourceOptions(using this)() // TODO pass initial ResourceTransformations here
+        )
+        _ <- registerResourceOutputsInternal()
+        _ <- stackPromise.fulfill(stack)
+      yield ()
+
+    private[besom] def registerProvider[R <: Resource: ResourceDecoder, A: ProviderArgsEncoder](
+      typ: ProviderType,
+      name: NonEmptyString,
+      args: A,
+      options: CustomResourceOptions
+    ): Output[R] = ???
+
+    override private[besom] def registerTask[A](fa: => Result[A]): Result[A] = workgroup.runInWorkGroup(fa)
+
+    override private[besom] def waitForAllTasks: Result[Unit] = workgroup.waitForAll
+
+    override private[besom] def close: Result[Unit] =
+      for
+        _ <- monitor.close()
+        _ <- engine.close()
+      yield ()
+
+    private[besom] def registerResourceOutputsInternal(): Result[Unit] = ???
+
+    override private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder](
+      typ: NonEmptyString,
+      name: NonEmptyString
+    ): Output[R] = ???
+
+    private[besom] def registerResourceInternal[R <: Resource: ResourceDecoder, A: ArgsEncoder](
+      typ: NonEmptyString,
+      name: NonEmptyString,
+      args: A,
+      options: ResourceOptions
+    ): Result[R] = ???
+
+    override private[besom] def registerResource[R <: Resource: ResourceDecoder](
+      typ: NonEmptyString,
+      name: NonEmptyString
+    ): Output[R] = ???
+    override private[besom] def readResource[R <: Resource: ResourceDecoder](
+      typ: NonEmptyString,
+      name: NonEmptyString
+    ): Output[R] = ???
+    // summon[ResourceDecoder[R]].makeFulfillable(using this) match
+    //  case (r, fulfillable) =>
+
+    private def resolveParent(typ: NonEmptyString, resourceOptions: ResourceOptions): Result[Option[Resource]] =
+      if typ == Stack.RootPulumiStackTypeName then Result.pure(None)
+      else
+        resourceOptions.parent match
+          case Some(parent) => Result.pure(Some(parent))
+          case None         => getStack.map(Some(_))
+
+    private def applyTransformations[A](
+      args: A,
+      resourceOptions: ResourceOptions,
+      parent: Option[Resource]
+    ): Result[(A, ResourceOptions)] =
+      Result.pure((args, resourceOptions))
+
+    private def mergeProviders(opts: ResourceOptions, parent: Option[Resource]): Result[Map[String, ProviderResource]] =
+      ???
+
+    override private[besom] def createResourceState(
+      typ: NonEmptyString,
+      name: NonEmptyString,
+      resourceOptions: ResourceOptions
+    ): Result[ResourceState] =
+      val parent: Option[Resource] =
+        if typ == Stack.RootPulumiStackTypeName then None
+        else if resourceOptions.parent.isDefined then resourceOptions.parent
+        else None // todo
+
+      ???
+
   def apply(
-    _runInfo: RunInfo,
-    _keepResources: Boolean,
-    _keepOutputValues: Boolean,
-    _monitor: Monitor,
-    _engine: Engine,
-    _workgroup: WorkGroup
-  ): Context =
-    new Context:
-      val projectName: NonEmptyString              = _runInfo.project
-      val stackName: NonEmptyString                = _runInfo.stack
-      val config: Config                           = _runInfo.config
-      private[besom] val runInfo: RunInfo          = _runInfo
-      private[besom] val keepResources: Boolean    = _keepResources
-      private[besom] val keepOutputValues: Boolean = _keepOutputValues
-      private[besom] val monitor: Monitor          = _monitor
-      private[besom] val engine: Engine            = _engine
-      private[besom] val workgroup: WorkGroup      = _workgroup
-
-      private[besom] def registerProvider[R <: Resource: ResourceDecoder, A: ProviderArgsEncoder](
-        typ: ProviderType, // TODO: ProviderType
-        name: NonEmptyString,
-        args: A,
-        options: CustomResourceOptions
-      ): Output[R] = ???
-
-      override private[besom] def registerTask[A](fa: => Result[A]): Result[A] = workgroup.runInWorkGroup(fa)
-
-      override private[besom] def waitForAllTasks: Result[Unit] = workgroup.waitForAll
-
-      override private[besom] def close: Result[Unit] =
-        for
-          _ <- monitor.close()
-          _ <- engine.close()
-        yield ()
-
-      override private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder](
-        typ: NonEmptyString,
-        name: NonEmptyString
-      ): Output[R] = ???
-      
-      override private[besom] def registerResource[R <: Resource: ResourceDecoder](
-        typ: NonEmptyString,
-        name: NonEmptyString
-      ): Output[R] = ???
-      override private[besom] def readResource[R <: Resource: ResourceDecoder](
-        typ: NonEmptyString,
-        name: NonEmptyString
-      ): Output[R] = ???
-      // summon[ResourceDecoder[R]].makeFulfillable(using this) match
-      //  case (r, fulfillable) =>
-
-      override private[besom] def createResourceState(
-        typ: NonEmptyString,
-        name: NonEmptyString
-      ): Result[ResourceState] = ???
+    runInfo: RunInfo,
+    keepResources: Boolean,
+    keepOutputValues: Boolean,
+    monitor: Monitor,
+    engine: Engine,
+    workgroup: WorkGroup,
+    stackPromise: Promise[Stack]
+  ): Context = new ContextImpl(
+    runInfo,
+    keepResources,
+    keepOutputValues,
+    monitor,
+    engine,
+    workgroup,
+    stackPromise
+  )
 
   def apply(
     runInfo: RunInfo,
@@ -316,9 +390,10 @@ object Context:
     keepResources: Boolean,
     keepOutputValues: Boolean
   ): Result[Context] =
-    WorkGroup().map { wg =>
-      apply(runInfo, keepResources, keepOutputValues, monitor, engine, wg)
-    }
+    for
+      wg    <- WorkGroup()
+      stack <- Promise[Stack]
+    yield apply(runInfo, keepResources, keepOutputValues, monitor, engine, wg, stack)
 
   def apply(runInfo: RunInfo): Result[Context] =
     for
@@ -327,6 +402,7 @@ object Context:
       keepResources    <- monitor.supportsFeature(SupportsFeatureRequest("resourceReferences")).map(_.hasSupport)
       keepOutputValues <- monitor.supportsFeature(SupportsFeatureRequest("outputValues")).map(_.hasSupport)
       ctx              <- apply(runInfo, monitor, engine, keepResources, keepOutputValues)
+      _                <- ctx.initializeStack
     yield ctx
 
 object Providers:
