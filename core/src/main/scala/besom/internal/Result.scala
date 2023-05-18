@@ -32,6 +32,7 @@ object WorkGroup:
 trait Promise[A]:
   def get: Result[A]
   def fulfill(a: A): Result[Unit]
+  def fulfillAny(a: Any): Result[Unit] = fulfill(a.asInstanceOf[A])
   def fail(t: Throwable): Result[Unit]
 
 object Promise:
