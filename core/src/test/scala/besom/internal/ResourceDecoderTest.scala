@@ -5,11 +5,14 @@ import com.google.protobuf.struct.*
 import ProtobufUtil.*
 
 class ResourceDecoderTest extends munit.FunSuite:
+  case class CustomStruct(a: String, b: Double) derives Decoder
+
   case class TestResource(
     urn: Output[String],
     id: Output[String],
     property1: Output[Option[String]],
-    property2: Output[Int]
+    property2: Output[Int],
+    property3: Output[CustomStruct]
   ) extends CustomResource derives ResourceDecoder
 
 
@@ -26,7 +29,11 @@ class ResourceDecoderTest extends munit.FunSuite:
       id = Some("fakeId"),
       data = Struct(Map(
         "property1" -> Some("abc").asValue,
-        "property2" -> 123.asValue
+        "property2" -> 123.asValue,
+        "property3" -> Map(
+          "a" -> "xyz".asValue,
+          "b" -> 3.0d.asValue
+        ).asValue
       )),
       dependencies = Map(
         "property1" -> Set.empty,
@@ -49,4 +56,5 @@ class ResourceDecoderTest extends munit.FunSuite:
     checkOutput(resource.id)("fakeId", Set(resource), false)
     checkOutput(resource.property1)(Some("abc"), Set(resource), false)
     checkOutput(resource.property2)(123, Set(resource, dependencyResource), false)
+    checkOutput(resource.property3)(CustomStruct("xyz", 3.0d), Set(resource), false)
   }
