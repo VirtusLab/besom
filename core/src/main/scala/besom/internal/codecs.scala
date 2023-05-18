@@ -1,5 +1,6 @@
 package besom.internal
 
+import scala.deriving.Mirror
 import com.google.protobuf.struct.*, Value.Kind
 import besom.internal.ProtobufUtil.*
 import scala.util.*
@@ -79,110 +80,8 @@ trait Decoder[A]:
     }
     override def mapping(value: Value): B = ???
 
-object Decoder:
-  import Constants.*
+object Decoder extends DecoderInstancesLowPrio:
   import spray.json.*
-  import scala.deriving.Mirror
-
-  // this is, effectively, Decoder[Enum]
-  def decoderSum[A](s: Mirror.SumOf[A], elems: => List[String -> Decoder[?]]): Decoder[A] =
-    new Decoder[A]:
-      private val enumNameToDecoder                   = elems.toMap
-      private def getDecoder(key: String): Decoder[A] = enumNameToDecoder(key).asInstanceOf[Decoder[A]]
-      override def decode(value: Value): Either[DecodingError, OutputData[A]] =
-        if value.kind.isStringValue then getDecoder(value.getStringValue).decode(Map.empty.asValue)
-        else errorLeft("Value was not a string, Enums should be serialized as strings")
-
-      override def mapping(value: Value): A = ???
-
-  def decoderProduct[A](p: Mirror.ProductOf[A], elems: => List[String -> Decoder[?]]): Decoder[A] =
-    new Decoder[A]:
-      override def decode(value: Value): Either[DecodingError, OutputData[A]] =
-        decodeAsPossibleSecret(value).flatMap { odv =>
-          Try {
-            odv.flatMap { innerValue =>
-              if (innerValue.kind.isStructValue) then
-                val fields = innerValue.getStructValue.fields
-                val innerEither =
-                  elems
-                    .foldLeft[Either[DecodingError, OutputData[Tuple]]](Right(OutputData(EmptyTuple))) {
-                      case (eitherAcc, (name -> decoder)) =>
-                        eitherAcc match
-                          case L @ Left(_) => L // just take the L
-                          case Right(acc) =>
-                            val fieldValue =
-                              fields.get(name).getOrElse(throw DecodingError(s"Value for field $name is missing!"))
-
-                            decoder.decode(value) match
-                              case Left(decodingError) => throw decodingError
-                              case Right(odField)      => Right(acc.zip(odField))
-                    }
-                    .map(_.map(p.fromProduct(_)))
-
-                innerEither match
-                  case Left(error) => throw error
-                  case Right(odA)  => odA
-              else throw DecodingError("Expected a struct to deserialize Product!")
-            }
-          } match
-            case Failure(exception) => errorLeft("Encountered an error", exception)
-            case Success(value)     => Right(value)
-
-        }
-
-      override def mapping(value: Value): A = ???
-
-  inline given derived[A](using m: Mirror.Of[A]): Decoder[A] =
-    lazy val labels           = CodecMacros.summonLabels[m.MirroredElemLabels]
-    lazy val instances        = CodecMacros.summonDecoders[m.MirroredElemTypes]
-    lazy val nameDecoderPairs = labels.zip(instances)
-
-    inline m match
-      case s: Mirror.SumOf[A] => decoderSum(s, nameDecoderPairs)
-      case p: Mirror.ProductOf[A] =>
-        decoderProduct(p, nameDecoderPairs)
-
-  inline def error(msg: String): Nothing = throw DecodingError(msg)
-  inline def errorLeft(msg: String, cause: Throwable = null): Either[DecodingError, Nothing] = Left(
-    DecodingError(msg, cause)
-  )
-
-  def decodeAsPossibleSecret(value: Value): Either[DecodingError, OutputData[Value]] =
-    extractSpecialStructSignature(value) match
-      case Some(sig) if sig == SpecialSecretSig =>
-        val innerValue = value.getStructValue.fields
-          .get(SecretValueName)
-          .map(Right.apply)
-          .getOrElse(errorLeft(s"Secrets must have a field called $SecretValueName!"))
-
-        innerValue.map(OutputData(_, isSecret = true))
-      case _ =>
-        if value.kind.isStringValue && Constants.UnknownValue == value.getStringValue then
-          Right(OutputData.unknown(isSecret = false))
-        else Right(OutputData(value))
-
-  def extractSpecialStructSignature(value: Value): Option[String] =
-    Iterator(value)
-      .filter(_.kind.isStructValue)
-      .flatMap(_.getStructValue.fields)
-      .filter((k, v) => k == SpecialSigKey)
-      .flatMap((_, v) => v.kind.stringValue)
-      .nextOption
-
-  def accumulatedOutputDatasOrFirstError[A](
-    acc: Either[DecodingError, Vector[OutputData[A]]],
-    elementEither: Either[DecodingError, OutputData[A]],
-    typ: String
-  ): Either[DecodingError, Vector[OutputData[A]]] =
-    acc match
-      case L @ Left(_) => L // just take the L
-      case Right(vec) =>
-        elementEither match
-          case Left(error)              => Left(error)
-          case Right(elementOutputData) =>
-            // TODO this should have an issue number from GH and should suggest reporting this to us
-            if elementOutputData.isEmpty then errorLeft(s"Encountered a null in $typ, this is illegal in besom!")
-            else Right(vec :+ elementOutputData)
 
   // for recursive stuff like Map[String, Value]
   given Decoder[Value] with
@@ -225,25 +124,30 @@ object Decoder:
 
     override def mapping(value: Value): Option[A] = ???
 
-  // given unionDecoder[A, B](using aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[A | B] = new Decoder[A | B]:
-  //   override def decode(value: Value): Either[DecodingError, OutputData[A | B]] =
-  //     decodeAsPossibleSecret(value).flatMap { odv =>
-  //       Try {
-  //         odv.flatMap { v =>
-  //           aDecoder.decode(v) match
-  //             case Left(error) =>
-  //               bDecoder.decode(v) match
-  //                 case Left(error2) => throw error2
-  //                 case Right(odb)   => odb.asInstanceOf[OutputData[A | B]]
+  def unionDecoder[A, B](using aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[A | B] = new Decoder[A | B]:
+    override def decode(value: Value): Either[DecodingError, OutputData[A | B]] =
+      decodeAsPossibleSecret(value).flatMap { odv =>
+        Try {
+          odv.flatMap { v =>
+            aDecoder.decode(v) match
+              case Left(error) =>
+                bDecoder.decode(v) match
+                  case Left(error2) => throw error2
+                  case Right(odb)   => odb.asInstanceOf[OutputData[A | B]]
 
-  //             case Right(oda) => oda.asInstanceOf[OutputData[A | B]]
-  //         }
-  //       } match
-  //         case Failure(exception) => errorLeft("Encountered an error", exception)
-  //         case Success(value)     => Right(value)
-  //     }
+              case Right(oda) => oda.asInstanceOf[OutputData[A | B]]
+          }
+        } match
+          case Failure(exception) => errorLeft("Encountered an error", exception)
+          case Success(value)     => Right(value)
+      }
 
-  //   override def mapping(value: Value): A | B = ???
+    override def mapping(value: Value): A | B = ???
+
+  given unionIntStringDecoder: Decoder[Int | String] = unionDecoder[Int, String]
+  given unionBooleanProductDecoder[P <: Product : Decoder]: Decoder[Boolean | P] = unionDecoder[P, Boolean]
+  given unionStringProductDecoder[P <: Product : Decoder]: Decoder[String | P] = unionDecoder[P, String]
+  given unionListProductDecoder[A, P <: Product](using Decoder[List[A]], Decoder[P]): Decoder[List[A] | P] = unionDecoder[List[A], P]
 
   // this is kinda different from what other pulumi sdks are doing because we disallow nulls in the list
   given listDecoder[A](using innerDecoder: Decoder[A]): Decoder[List[A]] = new Decoder[List[A]]:
@@ -316,6 +220,109 @@ object Decoder:
 
   //   def mapping(value: Value): Output[A] = ???
 
+trait DecoderInstancesLowPrio:
+  import Constants.*
+
+  inline given derived[A](using m: Mirror.Of[A]): Decoder[A] =
+    lazy val labels           = CodecMacros.summonLabels[m.MirroredElemLabels]
+    lazy val instances        = CodecMacros.summonDecoders[m.MirroredElemTypes]
+    lazy val nameDecoderPairs = labels.zip(instances)
+
+    inline m match
+      case s: Mirror.SumOf[A] => decoderSum(s, nameDecoderPairs)
+      case p: Mirror.ProductOf[A] =>
+        decoderProduct(p, nameDecoderPairs)
+
+  inline def error(msg: String): Nothing = throw DecodingError(msg)
+  inline def errorLeft(msg: String, cause: Throwable = null): Either[DecodingError, Nothing] = Left(
+    DecodingError(msg, cause)
+  )
+
+  // this is, effectively, Decoder[Enum]
+  def decoderSum[A](s: Mirror.SumOf[A], elems: => List[String -> Decoder[?]]): Decoder[A] =
+    new Decoder[A]:
+      private val enumNameToDecoder                   = elems.toMap
+      private def getDecoder(key: String): Decoder[A] = enumNameToDecoder(key).asInstanceOf[Decoder[A]]
+      override def decode(value: Value): Either[DecodingError, OutputData[A]] =
+        if value.kind.isStringValue then getDecoder(value.getStringValue).decode(Map.empty.asValue)
+        else errorLeft("Value was not a string, Enums should be serialized as strings")
+
+      override def mapping(value: Value): A = ???
+
+  def decoderProduct[A](p: Mirror.ProductOf[A], elems: => List[String -> Decoder[?]]): Decoder[A] =
+    new Decoder[A]:
+      override def decode(value: Value): Either[DecodingError, OutputData[A]] =
+        decodeAsPossibleSecret(value).flatMap { odv =>
+          Try {
+            odv.flatMap { innerValue =>
+              if (innerValue.kind.isStructValue) then
+                val fields = innerValue.getStructValue.fields
+                val innerEither =
+                  elems
+                    .foldLeft[Either[DecodingError, OutputData[Tuple]]](Right(OutputData(EmptyTuple))) {
+                      case (eitherAcc, (name -> decoder)) =>
+                        eitherAcc match
+                          case L @ Left(_) => L // just take the L
+                          case Right(acc) =>
+                            val fieldValue =
+                              fields.get(name).getOrElse(throw DecodingError(s"Value for field $name is missing!"))
+
+                            decoder.decode(value) match
+                              case Left(decodingError) => throw decodingError
+                              case Right(odField)      => Right(acc.zip(odField))
+                    }
+                    .map(_.map(p.fromProduct(_)))
+
+                innerEither match
+                  case Left(error) => throw error
+                  case Right(odA)  => odA
+              else throw DecodingError("Expected a struct to deserialize Product!")
+            }
+          } match
+            case Failure(exception) => errorLeft("Encountered an error", exception)
+            case Success(value)     => Right(value)
+
+        }
+
+      override def mapping(value: Value): A = ???
+
+  def decodeAsPossibleSecret(value: Value): Either[DecodingError, OutputData[Value]] =
+    extractSpecialStructSignature(value) match
+      case Some(sig) if sig == SpecialSecretSig =>
+        val innerValue = value.getStructValue.fields
+          .get(SecretValueName)
+          .map(Right.apply)
+          .getOrElse(errorLeft(s"Secrets must have a field called $SecretValueName!"))
+
+        innerValue.map(OutputData(_, isSecret = true))
+      case _ =>
+        if value.kind.isStringValue && Constants.UnknownValue == value.getStringValue then
+          Right(OutputData.unknown(isSecret = false))
+        else Right(OutputData(value))
+
+  def extractSpecialStructSignature(value: Value): Option[String] =
+    Iterator(value)
+      .filter(_.kind.isStructValue)
+      .flatMap(_.getStructValue.fields)
+      .filter((k, v) => k == SpecialSigKey)
+      .flatMap((_, v) => v.kind.stringValue)
+      .nextOption
+
+  def accumulatedOutputDatasOrFirstError[A](
+    acc: Either[DecodingError, Vector[OutputData[A]]],
+    elementEither: Either[DecodingError, OutputData[A]],
+    typ: String
+  ): Either[DecodingError, Vector[OutputData[A]]] =
+    acc match
+      case L @ Left(_) => L // just take the L
+      case Right(vec) =>
+        elementEither match
+          case Left(error)              => Left(error)
+          case Right(elementOutputData) =>
+            // TODO this should have an issue number from GH and should suggest reporting this to us
+            if elementOutputData.isEmpty then errorLeft(s"Encountered a null in $typ, this is illegal in besom!")
+            else Right(vec :+ elementOutputData)
+
 /*
  * Encoder needs the same debugability features as Decoder, ie:
  *  - stack awareness
@@ -346,7 +353,6 @@ trait Encoder[A]:
 object Encoder:
   import Constants.*
   import spray.json.*
-  import scala.deriving.Mirror
 
   def encoderSum[A](mirror: Mirror.SumOf[A], nameEncoderPairs: List[String -> Encoder[?]]): Encoder[A] =
     new Encoder[A]:
@@ -561,8 +567,6 @@ trait ArgsEncoder[A]:
   def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Value)]
 
 object ArgsEncoder:
-  import scala.deriving.Mirror
-
   def argsEncoderProduct[A](
     elems: List[String -> Encoder[?]]
   ): ArgsEncoder[A] =
@@ -603,8 +607,6 @@ trait ProviderArgsEncoder[A]:
   def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Value)]
 
 object ProviderArgsEncoder:
-  import scala.deriving.Mirror
-
   def providerArgsEncoderProduct[A](
     elems: List[String -> JsonEncoder[?]]
   ): ProviderArgsEncoder[A] =

@@ -15,7 +15,7 @@ object k8s:
     operation: Option[String],
     subresource: Option[String],
     time: Option[String]
-  )
+  ) derives Decoder
   case class OwnerReference(
     apiVersion: String,
     blockOwnerDeletion: Option[Boolean],
@@ -23,7 +23,7 @@ object k8s:
     kind: String,
     name: String,
     uid: String
-  )
+  ) derives Decoder
 
   case class ObjectMeta(
     annotations: Map[String, String] = Map.empty,
@@ -42,86 +42,86 @@ object k8s:
     resourceVersion: Option[String],
     selfLink: Option[String],
     uid: Option[String]
-  )
+  ) derives Decoder
 
-  case class NodeSelectorRequirement(key: String, operator: String, values: List[String] = List.empty)
+  case class NodeSelectorRequirement(key: String, operator: String, values: List[String] = List.empty) derives Decoder
 
   case class NodeSelectorTerm(
     matchExpressions: List[NodeSelectorRequirement] = List.empty,
     matchFields: List[NodeSelectorRequirement] = List.empty
-  )
+  ) derives Decoder
 
-  case class NodeSelector(nodeSelectorTerms: List[NodeSelectorTerm])
-  case class PreferredSchedulingTerm(preference: NodeSelectorTerm, weight: Int)
+  case class NodeSelector(nodeSelectorTerms: List[NodeSelectorTerm]) derives Decoder
+  case class PreferredSchedulingTerm(preference: NodeSelectorTerm, weight: Int) derives Decoder
 
-  case class WeightedPodAffinityTerm(podAffinityTerm: PodAffinityTerm, weight: Int)
-  case class LabelSelectorRequirement(key: String, operator: String, values: List[String] = List.empty)
+  case class WeightedPodAffinityTerm(podAffinityTerm: PodAffinityTerm, weight: Int) derives Decoder
+  case class LabelSelectorRequirement(key: String, operator: String, values: List[String] = List.empty) derives Decoder
   case class LabelSelector(
     matchExpressions: List[LabelSelectorRequirement] = List.empty,
     matchLabels: Map[String, String] = Map.empty
-  )
+  ) derives Decoder
   case class PodAffinityTerm(
     labelSelector: Option[LabelSelector],
     namespaceSelector: Option[LabelSelector],
     namespaces: List[String] = List.empty,
     topologyKey: String
-  )
+  ) derives Decoder
 
   case class NodeAffinity(
     preferredDuringSchedulingIgnoredDuringExecution: List[PreferredSchedulingTerm] = List.empty,
     requiredDuringSchedulingIgnoredDuringExecution: Option[NodeSelector]
-  )
+  ) derives Decoder
   case class PodAffinity(
     preferredDuringSchedulingIgnoredDuringExecution: List[WeightedPodAffinityTerm] = List.empty,
     requiredDuringSchedulingIgnoredDuringExecution: List[PodAffinityTerm] = List.empty
-  )
+  ) derives Decoder
   case class PodAntiAffinity(
     preferredDuringSchedulingIgnoredDuringExecution: List[WeightedPodAffinityTerm] = List.empty,
     requiredDuringSchedulingIgnoredDuringExecution: List[PodAffinityTerm] = List.empty
-  )
+  ) derives Decoder
 
   case class Affinity(
     nodeAffinity: Option[NodeAffinity],
     podAffinity: Option[PodAffinity],
     podAntiAffinity: Option[PodAntiAffinity]
-  )
-  case class EnvVar(name: String, value: Option[String], valueFrom: Option[EnvVarSource])
+  ) derives Decoder
+  case class EnvVar(name: String, value: Option[String], valueFrom: Option[EnvVarSource]) derives Decoder
   case class EnvVarSource(
     configMapKeyRef: Option[ConfigMapKeySelector],
     fieldRef: Option[ObjectFieldSelector],
     resourceFieldRef: Option[ResourceFieldSelector],
     secretKeyRef: Option[SecretKeySelector]
-  )
-  case class ConfigMapKeySelector(key: String, name: Option[String], optional: Option[Boolean])
-  case class ObjectFieldSelector(apiVersion: Option[String], fieldPath: String)
-  case class ResourceFieldSelector(containerName: Option[String], divisor: Option[String], resource: String)
-  case class SecretKeySelector(key: String, name: Option[String], optional: Option[Boolean])
+  ) derives Decoder
+  case class ConfigMapKeySelector(key: String, name: Option[String], optional: Option[Boolean]) derives Decoder
+  case class ObjectFieldSelector(apiVersion: Option[String], fieldPath: String) derives Decoder
+  case class ResourceFieldSelector(containerName: Option[String], divisor: Option[String], resource: String) derives Decoder
+  case class SecretKeySelector(key: String, name: Option[String], optional: Option[Boolean]) derives Decoder
   case class EnvFromSource(
     configMapRef: Option[ConfigMapEnvSource],
     prefix: Option[String],
     secretRef: Option[SecretEnvSource]
-  )
-  case class ConfigMapEnvSource(name: Option[String], optional: Option[Boolean])
-  case class SecretEnvSource(name: Option[String], optional: Option[Boolean])
-  case class Lifecycle(postStart: Option[LifecycleHandler], preStop: Option[LifecycleHandler])
+  ) derives Decoder
+  case class ConfigMapEnvSource(name: Option[String], optional: Option[Boolean]) derives Decoder
+  case class SecretEnvSource(name: Option[String], optional: Option[Boolean]) derives Decoder
+  case class Lifecycle(postStart: Option[LifecycleHandler], preStop: Option[LifecycleHandler]) derives Decoder
   case class LifecycleHandler(
     exec: Option[ExecAction],
     httpGet: Option[HTTPGetAction],
     tcpSocket: Option[TCPSocketAction]
-  )
-  case class ExecAction(command: List[String] = List.empty)
+  ) derives Decoder
+  case class ExecAction(command: List[String] = List.empty) derives Decoder
   case class HTTPGetAction(
     host: Option[String],
     httpHeaders: List[HTTPHeader] = List.empty,
     path: Option[String],
-    port: Either[Integer, String],
+    port: Int | String,
     scheme: Option[String]
-  )
-  case class HTTPHeader(name: String, value: String)
-  case class TCPSocketAction(host: Option[String], port: Either[Integer, String])
+  ) derives Decoder
+  case class HTTPHeader(name: String, value: String) derives Decoder
+  case class TCPSocketAction(host: Option[String], port: Int | String) derives Decoder
   case class Probe(
     exec: Option[ExecAction],
-    failureThreshold: Option[Integer],
+    failureThreshold: Option[Int],
     grpc: Option[GRPCAction],
     httpGet: Option[HTTPGetAction],
     initialDelaySeconds: Option[Int],
@@ -130,21 +130,21 @@ object k8s:
     tcpSocket: Option[TCPSocketAction],
     terminationGracePeriodSeconds: Option[Int],
     timeoutSeconds: Option[Int]
-  )
-  case class GRPCAction(port: Int, service: Option[String])
+  ) derives Decoder
+  case class GRPCAction(port: Int, service: Option[String]) derives Decoder
   case class ContainerPort(
     containerPort: Int,
     hostIP: Option[String],
     hostPort: Option[Int],
     name: Option[String],
     protocol: Option[String]
-  )
+  ) derives Decoder
   case class ResourceRequirements(
     claims: List[ResourceClaim] = List.empty,
     limits: Map[String, String] = Map.empty,
     requests: Map[String, String] = Map.empty
-  )
-  case class ResourceClaim(name: String)
+  ) derives Decoder
+  case class ResourceClaim(name: String) derives Decoder
   case class SecurityContext(
     allowPrivilegeEscalation: Option[Boolean],
     capabilities: Option[Capabilities],
@@ -157,17 +157,17 @@ object k8s:
     seLinuxOptions: Option[SELinuxOptions],
     seccompProfile: Option[SeccompProfile],
     windowsOptions: Option[WindowsSecurityContextOptions]
-  )
-  case class Capabilities(add: List[String] = List.empty, drop: List[String] = List.empty)
-  case class SELinuxOptions(level: Option[String], role: Option[String], `type`: Option[String], user: Option[String])
-  case class SeccompProfile(localhostProfile: Option[String], `type`: String)
+  ) derives Decoder
+  case class Capabilities(add: List[String] = List.empty, drop: List[String] = List.empty) derives Decoder
+  case class SELinuxOptions(level: Option[String], role: Option[String], `type`: Option[String], user: Option[String]) derives Decoder
+  case class SeccompProfile(localhostProfile: Option[String], `type`: String) derives Decoder
   case class WindowsSecurityContextOptions(
     gmsaCredentialSpec: Option[String],
     gmsaCredentialSpecName: Option[String],
     hostProcess: Option[Boolean],
     runAsUserName: Option[String]
-  )
-  case class VolumeDevice(devicePath: String, name: String)
+  ) derives Decoder
+  case class VolumeDevice(devicePath: String, name: String) derives Decoder
   case class VolumeMount(
     mountPath: String,
     mountPropagation: Option[String],
@@ -175,7 +175,7 @@ object k8s:
     readOnly: Option[Boolean],
     subPath: Option[String],
     subPathExpr: Option[String]
-  )
+  ) derives Decoder
   case class Container(
     args: List[String] = List.empty,
     command: List[String] = List.empty,
@@ -198,13 +198,13 @@ object k8s:
     volumeDevices: List[VolumeDevice] = List.empty,
     volumeMounts: List[VolumeMount] = List.empty,
     workingDir: Option[String]
-  )
+  ) derives Decoder
   case class PodDNSConfig(
     nameservers: List[String] = List.empty,
     options: List[PodDNSConfigOption] = List.empty,
     searches: List[String] = List.empty
-  )
-  case class PodDNSConfigOption(name: Option[String], value: Option[String])
+  ) derives Decoder
+  case class PodDNSConfigOption(name: Option[String], value: Option[String]) derives Decoder
   case class EphemeralContainer(
     args: List[String] = List.empty,
     command: List[String] = List.empty,
@@ -229,14 +229,14 @@ object k8s:
     volumeDevices: List[VolumeDevice] = List.empty,
     volumeMounts: List[VolumeMount] = List.empty,
     workingDir: Option[String]
-  )
-  case class HostAlias(hostnames: List[String] = List.empty, ip: Option[String])
-  case class LocalObjectReference(name: Option[String])
-  case class PodOS(name: String)
-  case class PodReadinessGate(conditionType: String)
-  case class PodResourceClaim(name: String, source: Option[ClaimSource])
-  case class ClaimSource(resourceClaimName: Option[String], resourceClaimTemplateName: Option[String])
-  case class PodSchedulingGate(name: String)
+  ) derives Decoder
+  case class HostAlias(hostnames: List[String] = List.empty, ip: Option[String]) derives Decoder
+  case class LocalObjectReference(name: Option[String]) derives Decoder
+  case class PodOS(name: String) derives Decoder
+  case class PodReadinessGate(conditionType: String) derives Decoder
+  case class PodResourceClaim(name: String, source: Option[ClaimSource]) derives Decoder
+  case class ClaimSource(resourceClaimName: Option[String], resourceClaimTemplateName: Option[String]) derives Decoder
+  case class PodSchedulingGate(name: String) derives Decoder
   case class PodSecurityContext(
     fsGroup: Option[Int],
     fsGroupChangePolicy: Option[String],
@@ -248,15 +248,15 @@ object k8s:
     supplementalGroups: List[Int] = List.empty,
     sysctls: List[Sysctl] = List.empty,
     windowsOptions: Option[WindowsSecurityContextOptions]
-  )
-  case class Sysctl(name: String, value: String)
+  ) derives Decoder
+  case class Sysctl(name: String, value: String) derives Decoder
   case class Toleration(
     effect: Option[String],
     key: Option[String],
     operator: Option[String],
     tolerationSeconds: Option[Int],
     value: Option[String]
-  )
+  ) derives Decoder
   case class TopologySpreadConstraint(
     labelSelector: Option[LabelSelector],
     matchLabelKeys: List[String] = List.empty,
@@ -266,7 +266,7 @@ object k8s:
     nodeTaintsPolicy: Option[String],
     topologyKey: String,
     whenUnsatisfiable: String
-  )
+  ) derives Decoder
   case class Volume(
     awsElasticBlockStore: Option[AWSElasticBlockStoreVolumeSource],
     azureDisk: Option[AzureDiskVolumeSource],
@@ -298,48 +298,48 @@ object k8s:
     secret: Option[SecretVolumeSource],
     storageos: Option[StorageOSVolumeSource],
     vsphereVolume: Option[VsphereVirtualDiskVolumeSource]
-  )
-  case class AWSElasticBlockStoreVolumeSource() // not implemented on purpose
-  case class AzureDiskVolumeSource() // not implemented on purpose
-  case class AzureFileVolumeSource() // not implemented on purpose
-  case class CephFSVolumeSource() // not implemented on purpose
-  case class CinderVolumeSource() // not implemented on purpose
+  ) derives Decoder
+  case class AWSElasticBlockStoreVolumeSource() derives Decoder // not implemented on purpose
+  case class AzureDiskVolumeSource() derives Decoder // not implemented on purpose
+  case class AzureFileVolumeSource() derives Decoder // not implemented on purpose
+  case class CephFSVolumeSource() derives Decoder // not implemented on purpose
+  case class CinderVolumeSource() derives Decoder // not implemented on purpose
   case class ConfigMapVolumeSource(
     defaultMode: Option[Int],
     items: List[KeyToPath] = List.empty,
     name: Option[String],
     optional: Option[Boolean]
-  )
-  case class CSIVolumeSource() // not implemented on purpose
-  case class DownwardAPIVolumeSource() // not implemented on purpose
-  case class EmptyDirVolumeSource() // not implemented on purpose
-  case class EphemeralVolumeSource() // not implemented on purpose
-  case class FCVolumeSource() // not implemented on purpose
-  case class FlexVolumeSource() // not implemented on purpose
-  case class FlockerVolumeSource() // not implemented on purpose
-  case class GCEPersistentDiskVolumeSource() // not implemented on purpose
-  case class GitRepoVolumeSource() // not implemented on purpose
-  case class GlusterfsVolumeSource() // not implemented on purpose
-  case class HostPathVolumeSource() // not implemented on purpose
-  case class ISCSIVolumeSource() // not implemented on purpose
-  case class NFSVolumeSource() // not implemented on purpose
-  case class PersistentVolumeClaimVolumeSource() // not implemented on purpose
-  case class PhotonPersistentDiskVolumeSource() // not implemented on purpose
-  case class PortworxVolumeSource() // not implemented on purpose
-  case class ProjectedVolumeSource() // not implemented on purpose
-  case class QuobyteVolumeSource() // not implemented on purpose
-  case class RBDVolumeSource() // not implemented on purpose
-  case class ScaleIOVolumeSource() // not implemented on purpose
+  ) derives Decoder
+  case class CSIVolumeSource() derives Decoder // not implemented on purpose
+  case class DownwardAPIVolumeSource() derives Decoder // not implemented on purpose
+  case class EmptyDirVolumeSource() derives Decoder // not implemented on purpose
+  case class EphemeralVolumeSource() derives Decoder // not implemented on purpose
+  case class FCVolumeSource() derives Decoder // not implemented on purpose
+  case class FlexVolumeSource() derives Decoder // not implemented on purpose
+  case class FlockerVolumeSource() derives Decoder // not implemented on purpose
+  case class GCEPersistentDiskVolumeSource() derives Decoder // not implemented on purpose
+  case class GitRepoVolumeSource() derives Decoder // not implemented on purpose
+  case class GlusterfsVolumeSource() derives Decoder // not implemented on purpose
+  case class HostPathVolumeSource() derives Decoder // not implemented on purpose
+  case class ISCSIVolumeSource() derives Decoder // not implemented on purpose
+  case class NFSVolumeSource() derives Decoder // not implemented on purpose
+  case class PersistentVolumeClaimVolumeSource() derives Decoder // not implemented on purpose
+  case class PhotonPersistentDiskVolumeSource() derives Decoder // not implemented on purpose
+  case class PortworxVolumeSource() derives Decoder // not implemented on purpose
+  case class ProjectedVolumeSource() derives Decoder // not implemented on purpose
+  case class QuobyteVolumeSource() derives Decoder // not implemented on purpose
+  case class RBDVolumeSource() derives Decoder // not implemented on purpose
+  case class ScaleIOVolumeSource() derives Decoder // not implemented on purpose
   case class SecretVolumeSource(
     defaultMode: Option[Int],
     items: List[KeyToPath] = List.empty,
     optional: Option[Boolean],
     secretName: Option[String]
-  )
-  case class StorageOSVolumeSource() // not implemented on purpose
-  case class VsphereVirtualDiskVolumeSource() // not implemented on purpose
+  ) derives Decoder
+  case class StorageOSVolumeSource() derives Decoder // not implemented on purpose
+  case class VsphereVirtualDiskVolumeSource() derives Decoder // not implemented on purpose
 
-  case class KeyToPath(key: String, mode: Option[Int], path: String)
+  case class KeyToPath(key: String, mode: Option[Int], path: String) derives Decoder
 
   case class PodCondition(
     lastProbeTime: Option[String],
@@ -348,7 +348,7 @@ object k8s:
     reason: Option[String],
     status: String,
     `type`: String
-  )
+  ) derives Decoder
   case class ContainerStatus(
     containerID: Option[String],
     image: String,
@@ -359,13 +359,13 @@ object k8s:
     restartCount: Int,
     started: Option[Boolean],
     state: Option[ContainerState]
-  )
+  ) derives Decoder
   case class ContainerState(
     running: Option[ContainerStateRunning],
     terminated: Option[ContainerStateTerminated],
     waiting: Option[ContainerStateWaiting]
-  )
-  case class ContainerStateRunning(startedAt: Option[String])
+  ) derives Decoder
+  case class ContainerStateRunning(startedAt: Option[String]) derives Decoder
   case class ContainerStateTerminated(
     containerID: Option[String],
     exitCode: Int,
@@ -374,9 +374,9 @@ object k8s:
     reason: Option[String],
     signal: Option[String],
     startedAt: Option[String]
-  )
-  case class ContainerStateWaiting(message: Option[String], reason: Option[String])
-  case class PodIP(ip: Option[String])
+  ) derives Decoder
+  case class ContainerStateWaiting(message: Option[String], reason: Option[String]) derives Decoder
+  case class PodIP(ip: Option[String]) derives Decoder
 
   case class PodSpec(
     activeDeadlineSeconds: Option[Int],
@@ -417,7 +417,7 @@ object k8s:
     tolerations: List[Toleration] = List.empty,
     topologySpreadConstraints: List[TopologySpreadConstraint] = List.empty,
     volumes: List[Volume] = List.empty
-  )
+  ) derives Decoder
 
   case class PodStatus(
     conditions: List[PodCondition] = List.empty,
@@ -433,7 +433,7 @@ object k8s:
     qosClass: Option[String],
     reason: Option[String],
     startTime: Option[String]
-  )
+  ) derives Decoder
 
   case class Pod(
     urn: Output[String],

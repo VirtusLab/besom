@@ -5,7 +5,7 @@ import Constants.*
 import Decoder.*
 import ProtobufUtil.*
 
-enum TestEnum2:
+enum TestEnum2 derives Decoder:
   case A
   case B
 
