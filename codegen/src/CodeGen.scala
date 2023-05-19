@@ -108,7 +108,7 @@ object CodeGen {
     def asScalaType(asArgsType: Boolean = false)(implicit typeMapper: TypeMapper): Type = typeMapper.asScalaType(typeRef, asArgsType)
   }
 
-  def sourcesFromPulumiPackage(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
+  def sourcesFromPulumiPackage(pulumiPackage: PulumiPackage, besomVersion: String): Seq[SourceFile] = {
     val enumTypeTokensBuffer = collection.mutable.ListBuffer.empty[String]
     val objectTypeTokensBuffer = collection.mutable.ListBuffer.empty[String]
     
@@ -130,41 +130,65 @@ object CodeGen {
     )
 
     Seq(
-      sourceFileForBuildDefinition(providerName = pulumiPackage.name),
-      sourceFileFromPulumiProvider(pulumiPackage)
+      sourceFileForBuildDefinition(
+        pulumiPackageName = pulumiPackage.name,
+        besomVersion = besomVersion
+      ),
+      sourceFileFromPulumiProvider(pulumiPackage),
+      resourcePluginMetadataFile(
+        pluginName = pulumiPackage.name,
+        pluginVersion = pulumiPackage.version
+      ),
     ) ++
     sourceFilesForNonResourceTypes(pulumiPackage) ++
     sourceFilesForCustomResources(pulumiPackage)
   }
 
-  def sourceFileForBuildDefinition(providerName: String): SourceFile = {
+  def sourceFileForBuildDefinition(pulumiPackageName: String, besomVersion: String): SourceFile = {
+    // TODO use original package version from the schema as publish.version?
+
     val fileContent =
       s"""|//> using scala "3.2.2"
-          |//> using lib "org.virtuslab::besom-core:0.0.1-SNAPSHOT"
+          |//> using lib "org.virtuslab::besom-core:${besomVersion}"
+          |
+          |//> using resourceDir "resources"
           |
           |//> using publish.organization "org.virtuslab"
-          |//> using publish.name "besom-kubernetes"
-          |//> using publish.version "0.0.1-SNAPSHOT"
+          |//> using publish.name "besom-${pulumiPackageName}"
+          |//> using publish.version "${besomVersion}"
           |""".stripMargin
 
-    val pathParts = basePackage.split("\\.") ++ Seq(providerName, "project.scala")
-    val filePath = Paths.get(pathParts.head, pathParts.tail.toArray: _*)
+    val filePath = Paths.get("project.scala")
 
     SourceFile(relativePath = filePath, sourceCode = fileContent)
   }
+
+  def resourcePluginMetadataFile(pluginName: String, pluginVersion: String): SourceFile = {
+    val fileContent =
+      s"""|{
+          |  "resource": true,
+          |  "name": "${pluginName}",
+          |  "version": "${pluginVersion}"
+          |}
+          |""".stripMargin
+    val filePath = Paths.get("resources", "plugin.json")
+
+    SourceFile(relativePath = filePath, sourceCode = fileContent)
+  } 
 
   def sourceFileFromPulumiProvider(pulumiPackage: PulumiPackage)(implicit typeMapper: TypeMapper): SourceFile = {
     val asPackageName = pulumiPackage.language.java.packages.withDefault(x => x)
 
     val providerName = pulumiPackage.name
     val providerPackageSuffix = asPackageName(providerName)
-    val pathPrefixParts = basePackage.split("\\.") ++ Seq(providerPackageSuffix, "resources")
+    val pathPrefixParts = Seq("src") ++ basePackage.split("\\.") ++ Seq(providerPackageSuffix, "resources")
     val filePathPrefix = Paths.get(pathPrefixParts.head, pathPrefixParts.tail.toArray: _*)
     sourceFileForResource(
       resourceName = "Provider",
       resourceDefinition = pulumiPackage.provider,
       fullPackageName = s"${basePackage}.${providerPackageSuffix}",
       filePathPrefix = filePathPrefix,
+      typeToken = s"pulumi:provider:${pulumiPackage.name}",
       isProvider = true
     )
   }
@@ -181,10 +205,8 @@ object CodeGen {
 
       val providerPackageSuffix = asPackageName(providerName)
 
-      val pathParts = basePackage.split("\\.") ++ Seq(providerPackageSuffix) ++ packageSuffix.split("\\.") ++ Seq(s"${typeName}.scala")
+      val pathParts = Seq("src") ++ basePackage.split("\\.") ++ Seq(providerPackageSuffix) ++ packageSuffix.split("\\.") ++ Seq(s"${typeName}.scala")
       val filePath = Paths.get(pathParts.head, pathParts.tail.toArray: _*)
-
-
 
       val packageDecl = s"package ${basePackage}.${providerPackageSuffix}.${packageSuffix}"
       val specificFileContent = typeDefinition match {
@@ -229,7 +251,8 @@ object CodeGen {
   def sourceForObjectType(typeName: String, objectTypeDefinition: ObjectTypeDefinition)(implicit typeMapper: TypeMapper): String = {
     val importedIdentifiers = commonImportedIdentifiers ++ Seq(
       "besom.internal.Decoder",
-      "besom.internal.Encoder"
+      "besom.internal.Encoder",
+      "besom.internal.ArgsEncoder"
     )
     val imports = importedIdentifiers.map(id => s"import $id").mkString("\n")
 
@@ -273,7 +296,7 @@ object CodeGen {
     val argsClass =
       s"""|case class $argsClassName(
           |${argsClassParams.map(param => s"  ${param}").mkString(",\n")}
-          |) derives Encoder""".stripMargin
+          |) derives Encoder, ArgsEncoder""".stripMargin
 
     val argsCompanion =
       s"""|object $argsClassName:
@@ -312,7 +335,7 @@ object CodeGen {
       val providerPackageSuffix = asPackageName(providerName)
 
       val fullPackageName = s"${basePackage}.${providerPackageSuffix}.${packageSuffix}.resources"
-      val pathPrefixParts = basePackage.split("\\.") ++ Seq(providerPackageSuffix) ++ packageSuffix.split("\\.") ++ Seq("resources") // TODO
+      val pathPrefixParts = Seq("src") ++ basePackage.split("\\.") ++ Seq(providerPackageSuffix) ++ packageSuffix.split("\\.") ++ Seq("resources") // TODO
     
       val filePathPrefix = Paths.get(pathPrefixParts.head, pathPrefixParts.tail.toArray: _*)
       
@@ -321,12 +344,13 @@ object CodeGen {
         resourceDefinition = resourceDefinition,
         fullPackageName = fullPackageName,
         filePathPrefix = filePathPrefix,
+        typeToken = typeToken,
         isProvider = false,
       )
     }.toSeq
   }
 
-  def sourceFileForResource(resourceName: String, resourceDefinition: ResourceDefinition, fullPackageName: String, filePathPrefix: Path, isProvider: Boolean)(implicit typeMapper: TypeMapper): SourceFile = {
+  def sourceFileForResource(resourceName: String, resourceDefinition: ResourceDefinition, fullPackageName: String, filePathPrefix: Path, typeToken: String, isProvider: Boolean)(implicit typeMapper: TypeMapper): SourceFile = {
     val resourceClassName = Type.Name(resourceName).syntax
     val argsClassName = Type.Name(s"${resourceName}Args").syntax
     val factoryMethodName = Term.Name(decapitalize(resourceName)).syntax
@@ -345,7 +369,8 @@ object CodeGen {
 
     val importedIdentifiers = commonImportedIdentifiers ++ conditionallyImportedIdentifiers ++ Seq(
       "besom.internal.ResourceDecoder",
-      "besom.internal.CustomResourceOptions"
+      "besom.internal.CustomResourceOptions",
+      "besom.util.NonEmptyString",
     )
 
     val imports = importedIdentifiers.map(id => s"import $id").mkString("\n")
@@ -387,15 +412,15 @@ object CodeGen {
           |) extends ${resourceBaseClass} derives ResourceDecoder""".stripMargin
 
     // the type has to match pulumi's resource type schema, ie kubernetes:core/v1:Pod
-    val typ = s"" // TODO HIER !!!!!!!!!!!!!!!!!!!!!!!
+    val typ = Lit.String(typeToken)
 
     val factoryMethod =
       s"""|def $factoryMethodName(using ctx: Context)(
-          |  name: String,
+          |  name: NonEmptyString,
           |  args: $argsClassName,
           |  opts: CustomResourceOptions = CustomResourceOptions()
           |): Output[$resourceClassName] = 
-          |  ctx.registerResource[$resourceClassName, $argsClassName]($typ, name, args, opts)
+          |  ctx.registerResource[$resourceClassName, $argsClassName](${typ}, name, args, opts)
           |""".stripMargin
 
     val argsEncoderClassName = if (isProvider) "ProviderArgsEncoder" else "ArgsEncoder"
