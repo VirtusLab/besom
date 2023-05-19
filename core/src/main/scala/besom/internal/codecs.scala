@@ -267,7 +267,7 @@ trait DecoderInstancesLowPrio:
                             val fieldValue =
                               fields.get(name).getOrElse(throw DecodingError(s"Value for field $name is missing!"))
 
-                            decoder.decode(value) match
+                            decoder.decode(fieldValue) match
                               case Left(decodingError) => throw decodingError
                               case Right(odField)      => Right(acc.zip(odField))
                     }

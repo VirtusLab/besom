@@ -10,6 +10,9 @@ object ProtobufUtil:
   extension (v: Value) def asJsonString: Either[Throwable, String] = Try(printer.print(Value.toJavaProto(v))).toEither
 
   extension (s: String) def asValue: Value = Value(Kind.StringValue(s))
+  extension (s: Option[String]) def asValue: Value =
+    val v = s.map(Kind.StringValue(_)).getOrElse(Kind.NullValue(NullValue.NULL_VALUE))
+    Value(v)
 
   extension (i: Int) def asValue: Value = Value(Kind.NumberValue(i))
 

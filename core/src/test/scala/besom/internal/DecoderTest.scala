@@ -5,11 +5,16 @@ import Constants.*
 import Decoder.*
 import ProtobufUtil.*
 
-enum TestEnum2 derives Decoder:
-  case A
-  case B
+object DecoderTest:
+  case class TestCaseClass(foo: Int, bar: List[String]) derives Decoder
+
+  enum TestEnum derives Decoder:
+    case A
+    case B
 
 class DecoderTest extends munit.FunSuite:
+  import DecoderTest.*
+
   test("special struct signature can be extracted") {
     val secretStructSample: Value = Map(
       SpecialSigKey -> SpecialSecretSig.asValue
@@ -18,13 +23,25 @@ class DecoderTest extends munit.FunSuite:
     assert(extractSpecialStructSignature(secretStructSample).get == SpecialSecretSig)
   }
 
-  test("decode enum") {
-    val v = "A".asValue
-    val d = summon[Decoder[TestEnum2]]
+  test("decode case class") {
+    val v = Map(
+      "foo" -> 10.asValue,
+      "bar" -> List("qwerty".asValue).asValue
+    ).asValue
+    val d = summon[Decoder[TestCaseClass]]
 
     d.decode(v) match
       case Left(ex)                                      => throw ex
-      case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some(TestEnum2.A))
+      case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some(TestCaseClass(10, List("qwerty"))))
       case Right(_)                                      => throw Exception("Unexpected unknown!")
+  }
 
+  test("decode enum") {
+    val v = "A".asValue
+    val d = summon[Decoder[TestEnum]]
+
+    d.decode(v) match
+      case Left(ex)                                      => throw ex
+      case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some(TestEnum.A))
+      case Right(_)                                      => throw Exception("Unexpected unknown!")
   }
