@@ -143,7 +143,7 @@ enum Result[+A]:
 
   def run[F[+_]](using F: Runtime[F]): F[A] = this match
     case Suspend(thunk, debug) =>
-      if (F.debugEnabled) (s"interpreting Suspend from $debug")
+      if (F.debugEnabled) println(s"interpreting Suspend from $debug")
       F.fromFuture(thunk())
     case Pure(value, debug) =>
       if (F.debugEnabled) println(s"interpreting Pure from $debug")
@@ -172,6 +172,10 @@ object Result:
   def defer[A](a: => A)(using Debug): Result[A] = Result.Defer(() => a, Debug())
   def pure[A](a: A)(using Debug): Result[A]     = Result.Pure(a, Debug())
   def eval[F[_], A](fa: => F[A])(tf: ToFuture[F])(using Debug): Result[A] =
+    // if F.eagerEvaluation then // TODO this is one of the possible ways to implement eager evaluation, other being the CHM approach
+    //   val pendingFuture = tf.eval(fa)()
+    //   Result.Suspend(() => pendingFuture, Debug())
+    // else
     Result.Suspend(tf.eval(fa), Debug())
   def evalTry[A](tryA: => Try[A])(using Debug): Result[A] =
     Result.Suspend(() => Future.fromTry(tryA), Debug())

@@ -8,6 +8,9 @@ enum TestEnum derives Encoder:
   case AnotherTest
   case `weird-test`
 
+case class PlainCaseClass(data: String, moreData: Int) derives Encoder
+case class TestProviderArgs(`type`: Output[String], pcc: Output[PlainCaseClass]) derives ProviderArgsEncoder
+
 class ContextTest extends munit.FunSuite:
   case class TestResource(urn: Output[String], id: Output[String], url: Output[String]) extends CustomResource
   case class AnotherTestResource(urn: Output[String], id: Output[String], url: Output[String]) extends CustomResource
@@ -33,13 +36,12 @@ class ContextTest extends munit.FunSuite:
     summon[Encoder[A]].encode(a).unsafeRunSync()
 
   test("quick dirty ProviderArgsEncoder test") {
-    import besom.api.k8s.*
     given Context = DummyContext().unsafeRunSync()
 
     val (res, value) = encodeProviderArgs(
-      ProviderArgs(
-        Output("test"),
-        Output(ObjectMetaArgs(name = "to", selfLink = "działa", finalizers = List("Panie", "Lama")))
+      TestProviderArgs(
+        Output("SOME-TEST-PROVIDER"),
+        Output(PlainCaseClass(data = "werks?", moreData = 123))
       )
     )
 

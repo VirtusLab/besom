@@ -52,6 +52,19 @@ def main(): Unit = Pulumi.run {
     )
   )
 
+  // how to deal with arbitrary callbacks
+  pod.flatMap { pod =>
+    ???
+  // k8s.service(
+  //   "app",
+  //   ServiceArgs(labels = Map("app" -> pod.metadata.map(_.flatMap(_.name)))),
+  //   spec = ServiceSpecArgs(
+  //     selector = labels,
+  //     ports = ServicePortArgs(80)
+  //   )
+  // )
+  }
+
   for {
     nginx   <- pod
     exports <- Pulumi.exports("name" -> nginx.metadata.map(_.flatMap(_.name)))

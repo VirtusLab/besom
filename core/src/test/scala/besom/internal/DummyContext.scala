@@ -33,4 +33,5 @@ object DummyContext:
     for
       wg    <- WorkGroup()
       stack <- Promise[Stack]
-    yield Context(runInfo, keepResources, keepOutputValues, monitor, engine, wg, stack)
+      rm    <- ResourceManager()
+    yield Context(runInfo, keepResources, keepOutputValues, monitor, engine, wg, stack, rm)

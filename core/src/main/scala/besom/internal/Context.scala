@@ -1,208 +1,78 @@
 package besom.internal
 
-import besom.util.*
-import scala.quoted.*
-import scala.deriving.Mirror
+import besom.util.*, Types.*
 import com.google.protobuf.struct.{Struct, Value}
 import pulumirpc.resource.SupportsFeatureRequest
-import besom.util.Types.ProviderType
-import io.grpc.internal.DnsNameResolver.ResourceResolver
 
 case class RawResourceResult(urn: String, id: Option[String], data: Struct, dependencies: Map[String, Set[Resource]])
 
-case class EmptyArgs() derives ArgsEncoder
+// needed for parent/child relationship tracking
+class ResourceManager(private val resources: Ref[Map[Resource, ResourceState]]):
+  def add(resource: ProviderResource, state: ProviderResourceState): Result[Unit] =
+    resources.update(_ + (resource -> state))
 
-case class Stack(urn: Output[String]) extends ComponentResource derives ResourceDecoder
-object Stack:
-  val RootPulumiStackTypeName: NonEmptyString = "pulumi:pulumi:Stack"
+  def add(resource: CustomResource, state: CustomResourceState): Result[Unit] =
+    resources.update(_ + (resource -> state))
 
-trait ResourceResolver[A]:
-  def resolve(errorOrResourceResult: Either[Throwable, RawResourceResult])(using Context): Result[Unit]
+  def add(resource: ComponentResource, state: ComponentResourceState): Result[Unit] =
+    resources.update(_ + (resource -> state))
 
-trait ResourceDecoder[A <: Resource]: // TODO rename to something more sensible
-  def makeResolver(using Context): Result[(A, ResourceResolver[A])]
+  def add(resource: Resource, state: ResourceState): Result[Unit] = (resource, state) match
+    case (pr: ProviderResource, prs: ProviderResourceState) =>
+      add(pr, prs)
+    case (cr: CustomResource, crs: CustomResourceState) =>
+      add(cr, crs)
+    case (compr: ComponentResource, comprs: ComponentResourceState) =>
+      add(compr, comprs)
+    case _ => Result.fail(new Exception(s"resource ${resource} and state ${state} don't match"))
 
-object ResourceDecoder:
-  class CustomPropertyExtractor[A](propertyName: String, decoder: Decoder[A]):
-    def extract(fields: Map[String, Value], dependencies: Map[String, Set[Resource]], resource: Resource)(using ctx: Context) =
-      val fieldDependencies = dependencies.get(propertyName).getOrElse(Set.empty)
+  def getStateFor(resource: ProviderResource): Result[ProviderResourceState] =
+    resources.get.flatMap(_.get(resource) match
+      case Some(state) =>
+        state match
+          case crs: CustomResourceState =>
+            Result.fail(new Exception(s"state for ProviderResource ${resource} is a CustomResourceState!"))
+          case prs: ProviderResourceState => Result.pure(prs)
+          case comprs: ComponentResourceState =>
+            Result.fail(new Exception(s"state for ProviderResource ${resource} is a ComponentResourceState!"))
 
-      val outputData = fields.get(propertyName).map { value =>
-        decoder.decode(value).map(_.withDependency(resource)) match
-          case Left(err) => throw err 
-          case Right(value) => value
-      }.getOrElse {
-        if ctx.isDryRun then OutputData.unknown().withDependency(resource) 
-        else OutputData.empty(Set(resource))
-      }.withDependencies(fieldDependencies)
-
-      outputData
-
-  def makeResolver[A <: Resource](
-    fromProduct: Product => A,
-    customPropertyExtractors: Vector[CustomPropertyExtractor[?]]
-  )(using Context): Result[(A, ResourceResolver[A])] =
-    val customPropertiesCount = customPropertyExtractors.length
-    val  customPropertiesResults = Result.sequence(
-      Vector.fill(customPropertiesCount)(Promise[OutputData[Option[Any]]])
+      case None => Result.fail(new Exception(s"state for resource ${resource} not found"))
     )
 
-    Promise[OutputData[String]].zip(Promise[OutputData[String]]).zip(customPropertiesResults).map { 
-      case (urnPromise, idPromise, customPopertiesPromises) =>
-        val allPromises = Vector(urnPromise, idPromise) ++ customPopertiesPromises.toList
+  def getStateFor(resource: CustomResource): Result[CustomResourceState] =
+    resources.get.flatMap(_.get(resource) match
+      case Some(state) =>
+        state match
+          case crs: CustomResourceState => Result.pure(crs)
+          case prs: ProviderResourceState =>
+            Result.fail(new Exception(s"state for CustomResource ${resource} is a ProviderResourceState!"))
+          case comprs: ComponentResourceState =>
+            Result.fail(new Exception(s"state for CustomResource ${resource} is a ComponentResourceState!"))
 
-        val propertiesOutputs = allPromises.map(promise => Output(promise.get)).toArray
-        val resource = fromProduct(Tuple.fromArray(propertiesOutputs))
+      case None => Result.fail(new Exception(s"state for resource ${resource} not found"))
+    )
 
-        def failAllPromises(err: Throwable): Result[Unit] =
-          Result.sequence(
-            allPromises.map(_.fail(err))
-          ).void.flatMap(_ => Result.fail(err))
+  def getStateFor(resource: ComponentResource): Result[ComponentResourceState] =
+    resources.get.flatMap(_.get(resource) match
+      case Some(state) =>
+        state match
+          case crs: CustomResourceState =>
+            Result.fail(new Exception(s"state for ComponentResource ${resource} is a CustomResourceState!"))
+          case prs: ProviderResourceState =>
+            Result.fail(new Exception(s"state for ComponentResource ${resource} is a ProviderResourceState!"))
+          case comprs: ComponentResourceState => Result.pure(comprs)
 
-        val resolver = new ResourceResolver[A]:
-          def resolve(errorOrResourceResult: Either[Throwable, RawResourceResult])(using ctx: Context): Result[Unit] =
-            errorOrResourceResult match
-              case Left(err) => failAllPromises(err)
+      case None => Result.fail(new Exception(s"state for resource ${resource} not found"))
+    )
 
-              case Right(rawResourceResult) =>
+  def getStateFor(resource: Resource): Result[ResourceState] =
+    resources.get.flatMap(_.get(resource) match
+      case Some(state) => Result.pure(state)
+      case None        => Result.fail(new Exception(s"state for resource ${resource} not found"))
+    )
 
-                val urnOutputData = OutputData(rawResourceResult.urn).withDependency(resource)
-
-                // TODO what if id is a blank string? does this happen? wtf?
-                val idOutputData = rawResourceResult.id.map(OutputData(_).withDependency(resource)).getOrElse {
-                  OutputData.unknown().withDependency(resource)
-                }
-
-                val fields = rawResourceResult.data.fields
-                val dependencies = rawResourceResult.dependencies
-
-                try
-                  val propertiesFulfilmentResults = customPopertiesPromises.zip(customPropertyExtractors).map {
-                    (promise, extractor) => promise.fulfillAny(extractor.extract(fields, dependencies, resource))
-                  }
-
-                  val fulfilmentResults = Vector(
-                    urnPromise.fulfill(urnOutputData),
-                    idPromise.fulfill(idOutputData),
-                  ) ++ propertiesFulfilmentResults
-
-                  Result.sequence(fulfilmentResults).void
-                catch 
-                  case err: DecodingError => failAllPromises(err)
-        
-        (resource, resolver)
-    }
-
-  inline def derived[A <: Resource]: ResourceDecoder[A] = ${ derivedImpl[A] }
-
-  def derivedImpl[A <: Resource : Type](using q : Quotes): Expr[ResourceDecoder[A]] =
-    Expr.summon[Mirror.Of[A]].get match
-      case '{ $m: Mirror.ProductOf[A] { type MirroredElemLabels = elementLabels; type MirroredElemTypes = elementTypes } } =>
-        def prepareExtractors(names: Type[?], types: Type[?]): List[Expr[CustomPropertyExtractor[?]]] =
-          (names, types) match
-            case ('[EmptyTuple], '[EmptyTuple]) => Nil
-            case ('[namesHead *: namesTail], '[Output[typesHead] *: typesTail]) =>
-              val propertyName = Expr(Type.valueOfConstant[namesHead].get.asInstanceOf[String])
-              val propertyDecoder = Expr.summon[Decoder[typesHead]].getOrElse {
-                quotes.reflect.report.errorAndAbort("Missing given instance of Decoder[" ++ Type.show[typesHead] ++ "]")
-              } // TODO: Handle missing decoder
-              val extractor = '{ CustomPropertyExtractor(${ propertyName }, ${propertyDecoder}) }
-              extractor :: prepareExtractors(Type.of[namesTail], Type.of[typesTail])
-
-        // Skip initial `urn` and `id` fields from the case class
-        val customPropertiesOutputsType = Type.of[elementTypes] match
-          case '[_ *: _ *: tpes] => Type.of[tpes]
-        val customPropertiesNamesType = Type.of[elementLabels] match
-          case '[_ *: _ *: tpes] => Type.of[tpes]
-        
-
-        val customPropertyExtractorsExpr = Expr.ofList(prepareExtractors(customPropertiesNamesType, customPropertiesOutputsType))
-
-        '{
-          new ResourceDecoder[A]:
-            def makeResolver(using Context): Result[(A, ResourceResolver[A])] = 
-              ResourceDecoder.makeResolver(
-                fromProduct = ${ m }.fromProduct,
-                customPropertyExtractors = ${ customPropertyExtractorsExpr }.toVector
-              )
-        }
-
-
-// type ResourceState struct {
-// 	m sync.RWMutex
-
-// 	urn URNOutput `pulumi:"urn"`
-
-// 	rawOutputs        Output
-// 	children          resourceSet
-// 	providers         map[string]ProviderResource
-// 	provider          ProviderResource
-// 	version           string
-// 	pluginDownloadURL string
-// 	aliases           []URNOutput
-// 	name              string
-// 	transformations   []ResourceTransformation
-
-// 	remoteComponent bool
-// }
-
-sealed trait ResourceState:
-  // def urn: Output[String] // TODO BALEET, URN is in resource anyway
-  // def rawOutputs: Output[_] // TODO BALEET this is for StackReference only and is a hack used by pulumi-go, we'll use the non-hacky way from pulumi-java
-  def children: Set[Resource]
-  def provider: ProviderResource
-  def version: String
-  def pluginDownloadURL: String
-  // def aliases: List[Output[F, String]]
-  def name: String
-  // def transformations: List[ResourceTransformation]
-  def remoteComponent: Boolean
-
-case class CommonResourceState(
-  // urn: Output[String], // TODO BALEET, URN is in custom resource anyway
-  // rawOutputs: Output[_], // TODO BALEET this is for StackReference only and is a hack used by pulumi-go, we'll use the non-hacky way from pulumi-java
-  children: Set[Resource],
-  provider: ProviderResource,
-  version: String,
-  pluginDownloadURL: String,
-  // aliases: List[Output[F, String]],
-  name: String,
-  // transformations: List[ResourceTransformation],
-  remoteComponent: Boolean
-)
-
-case class CustomResourceState(
-  common: CommonResourceState,
-  id: Output[String]
-) extends ResourceState:
-  export common.*
-
-case class ProviderResourceState(
-  custom: CustomResourceState,
-  pkg: String
-) extends ResourceState:
-  export custom.*
-
-case class ComponentResourceState(
-  common: CommonResourceState,
-  providers: Map[String, ProviderResource]
-) extends ResourceState:
-  export common.*
-
-// needed for parent/child relationship tracking
-class ResourceManager(private val resources: Ref[Map[Resource, ResourceState]])
-
-trait Resource:
-  def urn: Output[String]
-
-trait CustomResource extends Resource:
-  def id: Output[String]
-
-trait ComponentResource extends Resource
-
-trait ProviderResource extends CustomResource
-
-case class DependencyResource(urn: Output[String]) extends Resource
+object ResourceManager:
+  def apply(): Result[ResourceManager] = Ref(Map.empty).map(new ResourceManager(_))
 
 trait Context {
 
@@ -233,30 +103,31 @@ trait Context {
   private[besom] def waitForAllTasks: Result[Unit]
 
   private[besom] def registerProvider[R <: Resource: ResourceDecoder, A: ProviderArgsEncoder](
-    typ: ProviderType, // TODO: ProviderType
+    typ: ProviderType,
     name: NonEmptyString,
     args: A,
     options: CustomResourceOptions
   ): Output[R]
 
   private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder](
-    typ: NonEmptyString,
+    typ: ResourceType,
     name: NonEmptyString
   ): Output[R]
 
   private[besom] def registerResource[R <: Resource: ResourceDecoder](
-    typ: NonEmptyString,
+    typ: ResourceType,
     name: NonEmptyString
   ): Output[R]
 
   private[besom] def readResource[R <: Resource: ResourceDecoder](
-    typ: NonEmptyString,
+    typ: ResourceType,
     name: NonEmptyString
   ): Output[R]
 
   private[besom] def createResourceState(
-    typ: NonEmptyString,
+    typ: ResourceType,
     name: NonEmptyString,
+    resource: Resource,
     resourceOptions: ResourceOptions
   ): Result[ResourceState]
 
@@ -265,6 +136,8 @@ trait Context {
 
 object Context:
 
+  type Providers = Map[String, ProviderResource]
+
   private[besom] class ContextImpl(
     private[besom] val runInfo: RunInfo,
     private[besom] val keepResources: Boolean,
@@ -272,7 +145,8 @@ object Context:
     private[besom] val monitor: Monitor,
     private[besom] val engine: Engine,
     private[besom] val workgroup: WorkGroup,
-    private[besom] val stackPromise: Promise[Stack]
+    private[besom] val stackPromise: Promise[Stack],
+    private[besom] val resourceManager: ResourceManager
   ) extends Context:
 
     val projectName: NonEmptyString = runInfo.project
@@ -314,56 +188,174 @@ object Context:
     private[besom] def registerResourceOutputsInternal(): Result[Unit] = ???
 
     override private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder](
-      typ: NonEmptyString,
+      typ: ResourceType,
       name: NonEmptyString
-    ): Output[R] = ???
+    ): Output[R] =
+      // val effect: Output[R] = ???
+      // registerResourceCreation(typ, name, effect) // put into ConcurrentHashMap eagerly!
+      // effect
+      ???
+
+    private[besom] def prepareResourceInputs[A: ArgsEncoder](
+      resource: Resource,
+      args: A,
+      options: ResourceOptions,
+      state: ResourceState
+    ): Result[Struct] = ??? // use PropertiesSerializer.serializeResourceProperties
+    // for inputs <- summon[ArgsEncoder[A]].encode(args) yield inputs
+
+    private[besom] def executeRegisterResourceRequest[R <: Resource](
+      resource: Resource,
+      state: ResourceState,
+      resolver: ResourceResolver[R],
+      inputs: Struct
+    ): Result[Unit] =
+      this
+        .registerTask {
+          Result.defer {
+            ??? // call grpc here
+          }
+        }
+        .fork
+        .void
 
     private[besom] def registerResourceInternal[R <: Resource: ResourceDecoder, A: ArgsEncoder](
-      typ: NonEmptyString,
+      typ: ResourceType,
       name: NonEmptyString,
       args: A,
       options: ResourceOptions
-    ): Result[R] = ???
+    ): Result[R] =
+      summon[ResourceDecoder[R]].makeResolver(using this).flatMap { (resource, resolver) =>
+        for
+          state  <- createResourceState(typ, name, resource, options)
+          _      <- resourceManager.add(resource, state)
+          inputs <- prepareResourceInputs(resource, args, options, state)
+          _      <- executeRegisterResourceRequest(resource, state, resolver, inputs)
+        yield resource
+      }
 
     override private[besom] def registerResource[R <: Resource: ResourceDecoder](
-      typ: NonEmptyString,
+      typ: ResourceType,
       name: NonEmptyString
     ): Output[R] = ???
     override private[besom] def readResource[R <: Resource: ResourceDecoder](
-      typ: NonEmptyString,
+      typ: ResourceType,
       name: NonEmptyString
     ): Output[R] = ???
     // summon[ResourceDecoder[R]].makeFulfillable(using this) match
     //  case (r, fulfillable) =>
 
-    private def resolveParent(typ: NonEmptyString, resourceOptions: ResourceOptions): Result[Option[Resource]] =
+    private def resolveParent(typ: ResourceType, resourceOptions: ResourceOptions): Result[Option[Resource]] =
       if typ == Stack.RootPulumiStackTypeName then Result.pure(None)
       else
         resourceOptions.parent match
           case Some(parent) => Result.pure(Some(parent))
           case None         => getStack.map(Some(_))
 
-    private def applyTransformations[A](
-      args: A,
+    private def applyTransformations(
       resourceOptions: ResourceOptions,
       parent: Option[Resource]
-    ): Result[(A, ResourceOptions)] =
-      Result.pure((args, resourceOptions))
+    ): Result[ResourceOptions] =
+      Result.pure(resourceOptions) // TODO resource transformations
 
-    private def mergeProviders(opts: ResourceOptions, parent: Option[Resource]): Result[Map[String, ProviderResource]] =
-      ???
+    private def collapseAliases(opts: ResourceOptions): Result[List[Output[String]]] =
+      Result.pure(List.empty) // TODO aliases
+
+    private def mergeProviders(typ: String, opts: ResourceOptions): Result[Providers] =
+      def getParentProviders = opts.parent match
+        case None         => Result.pure(Map.empty)
+        case Some(parent) => resourceManager.getStateFor(parent).map(_.providers)
+
+      def overwriteWithProvidersFromOptions(initialProviders: Providers): Result[Providers] =
+        opts match
+          case CustomResourceOptions(common, provider, _, _, _) =>
+            provider match
+              case None => Result.pure(initialProviders)
+              case Some(provider) =>
+                resourceManager.getStateFor(provider).map { prs =>
+                  initialProviders + (prs.pkg -> provider)
+                }
+
+          case ComponentResourceOptions(_, providers) =>
+            Result
+              .sequence(
+                providers.map(provider => resourceManager.getStateFor(provider).map(rs => rs.pkg -> provider))
+              )
+              .map(_.toMap)
+              // overwrite overlapping initialProviders with providers from ComponentResourceOptions
+              .map(initialProviders ++ _)
+
+          case StackReferenceResourceOptions(_, _) => Result.pure(initialProviders)
+
+      for
+        initialProviders <- getParentProviders
+        providers        <- overwriteWithProvidersFromOptions(initialProviders)
+      yield providers
+
+    private def getProvider(typ: ResourceType, providers: Providers, opts: ResourceOptions): Result[ProviderResource] =
+      val pkg = typ.getPackage
+      opts match
+        case CustomResourceOptions(_, providerOpt, _, _, _) =>
+          providerOpt match
+            case None =>
+              providers.get(pkg) match
+                case None           => Result.fail(new Exception(s"no provider found for package ${pkg}"))
+                case Some(provider) => Result.pure(provider)
+
+            case Some(providerFromOpts) =>
+              resourceManager.getStateFor(providerFromOpts).flatMap { prs =>
+                if prs.pkg != pkg then
+                  providers.get(pkg) match
+                    case None           => Result.fail(new Exception(s"no provider found for package ${pkg}"))
+                    case Some(provider) => Result.pure(provider)
+                else Result.pure(providerFromOpts)
+              }
+
+        case _ =>
+          providers.get(pkg) match
+            case None           => Result.fail(new Exception(s"no provider found for package ${pkg}"))
+            case Some(provider) => Result.pure(provider)
 
     override private[besom] def createResourceState(
-      typ: NonEmptyString,
+      typ: ResourceType,
       name: NonEmptyString,
+      resource: Resource,
       resourceOptions: ResourceOptions
     ): Result[ResourceState] =
-      val parent: Option[Resource] =
-        if typ == Stack.RootPulumiStackTypeName then None
-        else if resourceOptions.parent.isDefined then resourceOptions.parent
-        else None // todo
+      for
+        parent    <- resolveParent(typ, resourceOptions)
+        opts      <- applyTransformations(resourceOptions, parent)
+        aliases   <- collapseAliases(opts)
+        providers <- mergeProviders(typ, opts)
+        provider  <- getProvider(typ, providers, opts)
+      yield {
+        val commonRS = CommonResourceState(
+          children = Set.empty,
+          provider = provider,
+          providers = providers,
+          version = resourceOptions.version,
+          pluginDownloadUrl = resourceOptions.pluginDownloadUrl,
+          name = name,
+          remoteComponent = false // TODO remote components pulumi-go: context.go:819-822
+        )
 
-      ???
+        resource match
+          case pr: ProviderResource =>
+            ProviderResourceState(
+              custom = CustomResourceState(
+                id = pr.id,
+                common = commonRS
+              ),
+              pkg = typ.getPackage
+            )
+          case compr: ComponentResource =>
+            ComponentResourceState(common = commonRS)
+          case cr: CustomResource =>
+            CustomResourceState(
+              id = cr.id,
+              common = commonRS
+            )
+      }
 
   def apply(
     runInfo: RunInfo,
@@ -372,7 +364,8 @@ object Context:
     monitor: Monitor,
     engine: Engine,
     workgroup: WorkGroup,
-    stackPromise: Promise[Stack]
+    stackPromise: Promise[Stack],
+    resourceManager: ResourceManager
   ): Context = new ContextImpl(
     runInfo,
     keepResources,
@@ -380,7 +373,8 @@ object Context:
     monitor,
     engine,
     workgroup,
-    stackPromise
+    stackPromise,
+    resourceManager
   )
 
   def apply(
@@ -393,7 +387,8 @@ object Context:
     for
       wg    <- WorkGroup()
       stack <- Promise[Stack]
-    yield apply(runInfo, keepResources, keepOutputValues, monitor, engine, wg, stack)
+      rm    <- ResourceManager()
+    yield apply(runInfo, keepResources, keepOutputValues, monitor, engine, wg, stack, rm)
 
   def apply(runInfo: RunInfo): Result[Context] =
     for

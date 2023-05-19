@@ -1,4 +1,4 @@
-//> using scala "3.2.0"
+//> using scala "3.2.2"
 
 //> using publish.organization "org.virtuslab"
 //> using publish.name "besom-core"

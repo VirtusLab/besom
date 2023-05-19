@@ -14,7 +14,7 @@ trait CommonResourceOptions:
   def urn: Option[String] // TODO this is only necessary for Resource deserialization, dependency resources and multi-language remote components
   def replaceOnChanges: List[String] // TODO?
   def retainOnDelete: Boolean
-  def pluginDownloadUrl: Option[String]
+  def pluginDownloadUrl: String
   // TODO: new resource option: https://github.com/pulumi/pulumi/pull/11883 this also needs a supported feature check!
   def deletedWith: Option[Resource]
 
@@ -23,20 +23,22 @@ final case class CommonResourceOptionsImpl(
   dependsOn: Output[List[Resource]],
   protect: Boolean,
   ignoreChanges: List[String],
-  version: String, // TODO?
+  version: String, // should be blank string when not provided TODO?
   customTimeouts: Option[String], // CustomTimeouts // TODO
   // resourceTransformations: List[ResourceTransformation], // TODO
   // aliases: List[Output[Alias]], // TODO
   urn: Option[String], // TODO better type
   replaceOnChanges: List[String], // TODO?
   retainOnDelete: Boolean,
-  pluginDownloadUrl: Option[String],
+  pluginDownloadUrl: String, // should be blank string when not provided
   // TODO: new resource option: https://github.com/pulumi/pulumi/pull/11883 this also needs a supported feature check!
   deletedWith: Option[Resource]
 ) extends CommonResourceOptions
 
 sealed trait ResourceOptions:
   def parent: Option[Resource]
+  def version: String
+  def pluginDownloadUrl: String
 
 final case class CustomResourceOptions private[internal] (
   common: CommonResourceOptions,
@@ -92,7 +94,7 @@ object CustomResourceOptions:
       urn = urn.asOption,
       replaceOnChanges = replaceOnChanges,
       retainOnDelete = retainOnDelete,
-      pluginDownloadUrl = pluginDownloadUrl.asOption,
+      pluginDownloadUrl = pluginDownloadUrl.asOption.getOrElse(""),
       deletedWith = deletedWith.asOption
     )
     new CustomResourceOptions(
@@ -131,7 +133,7 @@ object ComponentResourceOptions:
       urn = urn.asOption,
       replaceOnChanges = replaceOnChanges,
       retainOnDelete = retainOnDelete,
-      pluginDownloadUrl = pluginDownloadUrl.asOption,
+      pluginDownloadUrl = pluginDownloadUrl.asOption.getOrElse(""),
       deletedWith = deletedWith.asOption
     )
     new ComponentResourceOptions(common, providers)
