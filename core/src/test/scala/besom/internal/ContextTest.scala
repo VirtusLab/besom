@@ -43,8 +43,8 @@ class ContextTest extends munit.FunSuite:
       )
     )
 
-    println(res)
-    println(value)
+    // println(res)
+    // println(value)
   }
 
   test("quick dirty Encoder test - enums") {

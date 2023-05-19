@@ -45,3 +45,29 @@ class DecoderTest extends munit.FunSuite:
       case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some(TestEnum.A))
       case Right(_)                                      => throw Exception("Unexpected unknown!")
   }
+
+  test("decode int/string union") {
+    val d = summon[Decoder[Int | String]]
+    d.decode("A".asValue) match
+      case Left(ex)                                      => throw ex
+      case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some("A"))
+      case Right(_)                                      => throw Exception("Unexpected unknown!")
+    d.decode(1.asValue) match
+      case Left(ex)                                      => throw ex
+      case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some(1))
+      case Right(_)                                      => throw Exception("Unexpected unknown!")
+  }
+
+  
+
+  test("decode string/custom resource union") {
+    val d = summon[Decoder[Int | String]]
+    d.decode("A".asValue) match
+      case Left(ex)                                      => throw ex
+      case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some("A"))
+      case Right(_)                                      => throw Exception("Unexpected unknown!")
+    d.decode(1.asValue) match
+      case Left(ex)                                      => throw ex
+      case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some(1))
+      case Right(_)                                      => throw Exception("Unexpected unknown!")
+  }
