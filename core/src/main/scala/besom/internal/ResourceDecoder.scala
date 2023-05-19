@@ -96,25 +96,26 @@ object ResourceDecoder:
       case '{
             $m: Mirror.ProductOf[A] { type MirroredElemLabels = elementLabels; type MirroredElemTypes = elementTypes }
           } =>
-        def prepareExtractors(names: Type[?], types: Type[?]): List[Expr[CustomPropertyExtractor[?]]] =
-          (names, types) match
+        def prepareExtractors(elemLabels: Type[?], elemTypes: Type[?]): List[Expr[CustomPropertyExtractor[?]]] =
+          (elemLabels, elemTypes) match
             case ('[EmptyTuple], '[EmptyTuple]) => Nil
-            case ('[namesHead *: namesTail], '[Output[typesHead] *: typesTail]) =>
-              val propertyName = Expr(Type.valueOfConstant[namesHead].get.asInstanceOf[String])
-              val propertyDecoder = Expr.summon[Decoder[typesHead]].getOrElse {
-                quotes.reflect.report.errorAndAbort("Missing given instance of Decoder[" ++ Type.show[typesHead] ++ "]")
-              } // TODO: Handle missing decoder
-              val extractor = '{ CustomPropertyExtractor(${ propertyName }, ${ propertyDecoder }) }
-              extractor :: prepareExtractors(Type.of[namesTail], Type.of[typesTail])
+            case ('[label *: labelsTail], '[Output[tpe] *: tpesTail]) =>
+              val label = Type.valueOfConstant[label].get.asInstanceOf[String]
+              def tailExtractors = prepareExtractors(Type.of[labelsTail], Type.of[tpesTail])
 
-        // Skip initial `urn` and `id` fields from the case class
-        val customPropertiesOutputsType = Type.of[elementTypes] match
-          case '[_ *: _ *: tpes] => Type.of[tpes]
-        val customPropertiesNamesType = Type.of[elementLabels] match
-          case '[_ *: _ *: tpes] => Type.of[tpes]
+              if label == "id" | label == "urn" then
+                // Skipping `id` and `urn` properties as they're not custom properties
+                tailExtractors
+              else
+                val propertyName = Expr(label)
+                val propertyDecoder = Expr.summon[Decoder[tpe]].getOrElse {
+                  quotes.reflect.report.errorAndAbort("Missing given instance of Decoder[" ++ Type.show[tpe] ++ "]")
+                } // TODO: Handle missing decoder
+                val extractor = '{ CustomPropertyExtractor(${ propertyName }, ${ propertyDecoder }) }
+                extractor :: tailExtractors
 
         val customPropertyExtractorsExpr =
-          Expr.ofList(prepareExtractors(customPropertiesNamesType, customPropertiesOutputsType))
+          Expr.ofList(prepareExtractors(Type.of[elementLabels], Type.of[elementTypes]))
 
         '{
           new ResourceDecoder[A]:
