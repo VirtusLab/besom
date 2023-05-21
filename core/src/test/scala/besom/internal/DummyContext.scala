@@ -31,7 +31,7 @@ object DummyContext:
     keepOutputValues: Boolean = false
   ): Result[Context] =
     for
-      wg    <- WorkGroup()
-      stack <- Promise[Stack]
-      rm    <- ResourceManager()
-    yield Context(runInfo, keepResources, keepOutputValues, monitor, engine, wg, stack, rm)
+      wg        <- WorkGroup()
+      stack     <- Promise[Stack]
+      resources <- Resources()
+    yield Context(runInfo, keepResources, keepOutputValues, monitor, engine, wg, stack, resources)

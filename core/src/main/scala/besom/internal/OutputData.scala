@@ -60,8 +60,8 @@ enum OutputData[+A]:
       case (_, _) =>
         Unknown(combinedResources, combinedSecret)
 
-  def withDependencies(resources: Set[Resource]): OutputData[A] = 
-     resources.foldLeft(this)((acc, curr) => acc.withDependency(curr))
+  def withDependencies(resources: Set[Resource]): OutputData[A] =
+    resources.foldLeft(this)((acc, curr) => acc.withDependency(curr))
 
   def withDependency(resource: Resource): OutputData[A] =
     this match
@@ -90,6 +90,16 @@ enum OutputData[+A]:
     this match
       case Unknown(_, _)         => true
       case Known(_, _, optValue) => optValue.isEmpty
+
+  private[internal] def getValue: Option[A] =
+    this match
+      case Unknown(_, _)         => None
+      case Known(_, _, optValue) => optValue
+
+  private[internal] def getValueOrElse[B >: A](default: => B): B =
+    this match
+      case Unknown(_, _)         => default
+      case Known(_, _, optValue) => optValue.getOrElse(default)
 
 object OutputData:
   def unknown(isSecret: Boolean = false): OutputData[Nothing] = Unknown(Set.empty, isSecret)

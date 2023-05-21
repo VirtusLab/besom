@@ -12,17 +12,14 @@ case class SerializationResult(
 object PropertiesSerializer:
   def serializeResourceProperties[A: ArgsEncoder](
     label: String,
-    args: A,
-    filter: String => Boolean,
-    keepResources: Boolean
+    args: A
   ): Result[SerializationResult] =
-    serializeFilteredProperties(label, args, key => key != IdPropertyName && key != UrnPropertyName, keepResources)
+    serializeFilteredProperties(label, args, key => key != IdPropertyName && key != UrnPropertyName)
 
   def serializeFilteredProperties[A: ArgsEncoder](
     label: String,
     args: A,
-    filter: String => Boolean,
-    keepResources: Boolean
+    filter: String => Boolean
   ): Result[SerializationResult] =
     summon[ArgsEncoder[A]].encode(args, filter).map { case (fieldsToResources, value) =>
       SerializationResult(value, detectUnknowns(value), fieldsToResources)

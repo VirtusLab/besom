@@ -31,6 +31,9 @@ object Types:
 
   object ProviderType:
 
+    def apply(provider: NonEmptyString): ProviderType = s"pulumi:providers:${provider}"
+
+    // validate that provider type contains a prefix of `pulumi:providers:` and the provider identifier
     inline def from(s: String): ProviderType =
       requireConst(s)
       inline if !constValue[Matches[s.type, "pulumi:providers:.+"]] then

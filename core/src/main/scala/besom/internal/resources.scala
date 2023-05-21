@@ -1,85 +1,71 @@
 package besom.internal
 
-import besom.util.NonEmptyString
-import besom.util.Types.*
-import com.google.protobuf.struct.{Struct, Value}
-import scala.quoted.*
-import scala.deriving.Mirror
+class Resources(private val resources: Ref[Map[Resource, ResourceState]]):
+  def add(resource: ProviderResource, state: ProviderResourceState): Result[Unit] =
+    resources.update(_ + (resource -> state))
 
-trait Resource:
-  def urn: Output[String]
+  def add(resource: CustomResource, state: CustomResourceState): Result[Unit] =
+    resources.update(_ + (resource -> state))
 
-trait CustomResource extends Resource:
-  def id: Output[String]
+  def add(resource: ComponentResource, state: ComponentResourceState): Result[Unit] =
+    resources.update(_ + (resource -> state))
 
-trait ComponentResource extends Resource
+  def add(resource: Resource, state: ResourceState): Result[Unit] = (resource, state) match
+    case (pr: ProviderResource, prs: ProviderResourceState) =>
+      add(pr, prs)
+    case (cr: CustomResource, crs: CustomResourceState) =>
+      add(cr, crs)
+    case (compr: ComponentResource, comprs: ComponentResourceState) =>
+      add(compr, comprs)
+    case _ => Result.fail(new Exception(s"resource ${resource} and state ${state} don't match"))
 
-trait ProviderResource extends CustomResource
+  def getStateFor(resource: ProviderResource): Result[ProviderResourceState] =
+    resources.get.flatMap(_.get(resource) match
+      case Some(state) =>
+        state match
+          case crs: CustomResourceState =>
+            Result.fail(new Exception(s"state for ProviderResource ${resource} is a CustomResourceState!"))
+          case prs: ProviderResourceState => Result.pure(prs)
+          case comprs: ComponentResourceState =>
+            Result.fail(new Exception(s"state for ProviderResource ${resource} is a ComponentResourceState!"))
 
-case class DependencyResource(urn: Output[String]) extends Resource derives ResourceDecoder
+      case None => Result.fail(new Exception(s"state for resource ${resource} not found"))
+    )
 
-case class Stack(urn: Output[String]) extends ComponentResource derives ResourceDecoder
-object Stack:
-  val RootPulumiStackTypeName: ResourceType = "pulumi:pulumi:Stack"
+  def getStateFor(resource: CustomResource): Result[CustomResourceState] =
+    resources.get.flatMap(_.get(resource) match
+      case Some(state) =>
+        state match
+          case crs: CustomResourceState => Result.pure(crs)
+          case prs: ProviderResourceState =>
+            Result.fail(new Exception(s"state for CustomResource ${resource} is a ProviderResourceState!"))
+          case comprs: ComponentResourceState =>
+            Result.fail(new Exception(s"state for CustomResource ${resource} is a ComponentResourceState!"))
 
-// type ResourceState struct {
-// 	m sync.RWMutex
+      case None => Result.fail(new Exception(s"state for resource ${resource} not found"))
+    )
 
-// 	urn URNOutput `pulumi:"urn"`
+  def getStateFor(resource: ComponentResource): Result[ComponentResourceState] =
+    resources.get.flatMap(_.get(resource) match
+      case Some(state) =>
+        state match
+          case crs: CustomResourceState =>
+            Result.fail(new Exception(s"state for ComponentResource ${resource} is a CustomResourceState!"))
+          case prs: ProviderResourceState =>
+            Result.fail(new Exception(s"state for ComponentResource ${resource} is a ProviderResourceState!"))
+          case comprs: ComponentResourceState => Result.pure(comprs)
 
-// 	rawOutputs        Output
-// 	children          resourceSet
-// 	providers         map[string]ProviderResource
-// 	provider          ProviderResource
-// 	version           string
-// 	pluginDownloadURL string
-// 	aliases           []URNOutput
-// 	name              string
-// 	transformations   []ResourceTransformation
+      case None => Result.fail(new Exception(s"state for resource ${resource} not found"))
+    )
 
-// 	remoteComponent bool
-// }
+  def getStateFor(resource: Resource): Result[ResourceState] =
+    resources.get.flatMap(_.get(resource) match
+      case Some(state) => Result.pure(state)
+      case None        => Result.fail(new Exception(s"state for resource ${resource} not found"))
+    )
 
-sealed trait ResourceState:
-  // def urn: Output[String] // TODO BALEET, URN is in resource anyway
-  // def rawOutputs: Output[_] // TODO BALEET this is for StackReference only and is a hack used by pulumi-go, we'll use the non-hacky way from pulumi-java
-  def children: Set[Resource]
-  def provider: ProviderResource
-  def providers: Map[String, ProviderResource]
-  def version: String
-  def pluginDownloadUrl: String
-  // def aliases: List[Output[F, String]]
-  def name: String
-  // def transformations: List[ResourceTransformation]
-  def remoteComponent: Boolean
+  def updateStateFor(resource: Resource)(f: ResourceState => ResourceState): Result[Unit] =
+    resources.update(_.updatedWith(resource)(_.map(f)))
 
-case class CommonResourceState(
-  // urn: Output[String], // TODO BALEET, URN is in custom resource anyway
-  // rawOutputs: Output[_], // TODO BALEET this is for StackReference only and is a hack used by pulumi-go, we'll use the non-hacky way from pulumi-java
-  children: Set[Resource],
-  provider: ProviderResource,
-  providers: Map[String, ProviderResource],
-  version: String,
-  pluginDownloadUrl: String,
-  // aliases: List[Output[F, String]],
-  name: String,
-  // transformations: List[ResourceTransformation],
-  remoteComponent: Boolean
-)
-
-case class CustomResourceState(
-  common: CommonResourceState,
-  id: Output[String]
-) extends ResourceState:
-  export common.*
-
-case class ProviderResourceState(
-  custom: CustomResourceState,
-  pkg: String
-) extends ResourceState:
-  export custom.*
-
-case class ComponentResourceState(
-  common: CommonResourceState
-) extends ResourceState:
-  export common.*
+object Resources:
+  def apply(): Result[Resources] = Ref(Map.empty).map(new Resources(_))

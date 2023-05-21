@@ -144,10 +144,11 @@ object Decoder extends DecoderInstancesLowPrio:
 
     override def mapping(value: Value): A | B = ???
 
-  given unionIntStringDecoder: Decoder[Int | String] = unionDecoder[Int, String]
-  given unionBooleanProductDecoder[P <: Product : Decoder]: Decoder[Boolean | P] = unionDecoder[P, Boolean]
-  given unionStringProductDecoder[P <: Product : Decoder]: Decoder[String | P] = unionDecoder[P, String]
-  given unionListProductDecoder[A, P <: Product](using Decoder[List[A]], Decoder[P]): Decoder[List[A] | P] = unionDecoder[List[A], P]
+  given unionIntStringDecoder: Decoder[Int | String]                            = unionDecoder[Int, String]
+  given unionBooleanProductDecoder[P <: Product: Decoder]: Decoder[Boolean | P] = unionDecoder[P, Boolean]
+  given unionStringProductDecoder[P <: Product: Decoder]: Decoder[String | P]   = unionDecoder[P, String]
+  given unionListProductDecoder[A, P <: Product](using Decoder[List[A]], Decoder[P]): Decoder[List[A] | P] =
+    unionDecoder[List[A], P]
 
   // this is kinda different from what other pulumi sdks are doing because we disallow nulls in the list
   given listDecoder[A](using innerDecoder: Decoder[A]): Decoder[List[A]] = new Decoder[List[A]]:
@@ -628,7 +629,7 @@ object ArgsEncoder:
 
     argsEncoderProduct(nameEncoderPairs)
 
-trait ProviderArgsEncoder[A]:
+trait ProviderArgsEncoder[A] extends ArgsEncoder[A]:
   def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Value)]
 
 object ProviderArgsEncoder:

@@ -4,9 +4,6 @@ import com.google.protobuf.struct.{Struct, Value}
 import scala.quoted.*
 import scala.deriving.Mirror
 
-trait ResourceResolver[A]:
-  def resolve(errorOrResourceResult: Either[Throwable, RawResourceResult])(using Context): Result[Unit]
-
 trait ResourceDecoder[A <: Resource]: // TODO rename to something more sensible
   def makeResolver(using Context): Result[(A, ResourceResolver[A])]
 
@@ -100,7 +97,7 @@ object ResourceDecoder:
           (elemLabels, elemTypes) match
             case ('[EmptyTuple], '[EmptyTuple]) => Nil
             case ('[label *: labelsTail], '[Output[tpe] *: tpesTail]) =>
-              val label = Type.valueOfConstant[label].get.asInstanceOf[String]
+              val label          = Type.valueOfConstant[label].get.asInstanceOf[String]
               def tailExtractors = prepareExtractors(Type.of[labelsTail], Type.of[tpesTail])
 
               if label == "id" | label == "urn" then

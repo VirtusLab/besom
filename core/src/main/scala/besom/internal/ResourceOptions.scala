@@ -39,6 +39,7 @@ sealed trait ResourceOptions:
   def parent: Option[Resource]
   def version: String
   def pluginDownloadUrl: String
+  def dependsOn: Output[List[Resource]]
 
 final case class CustomResourceOptions private[internal] (
   common: CommonResourceOptions,
