@@ -24,7 +24,7 @@ sealed trait ResourceState:
   // def urn: Output[String] // TODO BALEET, URN is in resource anyway
   // def rawOutputs: Output[_] // TODO BALEET this is for StackReference only and is a hack used by pulumi-go, we'll use the non-hacky way from pulumi-java
   def children: Set[Resource]
-  def provider: ProviderResource
+  def provider: Option[ProviderResource]
   def providers: Map[String, ProviderResource]
   def version: String
   def pluginDownloadUrl: String
@@ -46,7 +46,7 @@ case class CommonResourceState(
   // urn: Output[String], // TODO BALEET, URN is in custom resource anyway
   // rawOutputs: Output[_], // TODO BALEET this is for StackReference only and is a hack used by pulumi-go, we'll use the non-hacky way from pulumi-java
   children: Set[Resource],
-  provider: ProviderResource,
+  provider: Option[ProviderResource],
   providers: Map[String, ProviderResource],
   version: String,
   pluginDownloadUrl: String,

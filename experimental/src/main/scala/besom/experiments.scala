@@ -5,71 +5,70 @@ import besom.util.Protocol
 import besom.internal.{CustomResourceOptions, CustomResource}
 
 // @main
-def main(): Unit = Pulumi.run {
+// def main(): Unit = Pulumi.run {
 
-  import besom.api.k8s, k8s.*
-  import besom.internal.{Context, ResourceDecoder, Output}
+//   import besom.api.k8s, k8s.*
+// import besom.internal.{Context, ResourceDecoder, Output}
 
-  case class IncomingPhoneNumber(urn: Output[String], id: Output[String], smsUrl: Output[String]) extends CustomResource
-      derives ResourceDecoder
+// case class IncomingPhoneNumber(urn: Output[String], id: Output[String], smsUrl: Output[String]) extends CustomResource
+// derives ResourceDecoder
 
-  val labels = Map("app" -> "nginx")
+// val labels = Map("app" -> "nginx")
 
-  // val compo = ctx.component("my:component", "an-instance-of-my-component") {
-  //   k8s.pod(???, ???)
-  // }
+// val compo = ctx.component("my:component", "an-instance-of-my-component") {
+//   k8s.pod(???, ???)
+// }
 
-  // val nginxDeployment = k8s.deployment(
-  //   "nginx",
-  //   DeploymentArgs(
-  //     spec = DeploymentSpecArgs(
-  //       selector = LabelSelectorArgs(labels),
-  //       replicas = 1,
-  //       template = PodTemplateSpecArgs(
-  //         metadata = ObjectMetaArgs(labels),
-  //         spec = PodSpecArgs(
-  //           containers = ContainerArgs(
-  //             name = "nginx",
-  //             image = "nginx",
-  //             ports = ContainerPortArgs(80)
-  //           ) :: Nil
-  //         )
-  //       )
-  //     )
-  //   )
-  // )
+// val nginxDeployment = k8s.deployment(
+//   "nginx",
+//   DeploymentArgs(
+//     spec = DeploymentSpecArgs(
+//       selector = LabelSelectorArgs(labels),
+//       replicas = 1,
+//       template = PodTemplateSpecArgs(
+//         metadata = ObjectMetaArgs(labels),
+//         spec = PodSpecArgs(
+//           containers = ContainerArgs(
+//             name = "nginx",
+//             image = "nginx",
+//             ports = ContainerPortArgs(80)
+//           ) :: Nil
+//         )
+//       )
+//     )
+//   )
+// )
 
-  val pod = k8s.pod(
-    "app",
-    PodArgs(
-      spec = PodSpecArgs(
-        containers = ContainerArgs(
-          name = "nginx",
-          image = "nginx",
-          ports = ContainerPortArgs(80)
-        ) :: Nil
-      )
-    )
-  )
+// val pod = k8s.pod(
+//   "app",
+//   PodArgs(
+//     spec = PodSpecArgs(
+//       containers = ContainerArgs(
+//         name = "nginx",
+//         image = "nginx",
+//         ports = ContainerPortArgs(80)
+//       ) :: Nil
+//     )
+//   )
+// )
 
-  // how to deal with arbitrary callbacks
-  pod.flatMap { pod =>
-    ???
-  // k8s.service(
-  //   "app",
-  //   ServiceArgs(labels = Map("app" -> pod.metadata.map(_.flatMap(_.name)))),
-  //   spec = ServiceSpecArgs(
-  //     selector = labels,
-  //     ports = ServicePortArgs(80)
-  //   )
-  // )
-  }
+// how to deal with arbitrary callbacks
+// pod.flatMap { pod =>
+//   k8s.service(
+//     "app",
+//     ServiceArgs(labels = Map("app" -> pod.metadata.map(_.flatMap(_.name)))),
+//     spec = ServiceSpecArgs(
+//       selector = labels,
+//       ports = ServicePortArgs(80)
+//     )
+//   )
+// }
 
-  for {
-    nginx   <- pod
-    exports <- Pulumi.exports("name" -> nginx.metadata.map(_.flatMap(_.name)))
-  } yield exports
-}
+//   for {
+//     nginx   <- pod
+//     exports <- Pulumi.exports("name" -> nginx.metadata.map(_.flatMap(_.name)))
+//   } yield exports
+// }
 
 // def instanceOptions(groupName: Output[String]) = aws.InstanceOptions(
 //   ami = "ami-6869aa05",

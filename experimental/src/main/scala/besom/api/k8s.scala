@@ -608,9 +608,8 @@ object k8s:
 
   def pod(using
     ctx: Context
-  )(name: String, args: PodArgs, opts: CustomResourceOptions = CustomResourceOptions()): Output[Pod] =
-    // ctx.readOrRegisterResource[Pod](name, typ, args, opts)
-    ???
+  )(name: NonEmptyString, args: PodArgs, opts: CustomResourceOptions = CustomResourceOptions()): Output[Pod] =
+    ctx.registerResource[Pod, PodArgs]("kubernetes:core/v1:Pod", name, args, opts)
 
   case class Provider(
     urn: Output[String],
@@ -653,7 +652,7 @@ object k8s:
     kind: Output[String],
     metadata: Output[ObjectMetaArgs],
     spec: Output[PodSpecArgs]
-  ) derives Encoder
+  ) derives ArgsEncoder
 
   object PodArgs:
     def apply(
@@ -664,7 +663,7 @@ object k8s:
     )(using Context): PodArgs =
       new PodArgs(apiVersion.asOutput(), kind.asOutput(), metadata.asOutput(), spec.asOutput())
 
-  // case class DeploymentArgs(spec: DeploymentSpecArgs) derives Encoder
+  // case class DeploymentArgs(spec: DeploymentSpecArgs) derives ArgsEncoder
 
   // case class LabelSelectorArgs(
   //   matchLabels: Output[Map[String, String]]
@@ -707,7 +706,7 @@ object k8s:
     resourceVersion: Output[String],
     selfLink: Output[String],
     uid: Output[String]
-  ) derives Encoder
+  ) derives ArgsEncoder
   object ObjectMetaArgs:
     def apply(
       annotations: Map[String, String] | Map[String, Output[String]] | Output[Map[String, String]] | NotProvided =
@@ -756,7 +755,7 @@ object k8s:
     operation: Output[String],
     subresource: Output[String],
     time: Output[String]
-  ) derives Encoder
+  ) derives ArgsEncoder
   object ManagedFieldsEntryArgs:
     def apply(
       apiVersion: String | Output[String] | NotProvided = NotProvided,
@@ -784,7 +783,7 @@ object k8s:
     kind: Output[String],
     name: Output[String],
     uid: Output[String]
-  ) derives Encoder
+  ) derives ArgsEncoder
   object OwnerReferenceArgs:
     def apply(
       apiVersion: String | Output[String] | NotProvided = NotProvided,
@@ -843,7 +842,7 @@ object k8s:
     tolerations: Output[List[TolerationArgs]],
     topologySpreadConstraints: Output[List[TopologySpreadConstraintArgs]],
     volumes: Output[List[VolumeArgs]]
-  ) derives Encoder
+  ) derives ArgsEncoder
   object PodSpecArgs:
     def apply(
       activeDeadlineSeconds: Int | Output[Int] | NotProvided = NotProvided,
@@ -937,7 +936,7 @@ object k8s:
     nodeAffinity: Output[NodeAffinityArgs],
     podAffinity: Output[PodAffinityArgs],
     podAntiAffinity: Output[PodAntiAffinityArgs]
-  ) derives Encoder
+  ) derives ArgsEncoder
   object AffinityArgs:
     def apply(
       nodeAffinity: NodeAffinityArgs | Output[NodeAffinityArgs] | NotProvided = NotProvided,
@@ -949,7 +948,7 @@ object k8s:
   case class NodeAffinityArgs(
     preferredDuringSchedulingIgnoredDuringExecution: Output[List[PreferredSchedulingTermArgs]],
     requiredDuringSchedulingIgnoredDuringExecution: Output[NodeSelectorArgs]
-  ) derives Encoder
+  ) derives ArgsEncoder
   object NodeAffinityArgs:
     def apply(
       preferredDuringSchedulingIgnoredDuringExecution: List[PreferredSchedulingTermArgs] |
@@ -964,7 +963,7 @@ object k8s:
   case class PodAffinityArgs(
     preferredDuringSchedulingIgnoredDuringExecution: Output[List[WeightedPodAffinityTermArgs]],
     requiredDuringSchedulingIgnoredDuringExecution: Output[List[PodAffinityTermArgs]]
-  ) derives Encoder
+  ) derives ArgsEncoder
   object PodAffinityArgs:
     def apply(
       preferredDuringSchedulingIgnoredDuringExecution: List[WeightedPodAffinityTermArgs] |
@@ -977,171 +976,192 @@ object k8s:
         requiredDuringSchedulingIgnoredDuringExecution = requiredDuringSchedulingIgnoredDuringExecution.asOutput()
       )
 
-  case class PodAntiAffinityArgs() derives Encoder
+  case class PodAntiAffinityArgs() derives ArgsEncoder
   object PodAntiAffinityArgs:
     def apply()(using Context): PodAntiAffinityArgs = new PodAntiAffinityArgs()
 
-  case class WeightedPodAffinityTermArgs() derives Encoder
-  case class PodAffinityTermArgs() derives Encoder
+  case class WeightedPodAffinityTermArgs() derives ArgsEncoder
+  case class PodAffinityTermArgs() derives ArgsEncoder
 
-  case class PreferredSchedulingTermArgs() derives Encoder
+  case class PreferredSchedulingTermArgs() derives ArgsEncoder
 
-  case class NodeSelectorArgs() derives Encoder
+  case class NodeSelectorArgs() derives ArgsEncoder
 
   case class ContainerArgs(
-    args: Output[List[String]],
-    command: Output[List[String]],
-    env: Output[List[EnvVarArgs]],
-    envFrom: Output[List[EnvFromSourceArgs]],
-    image: Output[NonEmptyString],
-    imagePullPolicy: Output[String],
-    lifecycle: Output[LifecycleArgs],
-    livenessProbe: Output[ProbeArgs],
-    name: Output[NonEmptyString],
-    ports: Output[ContainerPortArgs],
     readinessProbe: Output[ProbeArgs],
-    resources: Output[ResourceRequirementsArgs],
-    securityContext: Output[SecurityContextArgs],
-    startupProbe: Output[ProbeArgs],
-    stdin: Output[Boolean],
+    name: Output[String],
+    image: Output[String],
     stdinOnce: Output[Boolean],
-    terminationMessagePath: Output[String],
+    ports: Output[List[ContainerPortArgs]],
+    startupProbe: Output[ProbeArgs],
+    command: Output[List[String]],
     terminationMessagePolicy: Output[String],
+    imagePullPolicy: Output[String],
+    workingDir: Output[String],
+    securityContext: Output[SecurityContextArgs],
+    livenessProbe: Output[ProbeArgs],
+    lifecycle: Output[LifecycleArgs],
+    stdin: Output[Boolean],
+    terminationMessagePath: Output[String],
+    resources: Output[ResourceRequirementsArgs],
+    envFrom: Output[List[EnvFromSourceArgs]],
     tty: Output[Boolean],
     volumeDevices: Output[List[VolumeDeviceArgs]],
+    args: Output[List[String]],
     volumeMounts: Output[List[VolumeMountArgs]],
-    workingDir: Output[String]
-  ) derives Encoder
+    env: Output[List[EnvVarArgs]]
+  ) derives ArgsEncoder
+
   object ContainerArgs:
     def apply(
-      args: List[String] | Output[List[String]] | NotProvided = NotProvided,
-      command: List[String] | Output[List[String]] | NotProvided = NotProvided,
-      env: List[EnvVarArgs] | Output[List[EnvVarArgs]] | NotProvided = NotProvided,
-      envFrom: List[EnvFromSourceArgs] | Output[List[EnvFromSourceArgs]] | NotProvided = NotProvided,
-      image: NonEmptyString | Output[NonEmptyString] | NotProvided = NotProvided,
-      imagePullPolicy: String | Output[String] | NotProvided = NotProvided,
-      lifecycle: LifecycleArgs | Output[LifecycleArgs] | NotProvided = NotProvided,
-      livenessProbe: ProbeArgs | Output[ProbeArgs] | NotProvided = NotProvided,
-      name: NonEmptyString | Output[NonEmptyString],
-      ports: ContainerPortArgs | Output[ContainerPortArgs] | NotProvided = NotProvided,
       readinessProbe: ProbeArgs | Output[ProbeArgs] | NotProvided = NotProvided,
-      resources: ResourceRequirementsArgs | Output[ResourceRequirementsArgs] | NotProvided = NotProvided,
-      securityContext: SecurityContextArgs | Output[SecurityContextArgs] | NotProvided = NotProvided,
-      startupProbe: ProbeArgs | Output[ProbeArgs] | NotProvided = NotProvided,
-      stdin: Boolean | Output[Boolean] | NotProvided = NotProvided,
+      name: String | Output[String] | NotProvided = NotProvided,
+      image: String | Output[String] | NotProvided = NotProvided,
       stdinOnce: Boolean | Output[Boolean] | NotProvided = NotProvided,
-      terminationMessagePath: String | Output[String] | NotProvided = NotProvided,
+      ports: List[ContainerPortArgs] | Output[List[ContainerPortArgs]] | NotProvided = NotProvided,
+      startupProbe: ProbeArgs | Output[ProbeArgs] | NotProvided = NotProvided,
+      command: List[String] | Output[List[String]] | NotProvided = NotProvided,
       terminationMessagePolicy: String | Output[String] | NotProvided = NotProvided,
+      imagePullPolicy: String | Output[String] | NotProvided = NotProvided,
+      workingDir: String | Output[String] | NotProvided = NotProvided,
+      securityContext: SecurityContextArgs | Output[SecurityContextArgs] | NotProvided = NotProvided,
+      livenessProbe: ProbeArgs | Output[ProbeArgs] | NotProvided = NotProvided,
+      lifecycle: LifecycleArgs | Output[LifecycleArgs] | NotProvided = NotProvided,
+      stdin: Boolean | Output[Boolean] | NotProvided = NotProvided,
+      terminationMessagePath: String | Output[String] | NotProvided = NotProvided,
+      resources: ResourceRequirementsArgs | Output[ResourceRequirementsArgs] | NotProvided = NotProvided,
+      envFrom: List[EnvFromSourceArgs] | Output[List[EnvFromSourceArgs]] | NotProvided = NotProvided,
       tty: Boolean | Output[Boolean] | NotProvided = NotProvided,
       volumeDevices: List[VolumeDeviceArgs] | Output[List[VolumeDeviceArgs]] | NotProvided = NotProvided,
+      args: List[String] | Output[List[String]] | NotProvided = NotProvided,
       volumeMounts: List[VolumeMountArgs] | Output[List[VolumeMountArgs]] | NotProvided = NotProvided,
-      workingDir: String | Output[String] | NotProvided = NotProvided
-    )(using ctx: Context): ContainerArgs = new ContainerArgs(
-      args = args.asOutput(),
-      command = command.asOutput(),
-      env = env.asOutput(),
-      envFrom = envFrom.asOutput(),
-      image = image.asOutput(),
-      imagePullPolicy = imagePullPolicy.asOutput(),
-      lifecycle = lifecycle.asOutput(),
-      livenessProbe = livenessProbe.asOutput(),
-      name = name.asOutput(),
-      ports = ports.asOutput(),
-      readinessProbe = readinessProbe.asOutput(),
-      resources = resources.asOutput(),
-      securityContext = securityContext.asOutput(),
-      startupProbe = startupProbe.asOutput(),
-      stdin = stdin.asOutput(),
-      stdinOnce = stdinOnce.asOutput(),
-      terminationMessagePath = terminationMessagePath.asOutput(),
-      terminationMessagePolicy = terminationMessagePolicy.asOutput(),
-      tty = tty.asOutput(),
-      volumeDevices = volumeDevices.asOutput(),
-      volumeMounts = volumeMounts.asOutput(),
-      workingDir = workingDir.asOutput()
-    )
+      env: List[EnvVarArgs] | Output[List[EnvVarArgs]] | NotProvided = NotProvided
+    )(using Context): ContainerArgs =
+      new ContainerArgs(
+        readinessProbe = readinessProbe.asOutput(isSecret = false),
+        name = name.asOutput(isSecret = false),
+        image = image.asOutput(isSecret = false),
+        stdinOnce = stdinOnce.asOutput(isSecret = false),
+        ports = ports.asOutput(isSecret = false),
+        startupProbe = startupProbe.asOutput(isSecret = false),
+        command = command.asOutput(isSecret = false),
+        terminationMessagePolicy = terminationMessagePolicy.asOutput(isSecret = false),
+        imagePullPolicy = imagePullPolicy.asOutput(isSecret = false),
+        workingDir = workingDir.asOutput(isSecret = false),
+        securityContext = securityContext.asOutput(isSecret = false),
+        livenessProbe = livenessProbe.asOutput(isSecret = false),
+        lifecycle = lifecycle.asOutput(isSecret = false),
+        stdin = stdin.asOutput(isSecret = false),
+        terminationMessagePath = terminationMessagePath.asOutput(isSecret = false),
+        resources = resources.asOutput(isSecret = false),
+        envFrom = envFrom.asOutput(isSecret = false),
+        tty = tty.asOutput(isSecret = false),
+        volumeDevices = volumeDevices.asOutput(isSecret = false),
+        args = args.asOutput(isSecret = false),
+        volumeMounts = volumeMounts.asOutput(isSecret = false),
+        env = env.asOutput(isSecret = false)
+      )
 
-  case class LifecycleArgs() derives Encoder
+  case class LifecycleArgs() derives ArgsEncoder
   object LifecycleArgs:
     def apply()(using Context): LifecycleArgs = new LifecycleArgs()
 
-  case class ResourceRequirementsArgs() derives Encoder
+  case class ResourceRequirementsArgs() derives ArgsEncoder
   object ResourceRequirementsArgs:
     def apply()(using Context): ResourceRequirementsArgs = new ResourceRequirementsArgs()
 
-  case class ProbeArgs() derives Encoder
+  case class ProbeArgs() derives ArgsEncoder
   object ProbeArgs:
     def apply()(using Context): ProbeArgs = new ProbeArgs()
 
-  case class SecurityContextArgs() derives Encoder
+  case class SecurityContextArgs() derives ArgsEncoder
   object SecurityContextArgs:
     def apply()(using Context): SecurityContextArgs = new SecurityContextArgs()
 
-  case class VolumeDeviceArgs() derives Encoder
+  case class VolumeDeviceArgs() derives ArgsEncoder
   object VolumeDeviceArgs:
     def apply()(using Context): VolumeDeviceArgs = new VolumeDeviceArgs()
 
-  case class VolumeMountArgs() derives Encoder
+  case class VolumeMountArgs() derives ArgsEncoder
   object VolumeMountArgs:
     def apply()(using Context): VolumeMountArgs = new VolumeMountArgs()
 
-  case class EnvVarArgs() derives Encoder
+  case class EnvVarArgs() derives ArgsEncoder
   object EnvVarArgs:
     def apply()(using Context): EnvVarArgs = new EnvVarArgs()
 
-  case class EnvFromSourceArgs() derives Encoder
+  case class EnvFromSourceArgs() derives ArgsEncoder
   object EnvFromSourceArgs:
     def apply()(using Context): EnvFromSourceArgs = new EnvFromSourceArgs()
 
-  case class ContainerPortArgs(containerPort: Output[Int]) derives Encoder
-  object ContainerPortArgs:
-    def apply(containerPort: Int | Output[Int] | NotProvided = NotProvided)(using ctx: Context): ContainerPortArgs =
-      new ContainerPortArgs(containerPort.asOutput())
+  case class ContainerPortArgs(
+    name: Output[String],
+    containerPort: Output[Int],
+    hostPort: Output[Int],
+    hostIP: Output[String],
+    protocol: Output[String]
+  ) derives ArgsEncoder
 
-  case class PodDNSConfigArgs() derives Encoder
+  object ContainerPortArgs:
+    def apply(
+      name: String | Output[String] | NotProvided = NotProvided,
+      containerPort: Int | Output[Int] | NotProvided = NotProvided,
+      hostPort: Int | Output[Int] | NotProvided = NotProvided,
+      hostIP: String | Output[String] | NotProvided = NotProvided,
+      protocol: String | Output[String] | NotProvided = NotProvided
+    )(using Context): ContainerPortArgs =
+      new ContainerPortArgs(
+        name = name.asOutput(isSecret = false),
+        containerPort = containerPort.asOutput(isSecret = false),
+        hostPort = hostPort.asOutput(isSecret = false),
+        hostIP = hostIP.asOutput(isSecret = false),
+        protocol = protocol.asOutput(isSecret = false)
+      )
+
+  case class PodDNSConfigArgs() derives ArgsEncoder
   object PodDNSConfigArgs:
     def apply()(using Context): PodDNSConfigArgs = ???
 
-  case class LocalObjectReferenceArgs() derives Encoder
+  case class LocalObjectReferenceArgs() derives ArgsEncoder
   object LocalObjectReferenceArgs:
     def apply()(using Context): LocalObjectReferenceArgs = ???
 
-  case class EphemeralContainerArgs() derives Encoder
+  case class EphemeralContainerArgs() derives ArgsEncoder
   object EphemeralContainerArgs:
     def apply()(using Context): EphemeralContainerArgs = ???
 
-  case class HostAliasArgs() derives Encoder
+  case class HostAliasArgs() derives ArgsEncoder
   object HostAliasArgs:
     def apply()(using Context): HostAliasArgs = ???
 
-  case class PodOSArgs() derives Encoder
+  case class PodOSArgs() derives ArgsEncoder
   object PodOSArgs:
     def apply()(using Context): PodOSArgs = ???
 
-  case class PodReadinessGateArgs() derives Encoder
+  case class PodReadinessGateArgs() derives ArgsEncoder
   object PodReadinessGateArgs:
     def apply()(using Context): PodReadinessGateArgs = ???
 
-  case class PodResourceClaimArgs() derives Encoder
+  case class PodResourceClaimArgs() derives ArgsEncoder
   object PodResourceClaimArgs:
     def apply()(using Context): PodResourceClaimArgs = ???
 
-  case class PodSchedulingGateArgs() derives Encoder
+  case class PodSchedulingGateArgs() derives ArgsEncoder
   object PodSchedulingGateArgs:
     def apply()(using Context): PodSchedulingGateArgs = ???
 
-  case class PodSecurityContextArgs() derives Encoder
+  case class PodSecurityContextArgs() derives ArgsEncoder
   object PodSecurityContextArgs:
     def apply()(using Context): PodSecurityContextArgs = ???
 
-  case class TolerationArgs() derives Encoder
+  case class TolerationArgs() derives ArgsEncoder
   object TolerationArgs:
     def apply()(using Context): TolerationArgs = ???
 
-  case class TopologySpreadConstraintArgs() derives Encoder
+  case class TopologySpreadConstraintArgs() derives ArgsEncoder
   object TopologySpreadConstraintArgs:
     def apply()(using Context): TopologySpreadConstraintArgs = ???
 
-  case class VolumeArgs() derives Encoder
+  case class VolumeArgs() derives ArgsEncoder
   object VolumeArgs:
     def apply()(using Context): VolumeArgs = ???

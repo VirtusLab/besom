@@ -16,6 +16,8 @@
 //> using lib "com.thesamet.scalapb::scalapb-runtime-grpc:0.11.10"
 //> using lib "io.spray::spray-json:1.3.6"
 
+//> using lib "com.lihaoyi::pprint:0.6.6" // TODO BALEET
+
 //> using options "-java-output-version:8"
 
 //#> using options "-Xmax-inlines:64"

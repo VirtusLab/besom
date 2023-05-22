@@ -78,3 +78,9 @@ test-language-plugin: build-language-plugin run-language-plugin-tests
 install-language-plugin: build-language-plugin
 	pulumi plugin rm language scala
 	pulumi plugin install language scala {{publish-version}} --file {{language-plugin-output-dir}}
+
+# TEMP
+
+liftoff: publish-local-core
+        cd experimental && \
+        pulumi up --stack liftoff

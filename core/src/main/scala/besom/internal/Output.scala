@@ -59,12 +59,10 @@ object IsOutputData:
 
 /** These factory methods should be the only way to create Output instances!
   */
-
 trait OutputFactory:
   def apply[A](value: A)(using ctx: Context, ev: Not[IsOutputData[A]]): Output[A] = Output(value)
-  // def apply[A](using ctx: Context, ev: Not[IsOutputData[A]])(value: => ctx.F[A]): Output[A] = Output(value)
-  def apply[A](data: OutputData[A])(using ctx: Context): Output[A]             = Output(data)
-  def apply[A](using ctx: Context)(value: => Result[OutputData[A]]): Output[A] = Output(value)
+  def apply[A](data: OutputData[A])(using ctx: Context): Output[A]                = Output(data)
+  def apply[A](using ctx: Context)(value: => Result[OutputData[A]]): Output[A]    = Output(value)
 
   def secret[A](value: A)(using ctx: Context): Output[A] = Output.secret(value)
 

@@ -12,6 +12,7 @@ trait Fiber[+A]:
 trait WorkGroup:
   def runInWorkGroup[A](eff: => Result[A]): Result[A]
   def waitForAll: Result[Unit]
+  def reset: Result[Unit]
 
 object WorkGroup:
   def apply(): Result[WorkGroup] = Result.defer {
@@ -25,7 +26,9 @@ object WorkGroup:
             res
           }
         }
-      override def waitForAll: Result[Unit] = Result.defer(semaphore.acquire(Int.MaxValue)).void
+      override def waitForAll: Result[Unit] = Result.defer(semaphore.acquire(Int.MaxValue))
+
+      override def reset: Result[Unit] = Result.defer(semaphore.release(Int.MaxValue))
   }
 
 // TODO: implementations of Promise for CE and ZIO?

@@ -120,7 +120,7 @@ object Context:
 
     override private[besom] def registerTask[A](fa: => Result[A]): Result[A] = workgroup.runInWorkGroup(fa)
 
-    override private[besom] def waitForAllTasks: Result[Unit] = workgroup.waitForAll
+    override private[besom] def waitForAllTasks: Result[Unit] = workgroup.waitForAll *> workgroup.reset
 
     override private[besom] def close: Result[Unit] =
       for
@@ -128,7 +128,7 @@ object Context:
         _ <- engine.close()
       yield ()
 
-    private[besom] def registerResourceOutputsInternal(): Result[Unit] = ???
+    private[besom] def registerResourceOutputsInternal(): Result[Unit] = Result.unit // TODO
 
     override private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
       typ: ResourceType,
@@ -214,6 +214,20 @@ object Context:
     private[besom] def resolveAliases(resource: Resource): Result[List[String]] =
       Result.pure(List.empty) // TODO aliases
 
+    private[besom] def resolveProviderRegistrationId(state: ResourceState): Result[Option[String]] =
+      state match
+        case prs: ProviderResourceState =>
+          prs.custom.common.provider match
+            case Some(provider) => provider.registrationId.map(Some(_))
+            case None           => Result.pure(None)
+
+        case crs: CustomResourceState =>
+          crs.common.provider match
+            case Some(provider) => provider.registrationId.map(Some(_))
+            case None           => Result.pure(None)
+
+        case _ => Result.pure(None)
+
     private[besom] def prepareResourceInputs[A: ArgsEncoder](
       label: String,
       resource: Resource,
@@ -222,17 +236,17 @@ object Context:
       options: ResourceOptions
     ): Result[PreparedInputs] =
       for
-        directDeps     <- options.dependsOn.getValueOrElse(List.empty).map(_.toSet)
-        serResult      <- PropertiesSerializer.serializeResourceProperties(label, args)
-        maybeParentUrn <- resolveParentUrn(state.typ, options)
-        providerId     <- state.provider.registrationId // TODO Option[String] in java, ProviderResource?
-        providerRefs   <- resolveProviderReferences(state)
-        depUrns        <- aggregateDependencyUrns(directDeps, serResult.propertyToDependentResources)
-        aliases        <- resolveAliases(resource)
+        directDeps      <- options.dependsOn.getValueOrElse(List.empty).map(_.toSet)
+        serResult       <- PropertiesSerializer.serializeResourceProperties(label, args)
+        maybeParentUrn  <- resolveParentUrn(state.typ, options)
+        maybeProviderId <- resolveProviderRegistrationId(state)
+        providerRefs    <- resolveProviderReferences(state)
+        depUrns         <- aggregateDependencyUrns(directDeps, serResult.propertyToDependentResources)
+        aliases         <- resolveAliases(resource)
       yield PreparedInputs(
         serResult.serialized,
         maybeParentUrn.getOrElse(""),
-        providerId,
+        maybeProviderId.getOrElse(""),
         providerRefs,
         depUrns,
         aliases,
@@ -319,6 +333,7 @@ object Context:
               )
             }
             .flatMap { req =>
+              pprint.pprintln(req)
               this.monitor.registerResource(req)
             }
             .map { resp =>
@@ -360,6 +375,10 @@ object Context:
       val label = s"resource:$name[$typ]#..." // todo saner label or use data from resource state?
       summon[ResourceDecoder[R]].makeResolver(using this).flatMap { (resource, resolver) =>
         for
+          tuple <- summon[ArgsEncoder[A]].encode(args, _ => false)
+          _ = println(s"encoded for $label:")
+          _ = pprint.pprintln(tuple._1)
+          _ = pprint.pprintln(tuple._2)
           state  <- createResourceState(typ, name, resource, options)
           _      <- resources.add(resource, state)
           inputs <- prepareResourceInputs(label, resource, state, args, options)
@@ -443,29 +462,33 @@ object Context:
         providers        <- overwriteWithProvidersFromOptions(initialProviders)
       yield providers
 
-    private def getProvider(typ: ResourceType, providers: Providers, opts: ResourceOptions): Result[ProviderResource] =
+    private def getProvider(
+      typ: ResourceType,
+      providers: Providers,
+      opts: ResourceOptions
+    ): Result[Option[ProviderResource]] =
       val pkg = typ.getPackage
       opts match
         case CustomResourceOptions(_, providerOpt, _, _, _) =>
           providerOpt match
             case None =>
               providers.get(pkg) match
-                case None           => Result.fail(new Exception(s"no provider found for package ${pkg}"))
-                case Some(provider) => Result.pure(provider)
+                case None           => Result.pure(None)
+                case Some(provider) => Result.pure(Some(provider))
 
             case Some(providerFromOpts) =>
               resources.getStateFor(providerFromOpts).flatMap { prs =>
                 if prs.pkg != pkg then
                   providers.get(pkg) match
-                    case None           => Result.fail(new Exception(s"no provider found for package ${pkg}"))
-                    case Some(provider) => Result.pure(provider)
-                else Result.pure(providerFromOpts)
+                    case None           => Result.pure(None)
+                    case Some(provider) => Result.pure(Some(provider))
+                else Result.pure(Some(providerFromOpts))
               }
 
         case _ =>
           providers.get(pkg) match
-            case None           => Result.fail(new Exception(s"no provider found for package ${pkg}"))
-            case Some(provider) => Result.pure(provider)
+            case None           => Result.pure(None)
+            case Some(provider) => Result.pure(Some(provider))
 
     override private[besom] def createResourceState(
       typ: ResourceType,
@@ -474,15 +497,15 @@ object Context:
       resourceOptions: ResourceOptions
     ): Result[ResourceState] =
       for
-        parent    <- resolveParent(typ, resourceOptions)
-        opts      <- applyTransformations(resourceOptions, parent)
-        aliases   <- collapseAliases(opts)
-        providers <- mergeProviders(typ, opts)
-        provider  <- getProvider(typ, providers, opts)
+        parent        <- resolveParent(typ, resourceOptions)
+        opts          <- applyTransformations(resourceOptions, parent)
+        aliases       <- collapseAliases(opts)
+        providers     <- mergeProviders(typ, opts)
+        maybeProvider <- getProvider(typ, providers, opts)
       yield {
         val commonRS = CommonResourceState(
           children = Set.empty,
-          provider = provider,
+          provider = maybeProvider,
           providers = providers,
           version = resourceOptions.version,
           pluginDownloadUrl = resourceOptions.pluginDownloadUrl,

@@ -133,7 +133,7 @@ object ComponentResourceOptions:
       dependsOn = dependsOn,
       protect = protect,
       ignoreChanges = ignoreChanges,
-      version = version.asOption.getOrElse(""), // grpc & go are "strongly" typed
+      version = version.asOption.getOrElse(""), // TODO grpc & go are "strongly" typed
       customTimeouts = customTimeouts.asOption,
       urn = urn.asOption,
       replaceOnChanges = replaceOnChanges,

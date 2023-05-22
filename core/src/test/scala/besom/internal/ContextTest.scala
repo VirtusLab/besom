@@ -9,6 +9,7 @@ enum TestEnum derives Encoder:
   case `weird-test`
 
 case class PlainCaseClass(data: String, moreData: Int) derives Encoder
+case class TestArgs(a: Output[String], b: Output[PlainCaseClass]) derives ArgsEncoder
 case class TestProviderArgs(`type`: Output[String], pcc: Output[PlainCaseClass]) derives ProviderArgsEncoder
 
 class ContextTest extends munit.FunSuite:
@@ -29,7 +30,7 @@ class ContextTest extends munit.FunSuite:
   def encodeProviderArgs[A: ProviderArgsEncoder](a: A): (Map[String, Set[Resource]], Value) =
     summon[ProviderArgsEncoder[A]].encode(a, filterOut = _ => false).unsafeRunSync()
 
-  def encodeArgs[A: ArgsEncoder](a: A)(): (Map[String, Set[Resource]], Value) =
+  def encodeArgs[A: ArgsEncoder](a: A): (Map[String, Set[Resource]], Value) =
     summon[ArgsEncoder[A]].encode(a, filterOut = _ => false).unsafeRunSync()
 
   def encode[A: Encoder](a: A): (Set[Resource], Value) =
@@ -45,8 +46,22 @@ class ContextTest extends munit.FunSuite:
       )
     )
 
-    // println(res)
-    // println(value)
+    println(res)
+    println(value)
+  }
+
+  test("ArgsEncoder works") {
+    given Context = DummyContext().unsafeRunSync()
+
+    val (res, value) = encodeArgs(
+      TestArgs(
+        Output("SOME-TEST-PROVIDER"),
+        Output(PlainCaseClass(data = "werks?", moreData = 123))
+      )
+    )
+
+    println(res)
+    println(value)
   }
 
   test("quick dirty Encoder test - enums") {
