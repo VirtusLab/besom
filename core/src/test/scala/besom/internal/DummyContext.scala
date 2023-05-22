@@ -30,4 +30,8 @@ object DummyContext:
     keepResources: Boolean = false,
     keepOutputValues: Boolean = false
   ): Result[Context] =
-    WorkGroup().map(wg => Context(runInfo, keepResources, keepOutputValues, monitor, engine, wg))
+    for
+      wg        <- WorkGroup()
+      stack     <- Promise[Stack]
+      resources <- Resources()
+    yield Context(runInfo, keepResources, keepOutputValues, monitor, engine, wg, stack, resources)

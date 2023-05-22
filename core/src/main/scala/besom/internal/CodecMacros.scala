@@ -23,7 +23,7 @@ object CodecMacros:
 
   private def summonDecodersImpl[A: Type](using Quotes): Expr[List[Decoder[?]]] =
     import quotes.reflect.*
-    report.info(s"Deriving for ${Type.show[A]}")
+    // report.info(s"Deriving for ${Type.show[A]}")
     Expr.ofList(recSummonDecodersImpl(Type.of[A]))
 
   private def recSummonDecodersImpl(t: Type[?])(using Quotes): List[Expr[Decoder[?]]] =

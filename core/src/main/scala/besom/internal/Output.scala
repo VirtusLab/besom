@@ -40,6 +40,11 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
 
   private[internal] def getData: Result[OutputData[A]] = dataResult
 
+  private[internal] def getValue: Result[Option[A]] = dataResult.map(_.getValue)
+
+  private[internal] def getValueOrElse[B >: A](default: => B): Result[B] =
+    dataResult.map(_.getValueOrElse(default))
+
   private[internal] def withIsSecret(isSecretEff: Result[Boolean]): Output[A] =
     Output(
       for

@@ -84,11 +84,15 @@ trait ResultSpec[F[+_]: RunResult] extends munit.FunSuite:
     program.unsafeRunSync()
   }
 
+  // this is flaky because it's possible that the forked threads will finish before we get to wg.waitForAll
+  // inverse of the above is also true, forked jobs can be scheduled after we get to wg.waitForAll
+  // and then we finish before they start, correct solution would be for WorkGroup to acquire on calling thread
+  // and only after acquiring, fork the passed in task. sadly, that's not how runInWorkGroup is implemented.
   test("workgroup allows to wait until all tasks complete") {
     def spawnTasks(wg: WorkGroup, ref: Ref[Int]): Result[Unit] =
       Result.sequence {
         (1 to 30).map { idx =>
-          val napTime = scala.util.Random.between(10, 20)
+          val napTime = scala.util.Random.between(50, 100)
           wg.runInWorkGroup {
             Result.sleep(napTime).tap(_ => ref.update(i => i + idx))
           }.fork

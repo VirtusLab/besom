@@ -3,7 +3,6 @@ package besom.internal
 import besom.util.*
 
 trait CommonResourceOptions:
-  def id: Option[Output[NonEmptyString]] // TODO: This is only for StackReferenceResourceOptions
   def parent: Option[Resource]
   def dependsOn: Output[List[Resource]]
   def protect: Boolean
@@ -15,25 +14,36 @@ trait CommonResourceOptions:
   def urn: Option[String] // TODO this is only necessary for Resource deserialization, dependency resources and multi-language remote components
   def replaceOnChanges: List[String] // TODO?
   def retainOnDelete: Boolean
-  def pluginDownloadUrl: Option[String]
+  def pluginDownloadUrl: String
+  // TODO: new resource option: https://github.com/pulumi/pulumi/pull/11883 this also needs a supported feature check!
+  def deletedWith: Option[Resource]
 
 final case class CommonResourceOptionsImpl(
-  id: Option[Output[NonEmptyString]],
   parent: Option[Resource],
   dependsOn: Output[List[Resource]],
   protect: Boolean,
   ignoreChanges: List[String],
-  version: String, // TODO?
+  version: String, // should be blank string when not provided TODO?
   customTimeouts: Option[String], // CustomTimeouts // TODO
   // resourceTransformations: List[ResourceTransformation], // TODO
   // aliases: List[Output[Alias]], // TODO
   urn: Option[String], // TODO better type
   replaceOnChanges: List[String], // TODO?
   retainOnDelete: Boolean,
-  pluginDownloadUrl: Option[String]
+  pluginDownloadUrl: String, // should be blank string when not provided
+  // TODO: new resource option: https://github.com/pulumi/pulumi/pull/11883 this also needs a supported feature check!
+  deletedWith: Option[Resource]
 ) extends CommonResourceOptions
 
-sealed trait ResourceOptions
+sealed trait ResourceOptions:
+  def parent: Option[Resource]
+  def version: String
+  def pluginDownloadUrl: String
+  def dependsOn: Output[List[Resource]]
+  def protect: Boolean
+  def ignoreChanges: List[String]
+  def replaceOnChanges: List[String]
+  def retainOnDelete: Boolean
 
 final case class CustomResourceOptions private[internal] (
   common: CommonResourceOptions,
@@ -52,11 +62,18 @@ final case class ComponentResourceOptions private[internal] (
       CommonResourceOptions:
   export common.*
 
+final case class StackReferenceResourceOptions private[internal] (
+  common: CommonResourceOptions,
+  id: Option[Output[NonEmptyString]] // TODO: This is for StackReference
+) extends ResourceOptions,
+      CommonResourceOptions:
+  export common.*
+
 object CustomResourceOptions:
   def apply(using Context)(
-    id: Output[NonEmptyString] | NotProvided = NotProvided,
     parent: Resource | NotProvided = NotProvided,
     dependsOn: Output[List[Resource]] = Output(List.empty[Resource]),
+    deletedWith: Resource | NotProvided = NotProvided,
     protect: Boolean = false,
     ignoreChanges: List[String] = List.empty,
     version: NonEmptyString | NotProvided = NotProvided, // TODO? UGLY AF
@@ -73,7 +90,6 @@ object CustomResourceOptions:
     importId: String | NotProvided = NotProvided
   ): CustomResourceOptions =
     val common = CommonResourceOptionsImpl(
-      id = id.asOption,
       parent = parent.asOption,
       dependsOn = dependsOn,
       protect = protect,
@@ -83,7 +99,8 @@ object CustomResourceOptions:
       urn = urn.asOption,
       replaceOnChanges = replaceOnChanges,
       retainOnDelete = retainOnDelete,
-      pluginDownloadUrl = pluginDownloadUrl.asOption
+      pluginDownloadUrl = pluginDownloadUrl.asOption.getOrElse(""),
+      deletedWith = deletedWith.asOption
     )
     new CustomResourceOptions(
       common,
@@ -108,10 +125,10 @@ object ComponentResourceOptions:
     urn: String | NotProvided = NotProvided, // TODO better type
     replaceOnChanges: List[String] = List.empty, // TODO?
     retainOnDelete: Boolean = false,
-    pluginDownloadUrl: String | NotProvided = NotProvided
+    pluginDownloadUrl: String | NotProvided = NotProvided,
+    deletedWith: Resource | NotProvided = NotProvided
   ): ComponentResourceOptions =
     val common = CommonResourceOptionsImpl(
-      id = id.asOption,
       parent = parent.asOption,
       dependsOn = dependsOn,
       protect = protect,
@@ -121,6 +138,7 @@ object ComponentResourceOptions:
       urn = urn.asOption,
       replaceOnChanges = replaceOnChanges,
       retainOnDelete = retainOnDelete,
-      pluginDownloadUrl = pluginDownloadUrl.asOption
+      pluginDownloadUrl = pluginDownloadUrl.asOption.getOrElse(""),
+      deletedWith = deletedWith.asOption
     )
     new ComponentResourceOptions(common, providers)

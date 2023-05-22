@@ -144,10 +144,11 @@ object Decoder extends DecoderInstancesLowPrio:
 
     override def mapping(value: Value): A | B = ???
 
-  given unionIntStringDecoder: Decoder[Int | String] = unionDecoder[Int, String]
-  given unionBooleanProductDecoder[P <: Product : Decoder]: Decoder[Boolean | P] = unionDecoder[P, Boolean]
-  given unionStringProductDecoder[P <: Product : Decoder]: Decoder[String | P] = unionDecoder[P, String]
-  given unionListProductDecoder[A, P <: Product](using Decoder[List[A]], Decoder[P]): Decoder[List[A] | P] = unionDecoder[List[A], P]
+  given unionIntStringDecoder: Decoder[Int | String]                            = unionDecoder[Int, String]
+  given unionBooleanProductDecoder[P <: Product: Decoder]: Decoder[Boolean | P] = unionDecoder[P, Boolean]
+  given unionStringProductDecoder[P <: Product: Decoder]: Decoder[String | P]   = unionDecoder[P, String]
+  given unionListProductDecoder[A, P <: Product](using Decoder[List[A]], Decoder[P]): Decoder[List[A] | P] =
+    unionDecoder[List[A], P]
 
   // this is kinda different from what other pulumi sdks are doing because we disallow nulls in the list
   given listDecoder[A](using innerDecoder: Decoder[A]): Decoder[List[A]] = new Decoder[List[A]]:
@@ -206,6 +207,32 @@ object Decoder extends DecoderInstancesLowPrio:
 
       }
     def mapping(value: Value): Map[String, A] = Map.empty
+
+  // wondering if this works, it's a bit of a hack
+  given dependencyResourceDecoder(using Context): Decoder[DependencyResource] = new Decoder[DependencyResource]:
+    override def decode(value: Value): Either[DecodingError, OutputData[DependencyResource]] =
+      decodeAsPossibleSecret(value).flatMap { odv =>
+        Try {
+          odv.flatMap { innerValue =>
+            extractSpecialStructSignature(innerValue) match
+              case None => error("Expected a special struct signature!")
+              case Some(specialSig) =>
+                if specialSig != Constants.SpecialSecretSig then error("Expected a special resource signature!")
+                else
+                  val structValue = innerValue.getStructValue
+                  val urn = structValue.fields
+                    .get(Constants.ResourceUrnName)
+                    .map(_.getStringValue)
+                    .getOrElse(error("Expected a resource urn in resource struct!"))
+
+                  OutputData(DependencyResource(Output(urn)))
+          }
+        } match
+          case Failure(exception) => errorLeft("Encountered an error", exception)
+          case Success(value)     => Right(value)
+      }
+
+    override def mapping(value: Value): DependencyResource = ???
 
   // TODO is this required at all?
   // given outputDecoder[A](using innerDecoder: Decoder[A], ctx: Context): Decoder[Output[A]] = new Decoder[Output[A]]:
@@ -602,7 +629,7 @@ object ArgsEncoder:
 
     argsEncoderProduct(nameEncoderPairs)
 
-trait ProviderArgsEncoder[A]:
+trait ProviderArgsEncoder[A] extends ArgsEncoder[A]:
   def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Value)]
 
 object ProviderArgsEncoder:
