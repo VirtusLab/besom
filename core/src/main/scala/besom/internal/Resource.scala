@@ -8,6 +8,9 @@ import scala.deriving.Mirror
 
 sealed trait Resource:
   def urn: Output[String]
+  private[internal] def isCustom: Boolean = this match
+    case _: CustomResource => true
+    case _                 => false
 
 trait CustomResource extends Resource:
   def id: Output[String]

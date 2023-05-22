@@ -386,12 +386,17 @@ object CodeGen {
           |${resourceClassParams.map(param => s"  ${param}").mkString(",\n")}
           |) extends ${resourceBaseClass} derives ResourceDecoder""".stripMargin
 
+    // the type has to match pulumi's resource type schema, ie kubernetes:core/v1:Pod
+    val typ = s"" // TODO HIER !!!!!!!!!!!!!!!!!!!!!!!
+
     val factoryMethod =
       s"""|def $factoryMethodName(using ctx: Context)(
           |  name: String,
           |  args: $argsClassName,
           |  opts: CustomResourceOptions = CustomResourceOptions()
-          |): Output[$resourceClassName] = ???""".stripMargin
+          |): Output[$resourceClassName] = 
+          |  ctx.registerResource[$resourceClassName, $argsClassName]($typ, name, args, opts)
+          |""".stripMargin
 
     val argsEncoderClassName = if (isProvider) "ProviderArgsEncoder" else "ArgsEncoder"
 

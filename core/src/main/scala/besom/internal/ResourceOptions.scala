@@ -40,6 +40,10 @@ sealed trait ResourceOptions:
   def version: String
   def pluginDownloadUrl: String
   def dependsOn: Output[List[Resource]]
+  def protect: Boolean
+  def ignoreChanges: List[String]
+  def replaceOnChanges: List[String]
+  def retainOnDelete: Boolean
 
 final case class CustomResourceOptions private[internal] (
   common: CommonResourceOptions,

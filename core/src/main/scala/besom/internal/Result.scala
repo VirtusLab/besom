@@ -137,6 +137,12 @@ enum Result[+A]:
   def tapBoth(f: Either[Throwable, A] => Result[Unit])(using Debug): Result[A] =
     transformM(e => f(e) *> Result.pure(e))
   def delay(duration: Long)(using Debug): Result[A] = Result.Sleep(() => this, duration, Debug())
+  def either(using Debug): Result[Either[Throwable, A]] =
+    BiFlatMap(
+      this,
+      e => Result.Pure(e, Debug()),
+      Debug()
+    )
 
   inline def *>[B](rb: => Result[B])(using Debug): Result[B] = flatMap(_ => rb)
   inline def <*[B](rb: => Result[B])(using Debug): Result[A] = rb.flatMap(_ => this)
