@@ -185,7 +185,7 @@ object Context:
     )
 
     case class PreparedInputs(
-      serializedArgs: Value,
+      serializedArgs: Struct,
       parentUrn: String,
       providerId: String,
       providerRefs: Map[String, String],
@@ -245,7 +245,7 @@ object Context:
         aliases         <- resolveAliases(resource)
       yield PreparedInputs(
         serResult.serialized,
-        maybeParentUrn.getOrElse(""),
+        maybeParentUrn.getOrElse(""), // TODO PreparedInputs should be an Option[String] instead of String
         maybeProviderId.getOrElse(""),
         providerRefs,
         depUrns,
@@ -295,8 +295,7 @@ object Context:
                 name = state.name,
                 parent = inputs.parentUrn,
                 custom = resource.isCustom,
-                `object` =
-                  inputs.serializedArgs.kind.structValue, // TODO this is most certainly wrong, ArgsEncoder should return Struct
+                `object` = Some(inputs.serializedArgs), // TODO when could this be None?
                 protect = inputs.options.protect, // TODO we don't do what pulumi-java does, we do what pulumi-go does
                 dependencies = inputs.depUrns.allDeps.toList,
                 provider = inputs.providerId,

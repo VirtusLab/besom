@@ -590,14 +590,14 @@ object Encoder:
 // ProviderArgsEncoder summoning JsonEncoder instances instead of Encoder (because all
 // of the fields in provider arguments are serialized to JSON strings)
 trait ArgsEncoder[A]:
-  def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Value)]
+  def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Struct)]
 
 object ArgsEncoder:
   def argsEncoderProduct[A](
     elems: List[String -> Encoder[?]]
   ): ArgsEncoder[A] =
     new ArgsEncoder[A]:
-      override def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Value)] =
+      override def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Struct)] =
         Result
           .sequence {
             a.asInstanceOf[Product]
@@ -617,7 +617,7 @@ object ArgsEncoder:
                   else (mapOfResources + (label -> resources), mapOfValues + (label -> value))
               }
 
-            val struct = mapOfValues.asValue
+            val struct = mapOfValues.asStruct
 
             mapOfResources -> struct
           }
@@ -630,14 +630,14 @@ object ArgsEncoder:
     argsEncoderProduct(nameEncoderPairs)
 
 trait ProviderArgsEncoder[A] extends ArgsEncoder[A]:
-  def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Value)]
+  def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Struct)]
 
 object ProviderArgsEncoder:
   def providerArgsEncoderProduct[A](
     elems: List[String -> JsonEncoder[?]]
   ): ProviderArgsEncoder[A] =
     new ProviderArgsEncoder[A]:
-      override def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Value)] =
+      override def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Struct)] =
         Result
           .sequence {
             a.asInstanceOf[Product]
@@ -657,7 +657,7 @@ object ProviderArgsEncoder:
                   else (mapOfResources + (label -> resources), mapOfValues + (label -> value))
               }
 
-            val struct = mapOfValues.asValue
+            val struct = mapOfValues.asStruct
 
             mapOfResources -> struct
           }

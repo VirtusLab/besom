@@ -1,10 +1,10 @@
 package besom.internal
 
-import com.google.protobuf.struct.Value, Value.Kind, Kind.*
+import com.google.protobuf.struct.{Struct, Value}, Value.Kind, Kind.*
 import Constants.{IdPropertyName, UrnPropertyName}
 
 case class SerializationResult(
-  serialized: Value,
+  serialized: Struct,
   containsUnknowns: Boolean,
   propertyToDependentResources: Map[String, Set[Resource]]
 )
@@ -22,7 +22,7 @@ object PropertiesSerializer:
     filter: String => Boolean
   ): Result[SerializationResult] =
     summon[ArgsEncoder[A]].encode(args, filter).map { case (fieldsToResources, value) =>
-      SerializationResult(value, detectUnknowns(value), fieldsToResources)
+      SerializationResult(value, detectUnknowns(Value(Kind.StructValue(value))), fieldsToResources)
     }
 
   private[internal] def detectUnknowns(value: Value): Boolean =
