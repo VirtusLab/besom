@@ -11,7 +11,7 @@ import scala.util.control.NonFatal
 import besom.codegen.metaschema._
 
 object CodeGen {
-  val basePackage = "besom.api"
+  val baseApiPackagePath = PackagePath(Seq("besom", "api"))
 
   val commonImportedIdentifiers = Seq(
     "besom.util.NotProvided",
@@ -44,7 +44,24 @@ object CodeGen {
       )
     }
 
-    def asScalaType(typeRef: TypeReference, asArgsType: Boolean = false): Type = typeRef match {
+    def scalaTypeFromNonResourceTypeToken(escapedTypeToken: String, isResource: Boolean, asArgsType: Boolean) = {
+      val typeToken = escapedTypeToken.replace("%2F", "/") // TODO: Proper URL unescaping ?
+      val typeTokenStruct = parseTypeToken(typeToken)
+      val isObjectType = objectTypeTokens.contains(typeToken)
+      val isEnumType = enumTypeTokens.contains(typeToken)
+      val typeNameSuffix = if (asArgsType && !isEnumType) "Args" else ""
+      val typeName = s"${typeTokenStruct.typeName}${typeNameSuffix}"
+      val typeKindSubpackage =
+        if (isResource) ""
+        else if (isEnumType) "enums"
+        else if (asArgsType) "inputs" else "outputs"
+      val packagePath = baseApiPackagePath.resolve(typeTokenStruct.providerName).resolve(typeTokenStruct.packageSuffix).resolve(typeKindSubpackage)
+      val packageRef = packagePath.pathParts.toList.foldLeft[Term.Ref](q"_root_")((acc, name) => Term.Select(acc, Term.Name(name)))
+
+      t"${packageRef}.${Type.Name(typeName)}"
+    }
+
+    def asScalaType(typeRef: TypeReference, asArgsType: Boolean): Type = typeRef match {
       case BooleanType => t"Boolean"
       case StringType => t"String"
       case IntegerType => t"Int"
@@ -78,28 +95,22 @@ object CodeGen {
 
             assert(fileUri == "", s"Invalid type URI: $typeUri - referencing other schemas is not supported")
 
-            val (escapedTypeToken, isResource) = typePath match {
-              case s"/types/${token}" => (token, false)
-              case s"/resources/${token}" => (token, true)
-              case _ =>
-                //  TODO does typePath need URL escaping in this case too?
-                if (objectTypeTokens.contains(typePath) || enumTypeTokens.contains(typePath))
-                  (typePath, false)
-                else if (resourceTypeTokens.contains(typePath))
-                  (typePath, true)
-                else
-                  return asScalaType(namedType.`type`.get, asArgsType = asArgsType)
+            typePath match {
+              case s"/types/${token}" =>
+                scalaTypeFromNonResourceTypeToken(token, isResource = false, asArgsType = asArgsType)
+              case s"/resources/${token}" =>
+                scalaTypeFromNonResourceTypeToken(token, isResource = true, asArgsType = asArgsType)
+              case s"/${rest}" =>
+                throw new Exception(s"Invalid type reference: ${typeRef}")
+              case token =>
+                if (objectTypeTokens.contains(token) || enumTypeTokens.contains(token)) {
+                  println(s"Warning: type reference: ${typeRef} has an invalid format - assuming '#/types/' prefix")
+                  scalaTypeFromNonResourceTypeToken(token, isResource = false, asArgsType = asArgsType)
+                } else {
+                  println(s"Warning: type reference: ${typeRef} has an invalid format and is not defined in the current schema - using underlying primitive type as fallback")
+                  asScalaType(namedType.`type`.get, asArgsType = asArgsType)
+                }
             }
-            val typeToken = escapedTypeToken.replace("%2F", "/") // TODO: Proper URL unescaping ?
-            val typeTokenStruct = parseTypeToken(typeToken)
-            val typeNameSuffix = if (asArgsType && !enumTypeTokens.contains(typeToken)) "Args" else ""
-            val typeName = s"${typeTokenStruct.typeName}${typeNameSuffix}"
-            val resourcePackagePart = if (isResource) Seq("resources") else Seq.empty
-            val packageParts = basePackage.split("\\.") ++ Seq(typeTokenStruct.providerName) ++ typeTokenStruct.packageSuffix.split("\\.") ++ resourcePackagePart
-            val packageRef = packageParts.toList.foldLeft[Term.Ref](q"_root_")((acc, name) => Term.Select(acc, Term.Name(name)))
-
-            t"${packageRef}.${Type.Name(typeName)}"
-
         }
     }
   }
@@ -129,22 +140,25 @@ object CodeGen {
       moduleFormat = pulumiPackage.meta.moduleFormat.r
     )
 
-    Seq(
-      sourceFileForBuildDefinition(
+    val scalaSources = (
+      sourceFilesForProviderResource(pulumiPackage) ++
+      sourceFilesForNonResourceTypes(pulumiPackage) ++
+      sourceFilesForCustomResources(pulumiPackage)
+    ).map{ sourceFile => sourceFile.copy(relativePath = Paths.get("src").resolve(sourceFile.relativePath)) }
+    
+    scalaSources ++ Seq(
+      projectConfigFile(
         pulumiPackageName = pulumiPackage.name,
         besomVersion = besomVersion
       ),
-      sourceFileFromPulumiProvider(pulumiPackage),
       resourcePluginMetadataFile(
         pluginName = pulumiPackage.name,
         pluginVersion = pulumiPackage.version
       ),
-    ) ++
-    sourceFilesForNonResourceTypes(pulumiPackage) ++
-    sourceFilesForCustomResources(pulumiPackage)
+    )
   }
 
-  def sourceFileForBuildDefinition(pulumiPackageName: String, besomVersion: String): SourceFile = {
+  def projectConfigFile(pulumiPackageName: String, besomVersion: String): SourceFile = {
     // TODO use original package version from the schema as publish.version?
 
     val fileContent =
@@ -176,18 +190,16 @@ object CodeGen {
     SourceFile(relativePath = filePath, sourceCode = fileContent)
   } 
 
-  def sourceFileFromPulumiProvider(pulumiPackage: PulumiPackage)(implicit typeMapper: TypeMapper): SourceFile = {
+  def sourceFilesForProviderResource(pulumiPackage: PulumiPackage)(implicit typeMapper: TypeMapper): Seq[SourceFile] = {
     val asPackageName = pulumiPackage.language.java.packages.withDefault(x => x)
 
     val providerName = pulumiPackage.name
     val providerPackageSuffix = asPackageName(providerName)
-    val pathPrefixParts = Seq("src") ++ basePackage.split("\\.") ++ Seq(providerPackageSuffix, "resources")
-    val filePathPrefix = Paths.get(pathPrefixParts.head, pathPrefixParts.tail.toArray: _*)
-    sourceFileForResource(
+    val packagePath = baseApiPackagePath.resolve(providerPackageSuffix)
+    sourceFilesForResource(
       resourceName = "Provider",
       resourceDefinition = pulumiPackage.provider,
-      fullPackageName = s"${basePackage}.${providerPackageSuffix}",
-      filePathPrefix = filePathPrefix,
+      packagePath = packagePath,
       typeToken = s"pulumi:provider:${pulumiPackage.name}",
       isProvider = true
     )
@@ -197,33 +209,28 @@ object CodeGen {
   def sourceFilesForNonResourceTypes(pulumiPackage: PulumiPackage)(implicit typeMapper: TypeMapper): Seq[SourceFile] = {
     val asPackageName = pulumiPackage.language.java.packages.withDefault(x => x)
     
-    pulumiPackage.types.collect { case (typeToken, typeDefinition) =>
+    pulumiPackage.types.flatMap { case (typeToken, typeDefinition) =>
       val typeTokenStruct = typeMapper.parseTypeToken(typeToken)
       val providerName = typeTokenStruct.providerName
-      val packageSuffix = typeTokenStruct.packageSuffix
+      val typePackageSuffix = typeTokenStruct.packageSuffix
       val typeName = typeTokenStruct.typeName
 
       val providerPackageSuffix = asPackageName(providerName)
+      val packagePathPrefix = baseApiPackagePath.resolve(providerPackageSuffix).resolve(typePackageSuffix)
 
-      val pathParts = Seq("src") ++ basePackage.split("\\.") ++ Seq(providerPackageSuffix) ++ packageSuffix.split("\\.") ++ Seq(s"${typeName}.scala")
-      val filePath = Paths.get(pathParts.head, pathParts.tail.toArray: _*)
-
-      val packageDecl = s"package ${basePackage}.${providerPackageSuffix}.${packageSuffix}"
-      val specificFileContent = typeDefinition match {
-        case enumDef: EnumTypeDefinition => sourceForEnum(enumName = typeName, enumDefinition = enumDef)
-        case objectDef: ObjectTypeDefinition => sourceForObjectType(typeName = typeName, objectTypeDefinition = objectDef)
+      typeDefinition match {
+        case enumDef: EnumTypeDefinition => sourceFilesForEnum(enumName = typeName, enumDefinition = enumDef, packagePathPrefix = packagePathPrefix)
+        case objectDef: ObjectTypeDefinition => sourceFilesForObjectType(typeName = typeName, objectTypeDefinition = objectDef, packagePathPrefix = packagePathPrefix)
       }
-      val fileContent = packageDecl + "\n\n" + specificFileContent
-
-      SourceFile(relativePath = filePath, sourceCode = fileContent)
     }.toSeq
   }
 
-  def sourceForEnum(enumName: String, enumDefinition: EnumTypeDefinition): String = {
-    val importedIdentifiers = Seq(
+  def sourceFilesForEnum(enumName: String, enumDefinition: EnumTypeDefinition, packagePathPrefix: PackagePath): Seq[SourceFile] = {
+    val packagePath = packagePathPrefix.resolve("enums")
+
+    val imports = makeImportStatements(Seq(
       "besom.internal.Decoder"
-    )
-    val imports = importedIdentifiers.map(id => s"import $id").mkString("\n")
+    ))
 
     val superclass = enumDefinition.`type` match {
       case BooleanType => "besom.internal.BooleanEnum"
@@ -239,28 +246,36 @@ object CodeGen {
     } 
     
     val fileContent =
-      s"""|${imports}
+      s"""|package ${packagePath.packageName}
+          |
+          |${imports}
           |
           |enum ${enumName} extends ${superclass} derives Decoder:
           |${enumCases.map(arg => s"  ${arg}").mkString("\n")}
           |""".stripMargin
 
-    fileContent
+    Seq(SourceFile(
+      packagePath.filePath.resolve(s"${enumName}.scala"),
+      fileContent
+    ))
   }
 
-  def sourceForObjectType(typeName: String, objectTypeDefinition: ObjectTypeDefinition)(implicit typeMapper: TypeMapper): String = {
-    val importedIdentifiers = commonImportedIdentifiers ++ Seq(
-      "besom.internal.Decoder",
+  def sourceFilesForObjectType(typeName: String, objectTypeDefinition: ObjectTypeDefinition, packagePathPrefix: PackagePath)(implicit typeMapper: TypeMapper): Seq[SourceFile] = {
+    val baseClassName = Type.Name(typeName).syntax
+    val baseClassFileName = s"${typeName}.scala"
+    val argsClassName = Type.Name(s"${typeName}Args").syntax
+    val argsClassFileName = s"${typeName}Args.scala"
+    
+    val baseFileImports = makeImportStatements(commonImportedIdentifiers ++ Seq(
+      "besom.internal.Decoder"
+    ))
+
+    val argsFileImports = makeImportStatements(commonImportedIdentifiers ++ Seq(
       "besom.internal.Encoder",
       "besom.internal.ArgsEncoder"
-    )
-    val imports = importedIdentifiers.map(id => s"import $id").mkString("\n")
+    ))
 
-    val outputName = typeName
-    val outputClassName = Type.Name(outputName).syntax
-    val argsClassName = Type.Name(s"${outputClassName}Args").syntax
-
-    val outputClassArgs = objectTypeDefinition.properties.map { case (propertyName, propertyDefinition) =>
+    val baseClassParams = objectTypeDefinition.properties.map { case (propertyName, propertyDefinition) =>
       val fieldBaseType = propertyDefinition.typeReference.asScalaType()
       val isRequired = objectTypeDefinition.required.contains(propertyName)
       val fieldType = if (isRequired) fieldBaseType else t"Option[$fieldBaseType]"
@@ -285,12 +300,12 @@ object CodeGen {
     }
 
     // TODO: Should we show entire descriptions as comments? Formatting of comments should be preserved
-    // val outputComment = spec.description.fold("")(desc => s"/**\n${desc}\n*/\n") // TODO: Escape/sanitize comments
-    val outputComment = ""
+    // val baseClassComment = spec.description.fold("")(desc => s"/**\n${desc}\n*/\n") // TODO: Escape/sanitize comments
+    val baseClassComment = ""
 
-    val outputClass =
-      s"""|case class $outputClassName(
-          |${outputClassArgs.map(arg => s"  ${arg}").mkString(",\n")}
+    val baseClass =
+      s"""|case class $baseClassName(
+          |${baseClassParams.map(arg => s"  ${arg}").mkString(",\n")}
           |) derives Decoder""".stripMargin
 
     val argsClass =
@@ -307,18 +322,39 @@ object CodeGen {
           |${argsCompanionApplyBodyArgs.map(arg => s"      ${arg}").mkString(",\n")}
           |    )""".stripMargin
 
-    val fileContent =
-      s"""|${imports}
+    val baseClassPackagePath = packagePathPrefix.resolve("outputs")
+    val argsClassPackagePath = packagePathPrefix.resolve("inputs")
+
+    val baseClassFileContent =
+      s"""|package ${baseClassPackagePath.packageName}
           |
-          |${outputComment}
-          |${outputClass}
+          |${baseFileImports}
+          |
+          |${baseClassComment}
+          |${baseClass}
+          |
+          |""".stripMargin
+
+    val argsClassFileContent =
+      s"""|package ${argsClassPackagePath.packageName} 
+          |
+          |${argsFileImports}
           |
           |${argsClass}
           |
           |${argsCompanion}
           |""".stripMargin
 
-    fileContent
+    Seq(
+      SourceFile(
+        baseClassPackagePath.filePath.resolve(baseClassFileName),
+        baseClassFileContent
+      ),
+      SourceFile(
+        argsClassPackagePath.filePath.resolve(argsClassFileName),
+        argsClassFileContent
+      )
+    )
   }
 
   def sourceFilesForCustomResources(pulumiPackage: PulumiPackage)(implicit typeMapper: TypeMapper): Seq[SourceFile] = {
@@ -329,51 +365,51 @@ object CodeGen {
       val typeTokenStruct = typeMapper.parseTypeToken(typeToken)
 
       val providerName = typeTokenStruct.providerName
-      val packageSuffix = typeTokenStruct.packageSuffix
+      val typePackageSuffix = typeTokenStruct.packageSuffix
       val resourceName = typeTokenStruct.typeName
 
       val providerPackageSuffix = asPackageName(providerName)
-
-      val fullPackageName = s"${basePackage}.${providerPackageSuffix}.${packageSuffix}.resources"
-      val pathPrefixParts = Seq("src") ++ basePackage.split("\\.") ++ Seq(providerPackageSuffix) ++ packageSuffix.split("\\.") ++ Seq("resources") // TODO
-    
-      val filePathPrefix = Paths.get(pathPrefixParts.head, pathPrefixParts.tail.toArray: _*)
+      val packagePath = baseApiPackagePath.resolve(providerPackageSuffix).resolve(typePackageSuffix)
       
-      sourceFileForResource(
+      sourceFilesForResource(
         resourceName = resourceName,
         resourceDefinition = resourceDefinition,
-        fullPackageName = fullPackageName,
-        filePathPrefix = filePathPrefix,
+        packagePath = packagePath,
         typeToken = typeToken,
         isProvider = false,
       )
-    }.toSeq
+    }.toSeq.flatten
   }
 
-  def sourceFileForResource(resourceName: String, resourceDefinition: ResourceDefinition, fullPackageName: String, filePathPrefix: Path, typeToken: String, isProvider: Boolean)(implicit typeMapper: TypeMapper): SourceFile = {
-    val resourceClassName = Type.Name(resourceName).syntax
+  def sourceFilesForResource(resourceName: String, resourceDefinition: ResourceDefinition, packagePath: PackagePath, typeToken: String, isProvider: Boolean)(implicit typeMapper: TypeMapper): Seq[SourceFile] = {
+    val baseClassName = Type.Name(resourceName).syntax
+    val baseClassFileName = s"${resourceName}.scala"
     val argsClassName = Type.Name(s"${resourceName}Args").syntax
+    val argsClassFileName = s"${resourceName}Args.scala"
     val factoryMethodName = Term.Name(decapitalize(resourceName)).syntax
 
-    val conditionallyImportedIdentifiers =
-      if (isProvider)
-        Seq(
-          "besom.internal.ProviderResource",
-          "besom.internal.ProviderArgsEncoder"
-        )
-      else
-        Seq(
-          "besom.internal.CustomResource",
-          "besom.internal.ArgsEncoder"
-        )
+    val baseFileImports = {
+      val conditionalIdentifiers =
+        if (isProvider)
+          Seq("besom.internal.ProviderResource")
+        else
+          Seq("besom.internal.CustomResource")
+      val unconditionalIdentifiers = Seq(
+        "besom.internal.ResourceDecoder",
+        "besom.internal.CustomResourceOptions",
+        "besom.util.NonEmptyString",
+      )
+      makeImportStatements(commonImportedIdentifiers ++ conditionalIdentifiers ++ unconditionalIdentifiers)
+    }
 
-    val importedIdentifiers = commonImportedIdentifiers ++ conditionallyImportedIdentifiers ++ Seq(
-      "besom.internal.ResourceDecoder",
-      "besom.internal.CustomResourceOptions",
-      "besom.util.NonEmptyString",
-    )
-
-    val imports = importedIdentifiers.map(id => s"import $id").mkString("\n")
+    val argsFileImports = {
+      val conditionalIdentifiers =
+        if (isProvider)
+          Seq("besom.internal.ProviderArgsEncoder")
+        else
+          Seq("besom.internal.ArgsEncoder")
+      makeImportStatements(commonImportedIdentifiers ++ conditionalIdentifiers)
+    }
 
     val resourceBaseProperties = Seq(
       "urn" -> PropertyDefinition(typeReference = StringType),
@@ -382,7 +418,7 @@ object CodeGen {
 
     val resourceProperties = resourceBaseProperties ++ resourceDefinition.properties
 
-    val resourceClassParams = resourceProperties.map { case (propertyName, propertyDefinition) =>
+    val baseClassParams = resourceProperties.map { case (propertyName, propertyDefinition) =>
       makeResourceClassParam(propertyName = propertyName, property = propertyDefinition)
     }
 
@@ -398,17 +434,17 @@ object CodeGen {
       makeArgsCompanionApplyBodyArg(propertyName = propertyName, property = propertyDefinition)
     }
 
-    val packageDecl = s"package ${fullPackageName}"
+    val packageDecl = s"package ${packagePath.packageName}"
 
     // TODO: Should we show entire descriptions as comments? Formatting of comments should be preserved
-    // val resourceComment = spec.description.fold("")(desc => s"/**\n${desc}\n*/\n") // TODO: Escape/sanitize comments
-    val resourceComment = ""
+    // val baseClassComment = spec.description.fold("")(desc => s"/**\n${desc}\n*/\n") // TODO: Escape/sanitize comments
+    val baseClassComment = ""
 
     val resourceBaseClass = if (isProvider) "ProviderResource" else "CustomResource"
 
-    val resourceClass =
-      s"""|case class $resourceClassName(
-          |${resourceClassParams.map(param => s"  ${param}").mkString(",\n")}
+    val baseClass =
+      s"""|case class $baseClassName(
+          |${baseClassParams.map(param => s"  ${param}").mkString(",\n")}
           |) extends ${resourceBaseClass} derives ResourceDecoder""".stripMargin
 
     // the type has to match pulumi's resource type schema, ie kubernetes:core/v1:Pod
@@ -419,8 +455,8 @@ object CodeGen {
           |  name: NonEmptyString,
           |  args: $argsClassName,
           |  opts: CustomResourceOptions = CustomResourceOptions()
-          |): Output[$resourceClassName] = 
-          |  ctx.registerResource[$resourceClassName, $argsClassName](${typ}, name, args, opts)
+          |): Output[$baseClassName] = 
+          |  ctx.registerResource[$baseClassName, $argsClassName](${typ}, name, args, opts)
           |""".stripMargin
 
     val argsEncoderClassName = if (isProvider) "ProviderArgsEncoder" else "ArgsEncoder"
@@ -439,24 +475,37 @@ object CodeGen {
           |${argsCompanionApplyBodyArgs.map(arg => s"      ${arg}").mkString(",\n")}
           |    )""".stripMargin
 
-    val fileContent =
+    val baseClassFileContent =
       s"""|$packageDecl
           |
-          |${imports}
+          |${baseFileImports}
           |
-          |${resourceComment}
-          |${resourceClass}
+          |${baseClassComment}
+          |${baseClass}
           |
           |${factoryMethod}
+          |""".stripMargin
+
+    val argsClassFileContent =
+      s"""|$packageDecl
+          |
+          |${argsFileImports}
           |
           |${argsClass}
           |
           |${argsCompanion}
           |""".stripMargin
 
-    val filePath = filePathPrefix.resolve(s"${resourceName}.scala")
-
-    SourceFile(relativePath = filePath, sourceCode = fileContent)
+    Seq(
+      SourceFile(
+        packagePath.filePath.resolve(baseClassFileName),
+        baseClassFileContent
+      ),
+      SourceFile(
+        packagePath.filePath.resolve(argsClassFileName),
+        argsClassFileContent
+      )
+    )
   }
 
   private def makeResourceClassParam(propertyName: String, property: PropertyDefinition)(implicit typeMapper: TypeMapper) = {
@@ -512,7 +561,17 @@ object CodeGen {
   }
 
   private def decapitalize(s: String) = s(0).toLower.toString ++ s.substring(1, s.length)
-} 
+
+  private def makeImportStatements(importedIdentifiers: Seq[String]) =
+    importedIdentifiers.map(id => s"import $id").mkString("\n")
+}
+
+case class PackagePath(pathParts: Seq[String]) {
+  def packageName: String = pathParts.mkString(".")
+  def filePath: Path = Paths.get(pathParts.head, pathParts.tail.toArray: _*)
+
+  def resolve(name: String) = PackagePath(pathParts ++ name.split("\\.").filter(_.nonEmpty))
+}
 
 case class SourceFile(
   relativePath: Path,

@@ -86,22 +86,30 @@ install-language-plugin: build-language-plugin
 # Codegen
 ####################
 
-# Download the schema for a specific provider, e.g. `just get-schema kubernetes`
-get-schema schema-name:
-	mkdir -p {{schemas-output-dir}}
-	pulumi package get-schema {{schema-name}} > {{schemas-output-dir}}/{{schema-name}}.json
+# Compiles codegen module
+compile-codegen:
+	scala-cli compile codegen
 
-# Generate scala API code for the given provider, e.g. `just generate-resource-plugin kubernetes`
-generate-resource-plugin schema-name:
-	just get-schema {{schema-name}}
+# Download the schema for a specific provider, e.g. `just get-schema kubernetes`
+get-schema schema-name schema-version='':
+	#!/usr/bin/env sh
+	mkdir -p {{schemas-output-dir}}
+	pulumi plugin install resource {{schema-name}} {{schema-version}};
+	schema_source={{ if schema-version == "" { schema-name } else { schema-name + "@" + schema-version } }}
+	pulumi package get-schema $schema_source > {{schemas-output-dir}}/{{schema-name}}.json
+
+# Generate scala API code for the given provider, e.g. `just generate-provider-sdk kubernetes`
+generate-provider-sdk schema-name schema-version='':
+	just get-schema {{schema-name}} {{schema-version}}
+	rm -rf {{codegen-output-dir}}/{{schema-name}}
 	scala-cli run codegen -- {{schemas-output-dir}} {{codegen-output-dir}} {{schema-name}}
 
-# Compiles the previously generated scala API code for the given provider, e.g. `just compile-resource-plugin kubernetes`
-compile-resource-plugin schema-name:
+# Compiles the previously generated scala API code for the given provider, e.g. `just compile-provider-sdk kubernetes`
+compile-provider-sdk schema-name:
 	scala-cli compile {{codegen-output-dir}}/{{schema-name}}
 
-# Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-resource-plugin kubernetes`
-publish-local-resource-plugin schema-name:
+# Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes`
+publish-local-provider-sdk schema-name:
 	scala-cli publish local {{codegen-output-dir}}/{{schema-name}}
 
 
