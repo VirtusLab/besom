@@ -2,6 +2,8 @@
 
 publish-version := "0.0.1-SNAPSHOT"
 language-plugin-output-dir := justfile_directory() + "/.out/language-plugin"
+codegen-output-dir := justfile_directory() + "/.out/codegen"
+schemas-output-dir := justfile_directory() + "/.out/schemas"
 
 # This list of available targets
 default:
@@ -79,7 +81,33 @@ install-language-plugin: build-language-plugin
 	pulumi plugin rm language scala
 	pulumi plugin install language scala {{publish-version}} --file {{language-plugin-output-dir}}
 
-# TEMP
+
+####################
+# Codegen
+####################
+
+# Download the schema for a specific provider, e.g. `just get-schema kubernetes`
+get-schema schema-name:
+	mkdir -p {{schemas-output-dir}}
+	pulumi package get-schema {{schema-name}} > {{schemas-output-dir}}/{{schema-name}}.json
+
+# Generate scala API code for the given provider, e.g. `just generate-resource-plugin kubernetes`
+generate-resource-plugin schema-name:
+	just get-schema {{schema-name}}
+	scala-cli run codegen -- {{schemas-output-dir}} {{codegen-output-dir}} {{schema-name}}
+
+# Compiles the previously generated scala API code for the given provider, e.g. `just compile-resource-plugin kubernetes`
+compile-resource-plugin schema-name:
+	scala-cli compile {{codegen-output-dir}}/{{schema-name}}
+
+# Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-resource-plugin kubernetes`
+publish-local-resource-plugin schema-name:
+	scala-cli publish local {{codegen-output-dir}}/{{schema-name}}
+
+
+####################
+# Demo
+####################
 
 liftoff: publish-local-core
         cd experimental && \
