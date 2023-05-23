@@ -27,10 +27,10 @@ class ContextTest extends munit.FunSuite:
     assert(v2 == v2)
   }
 
-  def encodeProviderArgs[A: ProviderArgsEncoder](a: A): (Map[String, Set[Resource]], Value) =
+  def encodeProviderArgs[A: ProviderArgsEncoder](a: A): (Map[String, Set[Resource]], Struct) =
     summon[ProviderArgsEncoder[A]].encode(a, filterOut = _ => false).unsafeRunSync()
 
-  def encodeArgs[A: ArgsEncoder](a: A): (Map[String, Set[Resource]], Value) =
+  def encodeArgs[A: ArgsEncoder](a: A): (Map[String, Set[Resource]], Struct) =
     summon[ArgsEncoder[A]].encode(a, filterOut = _ => false).unsafeRunSync()
 
   def encode[A: Encoder](a: A): (Set[Resource], Value) =
