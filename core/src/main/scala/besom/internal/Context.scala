@@ -245,7 +245,9 @@ object Context:
         aliases         <- resolveAliases(resource)
       yield PreparedInputs(
         serResult.serialized,
-        maybeParentUrn.getOrElse(""), // TODO PreparedInputs should be an Option[String] instead of String
+        maybeParentUrn.getOrElse(
+          ""
+        ), // TODO PreparedInputs urn and providerId should be an Option[String] instead of String
         maybeProviderId.getOrElse(""),
         providerRefs,
         depUrns,
@@ -354,6 +356,8 @@ object Context:
             }
             .either
             .flatMap { eitherErrorOrResult =>
+              println(s"Got result for RegisterResourceRequest:")
+              pprint.pprintln(eitherErrorOrResult)
               resolver.resolve(eitherErrorOrResult)(using this)
             }
         }
