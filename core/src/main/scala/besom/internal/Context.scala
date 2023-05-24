@@ -6,7 +6,6 @@ import pulumirpc.resource.SupportsFeatureRequest
 import org.checkerframework.checker.units.qual.A
 import pulumirpc.resource.RegisterResourceRequest
 import pulumirpc.resource.RegisterResourceRequest.PropertyDependencies
-import org.checkerframework.checker.units.qual.s
 
 case class RawResourceResult(urn: String, id: Option[String], data: Struct, dependencies: Map[String, Set[Resource]])
 

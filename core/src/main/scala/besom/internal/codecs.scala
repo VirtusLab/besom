@@ -105,8 +105,9 @@ object Decoder extends DecoderInstancesLowPrio:
     def mapping(value: Value): Boolean =
       if value.kind.isBoolValue then value.getBoolValue else error("Expected a boolean!")
 
-  given jsonDecoder(using stringDecoder: Decoder[String]): Decoder[JsValue] =
-    stringDecoder.map(str => Try(str.parseJson).toEither.left.map(DecodingError("Failed to decode JSON", _)))
+  given jsonDecoder: Decoder[JsValue] with
+    def mapping(value: Value): JsValue = JsNull // TODO: Fixme - effectively we just ignore json values for now
+
 
   given optDecoder[A](using innerDecoder: Decoder[A]): Decoder[Option[A]] = new Decoder[Option[A]]:
     override def decode(value: Value): Either[DecodingError, OutputData[Option[A]]] =
@@ -275,7 +276,7 @@ trait DecoderInstancesLowPrio:
       private def getDecoder(key: String): Decoder[A] = enumNameToDecoder(key).asInstanceOf[Decoder[A]]
       override def decode(value: Value): Either[DecodingError, OutputData[A]] =
         if value.kind.isStringValue then getDecoder(value.getStringValue).decode(Map.empty.asValue)
-        else errorLeft("Value was not a string, Enums should be serialized as strings")
+        else errorLeft("Value was not a string, Enums should be serialized as strings") // TODO: This is not necessarily true
 
       override def mapping(value: Value): A = ???
 
