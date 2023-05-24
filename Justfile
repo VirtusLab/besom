@@ -46,7 +46,7 @@ test-sdk: test-core test-cats test-zio
 
 # Publishes locally core besom SDK
 publish-local-core:
-  scala-cli publish local core --version {{publish-version}}
+  scala-cli publish local core --version {{publish-version}} --doc=false
 
 
 ####################
@@ -110,7 +110,7 @@ compile-provider-sdk schema-name:
 
 # Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes`
 publish-local-provider-sdk schema-name:
-	scala-cli publish local {{codegen-output-dir}}/{{schema-name}}
+	scala-cli publish local {{codegen-output-dir}}/{{schema-name}} --doc=false
 
 
 ####################

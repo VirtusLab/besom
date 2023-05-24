@@ -6,6 +6,7 @@ import pulumirpc.resource.SupportsFeatureRequest
 import org.checkerframework.checker.units.qual.A
 import pulumirpc.resource.RegisterResourceRequest
 import pulumirpc.resource.RegisterResourceRequest.PropertyDependencies
+import org.checkerframework.checker.units.qual.s
 
 case class RawResourceResult(urn: String, id: Option[String], data: Struct, dependencies: Map[String, Set[Resource]])
 
@@ -356,7 +357,7 @@ object Context:
             }
             .either
             .flatMap { eitherErrorOrResult =>
-              println(s"Got result for RegisterResourceRequest:")
+              println(s"Got result for request:")
               pprint.pprintln(eitherErrorOrResult)
               resolver.resolve(eitherErrorOrResult)(using this)
             }
@@ -377,17 +378,21 @@ object Context:
     ): Result[R] =
       val label = s"resource:$name[$typ]#..." // todo saner label or use data from resource state?
       summon[ResourceDecoder[R]].makeResolver(using this).flatMap { (resource, resolver) =>
-        for
-          tuple <- summon[ArgsEncoder[A]].encode(args, _ => false)
-          _ = println(s"encoded for $label:")
-          _ = pprint.pprintln(tuple._1)
-          _ = pprint.pprintln(tuple._2)
-          state  <- createResourceState(typ, name, resource, options)
-          _      <- resources.add(resource, state)
-          inputs <- prepareResourceInputs(label, resource, state, args, options)
-          _      <- addChildToParentResource(resource, options.parent)
-          _      <- executeRegisterResourceRequest(resource, state, resolver, inputs)
-        yield resource
+        resources.cacheResource(typ, name, resource).flatMap { cached =>
+          if cached then
+            for
+              tuple <- summon[ArgsEncoder[A]].encode(args, _ => false)
+              _ = println(s"encoded for $label:")
+              _ = pprint.pprintln(tuple._1)
+              _ = pprint.pprintln(tuple._2)
+              state  <- createResourceState(typ, name, resource, options)
+              _      <- resources.add(resource, state)
+              inputs <- prepareResourceInputs(label, resource, state, args, options)
+              _      <- addChildToParentResource(resource, options.parent)
+              _      <- executeRegisterResourceRequest(resource, state, resolver, inputs)
+            yield resource
+          else resources.getCachedResource(typ, name).map(_.asInstanceOf[R])
+        }
       }
 
     override private[besom] def registerResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
@@ -396,6 +401,7 @@ object Context:
       args: A,
       options: ResourceOptions
     ): Output[R] =
+      println(s"registerResource $typ $name")
       given Context = this
       Output(registerResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
 

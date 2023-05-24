@@ -113,9 +113,12 @@ object Decoder extends DecoderInstancesLowPrio:
       decodeAsPossibleSecret(value).flatMap { odv =>
         Try {
           odv.flatMap { v =>
-            innerDecoder.decode(v) match
-              case Left(error) => throw error
-              case Right(oda)  => oda.optional
+            v match
+              case Value(Kind.NullValue(_), _) => OutputData(None)
+              case _ =>
+                innerDecoder.decode(v) match
+                  case Left(error) => throw error
+                  case Right(oda)  => oda.optional
           }
         } match
           case Failure(exception) => errorLeft("Encountered an error", exception)
@@ -291,18 +294,7 @@ trait DecoderInstancesLowPrio:
                         eitherAcc match
                           case L @ Left(_) => L // just take the L
                           case Right(acc) =>
-                            val fieldValue =
-                              // fields.get(name).getOrElse(throw DecodingError(s"Value for field $name is missing!"))
-                              fields.get(name).getOrElse{
-                                println(s"Value for field $name is missing!")
-                                println("!!!!!!!")
-                                println(decoder)
-                                println("@@@@@@@")
-                                println(elems)
-                                println("########")
-                                println(innerValue)
-                              } // DEBUG
-                              fields.get(name).getOrElse(Null)
+                            val fieldValue: Value = fields.getOrElse(name, Null)
                             decoder.decode(fieldValue) match
                               case Left(decodingError) => throw decodingError
                               case Right(odField)      => Right(acc.zip(odField))

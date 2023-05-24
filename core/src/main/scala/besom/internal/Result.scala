@@ -130,6 +130,18 @@ enum Result[+A]:
     Debug()
   )
 
+  // I don't think this is the correct way to do this.
+  // def memoize(using Debug): Result[A] =
+  //   val promise = scala.concurrent.Promise[A]
+  //   BiFlatMap(
+  //     this,
+  //     {
+  //       case Left(err) =>
+  //         promise.failure(err)
+
+  //     }
+  //   )
+
   def map[B](f: A => B)(using Debug): Result[B]              = flatMap(a => Pure(f(a), Debug()))
   def product[B](rb: Result[B])(using Debug): Result[(A, B)] = flatMap(a => rb.map(b => (a, b)))
   def zip[B](rb: => Result[B])(using z: Zippable[A, B])(using Debug) =

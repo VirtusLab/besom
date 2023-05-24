@@ -5,6 +5,7 @@ import besom.*, api.{kubernetes => k8s}
 import k8s.core.v1.inputs.*
 import k8s.apps.v1.inputs.*
 import k8s.meta.v1.inputs.*
+import k8s.core.v1.ConfigMap
 import k8s.apps.v1.{deployment, DeploymentArgs}
 import k8s.core.v1.{configMap, ConfigMapArgs, service, ServiceArgs}
 
@@ -24,7 +25,6 @@ def main(): Unit = Pulumi.run {
     )
   )
 
-  // we need to mount index.html in the nginx container
   val nginxDeployment = deployment(
     "nginx",
     DeploymentArgs(
@@ -77,9 +77,10 @@ def main(): Unit = Pulumi.run {
     )
   )
 
-  for {
+  for
+    _       <- indexHtmlConfigMap
     nginx   <- nginxDeployment
     service <- nginxService
     exports <- Pulumi.exports("name" -> nginx.metadata.map(_.name))
-  } yield exports
+  yield exports
 }
