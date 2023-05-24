@@ -6,7 +6,7 @@ import Decoder.*
 import ProtobufUtil.*
 
 object DecoderTest:
-  case class TestCaseClass(foo: Int, bar: List[String]) derives Decoder
+  case class TestCaseClass(foo: Int, bar: List[String], optNone1: Option[Int], /* optNone2: Option[Int], */ optSome: Option[String]) derives Decoder
 
   enum TestEnum derives Decoder:
     case A
@@ -26,13 +26,15 @@ class DecoderTest extends munit.FunSuite:
   test("decode case class") {
     val v = Map(
       "foo" -> 10.asValue,
-      "bar" -> List("qwerty".asValue).asValue
+      "bar" -> List("qwerty".asValue).asValue,
+      "optNone1" -> Null, // None.asValue,
+      "optSome" -> Some("abc").asValue
     ).asValue
     val d = summon[Decoder[TestCaseClass]]
 
     d.decode(v) match
       case Left(ex)                                      => throw ex
-      case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some(TestCaseClass(10, List("qwerty"))))
+      case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some(TestCaseClass(10, List("qwerty"), None, /* None, */ Some("abc"))))
       case Right(_)                                      => throw Exception("Unexpected unknown!")
   }
 

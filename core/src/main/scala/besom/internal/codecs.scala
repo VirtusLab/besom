@@ -58,7 +58,7 @@ trait Decoder[A]:
   def decode(value: Value): Either[DecodingError, OutputData[A]] =
     Decoder.decodeAsPossibleSecret(value).flatMap { odv =>
       Try(odv.map(mapping)) match
-        case Failure(exception) => Decoder.errorLeft("Encountered an error", exception)
+        case Failure(exception) => Decoder.errorLeft(s"Encountered an error - secret - ${odv}", exception)
         case Success(oda)       => Right(oda)
     }
 
@@ -292,7 +292,17 @@ trait DecoderInstancesLowPrio:
                           case L @ Left(_) => L // just take the L
                           case Right(acc) =>
                             val fieldValue =
-                              fields.get(name).getOrElse(throw DecodingError(s"Value for field $name is missing!"))
+                              // fields.get(name).getOrElse(throw DecodingError(s"Value for field $name is missing!"))
+                              fields.get(name).getOrElse{
+                                println(s"Value for field $name is missing!")
+                                println("!!!!!!!")
+                                println(decoder)
+                                println("@@@@@@@")
+                                println(elems)
+                                println("########")
+                                println(innerValue)
+                              } // DEBUG
+                              fields.get(name).getOrElse(Null)
                             decoder.decode(fieldValue) match
                               case Left(decodingError) => throw decodingError
                               case Right(odField)      => Right(acc.zip(odField))
