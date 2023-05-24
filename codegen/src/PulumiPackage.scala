@@ -6,7 +6,7 @@ import upickle.implicits.{key => fieldKey}
 import besom.codegen.UpickleApi
 import besom.codegen.UpickleApi._
 
-case class PulumiPackage(name: String, version: String, language: Language, meta: Meta, types: Map[String, TypeDefinition] = Map.empty, provider: ResourceDefinition, resources: Map[String, ResourceDefinition])
+case class PulumiPackage(name: String, version: String, language: Language = Language(), meta: Meta = Meta(), types: Map[String, TypeDefinition] = Map.empty, provider: ResourceDefinition, resources: Map[String, ResourceDefinition] = Map.empty)
 object PulumiPackage {
   implicit val reader: Reader[PulumiPackage] = macroR
 
@@ -54,6 +54,21 @@ case class TypeDefinitionProto(`type`: String, properties: Map[String, PropertyD
 object TypeDefinitionProto {
   implicit val reader: Reader[TypeDefinitionProto] = macroR
 }
+
+sealed trait ConstValue
+
+object ConstValue {
+  // TODO: Handle other possible data types?
+  implicit val reader: Reader[ConstValue] = new SimpleReader[ConstValue] {
+    override def expectedMsg = "expected string or boolean"
+    override def visitString(s: CharSequence, index: Int) = StringConstValue(s.toString)
+    override def visitTrue(index: Int) = BooleanConstValue(true)
+    override def visitFalse(index: Int) = BooleanConstValue(false)
+  }
+}
+
+case class StringConstValue(value: String) extends ConstValue
+case class BooleanConstValue(value: Boolean) extends ConstValue
 
 trait ObjectTypeDetails {
   def properties: Map[String, PropertyDefinition]
@@ -149,8 +164,9 @@ case class PropertyDefinitionProto(
   oneOf: List[TypeReference] = Nil,
   discriminator: Option[Discriminator] = None,
   @fieldKey("$ref") ref: Option[String] = None,
-
-  /* const, default, defaultInfo */
+  const: Option[ConstValue] = None,
+  default: Option[ConstValue] = None,
+  /* defaultInfo */
   deprecationMessage: Option[String] = None,
   description: Option[String] = None,
   // language: ,
@@ -164,7 +180,9 @@ object PropertyDefinitionProto {
 
 case class PropertyDefinition(
   typeReference: TypeReference,
-  /* const, default, defaultInfo */
+  const: Option[ConstValue] = None,
+  default: Option[ConstValue] = None,
+  /* defaultInfo */
   deprecationMessage: Option[String] = None,
   description: Option[String] = None,
   // language: ,
@@ -178,6 +196,8 @@ object PropertyDefinition {
   implicit val reader: Reader[PropertyDefinition] = PropertyDefinitionProto.reader.map { proto =>
     PropertyDefinition(
       typeReference = proto.toTypeReference,
+      const = proto.const,
+      default = proto.default,
       deprecationMessage = proto.deprecationMessage,
       description = proto.description,
       replaceOnChanges = proto.replaceOnChanges,
