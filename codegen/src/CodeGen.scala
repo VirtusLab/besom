@@ -292,7 +292,8 @@ object CodeGen {
     }
 
     val argsCompanionApplyParams = objectTypeDefinition.properties.map { case (propertyName, propertyDefinition) =>
-      makeArgsCompanionApplyParam(propertyName = propertyName, property = propertyDefinition)
+      val isRequired = objectTypeDefinition.required.contains(propertyName)
+      makeArgsCompanionApplyParam(propertyName = propertyName, property = propertyDefinition, isRequired)
     }
 
     val argsCompanionApplyBodyArgs = objectTypeDefinition.properties.map { case (propertyName, propertyDefinition) =>
@@ -426,8 +427,10 @@ object CodeGen {
       makeArgsClassParam(propertyName = propertyName, property = propertyDefinition)
     }
 
-    val argsCompanionApplyParams = resourceDefinition.inputProperties.map { case (propertyName, propertyDefinition) =>
-      makeArgsCompanionApplyParam(propertyName = propertyName, property = propertyDefinition)
+    val argsCompanionApplyParams = resourceDefinition.inputProperties.collect {
+      case (propertyName, propertyDefinition) if propertyDefinition.const.isEmpty =>
+        val isRequired = resourceDefinition.required.contains(propertyName)
+        makeArgsCompanionApplyParam(propertyName = propertyName, property = propertyDefinition, isRequired = isRequired)
     }
 
     val argsCompanionApplyBodyArgs = resourceDefinition.inputProperties.map { case (propertyName, propertyDefinition) =>
@@ -530,34 +533,57 @@ object CodeGen {
     ).syntax
   }
 
-  private def makeArgsCompanionApplyParam(propertyName: String, property: PropertyDefinition)(implicit typeMapper: TypeMapper) = {
-    val paramType = property.typeReference match {
+  private def makeArgsCompanionApplyParam(propertyName: String, property: PropertyDefinition, isRequired: Boolean)(implicit typeMapper: TypeMapper) = {
+    val requiredParamType = property.typeReference match {
       case MapType(additionalProperties) =>
         val valueType = additionalProperties.asScalaType(asArgsType = true)
-        t"""Map[String, $valueType] | Map[String, Output[$valueType]] | Output[Map[String, $valueType]] | NotProvided"""
+        t"""Map[String, $valueType] | Map[String, Output[$valueType]] | Output[Map[String, $valueType]]"""
       case tpe =>
         val baseType = tpe.asScalaType(asArgsType = true)
-        t"""$baseType | Output[$baseType] | NotProvided"""
+        t"""$baseType | Output[$baseType]"""
+    }
+
+    val paramType =
+      if (isRequired) requiredParamType
+      else t"""$requiredParamType | NotProvided"""
+
+    val default = property.default match {
+      case Some(defaultValue) =>
+        Some(constValueAsCode(defaultValue))
+      case None =>
+        if (isRequired) None else Some(q"NotProvided")
     }
 
     Term.Param(
       mods = List.empty,
       name = Term.Name(propertyName),
       decltpe = Some(paramType),
-      default = Some(q"NotProvided")
+      default = default
     ).syntax
   }
 
   private def makeArgsCompanionApplyBodyArg(propertyName: String, property: PropertyDefinition)(implicit typeMapper: TypeMapper) = {
     val fieldTermName = Term.Name(propertyName)
     val isSecret = Lit.Boolean(property.secret)
-    val argValue = property.typeReference match {
-      case MapType(_) =>
-        q"${fieldTermName}.asOutputMap(isSecret = ${isSecret})"
-      case _ =>
-        q"${fieldTermName}.asOutput(isSecret = ${isSecret})"
+    val argValue = property.const match {
+      case Some(constValue) =>
+        q"Output(${constValueAsCode(constValue)})"
+      case None =>
+        property.typeReference match {
+          case MapType(_) =>
+            q"${fieldTermName}.asOutputMap(isSecret = ${isSecret})"
+          case _ =>
+            q"${fieldTermName}.asOutput(isSecret = ${isSecret})"
+        }
     }
     Term.Assign(fieldTermName, argValue).syntax
+  }
+
+  private def constValueAsCode(constValue: ConstValue) = constValue match {
+    case StringConstValue(value) =>
+      Lit.String(value)
+    case BooleanConstValue(value) =>
+      Lit.Boolean(value)
   }
 
   private def decapitalize(s: String) = s(0).toLower.toString ++ s.substring(1, s.length)
