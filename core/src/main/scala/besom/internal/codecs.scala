@@ -58,7 +58,7 @@ trait Decoder[A]:
   def decode(value: Value): Either[DecodingError, OutputData[A]] =
     Decoder.decodeAsPossibleSecret(value).flatMap { odv =>
       Try(odv.map(mapping)) match
-        case Failure(exception) => Decoder.errorLeft("Encountered an error", exception)
+        case Failure(exception) => Decoder.errorLeft(s"Encountered an error - secret - ${odv}", exception)
         case Success(oda)       => Right(oda)
     }
 
@@ -105,17 +105,21 @@ object Decoder extends DecoderInstancesLowPrio:
     def mapping(value: Value): Boolean =
       if value.kind.isBoolValue then value.getBoolValue else error("Expected a boolean!")
 
-  given jsonDecoder(using stringDecoder: Decoder[String]): Decoder[JsValue] =
-    stringDecoder.map(str => Try(str.parseJson).toEither.left.map(DecodingError("Failed to decode JSON", _)))
+  given jsonDecoder: Decoder[JsValue] with
+    def mapping(value: Value): JsValue = JsNull // TODO: Fixme - effectively we just ignore json values for now
+
 
   given optDecoder[A](using innerDecoder: Decoder[A]): Decoder[Option[A]] = new Decoder[Option[A]]:
     override def decode(value: Value): Either[DecodingError, OutputData[Option[A]]] =
       decodeAsPossibleSecret(value).flatMap { odv =>
         Try {
           odv.flatMap { v =>
-            innerDecoder.decode(v) match
-              case Left(error) => throw error
-              case Right(oda)  => oda.optional
+            v match
+              case Value(Kind.NullValue(_), _) => OutputData(None)
+              case _ =>
+                innerDecoder.decode(v) match
+                  case Left(error) => throw error
+                  case Right(oda)  => oda.optional
           }
         } match
           case Failure(exception) => errorLeft("Encountered an error", exception)
@@ -272,7 +276,7 @@ trait DecoderInstancesLowPrio:
       private def getDecoder(key: String): Decoder[A] = enumNameToDecoder(key).asInstanceOf[Decoder[A]]
       override def decode(value: Value): Either[DecodingError, OutputData[A]] =
         if value.kind.isStringValue then getDecoder(value.getStringValue).decode(Map.empty.asValue)
-        else errorLeft("Value was not a string, Enums should be serialized as strings")
+        else errorLeft("Value was not a string, Enums should be serialized as strings") // TODO: This is not necessarily true
 
       override def mapping(value: Value): A = ???
 
@@ -291,8 +295,7 @@ trait DecoderInstancesLowPrio:
                         eitherAcc match
                           case L @ Left(_) => L // just take the L
                           case Right(acc) =>
-                            val fieldValue =
-                              fields.get(name).getOrElse(throw DecodingError(s"Value for field $name is missing!"))
+                            val fieldValue: Value = fields.getOrElse(name, Null)
                             decoder.decode(fieldValue) match
                               case Left(decodingError) => throw decodingError
                               case Right(odField)      => Right(acc.zip(odField))
