@@ -275,28 +275,28 @@ object CodeGen {
       "besom.internal.ArgsEncoder"
     ))
 
-    val baseClassParams = objectTypeDefinition.properties.map { case (propertyName, propertyDefinition) =>
-      val fieldBaseType = propertyDefinition.typeReference.asScalaType()
+    val objectProperties = objectTypeDefinition.properties
+
+    val baseClassParams = objectProperties.map { case (propertyName, propertyDefinition) =>
       val isRequired = objectTypeDefinition.required.contains(propertyName)
-      val fieldType = if (isRequired) fieldBaseType else t"Option[$fieldBaseType]"
-      Term.Param(
-        mods = List.empty,
-        name = Term.Name(propertyName),
-        decltpe = Some(fieldType),
-        default = None
-      ).syntax
+      makeNonResourceBaseClassParam(propertyName = propertyName, property = propertyDefinition, isRequired = isRequired)
     }
 
-    val argsClassParams = objectTypeDefinition.properties.map { case (propertyName, propertyDefinition) =>
+    val baseOutputExtensionMethods = objectProperties.map { case (propertyName, propertyDefinition) =>
+      val isRequired = objectTypeDefinition.required.contains(propertyName)
+      makeNonResourceBaseOutputExtensionMethod(propertyName = propertyName, property = propertyDefinition, isRequired = isRequired)
+    }
+
+    val argsClassParams = objectProperties.map { case (propertyName, propertyDefinition) =>
       makeArgsClassParam(propertyName = propertyName, property = propertyDefinition)
     }
 
-    val argsCompanionApplyParams = objectTypeDefinition.properties.map { case (propertyName, propertyDefinition) =>
+    val argsCompanionApplyParams = objectProperties.map { case (propertyName, propertyDefinition) =>
       val isRequired = objectTypeDefinition.required.contains(propertyName)
-      makeArgsCompanionApplyParam(propertyName = propertyName, property = propertyDefinition, isRequired)
+      makeArgsCompanionApplyParam(propertyName = propertyName, property = propertyDefinition, isRequired = isRequired)
     }
 
-    val argsCompanionApplyBodyArgs = objectTypeDefinition.properties.map { case (propertyName, propertyDefinition) =>
+    val argsCompanionApplyBodyArgs = objectProperties.map { case (propertyName, propertyDefinition) =>
       makeArgsCompanionApplyBodyArg(propertyName = propertyName, property = propertyDefinition)
     }
 
@@ -308,6 +308,11 @@ object CodeGen {
       s"""|case class $baseClassName(
           |${baseClassParams.map(arg => s"  ${arg}").mkString(",\n")}
           |) derives Decoder""".stripMargin
+
+    val baseCompanion =
+      s"""|object $baseClassName:
+          |  extension(output: Output[$baseClassName])
+          |${baseOutputExtensionMethods.map(meth => s"    ${meth}").mkString("\n")}""".stripMargin
 
     val argsClass =
       s"""|case class $argsClassName(
@@ -333,6 +338,8 @@ object CodeGen {
           |
           |${baseClassComment}
           |${baseClass}
+          |
+          |${baseCompanion}
           |
           |""".stripMargin
 
@@ -420,7 +427,11 @@ object CodeGen {
     val resourceProperties = resourceBaseProperties ++ resourceDefinition.properties
 
     val baseClassParams = resourceProperties.map { case (propertyName, propertyDefinition) =>
-      makeResourceClassParam(propertyName = propertyName, property = propertyDefinition)
+      makeResourceBaseClassParam(propertyName = propertyName, property = propertyDefinition)
+    }
+
+    val baseOutputExtensionMethods = resourceProperties.map { case (propertyName, propertyDefinition) =>
+      makeResourceBaseOutputExtensionMethod(propertyName = propertyName, property = propertyDefinition)
     }
 
     val argsClassParams = resourceDefinition.inputProperties.map { case (propertyName, propertyDefinition) =>
@@ -430,7 +441,7 @@ object CodeGen {
     val argsCompanionApplyParams = resourceDefinition.inputProperties.collect {
       case (propertyName, propertyDefinition) if propertyDefinition.const.isEmpty =>
         val isRequired = resourceDefinition.required.contains(propertyName)
-        makeArgsCompanionApplyParam(propertyName = propertyName, property = propertyDefinition, isRequired = isRequired)
+        makeArgsCompanionApplyParam(propertyName = propertyName, property = propertyDefinition, isRequired)
     }
 
     val argsCompanionApplyBodyArgs = resourceDefinition.inputProperties.map { case (propertyName, propertyDefinition) =>
@@ -449,6 +460,11 @@ object CodeGen {
       s"""|case class $baseClassName(
           |${baseClassParams.map(param => s"  ${param}").mkString(",\n")}
           |) extends ${resourceBaseClass} derives ResourceDecoder""".stripMargin
+
+    val baseCompanion =
+      s"""|object $baseClassName:
+          |  extension(output: Output[$baseClassName])
+          |${baseOutputExtensionMethods.map(meth => s"    ${meth}").mkString("\n")}""".stripMargin
 
     // the type has to match pulumi's resource type schema, ie kubernetes:core/v1:Pod
     val typ = Lit.String(typeToken)
@@ -486,6 +502,8 @@ object CodeGen {
           |${baseClassComment}
           |${baseClass}
           |
+          |${baseCompanion}
+          |
           |${factoryMethod}
           |""".stripMargin
 
@@ -511,7 +529,7 @@ object CodeGen {
     )
   }
 
-  private def makeResourceClassParam(propertyName: String, property: PropertyDefinition)(implicit typeMapper: TypeMapper) = {
+  private def makeResourceBaseClassParam(propertyName: String, property: PropertyDefinition)(implicit typeMapper: TypeMapper) = {
     val fieldBaseType = property.typeReference.asScalaType()
     val fieldType = t"Output[$fieldBaseType]"
     Term.Param(
@@ -520,6 +538,31 @@ object CodeGen {
       decltpe = Some(fieldType),
       default = None
     ).syntax
+  }
+
+  private def makeNonResourceBaseClassParam(propertyName: String, property: PropertyDefinition, isRequired: Boolean)(implicit typeMapper: TypeMapper) = {
+    val fieldBaseType = property.typeReference.asScalaType()
+    val fieldType = if (isRequired) fieldBaseType else t"Option[$fieldBaseType]"
+    Term.Param(
+      mods = List.empty,
+      name = Term.Name(propertyName),
+      decltpe = Some(fieldType),
+      default = None
+    ).syntax
+  }
+
+  private def makeResourceBaseOutputExtensionMethod(propertyName: String, property: PropertyDefinition)(implicit typeMapper: TypeMapper) = {
+    val propertyTermName = Term.Name(propertyName)
+    val fieldBaseType = property.typeReference.asScalaType()
+    val fieldType = t"Output[$fieldBaseType]"
+    q"""def ${propertyTermName}: $fieldType = output.flatMap(_.${propertyTermName})"""
+  }
+
+  private def makeNonResourceBaseOutputExtensionMethod(propertyName: String, property: PropertyDefinition, isRequired: Boolean)(implicit typeMapper: TypeMapper) = {
+    val propertyTermName = Term.Name(propertyName)
+    val fieldBaseType = property.typeReference.asScalaType()
+    val fieldType = if (isRequired) t"Output[$fieldBaseType]" else t"Output[Option[$fieldBaseType]]"
+    q"""def ${propertyTermName}: $fieldType = output.map(_.${propertyTermName})"""
   }
 
   private def makeArgsClassParam(propertyName: String, property: PropertyDefinition)(implicit typeMapper: TypeMapper) = {
