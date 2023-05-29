@@ -440,7 +440,7 @@ object CodeGen {
 
     val argsCompanionApplyParams = resourceDefinition.inputProperties.collect {
       case (propertyName, propertyDefinition) if propertyDefinition.const.isEmpty =>
-        val isRequired = resourceDefinition.required.contains(propertyName)
+        val isRequired = resourceDefinition.requiredInputs.contains(propertyName)
         makeArgsCompanionApplyParam(propertyName = propertyName, property = propertyDefinition, isRequired)
     }
 
@@ -469,10 +469,15 @@ object CodeGen {
     // the type has to match pulumi's resource type schema, ie kubernetes:core/v1:Pod
     val typ = Lit.String(typeToken)
 
+    val hasDefaultArgsConstructor = resourceDefinition.requiredInputs.forall { propertyName =>
+      val propertyDefinition = resourceDefinition.properties(propertyName)
+      propertyDefinition.default.nonEmpty || propertyDefinition.const.nonEmpty
+    }
+    val argsDefault = if (hasDefaultArgsConstructor) s""" = ${argsClassName}()""" else ""
     val factoryMethod =
       s"""|def $factoryMethodName(using ctx: Context)(
           |  name: NonEmptyString,
-          |  args: $argsClassName,
+          |  args: ${argsClassName}${argsDefault},
           |  opts: CustomResourceOptions = CustomResourceOptions()
           |): Output[$baseClassName] = 
           |  ctx.registerResource[$baseClassName, $argsClassName](${typ}, name, args, opts)
@@ -555,14 +560,14 @@ object CodeGen {
     val propertyTermName = Term.Name(propertyName)
     val fieldBaseType = property.typeReference.asScalaType()
     val fieldType = t"Output[$fieldBaseType]"
-    q"""def ${propertyTermName}: $fieldType = output.flatMap(_.${propertyTermName})"""
+    q"""def ${propertyTermName}: $fieldType = output.flatMap(_.${propertyTermName})""".syntax
   }
 
   private def makeNonResourceBaseOutputExtensionMethod(propertyName: String, property: PropertyDefinition, isRequired: Boolean)(implicit typeMapper: TypeMapper) = {
     val propertyTermName = Term.Name(propertyName)
     val fieldBaseType = property.typeReference.asScalaType()
     val fieldType = if (isRequired) t"Output[$fieldBaseType]" else t"Output[Option[$fieldBaseType]]"
-    q"""def ${propertyTermName}: $fieldType = output.map(_.${propertyTermName})"""
+    q"""def ${propertyTermName}: $fieldType = output.map(_.${propertyTermName})""".syntax
   }
 
   private def makeArgsClassParam(propertyName: String, property: PropertyDefinition)(implicit typeMapper: TypeMapper) = {
