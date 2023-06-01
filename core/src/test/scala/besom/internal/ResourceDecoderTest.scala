@@ -3,6 +3,7 @@ package besom.internal
 import RunResult.{given, *}
 import com.google.protobuf.struct.*
 import ProtobufUtil.*
+import besom.util.*, Types.*
 
 class ResourceDecoderTest extends munit.FunSuite:
   case class CustomStruct(a: String, b: Double) derives Decoder
@@ -17,6 +18,7 @@ class ResourceDecoderTest extends munit.FunSuite:
       derives ResourceDecoder
 
   test("resource resolver - happy path") {
+    val label           = Label.fromNameAndType("test", "test:pkg:TestResource")
     val resourceDecoder = summon[ResourceDecoder[TestResource]]
 
     given Context = DummyContext().unsafeRunSync()
@@ -44,7 +46,7 @@ class ResourceDecoderTest extends munit.FunSuite:
       )
     )
 
-    val (resource, resourceResolver) = resourceDecoder.makeResolver.unsafeRunSync()
+    val (resource, resourceResolver) = resourceDecoder.makeResolver(label).unsafeRunSync()
 
     resourceResolver.resolve(errorOrResourceResult).unsafeRunSync()
 

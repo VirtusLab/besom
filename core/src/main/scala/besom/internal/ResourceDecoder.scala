@@ -3,42 +3,59 @@ package besom.internal
 import com.google.protobuf.struct.{Struct, Value}
 import scala.quoted.*
 import scala.deriving.Mirror
+import besom.internal.logging.{LocalBesomLogger => logger}
+import besom.util.Types.*
 
 trait ResourceDecoder[A <: Resource]: // TODO rename to something more sensible
-  def makeResolver(using Context): Result[(A, ResourceResolver[A])]
+  def makeResolver(resourceLabel: Label)(using Context): Result[(A, ResourceResolver[A])]
 
 object ResourceDecoder:
   class CustomPropertyExtractor[A](propertyName: String, decoder: Decoder[A]):
-    def extract(fields: Map[String, Value], dependencies: Map[String, Set[Resource]], resource: Resource)(using
-      ctx: Context
-    ) =
-      val fieldDependencies = dependencies.get(propertyName).getOrElse(Set.empty)
 
-      val outputData = fields
-        .get(propertyName)
-        .map { value =>
-          decoder.decode(value).map(_.withDependency(resource)) match
-            case Left(err)    => throw err
-            case Right(value) => value
-        }
-        .getOrElse {
-          if ctx.isDryRun then OutputData.unknown().withDependency(resource)
-          else OutputData.empty(Set(resource))
-        }
-        .withDependencies(fieldDependencies)
+    // TODO think if this could be pure (ie.: return Result)
+    def extract(
+      resourceLabel: Label,
+      fields: Map[String, Value],
+      dependencies: Map[String, Set[Resource]],
+      resource: Resource
+    )(using
+      ctx: Context
+    ): OutputData[A] =
+      val fieldDependencies = dependencies.get(propertyName).getOrElse(Set.empty)
+      val propertyLabel     = resourceLabel.withKey(propertyName)
+
+      val outputData =
+        fields
+          .get(propertyName)
+          .map { value =>
+            logger.trace(s"extracting custom property $propertyName from $value using decoder $decoder")
+            decoder.decode(value, propertyLabel).map(_.withDependency(resource)) match
+              case Left(err) =>
+                logger.trace(s"failed to extract custom property $propertyName from $value: $err")
+                throw err
+              case Right(value) =>
+                logger.trace(s"extracted custom property $propertyName from $value")
+                value
+          }
+          .getOrElse {
+            if ctx.isDryRun then OutputData.unknown().withDependency(resource)
+            else OutputData.empty(Set(resource))
+          }
+          .withDependencies(fieldDependencies)
 
       outputData
 
   def makeResolver[A <: Resource](
+    resourceLabel: Label,
     fromProduct: Product => A,
     customPropertyExtractors: Vector[CustomPropertyExtractor[?]]
   )(using Context): Result[(A, ResourceResolver[A])] =
     val customPropertiesCount = customPropertyExtractors.length
     val customPropertiesResults = Result.sequence(
-      Vector.fill(customPropertiesCount)(Promise[OutputData[Option[Any]]])
+      Vector.fill(customPropertiesCount)(Promise[OutputData[Option[Any]]]())
     )
 
-    Promise[OutputData[String]].zip(Promise[OutputData[String]]).zip(customPropertiesResults).map {
+    Promise[OutputData[String]]().zip(Promise[OutputData[String]]()).zip(customPropertiesResults).map {
       case (urnPromise, idPromise, customPopertiesPromises) =>
         val allPromises = Vector(urnPromise, idPromise) ++ customPopertiesPromises.toList
 
@@ -56,7 +73,11 @@ object ResourceDecoder:
         val resolver = new ResourceResolver[A]:
           def resolve(errorOrResourceResult: Either[Throwable, RawResourceResult])(using ctx: Context): Result[Unit] =
             errorOrResourceResult match
-              case Left(err) => failAllPromises(err)
+              case Left(err) =>
+                val message =
+                  s"Resolve resource $resourceLabel: received error from gRPC call: ${err.getMessage()}, failing resolution"
+
+                ctx.logger.error(message) *> failAllPromises(err)
 
               case Right(rawResourceResult) =>
                 val urnOutputData = OutputData(rawResourceResult.urn).withDependency(resource)
@@ -69,10 +90,11 @@ object ResourceDecoder:
                 val fields       = rawResourceResult.data.fields
                 val dependencies = rawResourceResult.dependencies
 
+                // TODO think about making this pure
                 try
                   val propertiesFulfilmentResults =
                     customPopertiesPromises.zip(customPropertyExtractors).map { (promise, extractor) =>
-                      promise.fulfillAny(extractor.extract(fields, dependencies, resource))
+                      promise.fulfillAny(extractor.extract(resourceLabel, fields, dependencies, resource))
                     }
 
                   val fulfilmentResults = Vector(
@@ -80,8 +102,17 @@ object ResourceDecoder:
                     idPromise.fulfill(idOutputData)
                   ) ++ propertiesFulfilmentResults
 
-                  Result.sequence(fulfilmentResults).void
-                catch case err: DecodingError => failAllPromises(err)
+                  for
+                    _ <- ctx.logger
+                      .trace(s"Resolve resource $resourceLabel: fulfilling ${fulfilmentResults.size} promises")
+                    _ <- Result.sequence(fulfilmentResults).void
+                    _ <- ctx.logger.debug(s"Resolve resource $resourceLabel: resolved successfully")
+                  yield ()
+                catch
+                  case err: DecodingError =>
+                    val message =
+                      s"Resolve resource $resourceLabel: failed to decode resource: ${err.getMessage()}, failing resolution"
+                    ctx.logger.error(message) *> failAllPromises(err)
 
         (resource, resolver)
     }
@@ -116,8 +147,9 @@ object ResourceDecoder:
 
         '{
           new ResourceDecoder[A]:
-            def makeResolver(using Context): Result[(A, ResourceResolver[A])] =
+            def makeResolver(label: Label)(using Context): Result[(A, ResourceResolver[A])] =
               ResourceDecoder.makeResolver(
+                resourceLabel = label,
                 fromProduct = ${ m }.fromProduct,
                 customPropertyExtractors = ${ customPropertyExtractorsExpr }.toVector
               )

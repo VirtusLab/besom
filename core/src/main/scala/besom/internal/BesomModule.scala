@@ -1,5 +1,7 @@
 package besom.internal
 
+import besom.internal.logging.{LocalBesomLogger => logger}
+
 trait BesomModule:
   type Eff[+A]
 
@@ -10,9 +12,13 @@ trait BesomModule:
   object Output extends OutputFactory
 
   def run(program: Context ?=> Output[Outputs]): Unit =
+    logging.BesomLogger.unsafeEnableTraceLevelFileLogging()
+
     val everything: Result[Unit] = for
+      _           <- logger.info("Besom starting up...")
       ri          <- RunInfo.fromEnv
-      ctx         <- Context(ri)
+      ro          <- RunOptions.fromEnv
+      ctx         <- Context(ri, ro)
       userOutputs <- program(using ctx).getValueOrElse(Map.empty) // TODO register outputs!!!
       // _           <- Result.sleep(2000) // TODO DEBUG DELETE
       // _ = throw new Exception("ONIXPECTED!") // TODO DEBUG DELETE

@@ -5,9 +5,12 @@ import pulumirpc.provider.CallRequest
 import pulumirpc.provider.CallResponse
 import pulumirpc.provider.InvokeResponse
 import pulumirpc.engine.*
+import besom.internal.logging.BesomLogger
 
 object DummyContext:
-  val dummyRunInfo = RunInfo("test-project", "test-stack", Map.empty, List.empty, 4, false, "dummy", "dummy")
+  val dummyRunInfo        = RunInfo("test-project", "test-stack", 4, false, "dummy", "dummy")
+  val dummyRunOptions     = RunOptions(true, scribe.Level.Debug, false)
+  val dummyFeatureSupport = FeatureSupport(true, true, true, true)
   val dummyMonitor = new Monitor:
     def call(callRequest: CallRequest): Result[CallResponse]                                                  = ???
     def invoke(invokeRequest: ResourceInvokeRequest): Result[InvokeResponse]                                  = ???
@@ -25,13 +28,28 @@ object DummyContext:
 
   def apply(
     runInfo: RunInfo = dummyRunInfo,
+    runOptions: RunOptions = dummyRunOptions,
+    featureSupport: FeatureSupport = dummyFeatureSupport,
     monitor: Monitor = dummyMonitor,
     engine: Engine = dummyEngine,
     keepResources: Boolean = false,
     keepOutputValues: Boolean = false
   ): Result[Context] =
     for
-      wg        <- WorkGroup()
-      stack     <- Promise[Stack]
-      resources <- Resources()
-    yield Context(runInfo, keepResources, keepOutputValues, monitor, engine, wg, stack, resources)
+      taskTracker <- TaskTracker()
+      stack       <- Promise[Stack]()
+      logger      <- BesomLogger.local()
+      config      <- Config(runInfo.project, Map.empty, Set.empty, logger)
+      resources   <- Resources()
+    yield Context(
+      runInfo,
+      runOptions,
+      featureSupport,
+      config,
+      logger,
+      monitor,
+      engine,
+      taskTracker,
+      stack,
+      resources
+    )

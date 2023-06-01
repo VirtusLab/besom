@@ -13,6 +13,7 @@ class CatsRuntime(val debugEnabled: Boolean = false)(using ioRuntime: IORuntime)
   override def defer[A](thunk: => A): IO[A]                                          = IO(thunk)
   override def flatMapBoth[A, B](fa: IO[A])(f: Either[Throwable, A] => IO[B]): IO[B] = fa.attempt.flatMap(f)
   override def fromFuture[A](f: => scala.concurrent.Future[A]): IO[A]                = IO.fromFuture(IO(f))
+  override def blocking[A](thunk: => A): IO[A]                                       = IO.blocking(thunk)
   override def fork[A](fa: => IO[A]): IO[Fiber[A]] =
     for
       promise <- Deferred[IO, Either[Throwable, A]]

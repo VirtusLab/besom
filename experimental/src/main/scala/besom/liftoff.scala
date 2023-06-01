@@ -13,14 +13,27 @@ import k8s.core.v1.{configMap, ConfigMapArgs, service, ServiceArgs}
 def main(): Unit = Pulumi.run {
   val labels = Map("app" -> "nginx")
 
+  val html =
+    """<!DOCTYPE html>
+      <html>
+      |  <head>
+      |    <title>Infrastructure as Types: Pulumi and Scala</title>
+      |  </head>
+      |  <body>
+      |    <h1>Hello world!</h1>
+      |    <h3>Infrastructure as Types: Pulumi and Scala</h3>
+      |  </body>
+      |</html>""".stripMargin
+
   val indexHtmlConfigMap = configMap(
     "index-html-configmap",
     ConfigMapArgs(
       metadata = ObjectMetaArgs(
-        name = "index-html-configmap"
+        name = "index-html-configmap",
+        labels = labels
       ),
       data = Map(
-        "index.html" -> "<html><head><title>Infrastructure as Types: Pulumi and Scala</title></head><h1>WELCOME TO BESOM!</h1></br>></html>" // TODO paste a nice scala logotype and center everything nicely
+        "index.html" -> html
       )
     )
   )
@@ -55,7 +68,7 @@ def main(): Unit = Pulumi.run {
               VolumeArgs(
                 name = "index-html",
                 configMap = ConfigMapVolumeSourceArgs(
-                  name = indexHtmlConfigMap.flatMap(_.metadata.map(_.name.get))
+                  name = "index-html-configmap" // indexHtmlConfigMap.flatMap(_.metadata.map(_.name.get))
                 )
               )
             )

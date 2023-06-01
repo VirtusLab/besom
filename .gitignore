@@ -8,8 +8,10 @@
 *.iml
 target/
 .DS_Store
+*.log
 *.tmp
 *.schema.json
+**/Pulumi.*.yaml
 
 coverage/
 

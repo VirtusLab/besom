@@ -38,8 +38,9 @@ enum OutputData[+A]:
 
   def orElse[B >: A](that: => OutputData[B]): OutputData[B] =
     this match
+      // TODO this is quite a quirky idea - it changes the semantics between preview and deployment, probably not a good idea
       case Unknown(resources, isSecret) => combine(that, (_, r) => r)
-      case k @ Known(_, _, _)           => k
+      case k @ Known(_, _, _)           => k // TODO: this ignores the fact that Known can be empty
 
   def zip[B](that: OutputData[B])(using z: Zippable[A, B]): OutputData[z.Out] = // OutputData[(A, B)]
     combine(that, (a, b) => z.zip(a, b))
