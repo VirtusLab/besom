@@ -6,6 +6,8 @@ import scala.util.Failure
 import scala.util.Success
 import scala.concurrent.duration.Duration
 
+import logging.{LocalBesomLogger => logger}
+
 trait Fiber[+A]:
   def join: Result[A]
 
@@ -193,29 +195,29 @@ enum Result[+A]:
 
   def run[F[+_]](using F: Runtime[F]): F[A] = this match
     case Suspend(thunk, debug) =>
-      if (F.debugEnabled) println(s"interpreting Suspend from $debug")
+      if (F.debugEnabled) logger.trace(s"interpreting Suspend from $debug")
       F.fromFuture(thunk())
     case Pure(value, debug) =>
-      if (F.debugEnabled) println(s"interpreting Pure from $debug")
+      if (F.debugEnabled) logger.trace(s"interpreting Pure from $debug")
       F.pure(value)
     case Fail(err, debug) =>
-      if (F.debugEnabled) println(s"interpreting Fail from $debug")
+      if (F.debugEnabled) logger.trace(s"interpreting Fail from $debug")
       F.fail(err).asInstanceOf[F[A]]
     // TODO test that Defer catches for all implementations always
     case Defer(thunk, debug) =>
-      if (F.debugEnabled) println(s"interpreting Defer from $debug")
+      if (F.debugEnabled) logger.trace(s"interpreting Defer from $debug")
       F.defer(thunk())
     case Blocking(thunk, debug) =>
-      if (F.debugEnabled) println(s"interpreting Blocking from $debug")
+      if (F.debugEnabled) logger.trace(s"interpreting Blocking from $debug")
       F.blocking(thunk())
     case BiFlatMap(fa, f, debug) =>
-      if (F.debugEnabled) println(s"interpreting BiFlatMap from $debug")
+      if (F.debugEnabled) logger.trace(s"interpreting BiFlatMap from $debug")
       F.flatMapBoth(fa.run[F])(either => f(either).run[F])
     case Fork(fa, debug) =>
-      if (F.debugEnabled) println(s"interpreting Fork from $debug")
+      if (F.debugEnabled) logger.trace(s"interpreting Fork from $debug")
       F.fork(fa.run[F])
     case Sleep(fa, duration, debug) =>
-      if (F.debugEnabled) println(s"interpreting Sleep from $debug")
+      if (F.debugEnabled) logger.trace(s"interpreting Sleep from $debug")
       F.sleep(fa().run[F], duration)
 
 object Result:

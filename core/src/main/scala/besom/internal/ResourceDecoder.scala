@@ -3,24 +3,27 @@ package besom.internal
 import com.google.protobuf.struct.{Struct, Value}
 import scala.quoted.*
 import scala.deriving.Mirror
-import besom.internal.logging.{LocalBesomLogger => logger}
+import besom.internal.logging.*
 import besom.util.Types.*
+import org.checkerframework.checker.units.qual.C
 
 trait ResourceDecoder[A <: Resource]: // TODO rename to something more sensible
-  def makeResolver(resourceLabel: Label)(using Context): Result[(A, ResourceResolver[A])]
+  def makeResolver(using Context, MDC[Label]): Result[(A, ResourceResolver[A])]
 
 object ResourceDecoder:
   class CustomPropertyExtractor[A](propertyName: String, decoder: Decoder[A]):
 
     // TODO think if this could be pure (ie.: return Result)
     def extract(
-      resourceLabel: Label,
       fields: Map[String, Value],
       dependencies: Map[String, Set[Resource]],
       resource: Resource
     )(using
-      ctx: Context
+      ctx: Context,
+      mdc: MDC[Label]
     ): OutputData[A] =
+      val resourceLabel = mdc.get(Key.LabelKey)
+
       val fieldDependencies = dependencies.get(propertyName).getOrElse(Set.empty)
       val propertyLabel     = resourceLabel.withKey(propertyName)
 
@@ -28,13 +31,13 @@ object ResourceDecoder:
         fields
           .get(propertyName)
           .map { value =>
-            logger.trace(s"extracting custom property $propertyName from $value using decoder $decoder")
+            log.trace(s"extracting custom property $propertyName from $value using decoder $decoder")
             decoder.decode(value, propertyLabel).map(_.withDependency(resource)) match
               case Left(err) =>
-                logger.trace(s"failed to extract custom property $propertyName from $value: $err")
+                log.trace(s"failed to extract custom property $propertyName from $value: $err")
                 throw err
               case Right(value) =>
-                logger.trace(s"extracted custom property $propertyName from $value")
+                log.trace(s"extracted custom property $propertyName from $value")
                 value
           }
           .getOrElse {
@@ -45,11 +48,12 @@ object ResourceDecoder:
 
       outputData
 
+  end CustomPropertyExtractor
+
   def makeResolver[A <: Resource](
-    resourceLabel: Label,
     fromProduct: Product => A,
     customPropertyExtractors: Vector[CustomPropertyExtractor[?]]
-  )(using Context): Result[(A, ResourceResolver[A])] =
+  )(using Context, MDC[Label]): Result[(A, ResourceResolver[A])] =
     val customPropertiesCount = customPropertyExtractors.length
     val customPropertiesResults = Result.sequence(
       Vector.fill(customPropertiesCount)(Promise[OutputData[Option[Any]]]())
@@ -75,7 +79,7 @@ object ResourceDecoder:
             errorOrResourceResult match
               case Left(err) =>
                 val message =
-                  s"Resolve resource $resourceLabel: received error from gRPC call: ${err.getMessage()}, failing resolution"
+                  s"Resolve resource: received error from gRPC call: ${err.getMessage()}, failing resolution"
 
                 ctx.logger.error(message) *> failAllPromises(err)
 
@@ -94,7 +98,7 @@ object ResourceDecoder:
                 try
                   val propertiesFulfilmentResults =
                     customPopertiesPromises.zip(customPropertyExtractors).map { (promise, extractor) =>
-                      promise.fulfillAny(extractor.extract(resourceLabel, fields, dependencies, resource))
+                      promise.fulfillAny(extractor.extract(fields, dependencies, resource))
                     }
 
                   val fulfilmentResults = Vector(
@@ -104,14 +108,14 @@ object ResourceDecoder:
 
                   for
                     _ <- ctx.logger
-                      .trace(s"Resolve resource $resourceLabel: fulfilling ${fulfilmentResults.size} promises")
+                      .trace(s"Resolve resource: fulfilling ${fulfilmentResults.size} promises")
                     _ <- Result.sequence(fulfilmentResults).void
-                    _ <- ctx.logger.debug(s"Resolve resource $resourceLabel: resolved successfully")
+                    _ <- ctx.logger.debug(s"Resolve resource: resolved successfully")
                   yield ()
                 catch
                   case err: DecodingError =>
                     val message =
-                      s"Resolve resource $resourceLabel: failed to decode resource: ${err.getMessage()}, failing resolution"
+                      s"Resolve resource: failed to decode resource: ${err.getMessage()}, failing resolution"
                     ctx.logger.error(message) *> failAllPromises(err)
 
         (resource, resolver)
@@ -147,9 +151,8 @@ object ResourceDecoder:
 
         '{
           new ResourceDecoder[A]:
-            def makeResolver(label: Label)(using Context): Result[(A, ResourceResolver[A])] =
+            def makeResolver(using Context, MDC[Label]): Result[(A, ResourceResolver[A])] =
               ResourceDecoder.makeResolver(
-                resourceLabel = label,
                 fromProduct = ${ m }.fromProduct,
                 customPropertyExtractors = ${ customPropertyExtractorsExpr }.toVector
               )

@@ -7,14 +7,11 @@ import scala.util.Try
 case class RunInfo(
   project: NonEmptyString,
   stack: NonEmptyString,
-  // config: Config,
-  // configSecretKeys: Set[NonEmptyString],
+  acceptResources: Boolean,
   parallel: Int,
   dryRun: Boolean,
   monitorAddress: NonEmptyString,
   engineAddress: NonEmptyString
-  // mocks: MockResourceMonitor, // TODO is this necessary?
-  // engineConn: Option[grpc.Connection] // TODO is this necessary?
 )
 
 object RunInfo:
@@ -24,12 +21,13 @@ object RunInfo:
     Result
       .evalTry(Try {
         RunInfo(
-          project = Env.getOrFail(EnvProject),
-          stack = Env.getOrFail(EnvStack),
-          parallel = Env.getOrFail(EnvParallel).toInt,
-          dryRun = Env.getOrFail(EnvDryRun).toBoolean,
-          monitorAddress = Env.getOrFail(EnvMonitor),
-          engineAddress = Env.getOrFail(EnvEngine)
+          project = Env.project,
+          stack = Env.stack,
+          acceptResources = Env.acceptResources,
+          parallel = Env.parallel, // TODO we don't use this, should we?
+          dryRun = Env.dryRun,
+          monitorAddress = Env.monitorAddress,
+          engineAddress = Env.engineAddress
         )
       })
       .transformM {

@@ -50,8 +50,8 @@ object Types:
   opaque type Label <: String = String
 
   extension (label: Label)
-    def withKey(key: String): Label = s"$label.$key" // ie.: resource:myBucket[aws:s3:Bucket].url
-    def atIndex(index: Int): Label  = s"$label($index)" // ie.: resource:myBucket[aws:s3:Bucket].files(0)
+    def withKey(key: String): Label = s"$label.$key" // ie.: myBucket[aws:s3:Bucket].url
+    def atIndex(index: Int): Label  = s"$label($index)" // ie.: myBucket[aws:s3:Bucket].files(0)
 
   object Label:
-    def fromNameAndType(name: NonEmptyString, rt: ResourceType): Label = s"resource:$name[$rt]"
+    def fromNameAndType(name: NonEmptyString, rt: ResourceType): Label = s"$name[$rt]"

@@ -8,8 +8,7 @@ import pulumirpc.engine.*
 import besom.internal.logging.BesomLogger
 
 object DummyContext:
-  val dummyRunInfo        = RunInfo("test-project", "test-stack", 4, false, "dummy", "dummy")
-  val dummyRunOptions     = RunOptions(true, scribe.Level.Debug, false)
+  val dummyRunInfo        = RunInfo("test-project", "test-stack", true, 4, false, "dummy", "dummy")
   val dummyFeatureSupport = FeatureSupport(true, true, true, true)
   val dummyMonitor = new Monitor:
     def call(callRequest: CallRequest): Result[CallResponse]                                                  = ???
@@ -28,7 +27,6 @@ object DummyContext:
 
   def apply(
     runInfo: RunInfo = dummyRunInfo,
-    runOptions: RunOptions = dummyRunOptions,
     featureSupport: FeatureSupport = dummyFeatureSupport,
     monitor: Monitor = dummyMonitor,
     engine: Engine = dummyEngine,
@@ -39,17 +37,6 @@ object DummyContext:
       taskTracker <- TaskTracker()
       stack       <- Promise[Stack]()
       logger      <- BesomLogger.local()
-      config      <- Config(runInfo.project, Map.empty, Set.empty, logger)
+      config      <- Config(runInfo.project, Map.empty, Set.empty)
       resources   <- Resources()
-    yield Context(
-      runInfo,
-      runOptions,
-      featureSupport,
-      config,
-      logger,
-      monitor,
-      engine,
-      taskTracker,
-      stack,
-      resources
-    )
+    yield Context(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, stack, resources)

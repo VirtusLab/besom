@@ -7,8 +7,7 @@ import scala.util.Try
 class Config private (
   val projectName: NonEmptyString,
   private val configMap: Map[String, String],
-  private val configSecretKeys: Set[String],
-  private val logger: BesomLogger
+  private val configSecretKeys: Set[String]
 ):
   private def fullKey(key: String): String = projectName + ":" + key
 
@@ -20,18 +19,18 @@ class Config private (
     * we have the unsafeGet method should it be absolutely necessary in practice. We also return all configs as Outputs
     * so that we can handle failure in pure, functional way.
     */
-  def get(key: String)(using Context): Output[String] =
+  def get(key: String)(using ctx: Context): Output[String] =
     if configSecretKeys.contains(key) then
       val result: Result[OutputData[String]] =
-        logger.warn(s"Config key $key is a secret, refusing to fetch it as a plain string!") *>
+        ctx.logger.warn(s"Config key $key is a secret, refusing to fetch it as a plain string!") *>
           Result.pure(OutputData.empty())
 
       Output(result)
     else Output(OutputData(Set.empty, configMap.get(fullKey(key)), isSecret = false))
 
-  def getSecret(key: String)(using Context): Output[String] =
+  def getSecret(key: String)(using ctx: Context): Output[String] =
     if configSecretKeys.contains(key) then Output(OutputData(Set.empty, configMap.get(fullKey(key)), isSecret = true))
-    else Output(logger.warn(s"Config key $key is not a secret") *> Result.pure(OutputData.empty(isSecret = true)))
+    else Output(ctx.logger.warn(s"Config key $key is not a secret") *> Result.pure(OutputData.empty(isSecret = true)))
 
   def getDouble(key: String)(using Context): Output[Double] =
     get(key).flatMap { value =>
@@ -127,8 +126,7 @@ object Config:
   def apply(
     projectName: NonEmptyString,
     map: Map[NonEmptyString, String],
-    configSecretKeys: Set[NonEmptyString],
-    logger: BesomLogger
+    configSecretKeys: Set[NonEmptyString]
   ): Result[Config] = Result.defer {
     val cleanedProjectName =
       if projectName.endsWith(":config") then
@@ -140,16 +138,15 @@ object Config:
     new Config(
       projectName = cleanedProjectName,
       configMap = map.map { case (k, v) => (cleanKey(k), v) },
-      configSecretKeys = configSecretKeys.map(identity),
-      logger = logger
+      configSecretKeys = configSecretKeys.map(identity)
     )
   }
 
   import Env.*
 
-  def apply(projectName: NonEmptyString, logger: BesomLogger): Result[Config] =
+  def apply(projectName: NonEmptyString): Result[Config] =
     for
       configMap        <- Result.evalTry(Env.getConfigMap(EnvConfig))
       configSecretKeys <- Result.evalTry(Env.getConfigSecretKeys(EnvConfigSecretKeys))
-      config           <- Config(projectName, configMap, configSecretKeys, logger)
+      config           <- Config(projectName, configMap, configSecretKeys)
     yield config
