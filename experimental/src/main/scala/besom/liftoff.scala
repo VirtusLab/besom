@@ -68,7 +68,7 @@ def main(): Unit = Pulumi.run {
               VolumeArgs(
                 name = "index-html",
                 configMap = ConfigMapVolumeSourceArgs(
-                  name = "index-html-configmap" // indexHtmlConfigMap.flatMap(_.metadata.map(_.name.get))
+                  name = indexHtmlConfigMap.flatMap(_.metadata.map(_.name.get))
                 )
               )
             )

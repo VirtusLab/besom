@@ -80,13 +80,6 @@ enum OutputData[+A]:
       case k @ Known(resources, isSecret, None)    => Result.pure(k.asInstanceOf[OutputData[B]])
       case Known(resources, isSecret, Some(value)) => f(value).map(b => Known(resources, isSecret, Some(b)))
 
-  // TODO is this required at all?
-  // def traverseOutput[B](using ctx: Context, ev: A <:< Output[B]): Output[B] =
-  //   this match
-  //     case u @ Unknown(_, _)            => Output(u)
-  //     case k @ Known(_, _, None)        => Output(k.asInstanceOf[OutputData[B]])
-  //     case k @ Known(_, _, Some(value)) => Output(ev(value).getData.map(v => k.combine(v, (_, r) => r)))
-
   def isEmpty: Boolean =
     this match
       case Unknown(_, _)         => true

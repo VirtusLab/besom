@@ -107,8 +107,25 @@ object Decoder extends DecoderInstancesLowPrio:
       if value.kind.isBoolValue then value.getBoolValue else error(s"$label: Expected a boolean!")
 
   given jsonDecoder: Decoder[JsValue] with
-    def mapping(value: Value, label: Label): JsValue =
-      JsNull // TODO: Fixme - effectively we just ignore json values for now
+    def convertToJsValue(value: Value): JsValue =
+      value.kind match
+        case Kind.Empty                => JsNull
+        case Kind.NullValue(_)         => JsNull
+        case Kind.NumberValue(num)     => JsNumber(num)
+        case Kind.StringValue(str)     => JsString(str)
+        case Kind.BoolValue(bool)      => JsBoolean(bool)
+        case Kind.StructValue(struct)  => convertStructToJsObject(struct)
+        case Kind.ListValue(listValue) => convertListValueToJsArray(listValue)
+
+    def convertStructToJsObject(struct: Struct): JsObject =
+      val fields = struct.fields.view.mapValues(convertToJsValue).toMap
+      JsObject(fields)
+
+    def convertListValueToJsArray(listValue: ListValue): JsArray =
+      val values = listValue.values.map(convertToJsValue)
+      JsArray(values: _*)
+
+    def mapping(value: Value, label: Label): JsValue = convertToJsValue(value)
 
   given optDecoder[A](using innerDecoder: Decoder[A]): Decoder[Option[A]] = new Decoder[Option[A]]:
     override def decode(value: Value, label: Label): Either[DecodingError, OutputData[Option[A]]] =
