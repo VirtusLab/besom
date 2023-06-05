@@ -1,17 +1,19 @@
 //> using dep "org.virtuslab::besom-kubernetes:0.0.1-SNAPSHOT"
 
-import besom.*, api.{kubernetes => k8s}
+import besom.*, util.NonEmptyString
+import besom.api.{kubernetes => k8s}
 
 import k8s.core.v1.inputs.*
 import k8s.apps.v1.inputs.*
 import k8s.meta.v1.inputs.*
 import k8s.core.v1.ConfigMap
 import k8s.apps.v1.{deployment, DeploymentArgs}
-import k8s.core.v1.{configMap, ConfigMapArgs, service, ServiceArgs}
+import k8s.core.v1.{configMap, ConfigMapArgs, namespace, service, ServiceArgs}
 
 @main
 def main(): Unit = Pulumi.run {
-  val labels = Map("app" -> "nginx")
+  val labels       = Map("app" -> "nginx")
+  val appNamespace = namespace("liftoff")
 
   val html =
     """<!DOCTYPE html>
@@ -30,7 +32,8 @@ def main(): Unit = Pulumi.run {
     ConfigMapArgs(
       metadata = ObjectMetaArgs(
         name = "index-html-configmap",
-        labels = labels
+        labels = labels,
+        namespace = appNamespace.metadata.name.map(_.get)
       ),
       data = Map(
         "index.html" -> html
@@ -47,7 +50,8 @@ def main(): Unit = Pulumi.run {
         template = PodTemplateSpecArgs(
           metadata = ObjectMetaArgs(
             name = "nginx-deployment",
-            labels = labels
+            labels = labels,
+            namespace = appNamespace.metadata.name.map(_.get)
           ),
           spec = PodSpecArgs(
             containers = ContainerArgs(
@@ -68,12 +72,15 @@ def main(): Unit = Pulumi.run {
               VolumeArgs(
                 name = "index-html",
                 configMap = ConfigMapVolumeSourceArgs(
-                  name = indexHtmlConfigMap.flatMap(_.metadata.map(_.name.get))
+                  name = indexHtmlConfigMap.metadata.name.map(_.get)
                 )
               )
             )
           )
         )
+      ),
+      metadata = ObjectMetaArgs(
+        namespace = appNamespace.metadata.name.map(_.get)
       )
     )
   )
@@ -86,11 +93,15 @@ def main(): Unit = Pulumi.run {
         ports = List(
           ServicePortArgs(name = "http", port = 80)
         )
+      ),
+      metadata = ObjectMetaArgs(
+        namespace = appNamespace.metadata.name.map(_.get)
       )
     )
   )
 
   for
+    _       <- appNamespace
     _       <- indexHtmlConfigMap
     nginx   <- nginxDeployment
     service <- nginxService
