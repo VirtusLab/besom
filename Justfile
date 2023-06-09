@@ -134,7 +134,7 @@ publish-local-provider-sdk schema-name:
 ####################
 
 # Build and publish core, run the sample kubernetes Pulumi app that resides in ./experimental directory
-liftoff: publish-local-core
+liftoff: 
         cd experimental && \
         pulumi up --stack liftoff
 
@@ -151,6 +151,7 @@ clean-liftoff: destroy-liftoff
 # Cleans the deployment of ./experimental app completely, rebuilds core and kubernetes provider SDKs, deploys the app again
 clean-slate-liftoff: clean-sdk clean-liftoff
 	just generate-provider-sdk kubernetes 3.28.0 
+	just publish-local-core
 	just publish-local-provider-sdk kubernetes 
 	just liftoff
 
