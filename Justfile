@@ -9,7 +9,6 @@ schemas-output-dir := justfile_directory() + "/.out/schemas"
 default:
     @just --list
 
-
 ####################
 # Language SDK
 ####################
@@ -27,7 +26,7 @@ compile-zio:
 	scala-cli compile besom-zio
 
 # Compiles all SDK modules
-compile-sdk: compile-core compile-cats compile-zio
+compile-sdk: publish-local-core compile-cats compile-zio
 
 # Runs tests for core besom SDK
 test-core:
@@ -39,15 +38,32 @@ test-cats:
 
 # Runs tests for besom zio extension
 test-zio:
-  scala-cli test besom-zio
+	scala-cli test besom-zio
 
 # Runs all tests
-test-sdk: test-core test-cats test-zio
+test-sdk: compile-sdk test-core test-cats test-zio
 
 # Publishes locally core besom SDK
 publish-local-core:
   scala-cli publish local core --version {{publish-version}} --doc=false
 
+# Cleans core build, sets up build for IDE again
+clean-core: 
+	scala-cli clean core && \
+	scala-cli setup-ide core
+
+# Cleans besom cats-effect extension build, sets up build for IDE again
+clean-cats:
+	scala-cli clean besom-cats && \
+	scala-cli setup-ide besom-cats
+
+# Cleans besom ZIO extension build, sets up build for IDE again
+clean-zio:
+	scala-cli clean besom-zio && \
+	scala-cli setup-ide besom-zio
+
+# Cleans all SDK builds, sets up all modules for IDE again
+clean-sdk: clean-core clean-cats clean-zio
 
 ####################
 # Language plugin
@@ -117,6 +133,25 @@ publish-local-provider-sdk schema-name:
 # Demo
 ####################
 
-liftoff: publish-local-core
+# Build and publish core, run the sample kubernetes Pulumi app that resides in ./experimental directory
+liftoff: 
         cd experimental && \
         pulumi up --stack liftoff
+
+# Reverts the deployment of experimental sample kubernetes Pulumi app from ./experimental directory
+destroy-liftoff: 
+        cd experimental && \
+        pulumi destroy --stack liftoff -y
+
+# Cleans the deployment of experimental sample kubernetes Pulumi app from ./experimental directory to the ground
+clean-liftoff: destroy-liftoff
+	cd experimental && \
+	pulumi stack rm liftoff -y
+
+# Cleans the deployment of ./experimental app completely, rebuilds core and kubernetes provider SDKs, deploys the app again
+clean-slate-liftoff: clean-sdk clean-liftoff
+	just generate-provider-sdk kubernetes 3.28.0 
+	just publish-local-core
+	just publish-local-provider-sdk kubernetes 
+	just liftoff
+

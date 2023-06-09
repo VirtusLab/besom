@@ -12,18 +12,31 @@ import k8s.core.v1.{configMap, ConfigMapArgs, namespace, service, ServiceArgs}
 
 @main
 def main(): Unit = Pulumi.run {
-  val labels = Map("app" -> "nginx")
+  val labels       = Map("app" -> "nginx")
   val appNamespace = namespace("liftoff")
+
+  val html =
+    """<!DOCTYPE html>
+      <html>
+      |  <head>
+      |    <title>Infrastructure as Types: Pulumi and Scala</title>
+      |  </head>
+      |  <body>
+      |    <h1>Hello world!</h1>
+      |    <h3>Infrastructure as Types: Pulumi and Scala</h3>
+      |  </body>
+      |</html>""".stripMargin
 
   val indexHtmlConfigMap = configMap(
     "index-html-configmap",
     ConfigMapArgs(
       metadata = ObjectMetaArgs(
         name = "index-html-configmap",
-        namespace = appNamespace.metadata.name.map(_.get),
+        labels = labels,
+        namespace = appNamespace.metadata.name.map(_.get)
       ),
       data = Map(
-        "index.html" -> "<html><head><title>Infrastructure as Types: Pulumi and Scala</title></head><h1>WELCOME TO BESOM!</h1></br>></html>" // TODO paste a nice scala logotype and center everything nicely
+        "index.html" -> html
       )
     )
   )

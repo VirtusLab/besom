@@ -38,8 +38,9 @@ enum OutputData[+A]:
 
   def orElse[B >: A](that: => OutputData[B]): OutputData[B] =
     this match
+      // TODO this is quite a quirky idea - it changes the semantics between preview and deployment, probably not a good idea
       case Unknown(resources, isSecret) => combine(that, (_, r) => r)
-      case k @ Known(_, _, _)           => k
+      case k @ Known(_, _, _)           => k // TODO: this ignores the fact that Known can be empty
 
   def zip[B](that: OutputData[B])(using z: Zippable[A, B]): OutputData[z.Out] = // OutputData[(A, B)]
     combine(that, (a, b) => z.zip(a, b))
@@ -78,13 +79,6 @@ enum OutputData[+A]:
       case u @ Unknown(_, _)                       => Result.pure(u)
       case k @ Known(resources, isSecret, None)    => Result.pure(k.asInstanceOf[OutputData[B]])
       case Known(resources, isSecret, Some(value)) => f(value).map(b => Known(resources, isSecret, Some(b)))
-
-  // TODO is this required at all?
-  // def traverseOutput[B](using ctx: Context, ev: A <:< Output[B]): Output[B] =
-  //   this match
-  //     case u @ Unknown(_, _)            => Output(u)
-  //     case k @ Known(_, _, None)        => Output(k.asInstanceOf[OutputData[B]])
-  //     case k @ Known(_, _, Some(value)) => Output(ev(value).getData.map(v => k.combine(v, (_, r) => r)))
 
   def isEmpty: Boolean =
     this match

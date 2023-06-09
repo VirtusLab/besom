@@ -4,6 +4,7 @@ import com.google.protobuf.struct.*, Value.Kind
 import Constants.*
 import Decoder.*
 import ProtobufUtil.*
+import besom.util.Types.Label
 
 object DecoderTest:
   case class TestCaseClass(
@@ -20,6 +21,7 @@ object DecoderTest:
 
 class DecoderTest extends munit.FunSuite:
   import DecoderTest.*
+  val dummyLabel = Label.fromNameAndType("dummy", "dummy:pkg:Dummy")
 
   test("special struct signature can be extracted") {
     val secretStructSample: Value = Map(
@@ -38,7 +40,7 @@ class DecoderTest extends munit.FunSuite:
     ).asValue
     val d = summon[Decoder[TestCaseClass]]
 
-    d.decode(v) match
+    d.decode(v, dummyLabel) match
       case Left(ex) => throw ex
       case Right(OutputData.Known(res, isSecret, value)) =>
         assert(value == Some(TestCaseClass(10, List("qwerty"), None, None, Some("abc"))))
@@ -49,7 +51,7 @@ class DecoderTest extends munit.FunSuite:
     val v = "A".asValue
     val d = summon[Decoder[TestEnum]]
 
-    d.decode(v) match
+    d.decode(v, dummyLabel) match
       case Left(ex)                                      => throw ex
       case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some(TestEnum.A))
       case Right(_)                                      => throw Exception("Unexpected unknown!")
@@ -57,11 +59,11 @@ class DecoderTest extends munit.FunSuite:
 
   test("decode int/string union") {
     val d = summon[Decoder[Int | String]]
-    d.decode("A".asValue) match
+    d.decode("A".asValue, dummyLabel) match
       case Left(ex)                                      => throw ex
       case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some("A"))
       case Right(_)                                      => throw Exception("Unexpected unknown!")
-    d.decode(1.asValue) match
+    d.decode(1.asValue, dummyLabel) match
       case Left(ex)                                      => throw ex
       case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some(1))
       case Right(_)                                      => throw Exception("Unexpected unknown!")
@@ -69,11 +71,11 @@ class DecoderTest extends munit.FunSuite:
 
   test("decode string/custom resource union") {
     val d = summon[Decoder[Int | String]]
-    d.decode("A".asValue) match
+    d.decode("A".asValue, dummyLabel) match
       case Left(ex)                                      => throw ex
       case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some("A"))
       case Right(_)                                      => throw Exception("Unexpected unknown!")
-    d.decode(1.asValue) match
+    d.decode(1.asValue, dummyLabel) match
       case Left(ex)                                      => throw ex
       case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some(1))
       case Right(_)                                      => throw Exception("Unexpected unknown!")

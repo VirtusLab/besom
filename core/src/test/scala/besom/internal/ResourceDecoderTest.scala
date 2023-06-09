@@ -3,6 +3,8 @@ package besom.internal
 import RunResult.{given, *}
 import com.google.protobuf.struct.*
 import ProtobufUtil.*
+import besom.util.*, Types.*
+import logging.*
 
 class ResourceDecoderTest extends munit.FunSuite:
   case class CustomStruct(a: String, b: Double) derives Decoder
@@ -15,6 +17,9 @@ class ResourceDecoderTest extends munit.FunSuite:
     property3: Output[CustomStruct]
   ) extends CustomResource
       derives ResourceDecoder
+
+  val label        = Label.fromNameAndType("test", "test:pkg:TestResource")
+  given MDC[Label] = logging.MDC(Key.LabelKey, label)
 
   test("resource resolver - happy path") {
     val resourceDecoder = summon[ResourceDecoder[TestResource]]

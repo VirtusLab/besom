@@ -1,6 +1,6 @@
 package besom.internal
 
-import besom.util.Types.ResourceType
+import besom.util.*, Types.*
 
 // type ResourceState struct {
 // 	m sync.RWMutex
@@ -29,7 +29,7 @@ sealed trait ResourceState:
   def version: String
   def pluginDownloadUrl: String
   // def aliases: List[Output[F, String]]
-  def name: String
+  def name: NonEmptyString
   def typ: ResourceType
   // def transformations: List[ResourceTransformation]
   def remoteComponent: Boolean
@@ -42,6 +42,8 @@ sealed trait ResourceState:
     case comprs: ComponentResourceState =>
       comprs.copy(common = comprs.common.copy(children = comprs.common.children + child))
 
+extension (rs: ResourceState) def asLabel: Label = Label.fromNameAndType(rs.name, rs.typ)
+
 case class CommonResourceState(
   // urn: Output[String], // TODO BALEET, URN is in custom resource anyway
   // rawOutputs: Output[_], // TODO BALEET this is for StackReference only and is a hack used by pulumi-go, we'll use the non-hacky way from pulumi-java
@@ -51,7 +53,7 @@ case class CommonResourceState(
   version: String,
   pluginDownloadUrl: String,
   // aliases: List[Output[F, String]],
-  name: String,
+  name: NonEmptyString,
   typ: ResourceType,
   // transformations: List[ResourceTransformation],
   remoteComponent: Boolean

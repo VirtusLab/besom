@@ -2,14 +2,13 @@ package besom.internal
 
 import pulumirpc.resource.SupportsFeatureRequest
 
-class FeatureSupport(monitor: Monitor, cacheRef: Ref[Map[String, Boolean]]):
+case class FeatureSupport(keepResources: Boolean, keepOutputValues: Boolean, deletedWith: Boolean, aliasSpecs: Boolean)
 
-  def isFeatureSupported(feature: String): Result[Boolean] = cacheRef.get.flatMap { cache =>
-    cache.get(feature).map(Result.pure).getOrElse {
-      val request = SupportsFeatureRequest(feature)
-
-      monitor.supportsFeature(request).flatMap { response =>
-        cacheRef.update(_.updated(feature, response.hasSupport)) *> Result.pure(response.hasSupport)
-      }
-    }
-  }
+object FeatureSupport:
+  def apply(monitor: Monitor): Result[FeatureSupport] =
+    for
+      keepResources    <- monitor.supportsFeature(SupportsFeatureRequest("resourceReferences")).map(_.hasSupport)
+      keepOutputValues <- monitor.supportsFeature(SupportsFeatureRequest("outputValues")).map(_.hasSupport)
+      deletedWith      <- monitor.supportsFeature(SupportsFeatureRequest("deletedWith")).map(_.hasSupport)
+      aliasSpecs       <- monitor.supportsFeature(SupportsFeatureRequest("aliasSpecs")).map(_.hasSupport)
+    yield FeatureSupport(keepResources, keepOutputValues, deletedWith, aliasSpecs)

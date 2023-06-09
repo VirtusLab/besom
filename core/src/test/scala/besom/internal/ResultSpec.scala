@@ -73,8 +73,8 @@ trait ResultSpec[F[+_]: RunResult] extends munit.FunSuite:
 
     val program =
       for
-        p1   <- Promise[Unit]
-        p2   <- Promise[Unit]
+        p1   <- Promise[Unit]()
+        p2   <- Promise[Unit]()
         fib1 <- interlock(p1, p2).fork
         fib2 <- interlock(p2, p1).fork
         _    <- fib1.join

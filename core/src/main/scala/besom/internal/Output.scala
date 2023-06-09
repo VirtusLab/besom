@@ -6,11 +6,9 @@ import besom.util.NotProvided
 /** Output is a wrapper for a monadic effect used to model async execution that allows Pulumi to track information about
   * dependencies between resources and properties of data (whether it's known or a secret for instance).
   *
-  * Invariant: dataResult has to be registered in Context by the time when it reaches the constructor here!
+  * Invariant: dataResult has to be registered in TaskTracker by the time it reaches the constructor here!
   * @param dataResult
-  *   Effect of type F[A]
-  * @param F
-  *   Monad instance for F[+_]
+  *   Effect of type Result[A]
   * @param ctx
   *   Context
   */
@@ -29,10 +27,19 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
       yield nested.flatten
     )
 
+  // EXTREMELY EXPERIMENTAL
+  def flatMap[F[_]: Result.ToFuture, B](f: A => F[B]): Output[B] =
+    Output(
+      for
+        outputData: OutputData[A]         <- dataResult
+        nested: OutputData[OutputData[B]] <- outputData.traverseResult(a => Result.eval(f(a)).map(OutputData(_)))
+      yield nested.flatten
+    )
+
   def zip[B](that: => Output[B])(using z: Zippable[A, B]): Output[z.Out] =
     Output(dataResult.zip(that.getData).map((a, b) => a.zip(b)))
 
-  def flatten[B](using ev: A <:< Output[B]): Output[B] = flatMap(identity)
+  def flatten[B](using ev: A <:< Output[B]): Output[B] = flatMap(a => ev(a))
 
   def asPlaintext: Output[A] = withIsSecret(Result.pure(false))
 
@@ -97,6 +104,9 @@ object Output:
 
   def secret[A](using ctx: Context)(value: A): Output[A] =
     new Output[A](ctx.registerTask(Result.pure(OutputData(value))))
+
+  def secret[A](using ctx: Context)(maybeValue: Option[A]): Output[A] =
+    new Output[A](ctx.registerTask(Result.pure(OutputData(Set.empty, maybeValue, isSecret = true))))
 
   extension [A](v: A | Output[A] | NotProvided)
     def asOutput(isSecret: Boolean = false)(using ctx: Context): Output[A] =

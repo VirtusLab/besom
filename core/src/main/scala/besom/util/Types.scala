@@ -27,6 +27,8 @@ object Types:
 
     implicit inline def str2ResourceType(inline s: String): ResourceType = ResourceType.from(s)
 
+  end ResourceType
+
   opaque type ProviderType <: ResourceType = String
 
   object ProviderType:
@@ -42,3 +44,14 @@ object Types:
 
     // TODO should we use Conversion?
     implicit inline def str2ProviderType(inline s: String): ProviderType = ProviderType.from(s)
+
+  end ProviderType
+
+  opaque type Label <: String = String
+
+  extension (label: Label)
+    def withKey(key: String): Label = s"$label.$key" // ie.: myBucket[aws:s3:Bucket].url
+    def atIndex(index: Int): Label  = s"$label($index)" // ie.: myBucket[aws:s3:Bucket].files(0)
+
+  object Label:
+    def fromNameAndType(name: NonEmptyString, rt: ResourceType): Label = s"$name[$rt]"

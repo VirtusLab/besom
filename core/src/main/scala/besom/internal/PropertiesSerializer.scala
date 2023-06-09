@@ -11,13 +11,11 @@ case class SerializationResult(
 
 object PropertiesSerializer:
   def serializeResourceProperties[A: ArgsEncoder](
-    label: String,
     args: A
   ): Result[SerializationResult] =
-    serializeFilteredProperties(label, args, key => key == IdPropertyName || key == UrnPropertyName)
+    serializeFilteredProperties(args, key => key == IdPropertyName || key == UrnPropertyName)
 
   def serializeFilteredProperties[A: ArgsEncoder](
-    label: String,
     args: A,
     filter: String => Boolean
   ): Result[SerializationResult] =
