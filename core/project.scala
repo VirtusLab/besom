@@ -1,4 +1,4 @@
-//> using scala "3.2.2"
+//> using scala "3.3.0"
 
 //> using publish.organization "org.virtuslab"
 //> using publish.name "besom-core"
@@ -20,7 +20,7 @@
 //> using lib "com.outr::scribe-file:3.11.3"
 //> using lib "com.lihaoyi::pprint:0.6.6" // TODO BALEET
 
-//> using options "-java-output-version:8"
+//> using options "-java-output-version:8", "-Ysafe-init"
 
 //#> using options "-Xmax-inlines:64"
 

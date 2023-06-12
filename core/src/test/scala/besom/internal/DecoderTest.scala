@@ -15,9 +15,15 @@ object DecoderTest:
     optSome: Option[String]
   ) derives Decoder
 
-  enum TestEnum derives Decoder:
-    case A
-    case B
+
+  sealed abstract class TestEnum(val name: String, val value: String) extends besom.internal.StringEnum
+
+  object TestEnum extends besom.internal.EnumCompanion[TestEnum]("TestEnum"):
+    object A extends TestEnum("A", "A value")
+    object B extends TestEnum("B", "B value")
+
+    override val allInstances: Seq[TestEnum] = Seq(A, B)
+
 
 class DecoderTest extends munit.FunSuite:
   import DecoderTest.*
