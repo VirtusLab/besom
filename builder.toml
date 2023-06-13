@@ -1,0 +1,17 @@
+scalaVersion = "3.3.0"
+
+[modules.besom-zio]
+platforms = ["jvm"]
+dependsOn = ["core"]
+
+
+[modules.besom-cats]
+platforms = ["jvm"]
+dependsOn = ["core"]
+
+[modules.core]
+platforms = ["jvm"]
+
+[modules.codegen]
+platforms = ["jvm"]
+scalaVersion = "2.13.10"

@@ -1,4 +1,4 @@
-//> using scala "3.2.2"
+//> using scala "3.3.0"
 
 //> using file "../core/src/test/scala/besom/internal/ResultSpec.scala"
 //> using file "../core/src/test/scala/besom/internal/RunResult.scala"

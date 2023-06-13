@@ -81,7 +81,7 @@ trait Decoder[A]:
       }
     override def mapping(value: Value, label: Label): B = ???
 
-object Decoder extends DecoderInstancesLowPrio:
+object Decoder extends DecoderInstancesLowPrio1:
   import spray.json.*
 
   // for recursive stuff like Map[String, Value]
@@ -98,7 +98,7 @@ object Decoder extends DecoderInstancesLowPrio:
       else errorLeft(s"$label: Numeric value was expected to be integer but had a decimal value!")
     }
 
-  given Decoder[String] with
+  given stringDecoder: Decoder[String] with
     def mapping(value: Value, label: Label): String =
       if value.kind.isStringValue then value.getStringValue else error(s"$label: Expected a string!")
 
@@ -146,31 +146,7 @@ object Decoder extends DecoderInstancesLowPrio:
 
     override def mapping(value: Value, label: Label): Option[A] = ???
 
-  def unionDecoder[A, B](using aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[A | B] = new Decoder[A | B]:
-    override def decode(value: Value, label: Label): Either[DecodingError, OutputData[A | B]] =
-      decodeAsPossibleSecret(value, label).flatMap { odv =>
-        Try {
-          odv.flatMap { v =>
-            aDecoder.decode(v, label) match
-              case Left(error) =>
-                bDecoder.decode(v, label) match
-                  case Left(error2) => throw error2
-                  case Right(odb)   => odb.asInstanceOf[OutputData[A | B]]
-
-              case Right(oda) => oda.asInstanceOf[OutputData[A | B]]
-          }
-        } match
-          case Failure(exception) => errorLeft(s"$label: Encountered an error", exception)
-          case Success(value)     => Right(value)
-      }
-
-    override def mapping(value: Value, label: Label): A | B = ???
-
-  given unionIntStringDecoder: Decoder[Int | String]                            = unionDecoder[Int, String]
-  given unionBooleanProductDecoder[P <: Product: Decoder]: Decoder[Boolean | P] = unionDecoder[P, Boolean]
-  given unionStringProductDecoder[P <: Product: Decoder]: Decoder[String | P]   = unionDecoder[P, String]
-  given unionListProductDecoder[A, P <: Product](using Decoder[List[A]], Decoder[P]): Decoder[List[A] | P] =
-    unionDecoder[List[A], P]
+  given unionIntStringDecoder: Decoder[Int | String] = unionDecoder[Int, String]
 
   // this is kinda different from what other pulumi sdks are doing because we disallow nulls in the list
   given listDecoder[A](using innerDecoder: Decoder[A]): Decoder[List[A]] = new Decoder[List[A]]:
@@ -272,10 +248,40 @@ object Decoder extends DecoderInstancesLowPrio:
 
   //   def mapping(value: Value): Output[A] = ???
 
-trait DecoderInstancesLowPrio:
+trait DecoderInstancesLowPrio1 extends DecoderInstancesLowPrio2:
+  import spray.json.JsValue
+
+  given unionBooleanDecoder[A : Decoder](using NotGiven[A <:< Boolean]): Decoder[Boolean | A] = unionDecoder[A, Boolean]
+  given unionStringDecoder[A : Decoder](using NotGiven[A <:< String]): Decoder[String | A]    = unionDecoder[A, String]
+  given unionJsonDecoder[A : Decoder](using NotGiven[A <:< JsValue]): Decoder[JsValue | A]    = unionDecoder[A, JsValue]
+
+trait DecoderInstancesLowPrio2 extends DecoderHelpers:
+  given singleOrListDecoder[A : Decoder, L <: List[?] : Decoder]: Decoder[A | L] = unionDecoder[A, L]
+
+trait DecoderHelpers:
   import Constants.*
 
-  inline given derived[A](using m: Mirror.Of[A]): Decoder[A] =
+  def unionDecoder[A, B](using aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[A | B] = new Decoder[A | B]:
+    override def decode(value: Value, label: Label): Either[DecodingError, OutputData[A | B]] =
+      decodeAsPossibleSecret(value, label).flatMap { odv =>
+        Try {
+          odv.flatMap { v =>
+            aDecoder.decode(v, label) match
+              case Left(error) =>
+                bDecoder.decode(v, label) match
+                  case Left(error2) => throw error2
+                  case Right(odb)   => odb.asInstanceOf[OutputData[A | B]]
+
+              case Right(oda) => oda.asInstanceOf[OutputData[A | B]]
+          }
+        } match
+          case Failure(exception) => errorLeft(s"$label: Encountered an error", exception)
+          case Success(value)     => Right(value)
+      }
+
+    override def mapping(value: Value, label: Label): A | B = ???
+
+  inline def derived[A](using m: Mirror.Of[A]): Decoder[A] =
     lazy val labels           = CodecMacros.summonLabels[m.MirroredElemLabels]
     lazy val instances        = CodecMacros.summonDecoders[m.MirroredElemTypes]
     lazy val nameDecoderPairs = labels.zip(instances)
@@ -403,7 +409,10 @@ trait DecoderInstancesLowPrio:
  * [✓][ ] TODO JsonEncoder - this is a separate typeclass required for json-serialized fields of ProviderArgs
  */
 trait Encoder[A]:
+  self =>
   def encode(a: A): Result[(Set[Resource], Value)]
+  def contramap[B](f: B => A): Encoder[B] = new Encoder[B]:
+    def encode(b: B): Result[(Set[Resource], Value)] = self.encode(f(b))
 
 object Encoder:
   import Constants.*
@@ -437,7 +446,7 @@ object Encoder:
             resources -> labelsToValuesMap.asValue
           }
 
-  inline given derived[A](using m: Mirror.Of[A]): Encoder[A] =
+  inline def derived[A](using m: Mirror.Of[A]): Encoder[A] =
     lazy val labels           = CodecMacros.summonLabels[m.MirroredElemLabels]
     lazy val instances        = CodecMacros.summonEncoders[m.MirroredElemTypes]
     lazy val nameEncoderPairs = labels.zip(instances)
@@ -486,7 +495,7 @@ object Encoder:
           else Result.pure(urnResources -> urnValue)
         }
 
-  given Encoder[String] with
+  given stringEncoder: Encoder[String] with
     def encode(str: String): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> str.asValue)
 
   given Encoder[NonEmptyString] with
@@ -505,7 +514,7 @@ object Encoder:
   given Encoder[Boolean] with
     def encode(bool: Boolean): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> bool.asValue)
 
-  given Encoder[JsValue] with
+  given jsonEncoder: Encoder[JsValue] with
     // TODO not stack-safe
     def encodeInternal(json: JsValue): Value =
       json match

@@ -10,8 +10,8 @@ case class PulumiPackage(name: String, version: String, language: Language = Lan
 object PulumiPackage {
   implicit val reader: Reader[PulumiPackage] = macroR
 
-  def fromFile(filePath: String) = {
-    val input = ujson.Readable.fromFile(new File(filePath))
+  def fromFile(filePath: os.Path) = {
+    val input = os.read(filePath)
     val json = ujson.read(input)
     read[PulumiPackage](json)
   }
@@ -188,10 +188,8 @@ case class PropertyDefinition(
   // language: ,
   replaceOnChanges: Boolean = false,
   willReplaceOnChanges: Boolean = false,
-  secret: Boolean = false,
-
-  
-) //extends TypeReference
+  secret: Boolean = false
+)
 object PropertyDefinition {
   implicit val reader: Reader[PropertyDefinition] = PropertyDefinitionProto.reader.map { proto =>
     PropertyDefinition(
@@ -209,7 +207,7 @@ object PropertyDefinition {
 
 
 // TODO Handle `value`s of other primitive types
-case class EnumValueDefinition(value: String, name: Option[String] = None, description: Option[String] = None, deprecationMessage: Option[String] = None)
+case class EnumValueDefinition(value: ConstValue, name: Option[String] = None, description: Option[String] = None, deprecationMessage: Option[String] = None)
 object EnumValueDefinition {
   implicit val reader: Reader[EnumValueDefinition] = macroR
 }
@@ -229,4 +227,5 @@ object TypeDefinition {
 }
 
 case class EnumTypeDefinition(`enum`: List[EnumValueDefinition], `type`: PrimitiveType, isOverlay: Boolean) extends TypeDefinition
+
 case class ObjectTypeDefinition(properties: Map[String, PropertyDefinition], required: List[String] = Nil, isOverlay: Boolean) extends TypeDefinition with ObjectTypeDetails

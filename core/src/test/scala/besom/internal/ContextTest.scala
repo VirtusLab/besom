@@ -3,10 +3,18 @@ package besom.internal
 import RunResult.{given, *}
 import com.google.protobuf.struct.*
 
-enum TestEnum derives Encoder:
-  case Test1
-  case AnotherTest
-  case `weird-test`
+sealed abstract class TestEnum(val name: String, val value: String) extends besom.internal.StringEnum
+
+object TestEnum extends besom.internal.EnumCompanion[TestEnum]("TestEnum"):
+  object Test1 extends TestEnum("Test1", "Test1 value")
+  object AnotherTest extends TestEnum("AnotherTest", "AnotherTest value")
+  object `weird-test` extends TestEnum("weird-test", "weird-test value")
+
+  override val allInstances: Seq[TestEnum] = Seq(
+    Test1,
+    AnotherTest,
+    `weird-test`
+  )
 
 case class PlainCaseClass(data: String, moreData: Int) derives Encoder
 case class TestArgs(a: Output[String], b: Output[PlainCaseClass]) derives ArgsEncoder
@@ -67,7 +75,7 @@ class ContextTest extends munit.FunSuite:
   test("quick dirty Encoder test - enums") {
     given Context = DummyContext().unsafeRunSync()
 
-    val (res, value) = encode(
+    val (res, value) = encode[TestEnum](
       TestEnum.`weird-test`
     )
 
