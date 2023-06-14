@@ -7,6 +7,8 @@ import scala.util.*
 import besom.util.*, Types.Label
 import Asset.*
 import Archive.*
+import org.checkerframework.checker.units.qual.s
+import org.checkerframework.checker.units.qual.m
 
 object Constants:
   final val UnknownValue           = "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
@@ -44,7 +46,7 @@ case class DecodingError(message: String, cause: Throwable = null) extends Excep
  * [ ][ ] TODO: a better way than current Try/throw combo to traverse OutputData's lack of error channel
  * [✓][ ] TODO: Decoder[A] where A <: Product - derivation
  * [✓][ ] TODO: Decoder[Enum]
- * [ ][ ] TODO: Decoders for dependency resources (interesting problem, what about Context? shouldn't they use ResourceDecoder?)
+ * [✓][ ] TODO: Decoders for dependency resources (interesting problem, what about Context? shouldn't they use ResourceDecoder?)
  * [ ][ ] TODO: Decoder[Output[A]] (interesting problem, possibly unnecessary, what about Context?)
  * [ ][ ] TODO: Decoder[Asset]
  * [ ][ ] TODO: Decoder[Archive]
@@ -237,6 +239,203 @@ object Decoder extends DecoderInstancesLowPrio1:
 
     override def mapping(value: Value, label: Label): DependencyResource = ???
 
+  given fileAssetDecoder: Decoder[FileAsset] = new Decoder[FileAsset]:
+    override def decode(value: Value, label: Label): Either[DecodingError, OutputData[FileAsset]] =
+      decodeAsPossibleSecret(value, label).flatMap { odv =>
+        Try {
+          odv.flatMap[FileAsset] { innerValue =>
+            extractSpecialStructSignature(innerValue) match
+              case None => error(s"$label: Expected a special struct signature!")
+              case Some(specialSig) =>
+                if specialSig != Constants.SpecialAssetSig then error(s"$label: Expected a special asset signature!")
+                else
+                  val structValue = innerValue.getStructValue
+                  val path = structValue.fields
+                    .get(Constants.AssetOrArchivePathName)
+                    .map(_.getStringValue)
+                    .getOrElse(error(s"$label: Expected a path in asset struct!"))
+
+                  OutputData(FileAsset(path))
+          }
+        } match
+          case Failure(exception) => errorLeft(s"$label: Encountered an error", exception)
+          case Success(value)     => Right(value)
+      }
+
+    override def mapping(value: Value, label: Label): FileAsset = ???
+
+  given remoteAssetDecoder: Decoder[RemoteAsset] = new Decoder[RemoteAsset]:
+    override def decode(value: Value, label: Label): Either[DecodingError, OutputData[RemoteAsset]] =
+      decodeAsPossibleSecret(value, label).flatMap { odv =>
+        Try {
+          odv.flatMap[RemoteAsset] { innerValue =>
+            extractSpecialStructSignature(innerValue) match
+              case None => error(s"$label: Expected a special struct signature!")
+              case Some(specialSig) =>
+                if specialSig != Constants.SpecialAssetSig then error(s"$label: Expected a special asset signature!")
+                else
+                  val structValue = innerValue.getStructValue
+                  val uri = structValue.fields
+                    .get(Constants.AssetOrArchiveUriName)
+                    .map(_.getStringValue)
+                    .getOrElse(error(s"$label: Expected a uri in asset struct!"))
+
+                  OutputData(RemoteAsset(uri))
+          }
+        } match
+          case Failure(exception) => errorLeft(s"$label: Encountered an error", exception)
+          case Success(value)     => Right(value)
+      }
+
+    override def mapping(value: Value, label: Label): RemoteAsset = ???
+
+  given stringAssetDecoder: Decoder[StringAsset] = new Decoder[StringAsset]:
+    override def decode(value: Value, label: Label): Either[DecodingError, OutputData[StringAsset]] =
+      decodeAsPossibleSecret(value, label).flatMap { odv =>
+        Try {
+          odv.flatMap[StringAsset] { innerValue =>
+            extractSpecialStructSignature(innerValue) match
+              case None => error(s"$label: Expected a special struct signature!")
+              case Some(specialSig) =>
+                if specialSig != Constants.SpecialAssetSig then error(s"$label: Expected a special asset signature!")
+                else
+                  val structValue = innerValue.getStructValue
+                  val text = structValue.fields
+                    .get(Constants.AssetTextName)
+                    .map(_.getStringValue)
+                    .getOrElse(error(s"$label: Expected a text in asset struct!"))
+
+                  OutputData(StringAsset(text))
+          }
+        } match
+          case Failure(exception) => errorLeft(s"$label: Encountered an error", exception)
+          case Success(value)     => Right(value)
+      }
+    override def mapping(value: Value, label: Label): StringAsset = ???
+
+  given fileArchiveDecoder: Decoder[FileArchive] = new Decoder[FileArchive]:
+    override def decode(value: Value, label: Label): Either[DecodingError, OutputData[FileArchive]] =
+      decodeAsPossibleSecret(value, label).flatMap { odv =>
+        Try {
+          odv.flatMap[FileArchive] { innerValue =>
+            extractSpecialStructSignature(innerValue) match
+              case None => error(s"$label: Expected a special struct signature!")
+              case Some(specialSig) =>
+                if specialSig != Constants.SpecialArchiveSig then
+                  error(s"$label: Expected a special archive signature!")
+                else
+                  val structValue = innerValue.getStructValue
+                  val path = structValue.fields
+                    .get(Constants.AssetOrArchivePathName)
+                    .map(_.getStringValue)
+                    .getOrElse(error(s"$label: Expected a path in archive struct!"))
+
+                  OutputData(FileArchive(path))
+          }
+        } match
+          case Failure(exception) => errorLeft(s"$label: Encountered an error", exception)
+          case Success(value)     => Right(value)
+      }
+    override def mapping(value: Value, label: Label): FileArchive = ???
+
+  given remoteArchiveDecoder: Decoder[RemoteArchive] = new Decoder[RemoteArchive]:
+    override def decode(value: Value, label: Label): Either[DecodingError, OutputData[RemoteArchive]] =
+      decodeAsPossibleSecret(value, label).flatMap { odv =>
+        Try {
+          odv.flatMap[RemoteArchive] { innerValue =>
+            extractSpecialStructSignature(innerValue) match
+              case None => error(s"$label: Expected a special struct signature!")
+              case Some(specialSig) =>
+                if specialSig != Constants.SpecialArchiveSig then
+                  error(s"$label: Expected a special archive signature!")
+                else
+                  val structValue = innerValue.getStructValue
+                  val uri = structValue.fields
+                    .get(Constants.AssetOrArchiveUriName)
+                    .map(_.getStringValue)
+                    .getOrElse(error(s"$label: Expected a uri in archive struct!"))
+
+                  OutputData(RemoteArchive(uri))
+          }
+        } match
+          case Failure(exception) => errorLeft(s"$label: Encountered an error", exception)
+          case Success(value)     => Right(value)
+      }
+    override def mapping(value: Value, label: Label): RemoteArchive = ???
+
+  given assetArchiveDecoder: Decoder[AssetArchive] = new Decoder[AssetArchive]:
+    override def decode(value: Value, label: Label): Either[DecodingError, OutputData[AssetArchive]] =
+      decodeAsPossibleSecret(value, label).flatMap { odv =>
+        Try {
+          odv.flatMap[AssetArchive] { innerValue =>
+            extractSpecialStructSignature(innerValue) match
+              case None => error(s"$label: Expected a special struct signature!")
+              case Some(specialSig) =>
+                if specialSig != Constants.SpecialArchiveSig then
+                  error(s"$label: Expected a special archive signature!")
+                else
+                  val structValue = innerValue.getStructValue
+                  val nested = structValue.fields
+                    .get(Constants.ArchiveAssetsName)
+                    .map(_.getStructValue)
+                    .getOrElse(error(s"$label: Expected an assets struct in archive struct!"))
+
+                  val outputDataVec = nested.fields.toVector.map { (name, value) =>
+                    assetOrArchiveDecoder.decode(value, label.withKey(name)) match
+                      case Left(exception) =>
+                        error(s"$label: Encountered an error when deserializing an archive", exception)
+                      case Right(assetOrArchive) =>
+                        assetOrArchive.map((name, _))
+                  }
+
+                  OutputData.sequence(outputDataVec).map(vec => AssetArchive(vec.toMap))
+          }
+        } match
+          case Failure(exception) => errorLeft(s"$label: Encountered an error", exception)
+          case Success(value)     => Right(value)
+      }
+    override def mapping(value: Value, label: Label): AssetArchive = ???
+
+  given assetDecoder: Decoder[Asset] = new Decoder[Asset]:
+    override def decode(value: Value, label: Label): Either[DecodingError, OutputData[Asset]] =
+      fileAssetDecoder.decode(value, label) match
+        case Left(_) =>
+          stringAssetDecoder.decode(value, label) match
+            case Left(_) =>
+              remoteAssetDecoder.decode(value, label) match
+                case Left(value) =>
+                  errorLeft(s"$label: Found value is neither a FileAsset, StringAsset nor RemoteAsset")
+                case Right(odv) => Right(odv)
+            case Right(odv) => Right(odv)
+        case Right(odv) => Right(odv)
+
+    override def mapping(value: Value, label: Label): Asset = ???
+
+  given archiveDecoder: Decoder[Archive] = new Decoder[Archive]:
+    override def decode(value: Value, label: Label): Either[DecodingError, OutputData[Archive]] =
+      fileArchiveDecoder.decode(value, label) match
+        case Left(_) =>
+          remoteArchiveDecoder.decode(value, label) match
+            case Left(_) =>
+              assetArchiveDecoder.decode(value, label) match
+                case Left(value) =>
+                  errorLeft(s"$label: Found value is neither FileArchive, AssetArchive nor RemoteArchive")
+                case Right(odv) => Right(odv)
+            case Right(odv) => Right(odv)
+        case Right(odv) => Right(odv)
+    override def mapping(value: Value, label: Label): Archive = ???
+
+  given assetOrArchiveDecoder: Decoder[AssetOrArchive] = new Decoder[AssetOrArchive]:
+    override def decode(value: Value, label: Label): Either[DecodingError, OutputData[AssetOrArchive]] =
+      assetDecoder.decode(value, label) match
+        case Left(_) =>
+          archiveDecoder.decode(value, label) match
+            case Left(_) =>
+              errorLeft(s"$label: Found value is neither an Asset nor an Archive")
+            case Right(odv) => Right(odv)
+        case Right(odv) => Right(odv)
+    override def mapping(value: Value, label: Label): AssetOrArchive = ???
+
   // TODO is this required at all?
   // given outputDecoder[A](using innerDecoder: Decoder[A], ctx: Context): Decoder[Output[A]] = new Decoder[Output[A]]:
   //   override def decode(value: Value, label: Label): Either[DecodingError, OutputData[Output[A]]] =
@@ -293,7 +492,8 @@ trait DecoderHelpers:
       case p: Mirror.ProductOf[A] =>
         decoderProduct(p, nameDecoderPairs)
 
-  inline def error(msg: String): Nothing = throw DecodingError(msg)
+  inline def error(msg: String): Nothing                   = throw DecodingError(msg)
+  inline def error(msg: String, cause: Exception): Nothing = throw DecodingError(msg, cause)
   inline def errorLeft(msg: String, cause: Throwable = null): Either[DecodingError, Nothing] = Left(
     DecodingError(msg, cause)
   )
@@ -386,30 +586,13 @@ trait DecoderHelpers:
             if elementOutputData.isEmpty then errorLeft(s"Encountered a null in $typ, this is illegal in besom!")
             else Right(vec :+ elementOutputData)
 
-/*
- * Encoder needs the same debugability features as Decoder, ie:
- *  - stack awareness
- *  - field names
- *
- * [✓][ ] TODO Option
- * [✓][ ] TODO primitives
- * [✓][ ] TODO String
- * [✓][ ] TODO JsValue
- * [✓][ ] TODO *Args Product - derivation
- * [✓][ ] TODO Enums/ADTs - derivation
- * [✓][ ] TODO CustomResource
- * [✓][ ] TODO ComponentResource
- * [ ][ ] TODO Asset/Archive
- * [✓][ ] TODO Union Type/Either
- * [✓][ ] TODO Output
- * [✓][ ] TODO Map
- * [✓][ ] TODO List
- *
- * [✓][ ] TODO ArgsEncoder - this is a separate typeclass required for serialization of top-level *Args classes
- * [✓][ ] TODO ProviderArgsEncoder - this is a separate typeclass required for serialization of top-level ProviderArgs classes
- *             that have all fields serialized as JSON strings
- * [✓][ ] TODO JsonEncoder - this is a separate typeclass required for json-serialized fields of ProviderArgs
- */
+/** ArgsEncoder - this is a separate typeclass required for serialization of top-level *Args classes
+  *
+  * ProviderArgsEncoder - this is a separate typeclass required for serialization of top-level ProviderArgs classes that
+  * have all fields serialized as JSON strings
+  *
+  * JsonEncoder - this is a separate typeclass required for json-serialized fields of ProviderArgs
+  */
 trait Encoder[A]:
   self =>
   def encode(a: A): Result[(Set[Resource], Value)]
@@ -612,18 +795,20 @@ object Encoder:
   given assetEncoder: Encoder[Asset] = new Encoder[Asset]:
     def encode(asset: Asset): Result[(Set[Resource], Value)] =
       asset match
-        case fa: FileAsset    => fileAssetEncoder.encode(fa)
-        case ra: RemoteAsset  => remoteAssetEncoder.encode(ra)
-        case sa: StringAsset  => stringAssetEncoder.encode(sa)
-        case ia: InvalidAsset.type => Result.fail(Exception("Cannot serialize invalid asset")) // TODO is this necessary?
+        case fa: FileAsset   => fileAssetEncoder.encode(fa)
+        case ra: RemoteAsset => remoteAssetEncoder.encode(ra)
+        case sa: StringAsset => stringAssetEncoder.encode(sa)
+        // case ia: InvalidAsset.type =>
+        //   Result.fail(Exception("Cannot serialize invalid asset")) // TODO is this necessary?
 
   given archiveEncoder: Encoder[Archive] = new Encoder[Archive]:
     def encode(archive: Archive): Result[(Set[Resource], Value)] =
       archive match
-        case fa: FileArchive    => fileArchiveEncoder.encode(fa)
-        case ra: RemoteArchive  => remoteArchiveEncoder.encode(ra)
-        case aa: AssetArchive   => assetArchiveEncoder.encode(aa)
-        case ia: InvalidArchive.type => Result.fail(Exception("Cannot serialize invalid archive")) // TODO is this necessary?
+        case fa: FileArchive   => fileArchiveEncoder.encode(fa)
+        case ra: RemoteArchive => remoteArchiveEncoder.encode(ra)
+        case aa: AssetArchive  => assetArchiveEncoder.encode(aa)
+        // case ia: InvalidArchive.type =>
+        //   Result.fail(Exception("Cannot serialize invalid archive")) // TODO is this necessary?
 
   given assetOrArchiveEncoder: Encoder[AssetOrArchive] = new Encoder[AssetOrArchive]:
     def encode(assetOrArchive: AssetOrArchive): Result[(Set[Resource], Value)] =
