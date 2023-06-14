@@ -596,7 +596,7 @@ object Encoder:
     def encode(assetArchive: AssetArchive): Result[(Set[Resource], Value)] =
       val serializedAssets =
         assetArchive.assets.toVector.map { case (key, assetOrArchive) =>
-          summon[Encoder[AssetOrArchive]].encode(assetOrArchive).map((key, _))
+          assetOrArchiveEncoder.encode(assetOrArchive).map((key, _))
         }
 
       Result.sequence(serializedAssets).map { vec =>
@@ -612,24 +612,24 @@ object Encoder:
   given assetEncoder: Encoder[Asset] = new Encoder[Asset]:
     def encode(asset: Asset): Result[(Set[Resource], Value)] =
       asset match
-        case fa: FileAsset    => summon[Encoder[FileAsset]].encode(fa)
-        case ra: RemoteAsset  => summon[Encoder[RemoteAsset]].encode(ra)
-        case sa: StringAsset  => summon[Encoder[StringAsset]].encode(sa)
-        case ia: InvalidAsset => Result.fail(Exception("Cannot serialize invalid asset")) // TODO is this necessary?
+        case fa: FileAsset    => fileAssetEncoder.encode(fa)
+        case ra: RemoteAsset  => remoteAssetEncoder.encode(ra)
+        case sa: StringAsset  => stringAssetEncoder.encode(sa)
+        case ia: InvalidAsset.type => Result.fail(Exception("Cannot serialize invalid asset")) // TODO is this necessary?
 
   given archiveEncoder: Encoder[Archive] = new Encoder[Archive]:
     def encode(archive: Archive): Result[(Set[Resource], Value)] =
       archive match
-        case fa: FileArchive    => summon[Encoder[FileArchive]].encode(fa)
-        case ra: RemoteArchive  => summon[Encoder[RemoteArchive]].encode(ra)
-        case aa: AssetArchive   => summon[Encoder[AssetArchive]].encode(aa)
-        case ia: InvalidArchive => Result.fail(Exception("Cannot serialize invalid archive")) // TODO is this necessary?
+        case fa: FileArchive    => fileArchiveEncoder.encode(fa)
+        case ra: RemoteArchive  => remoteArchiveEncoder.encode(ra)
+        case aa: AssetArchive   => assetArchiveEncoder.encode(aa)
+        case ia: InvalidArchive.type => Result.fail(Exception("Cannot serialize invalid archive")) // TODO is this necessary?
 
   given assetOrArchiveEncoder: Encoder[AssetOrArchive] = new Encoder[AssetOrArchive]:
     def encode(assetOrArchive: AssetOrArchive): Result[(Set[Resource], Value)] =
       assetOrArchive match
-        case a: Asset   => summon[Encoder[Asset]].encode(a)
-        case a: Archive => summon[Encoder[Archive]].encode(a)
+        case a: Asset   => assetEncoder.encode(a)
+        case a: Archive => archiveEncoder.encode(a)
 
   given listEncoder[A](using innerEncoder: Encoder[A]): Encoder[List[A]] = new Encoder[List[A]]:
     def encode(lstA: List[A]): Result[(Set[Resource], Value)] =
