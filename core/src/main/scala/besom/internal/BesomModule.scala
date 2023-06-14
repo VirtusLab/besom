@@ -33,4 +33,5 @@ trait BesomModule:
       case Left(err) => throw err
       case Right(_)  => sys.exit(0)
 
-  def exports(outputs: (String, Output[Any])*)(using Context): Output[Map[String, Output[Any]]] = Output(outputs.toMap)
+  def exports_(outputs: (String, Output[Any])*)(using Context): Output[Map[String, Output[Any]]] = Output(outputs.toMap)
+  def exports(outputs: (String, Output[Any])*)(using Context): Map[String, Output[Any]]          = outputs.toMap

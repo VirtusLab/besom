@@ -5,6 +5,8 @@ import com.google.protobuf.struct.*, Value.Kind
 import besom.internal.ProtobufUtil.*
 import scala.util.*
 import besom.util.*, Types.Label
+import Asset.*
+import Archive.*
 
 object Constants:
   final val UnknownValue           = "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
@@ -251,12 +253,12 @@ object Decoder extends DecoderInstancesLowPrio1:
 trait DecoderInstancesLowPrio1 extends DecoderInstancesLowPrio2:
   import spray.json.JsValue
 
-  given unionBooleanDecoder[A : Decoder](using NotGiven[A <:< Boolean]): Decoder[Boolean | A] = unionDecoder[A, Boolean]
-  given unionStringDecoder[A : Decoder](using NotGiven[A <:< String]): Decoder[String | A]    = unionDecoder[A, String]
-  given unionJsonDecoder[A : Decoder](using NotGiven[A <:< JsValue]): Decoder[JsValue | A]    = unionDecoder[A, JsValue]
+  given unionBooleanDecoder[A: Decoder](using NotGiven[A <:< Boolean]): Decoder[Boolean | A] = unionDecoder[A, Boolean]
+  given unionStringDecoder[A: Decoder](using NotGiven[A <:< String]): Decoder[String | A]    = unionDecoder[A, String]
+  given unionJsonDecoder[A: Decoder](using NotGiven[A <:< JsValue]): Decoder[JsValue | A]    = unionDecoder[A, JsValue]
 
 trait DecoderInstancesLowPrio2 extends DecoderHelpers:
-  given singleOrListDecoder[A : Decoder, L <: List[?] : Decoder]: Decoder[A | L] = unionDecoder[A, L]
+  given singleOrListDecoder[A: Decoder, L <: List[?]: Decoder]: Decoder[A | L] = unionDecoder[A, L]
 
 trait DecoderHelpers:
   import Constants.*
@@ -554,6 +556,80 @@ object Encoder:
             else Set.empty -> serializedValue // TODO Resource propagation
           }
     }
+
+  private def assetWrapper(key: String, value: Value): Value = Map(
+    Constants.SpecialSigKey -> Constants.SpecialAssetSig.asValue,
+    key -> value
+  ).asValue
+
+  private def archiveWrapper(key: String, value: Value): Value = Map(
+    Constants.SpecialSigKey -> Constants.SpecialArchiveSig.asValue,
+    key -> value
+  ).asValue
+
+  given fileAssetEncoder: Encoder[FileAsset] = new Encoder[FileAsset]:
+    def encode(fileAsset: FileAsset): Result[(Set[Resource], Value)] = Result {
+      Set.empty -> assetWrapper(Constants.AssetOrArchivePathName, fileAsset.path.asValue)
+    }
+
+  given remoteAssetEncoder: Encoder[RemoteAsset] = new Encoder[RemoteAsset]:
+    def encode(remoteAsset: RemoteAsset): Result[(Set[Resource], Value)] = Result {
+      Set.empty -> assetWrapper(Constants.AssetOrArchiveUriName, remoteAsset.uri.asValue)
+    }
+
+  given stringAssetEncoder: Encoder[StringAsset] = new Encoder[StringAsset]:
+    def encode(stringAsset: StringAsset): Result[(Set[Resource], Value)] = Result {
+      Set.empty -> assetWrapper(Constants.AssetTextName, stringAsset.text.asValue)
+    }
+
+  given fileArchiveEncoder: Encoder[FileArchive] = new Encoder[FileArchive]:
+    def encode(fileArchive: FileArchive): Result[(Set[Resource], Value)] = Result {
+      Set.empty -> archiveWrapper(Constants.AssetOrArchivePathName, fileArchive.path.asValue)
+    }
+
+  given remoteArchiveEncoder: Encoder[RemoteArchive] = new Encoder[RemoteArchive]:
+    def encode(remoteArchive: RemoteArchive): Result[(Set[Resource], Value)] = Result {
+      Set.empty -> archiveWrapper(Constants.AssetOrArchiveUriName, remoteArchive.uri.asValue)
+    }
+
+  given assetArchiveEncoder: Encoder[AssetArchive] = new Encoder[AssetArchive]:
+    def encode(assetArchive: AssetArchive): Result[(Set[Resource], Value)] =
+      val serializedAssets =
+        assetArchive.assets.toVector.map { case (key, assetOrArchive) =>
+          summon[Encoder[AssetOrArchive]].encode(assetOrArchive).map((key, _))
+        }
+
+      Result.sequence(serializedAssets).map { vec =>
+        val (keys, depsAndValues) = vec.unzip
+        val (deps, values)        = depsAndValues.unzip
+        val allDeps = deps.foldLeft(Set.empty[Resource]) { case (acc, resources) =>
+          acc ++ resources
+        }
+
+        allDeps -> archiveWrapper(Constants.ArchiveAssetsName, keys.zip(values).toMap.asValue)
+      }
+
+  given assetEncoder: Encoder[Asset] = new Encoder[Asset]:
+    def encode(asset: Asset): Result[(Set[Resource], Value)] =
+      asset match
+        case fa: FileAsset    => summon[Encoder[FileAsset]].encode(fa)
+        case ra: RemoteAsset  => summon[Encoder[RemoteAsset]].encode(ra)
+        case sa: StringAsset  => summon[Encoder[StringAsset]].encode(sa)
+        case ia: InvalidAsset => Result.fail(Exception("Cannot serialize invalid asset")) // TODO is this necessary?
+
+  given archiveEncoder: Encoder[Archive] = new Encoder[Archive]:
+    def encode(archive: Archive): Result[(Set[Resource], Value)] =
+      archive match
+        case fa: FileArchive    => summon[Encoder[FileArchive]].encode(fa)
+        case ra: RemoteArchive  => summon[Encoder[RemoteArchive]].encode(ra)
+        case aa: AssetArchive   => summon[Encoder[AssetArchive]].encode(aa)
+        case ia: InvalidArchive => Result.fail(Exception("Cannot serialize invalid archive")) // TODO is this necessary?
+
+  given assetOrArchiveEncoder: Encoder[AssetOrArchive] = new Encoder[AssetOrArchive]:
+    def encode(assetOrArchive: AssetOrArchive): Result[(Set[Resource], Value)] =
+      assetOrArchive match
+        case a: Asset   => summon[Encoder[Asset]].encode(a)
+        case a: Archive => summon[Encoder[Archive]].encode(a)
 
   given listEncoder[A](using innerEncoder: Encoder[A]): Encoder[List[A]] = new Encoder[List[A]]:
     def encode(lstA: List[A]): Result[(Set[Resource], Value)] =

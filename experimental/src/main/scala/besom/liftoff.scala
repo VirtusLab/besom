@@ -6,28 +6,18 @@ import besom.api.{kubernetes => k8s}
 import k8s.core.v1.inputs.*
 import k8s.apps.v1.inputs.*
 import k8s.meta.v1.inputs.*
-import k8s.core.v1.ConfigMap
 import k8s.apps.v1.{deployment, DeploymentArgs}
 import k8s.core.v1.{configMap, ConfigMapArgs, namespace, service, ServiceArgs}
+import besom.internal.Output
 
-@main
-def main(): Unit = Pulumi.run {
-  val labels       = Map("app" -> "nginx")
-  val appNamespace = namespace("liftoff")
+@main def main = Pulumi.run {
+  val labels                                      = Map("app" -> "nginx")
+  val appNamespace: Output[k8s.core.v1.Namespace] = namespace("liftoff")
 
   val html =
-    """<!DOCTYPE html>
-      <html>
-      |  <head>
-      |    <title>Infrastructure as Types: Pulumi and Scala</title>
-      |  </head>
-      |  <body>
-      |    <h1>Hello world!</h1>
-      |    <h3>Infrastructure as Types: Pulumi and Scala</h3>
-      |  </body>
-      |</html>""".stripMargin
+    "<h1>Welcome to Besom: Functional Infrastructure in Scala 3</h1>"
 
-  val indexHtmlConfigMap = configMap(
+  val indexHtmlConfigMap: Output[k8s.core.v1.ConfigMap] = configMap(
     "index-html-configmap",
     ConfigMapArgs(
       metadata = ObjectMetaArgs(
@@ -95,16 +85,14 @@ def main(): Unit = Pulumi.run {
         )
       ),
       metadata = ObjectMetaArgs(
-        namespace = appNamespace.metadata.name.map(_.get)
+        namespace = appNamespace.metadata.name.map(_.get),
+        labels = labels
       )
     )
   )
 
   for
-    _       <- appNamespace
-    _       <- indexHtmlConfigMap
     nginx   <- nginxDeployment
     service <- nginxService
-    exports <- Pulumi.exports("name" -> nginx.metadata.map(_.name))
-  yield exports
+  yield exports("name" -> nginx.metadata.name)
 }
