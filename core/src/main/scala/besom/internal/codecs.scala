@@ -48,8 +48,8 @@ case class DecodingError(message: String, cause: Throwable = null) extends Excep
  * [✓][ ] TODO: Decoder[Enum]
  * [✓][ ] TODO: Decoders for dependency resources (interesting problem, what about Context? shouldn't they use ResourceDecoder?)
  * [ ][ ] TODO: Decoder[Output[A]] (interesting problem, possibly unnecessary, what about Context?)
- * [ ][ ] TODO: Decoder[Asset]
- * [ ][ ] TODO: Decoder[Archive]
+ * [✓][ ] TODO: Decoder[Asset]
+ * [✓][ ] TODO: Decoder[Archive]
  * [✓][ ] TODO: Decoder[JsValue]
  * [✓][ ] TODO: Decoder[primitives]
  * [✓][ ] TODO: Decoder[A | B]
