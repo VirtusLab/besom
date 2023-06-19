@@ -432,7 +432,7 @@ object CodeGen {
     )
 
     val resourceProperties = {
-      val allProperties = (resourceBaseProperties ++ resourceDefinition.properties).toSeq.sortBy(_._1)
+      val allProperties = (resourceBaseProperties ++ resourceDefinition.properties.toSeq.sortBy(_._1))
       if (allProperties.size <= jvmMaxParamsCount)
         allProperties
       else {
