@@ -33,13 +33,15 @@ def main(): Unit = Pulumi.run {
       metadata = ObjectMetaArgs(
         name = "index-html-configmap",
         labels = labels,
-        namespace = appNamespace.metadata.name.map(_.get)
+        namespace = appNamespace.metadata.name.orEmpty
       ),
       data = Map(
         "index.html" -> html
       )
     )
   )
+
+  // deployment("dfdsfsd", DeploymentArgs(spec = DeploymentSpecArgs()))
 
   val nginxDeployment = deployment(
     "nginx",
@@ -51,7 +53,7 @@ def main(): Unit = Pulumi.run {
           metadata = ObjectMetaArgs(
             name = "nginx-deployment",
             labels = labels,
-            namespace = appNamespace.metadata.name.map(_.get)
+            namespace = appNamespace.metadata.name.orEmpty
           ),
           spec = PodSpecArgs(
             containers = ContainerArgs(
@@ -72,7 +74,7 @@ def main(): Unit = Pulumi.run {
               VolumeArgs(
                 name = "index-html",
                 configMap = ConfigMapVolumeSourceArgs(
-                  name = indexHtmlConfigMap.metadata.name.map(_.get)
+                  name = indexHtmlConfigMap.metadata.name.orEmpty
                 )
               )
             )
@@ -80,7 +82,7 @@ def main(): Unit = Pulumi.run {
         )
       ),
       metadata = ObjectMetaArgs(
-        namespace = appNamespace.metadata.name.map(_.get)
+        namespace = appNamespace.metadata.name.orEmpty
       )
     )
   )
@@ -95,7 +97,7 @@ def main(): Unit = Pulumi.run {
         )
       ),
       metadata = ObjectMetaArgs(
-        namespace = appNamespace.metadata.name.map(_.get)
+        namespace = appNamespace.metadata.name.orEmpty
       )
     )
   )
@@ -105,6 +107,5 @@ def main(): Unit = Pulumi.run {
     _       <- indexHtmlConfigMap
     nginx   <- nginxDeployment
     service <- nginxService
-    exports <- Pulumi.exports("name" -> nginx.metadata.map(_.name))
-  yield exports
+  yield exports("name" -> nginx.metadata.name)
 }
