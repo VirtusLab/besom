@@ -1,20 +1,19 @@
 package besom.internal
 
 import scala.quoted.*
-import java.awt.Component
 
 trait RegistersOutputs[A <: ComponentResource & Product] {
-  def toMapOfOutputs(a: A): Map[String, Output[Any]]
+  def toMapOfOutputs(a: A): Map[String, (Encoder[?], Output[Any])]
 }
 
 object RegistersOutputs {
   inline given derived[A <: ComponentResource & Product]: RegistersOutputs[A] = new RegistersOutputs[A] {
-    def toMapOfOutputs(a: A): Map[String,Output[Any]] = derivedImpl[A](a)
+    def toMapOfOutputs(a: A): Map[String, (Encoder[?], Output[Any])] = derivedImpl[A](a)
   }
 
-  private inline def derivedImpl[A](a: A): Map[String, Output[Any]] = ${ toMapOfOutputsImpl[A]('a) }
+  private inline def derivedImpl[A](a: A): Map[String, (Encoder[?], Output[Any])] = ${ toMapOfOutputsImpl[A]('a) }
 
-  def toMapOfOutputsImpl[A: Type](using Quotes)(a: Expr[Any]): Expr[Map[String,Output[Any]]] = {
+  def toMapOfOutputsImpl[A: Type](using Quotes)(a: Expr[Any]): Expr[Map[String, (Encoder[?], Output[Any])]] = {
     import quotes.reflect.*
     val tpe = TypeRepr.of[A]
     val fields = tpe.typeSymbol.caseFields
@@ -30,8 +29,16 @@ object RegistersOutputs {
     val extractedFields = fields.map { field =>
       val fieldName = field.name
       val fieldExpr = Select.unique(a.asTerm, fieldName).asExprOf[Output[Any]]
-      '{ (${ Expr(fieldName) }, $fieldExpr) }
+      val fieldTpe = field.tree match
+        case v: ValDef => v.tpt.tpe
+        case d: DefDef => d.returnTpt.tpe
+      val encoder = fieldTpe.asType match
+        case '[p] =>
+          Expr.summon[Encoder[p]]
+          .getOrElse(report.errorAndAbort(s"Couldn't find encoder of type ${fieldTpe.show} for field ${field.name}"))
+          .asExprOf[Encoder[?]]
+      '{ (${ Expr(fieldName) }, ($encoder, $fieldExpr)) }
     }
-    '{ Map(${Varargs(extractedFields.toList)}: _*) }.asExprOf[Map[String, Output[Any]]]
+    '{ Map(${Varargs(extractedFields.toList)}: _*) }.asExprOf[Map[String, (Encoder[?], Output[Any])]]
   }
 }

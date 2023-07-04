@@ -10,10 +10,11 @@ class RegistersOutputsDerivationTest extends munit.FunSuite {
 
   test("derive an instance for TestRegistersOutputs") {
     given Context = DummyContext().unsafeRunSync()
+    given intEncoder: Encoder[Output[Int]] = (a: Output[Int]) => ???
 
     val testRegistersOutputs = TestRegistersOutputs(Output(1))
     val instance = summon[RegistersOutputs[TestRegistersOutputs]]
-    assertEquals(instance.toMapOfOutputs(testRegistersOutputs), Map("a" -> testRegistersOutputs.a))
+    assertEquals(instance.toMapOfOutputs(testRegistersOutputs), Map("a" -> (intEncoder, testRegistersOutputs.a)))
   }
 
   case class TestRegistersOutputs3(aField: Output[Int], alsoAField: Output[String], anotherFields: Output[Float]) extends ComponentResource {
@@ -22,13 +23,16 @@ class RegistersOutputsDerivationTest extends munit.FunSuite {
 
   test("derive an instance for TestRegistersOutputs3") {
     given Context = DummyContext().unsafeRunSync()
+    given intEncoder: Encoder[Output[Int]] = (a: Output[Int]) => ???
+    given stringEncoder: Encoder[Output[String]] = (a: Output[String]) => ???
+    given floatEncoder: Encoder[Output[Float]] = (a: Output[Float]) => ???
 
     val testRegistersOutputs = TestRegistersOutputs3(Output(1), Output("XD"), Output(1.0f))
     val instance = summon[RegistersOutputs[TestRegistersOutputs3]]
     val expected = Map(
-      "aField" -> testRegistersOutputs.aField,
-      "alsoAField" -> testRegistersOutputs.alsoAField,
-      "anotherFields" -> testRegistersOutputs.anotherFields
+      "aField" -> (intEncoder, testRegistersOutputs.aField),
+      "alsoAField" -> (stringEncoder, testRegistersOutputs.alsoAField),
+      "anotherFields" -> (floatEncoder, testRegistersOutputs.anotherFields)
     )
     assertEquals(instance.toMapOfOutputs(testRegistersOutputs), expected)
   }
