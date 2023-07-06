@@ -41,8 +41,6 @@ def main(): Unit = Pulumi.run {
     )
   )
 
-  // deployment("dfdsfsd", DeploymentArgs(spec = DeploymentSpecArgs()))
-
   val nginxDeployment = deployment(
     "nginx",
     DeploymentArgs(
