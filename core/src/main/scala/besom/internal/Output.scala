@@ -58,6 +58,12 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
   private[internal] def getValueOrElse[B >: A](default: => B): Result[B] =
     dataResult.map(_.getValueOrElse(default))
 
+  private[internal] def getValueOrFail(msg: String): Result[A] =
+    dataResult.flatMap {
+      case OutputData.Known(_, _, Some(value)) => Result.pure(value)
+      case _                                   => Result.fail(Exception(msg))
+    }
+
   private[internal] def withIsSecret(isSecretEff: Result[Boolean]): Output[A] =
     Output(
       for

@@ -273,28 +273,23 @@ class ResourceOps(using ctx: Context, mdc: MDC[Label]):
 
   // This method returns an Option of Resource because for Stack there is no parent resource,
   // for any other resource the parent is either explicitly set in ResourceOptions or the stack is the parent.
-  private def resolveParent(typ: ResourceType, resourceOptions: ResourceOptions): Result[Option[Resource]] =
+  private def resolveParentUrn(typ: ResourceType, resourceOptions: ResourceOptions): Result[Option[String]] =
     if typ == Stack.RootPulumiStackTypeName then Result.pure(None)
     else
       resourceOptions.parent match
         case Some(parent) =>
           log.trace(s"resolveParent - parent found in ResourceOptions: $parent") *>
-            Result.pure(Some(parent))
+            parent.urn.getValue
         case None =>
-          log.trace(s"resolveParent - parent not found in ResourceOptions, using Stack") *>
-            ctx.getStack.map(Some(_))
+          log.trace(s"resolveParent - parent not found in ResourceOptions, using parent from Context") *>
+            ctx.getParentURN.map(Some(_))
 
-  private def resolveParentUrn(typ: ResourceType, resourceOptions: ResourceOptions): Result[Option[String]] =
-    resolveParent(typ, resourceOptions).flatMap {
-      case None =>
-        Result.pure(None)
-      case Some(parent) =>
-        parent.urn.getData.map(_.getValue)
-    }
+  private def resolveParentTransformations(typ: ResourceType, resourceOptions: ResourceOptions): Result[List[Unit]] =
+    ??? // TODO
 
   private def applyTransformations(
     resourceOptions: ResourceOptions,
-    parent: Option[Resource]
+    parentTransformations: List[Unit] // TODO this needs transformations from ResourceState, not Resource
   ): Result[ResourceOptions] =
     Result.pure(resourceOptions) // TODO resource transformations
 
@@ -369,12 +364,12 @@ class ResourceOps(using ctx: Context, mdc: MDC[Label]):
     resourceOptions: ResourceOptions
   ): Result[ResourceState] =
     for
-      _             <- log.debug(s"createResourceState")
-      parent        <- resolveParent(typ, resourceOptions)
-      opts          <- applyTransformations(resourceOptions, parent) // todo add logging
-      aliases       <- collapseAliases(opts) // todo add logging
-      providers     <- mergeProviders(typ, opts)
-      maybeProvider <- getProvider(typ, providers, opts)
+      _                     <- log.debug(s"createResourceState")
+      parentTransformations <- resolveParentTransformations(typ, resourceOptions)
+      opts                  <- applyTransformations(resourceOptions, parentTransformations) // todo add logging
+      aliases               <- collapseAliases(opts) // todo add logging
+      providers             <- mergeProviders(typ, opts)
+      maybeProvider         <- getProvider(typ, providers, opts)
     yield {
       val commonRS = CommonResourceState(
         children = Set.empty,

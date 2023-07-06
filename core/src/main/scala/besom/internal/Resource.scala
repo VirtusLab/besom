@@ -29,3 +29,5 @@ case class DependencyResource(urn: Output[String]) extends Resource derives Reso
 case class Stack(urn: Output[String]) extends ComponentResource derives ResourceDecoder
 object Stack:
   val RootPulumiStackTypeName: ResourceType = "pulumi:pulumi:Stack"
+
+case class ComponentUrn(urn: Output[String]) extends ComponentResource derives ResourceDecoder

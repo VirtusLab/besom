@@ -2,12 +2,61 @@ package besom.internal
 
 import besom.util.*, Types.*
 import besom.internal.logging.*
+import scala.annotation.implicitNotFound
+import besom.internal.ComponentResource
 
 case class InvokeOptions()
 
 type Providers = Map[String, ProviderResource]
 
-class Context(
+@implicitNotFound("TODO write a good message here") // TODO
+trait Context extends TaskTracker:
+  private[besom] def initializeStack: Result[Unit]
+  private[besom] def featureSupport: FeatureSupport
+  private[besom] def resources: Resources
+  private[besom] def runInfo: RunInfo
+  private[besom] def monitor: Monitor
+  private[besom] def getParentURN: Result[String]
+
+  private[besom] def isDryRun: Boolean
+  private[besom] def logger: BesomLogger
+
+  private[besom] def registerComponentResource[A <: ComponentResource: ResourceDecoder](
+    name: NonEmptyString,
+    typ: ResourceType
+  ): Result[A]
+
+  private[besom] def registerProvider[R <: Resource: ResourceDecoder, A: ProviderArgsEncoder](
+    typ: ProviderType,
+    name: NonEmptyString,
+    args: A,
+    options: CustomResourceOptions
+  ): Output[R]
+  private[besom] def registerResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
+    typ: ResourceType,
+    name: NonEmptyString,
+    args: A,
+    options: ResourceOptions
+  ): Output[R]
+  private[besom] def readResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
+    typ: ResourceType,
+    name: NonEmptyString,
+    args: A,
+    options: ResourceOptions
+  ): Output[R]
+  private[besom] def registerResourceOutputs(
+    urnResult: Result[String],
+    outputs: Map[String, (Encoder[?], Output[Any])]
+  ): Result[Unit]
+
+  private[besom] def close: Result[Unit]
+
+class ComponentContext(private val globalContext: Context, private val componentURN: Result[String]) extends Context:
+  export globalContext.{getParentURN => _, *}
+
+  def getParentURN: Result[String] = componentURN
+
+class ContextImpl(
   private[besom] val runInfo: RunInfo,
   private[besom] val featureSupport: FeatureSupport,
   val config: Config,
@@ -17,36 +66,50 @@ class Context(
   private[besom] val taskTracker: TaskTracker,
   private[besom] val stackPromise: Promise[Stack],
   private[besom] val resources: Resources
-) extends TaskTracker:
+) extends Context
+    with TaskTracker:
 
   val projectName: NonEmptyString = runInfo.project
   val stackName: NonEmptyString   = runInfo.stack
 
   export taskTracker.{registerTask, waitForAllTasks}
-  export resources.getStateFor
 
   private[besom] def isDryRun: Boolean = runInfo.dryRun
 
-  private[besom] def getStack: Result[Stack] = stackPromise.get
+  private[besom] def getParentURN: Result[String] =
+    stackPromise.get.flatMap(_.urn.getData).map(_.getValue).flatMap {
+      case Some(urn) => Result.pure(urn)
+      case None      => Result.fail(Exception("Stack urn is not available. This should not happen."))
+    }
 
   private[besom] def initializeStack: Result[Unit] =
     val rootPulumiStackName = projectName +++ "-" +++ stackName
+    val typ                 = Stack.RootPulumiStackTypeName
 
+    for
+      stack <- registerComponentResource[Stack](rootPulumiStackName, typ)
+      _     <- stackPromise.fulfill(stack)
+    yield ()
+
+  private[besom] def registerComponentResource[A <: ComponentResource: ResourceDecoder](
+    name: NonEmptyString,
+    typ: ResourceType
+  ): Result[A] =
     given Context = this
 
-    val label = Label.fromNameAndType(rootPulumiStackName, Stack.RootPulumiStackTypeName)
+    val label = Label.fromNameAndType(name, typ)
 
     MDC(Key.LabelKey, label) {
       for
-        stack <- ResourceOps().registerResourceInternal[Stack, EmptyArgs](
-          Stack.RootPulumiStackTypeName,
-          rootPulumiStackName,
+        comp <- ResourceOps().registerResourceInternal[A, EmptyArgs](
+          typ,
+          name,
           EmptyArgs(),
           ComponentResourceOptions(using this)() // TODO pass initial ResourceTransformations here
         )
-        _ <- registerResourceOutputsInternal()
-        _ <- stackPromise.fulfill(stack)
-      yield ()
+
+        urn <- comp.urn.getValue
+      yield comp
     }
 
   private[besom] def registerProvider[R <: Resource: ResourceDecoder, A: ProviderArgsEncoder](
@@ -78,8 +141,13 @@ class Context(
     args: A,
     options: ResourceOptions
   ): Output[R] = ???
-  // summon[ResourceDecoder[R]].makeFulfillable(using this) match
-  //  case (r, fulfillable) =>
+
+  private[besom] def registerResourceOutputs(
+    urnResult: Result[String],
+    outputs: Map[String, (Encoder[?], Output[Any])]
+  ): Result[Unit] =
+    for _ <- Result.unit
+    yield ()
 
   private[besom] def close: Result[Unit] =
     for
@@ -114,7 +182,7 @@ object Context:
     stackPromise: Promise[Stack],
     resources: Resources
   ): Context =
-    new Context(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, stackPromise, resources)
+    new ContextImpl(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, stackPromise, resources)
 
   def apply(
     runInfo: RunInfo,
