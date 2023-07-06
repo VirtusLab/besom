@@ -1,6 +1,7 @@
 //> using dep "org.virtuslab::besom-kubernetes:0.0.1-SNAPSHOT"
 
-import besom.*, util.NonEmptyString
+import besom.*
+import besom.util.NonEmptyString
 import besom.api.{kubernetes => k8s}
 
 import k8s.core.v1.inputs.*

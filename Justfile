@@ -47,6 +47,17 @@ test-sdk: compile-sdk test-core test-cats test-zio
 publish-local-core:
   scala-cli publish local core --version {{publish-version}} --doc=false
 
+# Publishes locally besom cats-effect extension
+publish-local-cats:
+	scala-cli publish local besom-cats --version {{publish-version}} --doc=false
+
+# Publishes locally besom zio extension
+publish-local-zio:
+	scala-cli publish local besom-zio --version {{publish-version}} --doc=false
+
+# Publishes locally all SDK modules: core, cats-effect extension, zio extension
+publish-local-sdk: publish-local-core publish-local-cats publish-local-zio
+
 # Cleans core build, sets up build for IDE again
 clean-core: 
 	scala-cli clean core && \

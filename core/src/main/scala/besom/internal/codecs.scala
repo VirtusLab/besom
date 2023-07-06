@@ -651,14 +651,14 @@ object Encoder:
     def encode(json: JsValue): Result[(Set[Resource], Value)] =
       Result.pure(Set.empty -> encodeInternal(json))
 
-  given optEncoder[A](using inner: Encoder[A]): Encoder[Option[A]] = new Encoder[Option[A]]:
+  given optEncoder[A](using inner: Encoder[A]): Encoder[Option[A]] with
     def encode(optA: Option[A]): Result[(Set[Resource], Value)] =
       optA match
         case Some(value) => inner.encode(value)
         case None        => Result.pure(Set.empty -> Null)
 
   // TODO pass keepResources from ctx
-  given outputEncoder[A](using inner: Encoder[Option[A]]): Encoder[Output[A]] = new Encoder[Output[A]]:
+  given outputEncoder[A](using inner: Encoder[Option[A]]): Encoder[Output[A]] with
     def encode(outA: Output[A]): Result[(Set[Resource], Value)] = outA.getData.flatMap { oda =>
       oda match
         case OutputData.Unknown(resources, isSecret) => // TODO Resource propagation

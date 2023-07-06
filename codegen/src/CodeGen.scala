@@ -65,9 +65,9 @@ object CodeGen {
       case namedType: NamedType =>
         namedType.typeUri match {
           case "pulumi.json#/Archive" =>
-            t"besom.types.PulumiArchive"
+            t"besom.internal.Archive"
           case "pulumi.json#/Asset" =>
-            t"besom.types.PulumiAsset"
+            t"besom.internal.Asset"
           case "pulumi.json#/Any" =>
             t"besom.types.PulumiAny"
           case "pulumi.json#/Json" =>
