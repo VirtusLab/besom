@@ -1,5 +1,6 @@
 package besom.internal
 
+import com.google.protobuf.struct.*
 import besom.util.*, Types.*
 import besom.internal.logging.*
 import scala.annotation.implicitNotFound
@@ -46,7 +47,7 @@ trait Context extends TaskTracker:
   ): Output[R]
   private[besom] def registerResourceOutputs(
     urnResult: Result[String],
-    outputs: Map[String, (Encoder[?], Output[Any])]
+    outputs: Map[String, Result[(Set[Resource], Value)]]
   ): Result[Unit]
 
   private[besom] def close: Result[Unit]
@@ -144,7 +145,7 @@ class ContextImpl(
 
   private[besom] def registerResourceOutputs(
     urnResult: Result[String],
-    outputs: Map[String, (Encoder[?], Output[Any])]
+    outputs: Map[String, Result[(Set[Resource], Value)]]
   ): Result[Unit] =
     for _ <- Result.unit
     yield ()

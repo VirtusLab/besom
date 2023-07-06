@@ -1,5 +1,6 @@
 package besom.internal
 
+import com.google.protobuf.struct.*
 import besom.internal.logging.{LocalBesomLogger => logger, BesomLogger}
 import besom.util.NonEmptyString
 import besom.util.Types.ResourceType
@@ -9,7 +10,7 @@ trait BesomModule:
 
   given rt: Runtime[Eff]
 
-  type Outputs = Map[String, (Encoder[?], Output[Any])]
+  type Outputs = Map[String, Result[(Set[Resource], Value)]]
 
   object Output extends OutputFactory
 
