@@ -23,7 +23,7 @@ import besom.internal.Output
       metadata = ObjectMetaArgs(
         name = "index-html-configmap",
         labels = labels,
-        namespace = appNamespace.metadata.name.map(_.get)
+        namespace = appNamespace.metadata.name.orEmpty
       ),
       data = Map(
         "index.html" -> html
@@ -41,7 +41,7 @@ import besom.internal.Output
           metadata = ObjectMetaArgs(
             name = "nginx-deployment",
             labels = labels,
-            namespace = appNamespace.metadata.name.map(_.get)
+            namespace = appNamespace.metadata.name.orEmpty
           ),
           spec = PodSpecArgs(
             containers = ContainerArgs(
@@ -62,7 +62,7 @@ import besom.internal.Output
               VolumeArgs(
                 name = "index-html",
                 configMap = ConfigMapVolumeSourceArgs(
-                  name = indexHtmlConfigMap.metadata.name.map(_.get)
+                  name = indexHtmlConfigMap.metadata.name.orEmpty
                 )
               )
             )
@@ -70,7 +70,7 @@ import besom.internal.Output
         )
       ),
       metadata = ObjectMetaArgs(
-        namespace = appNamespace.metadata.name.map(_.get)
+        namespace = appNamespace.metadata.name.orEmpty
       )
     )
   )
@@ -85,7 +85,7 @@ import besom.internal.Output
         )
       ),
       metadata = ObjectMetaArgs(
-        namespace = appNamespace.metadata.name.map(_.get),
+        namespace = appNamespace.metadata.name.orEmpty,
         labels = labels
       )
     )

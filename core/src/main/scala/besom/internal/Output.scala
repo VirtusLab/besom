@@ -41,6 +41,12 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
 
   def flatten[B](using ev: A <:< Output[B]): Output[B] = flatMap(a => ev(a))
 
+  def orEmpty[B](using ev: A <:< Option[B]): Output[B] = flatMap { a =>
+    ev(a) match
+      case Some(value) => Output(value)
+      case None        => Output.empty()
+  }
+
   def asPlaintext: Output[A] = withIsSecret(Result.pure(false))
 
   def asSecret: Output[A] = withIsSecret(Result.pure(true))

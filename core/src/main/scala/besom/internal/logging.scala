@@ -21,10 +21,8 @@ object logging:
       case Key.LabelKey =>
         val opt = inner.get(key.value)
 
-        println(opt)
-        val v = opt.map(_.apply())
-        println(v)
-        v
+        opt
+          .map(_.apply())
           .getOrElse { throw Exception(s"Expected key '${key.value}' was not found in MDC!") }
           .asInstanceOf[B]
 
