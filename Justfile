@@ -133,7 +133,7 @@ publish-local-provider-sdk schema-name:
 # Demo
 ####################
 
-# Build and publish core, run the sample kubernetes Pulumi app that resides in ./experimental directory
+# Run the sample kubernetes Pulumi app that resides in ./experimental directory
 liftoff: 
         cd experimental && \
         pulumi up --stack liftoff

@@ -293,14 +293,18 @@ object CodeGen {
       }
     }
 
+    def isRequiredProperty(propertyName: String) = objectTypeDefinition.required.contains(propertyName)
+
     val baseClassParams = objectProperties.map { case (propertyName, propertyDefinition) =>
-      val isRequired = objectTypeDefinition.required.contains(propertyName)
-      makeNonResourceBaseClassParam(propertyName = propertyName, property = propertyDefinition, isRequired = isRequired)
+      makeNonResourceBaseClassParam(propertyName = propertyName, property = propertyDefinition, isRequired = isRequiredProperty(propertyName))
     }
 
     val baseOutputExtensionMethods = objectProperties.map { case (propertyName, propertyDefinition) =>
-      val isRequired = objectTypeDefinition.required.contains(propertyName)
-      makeNonResourceBaseOutputExtensionMethod(propertyName = propertyName, property = propertyDefinition, isRequired = isRequired)
+      makeNonResourceBaseOutputExtensionMethod(propertyName = propertyName, property = propertyDefinition, isRequired = isRequiredProperty(propertyName))
+    }
+
+    val baseOptionOutputExtensionMethods = objectProperties.map { case (propertyName, propertyDefinition) =>
+      makeNonResourceBaseOptionOutputExtensionMethod(propertyName = propertyName, property = propertyDefinition, isRequired = isRequiredProperty(propertyName))
     }
 
     val argsClassParams = objectProperties.map { case (propertyName, propertyDefinition) =>
@@ -308,8 +312,7 @@ object CodeGen {
     }
 
     val argsCompanionApplyParams = objectProperties.map { case (propertyName, propertyDefinition) =>
-      val isRequired = objectTypeDefinition.required.contains(propertyName)
-      makeArgsCompanionApplyParam(propertyName = propertyName, property = propertyDefinition, isRequired = isRequired)
+      makeArgsCompanionApplyParam(propertyName = propertyName, property = propertyDefinition, isRequired = isRequiredProperty(propertyName))
     }
 
     val argsCompanionApplyBodyArgs = objectProperties.map { case (propertyName, propertyDefinition) =>
@@ -332,8 +335,14 @@ object CodeGen {
         val classNameTerminator = if (baseClassName.endsWith("_")) " " else "" // colon after underscore would be treated as a part of the name
 
         s"""|object ${baseClassName}${classNameTerminator}:
-            |  extension(output: Output[$baseClassName])
-            |${baseOutputExtensionMethods.map(meth => s"    ${meth}").mkString("\n")}""".stripMargin
+            |  given outputOps: {} with
+            |    extension(output: Output[$baseClassName])
+            |${baseOutputExtensionMethods.map(meth => s"      ${meth}").mkString("\n")}
+            |
+            |  given optionOutputOps: {} with
+            |    extension(output: Output[Option[$baseClassName]])
+            |${baseOptionOutputExtensionMethods.map(meth => s"      ${meth}").mkString("\n")}
+            |""".stripMargin
       } else {
         s"""object $baseClassName"""
       }
@@ -441,12 +450,17 @@ object CodeGen {
       }
     }
 
+    val requiredOutputs = resourceDefinition.required ++ List("urn", "id")
+
+    def isRequiredOutputProperty(propertyName: String) = requiredOutputs.contains(propertyName)
+    def isRequiredInputProperty(propertyName: String) = resourceDefinition.requiredInputs.contains(propertyName)
+
     val baseClassParams = resourceProperties.map { case (propertyName, propertyDefinition) =>
-      makeResourceBaseClassParam(propertyName = propertyName, property = propertyDefinition)
+      makeResourceBaseClassParam(propertyName = propertyName, property = propertyDefinition, isRequired = isRequiredOutputProperty(propertyName))
     }
 
     val baseOutputExtensionMethods = resourceProperties.map { case (propertyName, propertyDefinition) =>
-      makeResourceBaseOutputExtensionMethod(propertyName = propertyName, property = propertyDefinition)
+      makeResourceBaseOutputExtensionMethod(propertyName = propertyName, property = propertyDefinition, isRequired = isRequiredOutputProperty(propertyName))
     }
 
     val inputProperties = {
@@ -465,8 +479,7 @@ object CodeGen {
 
     val argsCompanionApplyParams = inputProperties.collect {
       case (propertyName, propertyDefinition) if propertyDefinition.const.isEmpty =>
-        val isRequired = resourceDefinition.requiredInputs.contains(propertyName)
-        makeArgsCompanionApplyParam(propertyName = propertyName, property = propertyDefinition, isRequired)
+        makeArgsCompanionApplyParam(propertyName = propertyName, property = propertyDefinition, isRequired = isRequiredInputProperty(propertyName))
     }
 
     val argsCompanionApplyBodyArgs = inputProperties.map { case (propertyName, propertyDefinition) =>
@@ -489,8 +502,9 @@ object CodeGen {
     val baseCompanion =
       if (hasOutputExtensions) {
         s"""|object $baseClassName:
-            |  extension(output: Output[$baseClassName])
-            |${baseOutputExtensionMethods.map(meth => s"    ${meth}").mkString("\n")}""".stripMargin
+            |  given outputOps: {} with
+            |    extension(output: Output[$baseClassName])
+            |${baseOutputExtensionMethods.map(meth => s"      ${meth}").mkString("\n")}""".stripMargin
       } else {
         s"""object $baseClassName"""
       }
@@ -563,9 +577,9 @@ object CodeGen {
     )
   }
 
-  private def makeResourceBaseClassParam(propertyName: String, property: PropertyDefinition)(implicit typeMapper: TypeMapper, logger: Logger) = {
+  private def makeResourceBaseClassParam(propertyName: String, property: PropertyDefinition, isRequired: Boolean)(implicit typeMapper: TypeMapper, logger: Logger) = {
     val fieldBaseType = property.typeReference.asScalaType()
-    val fieldType = t"Output[$fieldBaseType]"
+    val fieldType = if (isRequired) t"Output[$fieldBaseType]" else t"Output[Option[$fieldBaseType]]"
     Term.Param(
       mods = List.empty,
       name = Term.Name(manglePropertyName(propertyName)),
@@ -585,18 +599,26 @@ object CodeGen {
     ).syntax
   }
 
-  private def makeResourceBaseOutputExtensionMethod(propertyName: String, property: PropertyDefinition)(implicit typeMapper: TypeMapper, logger: Logger) = {
+  private def makeResourceBaseOutputExtensionMethod(propertyName: String, property: PropertyDefinition, isRequired: Boolean)(implicit typeMapper: TypeMapper, logger: Logger) = {
     val propertyTermName = Term.Name(manglePropertyName(propertyName))
     val fieldBaseType = property.typeReference.asScalaType()
-    val fieldType = t"Output[$fieldBaseType]"
-    q"""def ${propertyTermName}: $fieldType = output.flatMap(_.${propertyTermName})""".syntax
+    val resultType = if (isRequired) t"Output[$fieldBaseType]" else t"Output[Option[$fieldBaseType]]"
+    q"""def ${propertyTermName}: $resultType = output.flatMap(_.${propertyTermName})""".syntax
   }
 
   private def makeNonResourceBaseOutputExtensionMethod(propertyName: String, property: PropertyDefinition, isRequired: Boolean)(implicit typeMapper: TypeMapper, logger: Logger) = {
     val propertyTermName = Term.Name(manglePropertyName(propertyName))
     val fieldBaseType = property.typeReference.asScalaType()
-    val fieldType = if (isRequired) t"Output[$fieldBaseType]" else t"Output[Option[$fieldBaseType]]"
-    q"""def ${propertyTermName}: $fieldType = output.map(_.${propertyTermName})""".syntax
+    val resultType = if (isRequired) t"Output[$fieldBaseType]" else t"Output[Option[$fieldBaseType]]"
+    q"""def ${propertyTermName}: $resultType = output.map(_.${propertyTermName})""".syntax
+  }
+
+  private def makeNonResourceBaseOptionOutputExtensionMethod(propertyName: String, property: PropertyDefinition, isRequired: Boolean)(implicit typeMapper: TypeMapper, logger: Logger) = {
+    val propertyTermName = Term.Name(manglePropertyName(propertyName))
+    val fieldBaseType = property.typeReference.asScalaType()
+    val resultType = t"Output[Option[$fieldBaseType]]"
+    val innerMethodName = if (isRequired) Term.Name("map") else Term.Name("flatMap")
+    q"""def ${propertyTermName}: $resultType = output.map(_.${innerMethodName}(_.${propertyTermName}))""".syntax
   }
 
   private def makeArgsClassParam(propertyName: String, property: PropertyDefinition)(implicit typeMapper: TypeMapper, logger: Logger) = {
