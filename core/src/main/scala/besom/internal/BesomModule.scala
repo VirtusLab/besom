@@ -66,8 +66,8 @@ trait BesomModule:
               "Component resource is not available. This should not happen."
             }
             .flatMap { a =>
-              val componentOutputs = RegistersOutputs[A].toMapOfOutputs(a)
-              ctx.registerResourceOutputs(name, typ, urnRes, componentOutputs) *> Result.pure(a)
+              val serializedOutputs = RegistersOutputs[A].serializeOutputs(a)
+              ctx.registerResourceOutputs(name, typ, urnRes, serializedOutputs) *> Result.pure(a)
             }
         }
         .map(OutputData(_))

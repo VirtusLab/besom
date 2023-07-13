@@ -19,7 +19,7 @@ class RegistersOutputsDerivationTest extends munit.FunSuite {
     )
 
     assertEquals(
-      instance.toMapOfOutputs(testRegistersOutputs).unsafeRunSync(),
+      instance.serializeOutputs(testRegistersOutputs).unsafeRunSync(),
       expectedStruct
     )
   }
@@ -45,7 +45,7 @@ class RegistersOutputsDerivationTest extends munit.FunSuite {
       )
     )
     assertEquals(
-      instance.toMapOfOutputs(testRegistersOutputs).unsafeRunSync(),
+      instance.serializeOutputs(testRegistersOutputs).unsafeRunSync(),
       expectedStruct
     )
   }

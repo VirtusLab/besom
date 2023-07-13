@@ -4,18 +4,18 @@ import com.google.protobuf.struct.*
 import scala.quoted.*
 
 trait RegistersOutputs[A <: ComponentResource & Product]:
-  def toMapOfOutputs(a: A): Result[Struct]
+  def serializeOutputs(a: A): Result[Struct]
 
 object RegistersOutputs:
   def apply[A <: ComponentResource & Product](using ro: RegistersOutputs[A]): RegistersOutputs[A] = ro
 
   inline given derived[A <: ComponentResource & Product]: RegistersOutputs[A] = new RegistersOutputs[A] {
-    def toMapOfOutputs(a: A): Result[Struct] = derivedImpl[A](a)
+    def serializeOutputs(a: A): Result[Struct] = derivedImpl[A](a)
   }
 
-  private inline def derivedImpl[A](a: A): Result[Struct] = ${ toMapOfOutputsImpl[A]('a) }
+  private inline def derivedImpl[A](a: A): Result[Struct] = ${ serializeOutputsImpl[A]('a) }
 
-  def toMapOfOutputsImpl[A: Type](using Quotes)(a: Expr[Any]): Expr[Result[Struct]] = {
+  def serializeOutputsImpl[A: Type](using Quotes)(a: Expr[Any]): Expr[Result[Struct]] = {
     import quotes.reflect.*
     val tpe          = TypeRepr.of[A]
     val fields       = tpe.typeSymbol.caseFields
