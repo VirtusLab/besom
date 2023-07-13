@@ -10,7 +10,7 @@ trait BesomModule:
 
   given rt: Runtime[Eff]
 
-  type Outputs = Map[String, Result[(Set[Resource], Value)]]
+  type Outputs = Result[Struct] // TODO this needs to be changed to an opaque probably
 
   object Output extends OutputFactory
 
@@ -28,8 +28,8 @@ trait BesomModule:
       featureSupport <- FeatureSupport(monitor)
       _              <- logger.info(s"Resolved feature support, spawning context and executing user program.")
       ctx            <- Context(runInfo, taskTracker, monitor, engine, logger, featureSupport, config)
-      userOutputs    <- program(using ctx).getValueOrElse(Map.empty)
-      -              <- ctx.registerResourceOutputs(ctx.getParentURN, userOutputs) // TODO register outputs!!!
+      userOutputs    <- program(using ctx).getValueOrElse(Result.pure(Struct()))
+      -              <- Stack.registerStackOutputs(runInfo, userOutputs)(using ctx)
       _              <- ctx.waitForAllTasks
       _              <- ctx.close
     yield ()
@@ -47,28 +47,26 @@ trait BesomModule:
   def exports(outputs: (String, Output[Any])*)(using Context): Output[Map[String, Output[Any]]] = Output(outputs.toMap)
 
   def component[A <: ComponentResource & Product: RegistersOutputs](name: NonEmptyString, typ: ResourceType)(
-    f: Context ?=> Output[A]
+    f: Context ?=> ComponentBase ?=> Output[A]
   )(using ctx: Context): Output[A] =
     Output {
       ctx
-        .registerComponentResource[ComponentUrn](name, typ)
-        .flatMap { componentURN =>
-          val urnRes: Result[String] = componentURN.urn.getValue.flatMap { // TODO include getValueOrFail
-            case Some(urn) => Result.pure(urn)
-            case None =>
-              Result.fail(Exception(s"Urn for component resource $name is not available. This should not happen."))
+        .registerComponentResource(name, typ)
+        .flatMap { componentBase =>
+          val urnRes: Result[String] = componentBase.urn.getValueOrFail {
+            s"Urn for component resource $name is not available. This should not happen."
           }
 
           val componentContext = ComponentContext(ctx, urnRes)
-          val componentOutput  = f(using componentContext)
-          componentOutput.getValue
-            .flatMap { // TODO include getValueOrFail
-              case Some(component) => Result.pure(component)
-              case None => Result.fail(Exception("Component resource is not available. This should not happen."))
+          val componentOutput  = f(using componentContext)(using componentBase)
+
+          componentOutput
+            .getValueOrFail {
+              "Component resource is not available. This should not happen."
             }
             .flatMap { a =>
               val componentOutputs = RegistersOutputs[A].toMapOfOutputs(a)
-              ctx.registerResourceOutputs(urnRes, componentOutputs) *> Result.pure(a)
+              ctx.registerResourceOutputs(name, typ, urnRes, componentOutputs) *> Result.pure(a)
             }
         }
         .map(OutputData(_))

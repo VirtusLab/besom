@@ -26,10 +26,11 @@ class Config private (
           Result.pure(OutputData.empty())
 
       Output(result)
-    else Output(OutputData(Set.empty, configMap.get(fullKey(key)), isSecret = false))
+    else Output.ofData(OutputData(Set.empty, configMap.get(fullKey(key)), isSecret = false))
 
   def getSecret(key: String)(using ctx: Context): Output[String] =
-    if configSecretKeys.contains(key) then Output(OutputData(Set.empty, configMap.get(fullKey(key)), isSecret = true))
+    if configSecretKeys.contains(key) then
+      Output.ofData(OutputData(Set.empty, configMap.get(fullKey(key)), isSecret = true))
     else Output(ctx.logger.warn(s"Config key $key is not a secret") *> Result.pure(OutputData.empty(isSecret = true)))
 
   def getDouble(key: String)(using Context): Output[Double] =

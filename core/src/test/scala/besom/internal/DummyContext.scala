@@ -34,9 +34,9 @@ object DummyContext:
     keepOutputValues: Boolean = false
   ): Result[Context] =
     for
-      taskTracker <- TaskTracker()
-      stack       <- Promise[Stack]()
-      logger      <- BesomLogger.local()
-      config      <- Config(runInfo.project, Map.empty, Set.empty)
-      resources   <- Resources()
-    yield Context(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, stack, resources)
+      taskTracker  <- TaskTracker()
+      stackPromise <- Promise[Stack]()
+      logger       <- BesomLogger.local()
+      config       <- Config(runInfo.project, Map.empty, Set.empty)
+      resources    <- Resources()
+    yield Context(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, stackPromise)

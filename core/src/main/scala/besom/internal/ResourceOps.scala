@@ -1,13 +1,29 @@
 package besom.internal
 
-import com.google.protobuf.struct.Struct
-import pulumirpc.resource.RegisterResourceRequest
+import com.google.protobuf.struct.*
+import pulumirpc.resource.*
 import pulumirpc.resource.RegisterResourceRequest.PropertyDependencies
 
 import besom.util.*, Types.*
 import besom.internal.logging.*
+import fansi.Str
 
 class ResourceOps(using ctx: Context, mdc: MDC[Label]):
+
+  private[besom] def registerResourceOutputsInternal(
+    urnResult: Result[String],
+    outputs: Result[Struct]
+  ): Result[Unit] =
+    urnResult.flatMap { urn =>
+      outputs.flatMap { struct =>
+        val request = RegisterResourceOutputsRequest(
+          urn = urn,
+          outputs = if struct.fields.isEmpty then None else Some(struct)
+        )
+
+        ctx.monitor.registerResourceOutputs(request)
+      }
+    }
 
   private[besom] def resolveProviderReferences(state: ResourceState): Result[Map[String, String]] =
     Result
@@ -399,4 +415,5 @@ class ResourceOps(using ctx: Context, mdc: MDC[Label]):
             common = commonRS
           )
         case DependencyResource(urn) => throw new Exception("DependencyResource should not be registered")
+        case ComponentBase(urn)      => throw new Exception("ComponentBase should not be registered")
     }

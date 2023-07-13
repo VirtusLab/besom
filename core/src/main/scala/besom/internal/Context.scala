@@ -10,7 +10,7 @@ case class InvokeOptions()
 
 type Providers = Map[String, ProviderResource]
 
-@implicitNotFound("TODO write a good message here") // TODO
+@implicitNotFound("TODO Context is missing, this message has to be improved") // TODO
 trait Context extends TaskTracker:
   private[besom] def initializeStack: Result[Unit]
   private[besom] def featureSupport: FeatureSupport
@@ -22,10 +22,10 @@ trait Context extends TaskTracker:
   private[besom] def isDryRun: Boolean
   private[besom] def logger: BesomLogger
 
-  private[besom] def registerComponentResource[A <: ComponentResource: ResourceDecoder](
+  private[besom] def registerComponentResource(
     name: NonEmptyString,
     typ: ResourceType
-  ): Result[A]
+  ): Result[ComponentBase]
 
   private[besom] def registerProvider[R <: Resource: ResourceDecoder, A: ProviderArgsEncoder](
     typ: ProviderType,
@@ -33,21 +33,26 @@ trait Context extends TaskTracker:
     args: A,
     options: CustomResourceOptions
   ): Output[R]
+
   private[besom] def registerResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
     typ: ResourceType,
     name: NonEmptyString,
     args: A,
     options: ResourceOptions
   ): Output[R]
+
   private[besom] def readResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
     typ: ResourceType,
     name: NonEmptyString,
     args: A,
     options: ResourceOptions
   ): Output[R]
+
   private[besom] def registerResourceOutputs(
+    name: NonEmptyString,
+    typ: ResourceType,
     urnResult: Result[String],
-    outputs: Map[String, Result[(Set[Resource], Value)]]
+    outputs: Result[Struct]
   ): Result[Unit]
 
   private[besom] def close: Result[Unit]
@@ -65,13 +70,10 @@ class ContextImpl(
   private[besom] val monitor: Monitor,
   private[besom] val engine: Engine,
   private[besom] val taskTracker: TaskTracker,
-  private[besom] val stackPromise: Promise[Stack],
-  private[besom] val resources: Resources
+  private[besom] val resources: Resources,
+  private val stackPromise: Promise[Stack]
 ) extends Context
     with TaskTracker:
-
-  val projectName: NonEmptyString = runInfo.project
-  val stackName: NonEmptyString   = runInfo.stack
 
   export taskTracker.{registerTask, waitForAllTasks}
 
@@ -84,25 +86,19 @@ class ContextImpl(
     }
 
   private[besom] def initializeStack: Result[Unit] =
-    val rootPulumiStackName = projectName +++ "-" +++ stackName
-    val typ                 = Stack.RootPulumiStackTypeName
+    Stack.initializeStack(runInfo)(using this).flatMap(stackPromise.fulfill)
 
-    for
-      stack <- registerComponentResource[Stack](rootPulumiStackName, typ)
-      _     <- stackPromise.fulfill(stack)
-    yield ()
-
-  private[besom] def registerComponentResource[A <: ComponentResource: ResourceDecoder](
+  private[besom] def registerComponentResource(
     name: NonEmptyString,
     typ: ResourceType
-  ): Result[A] =
+  ): Result[ComponentBase] =
     given Context = this
 
     val label = Label.fromNameAndType(name, typ)
 
     MDC(Key.LabelKey, label) {
       for
-        comp <- ResourceOps().registerResourceInternal[A, EmptyArgs](
+        comp <- ResourceOps().registerResourceInternal[ComponentBase, EmptyArgs](
           typ,
           name,
           EmptyArgs(),
@@ -144,20 +140,21 @@ class ContextImpl(
   ): Output[R] = ???
 
   private[besom] def registerResourceOutputs(
+    name: NonEmptyString,
+    typ: ResourceType,
     urnResult: Result[String],
-    outputs: Map[String, Result[(Set[Resource], Value)]]
+    outputs: Result[Struct]
   ): Result[Unit] =
-    for _ <- Result.unit
-    yield ()
+    given Context = this
+    MDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
+      ResourceOps().registerResourceOutputsInternal(urnResult, outputs)
+    }
 
   private[besom] def close: Result[Unit] =
     for
       _ <- monitor.close()
       _ <- engine.close()
     yield ()
-
-  // TODO move out to ops
-  private[besom] def registerResourceOutputsInternal(): Result[Unit] = Result.unit // TODO
 
   private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
     typ: ResourceType,
@@ -180,10 +177,10 @@ object Context:
     monitor: Monitor,
     engine: Engine,
     taskTracker: TaskTracker,
-    stackPromise: Promise[Stack],
-    resources: Resources
+    resources: Resources,
+    stackPromise: Promise[Stack]
   ): Context =
-    new ContextImpl(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, stackPromise, resources)
+    new ContextImpl(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, stackPromise)
 
   def apply(
     runInfo: RunInfo,
@@ -195,9 +192,9 @@ object Context:
     taskTracker: TaskTracker
   ): Result[Context] =
     for
-      stack     <- Promise[Stack]()
-      resources <- Resources()
-    yield apply(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, stack, resources)
+      resources    <- Resources()
+      stackPromise <- Promise[Stack]()
+    yield apply(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, stackPromise)
 
   def apply(
     runInfo: RunInfo,

@@ -80,7 +80,7 @@ object IsOutputData:
   */
 trait OutputFactory:
   def apply[A](value: A)(using ctx: Context, ev: Not[IsOutputData[A]]): Output[A] = Output(value)
-  def apply[A](data: OutputData[A])(using ctx: Context): Output[A]                = Output(data)
+  def ofData[A](data: OutputData[A])(using ctx: Context): Output[A]               = Output.ofData(data)
   def apply[A](using ctx: Context)(value: => Result[OutputData[A]]): Output[A]    = Output(value)
 
   def secret[A](value: A)(using ctx: Context): Output[A] = Output.secret(value)
@@ -103,15 +103,15 @@ object Output:
   ): Output[A] =
     new Output[A](ctx.registerTask(OutputData.traverseResult(value)))
 
-  // could this be pure without implicit Context? it's not async in any way so?
+  // TODO could this be pure without implicit Context? it's not async in any way so?
   def apply[A](value: A)(using ev: Not[IsOutputData[A]])(using ctx: Context): Output[A] =
     new Output[A](ctx.registerTask(Result.pure(OutputData(value))))
 
   def apply[A](value: => Result[OutputData[A]])(using ctx: Context): Output[A] =
     new Output[A](ctx.registerTask((value)))
 
-  // could this be pure without implicit Context? it's not async in any way so?
-  def apply[A](data: OutputData[A])(using ctx: Context): Output[A] =
+  // TODO could this be pure without implicit Context? it's not async in any way so?
+  def ofData[A](data: OutputData[A])(using ctx: Context): Output[A] =
     new Output[A](ctx.registerTask(Result.pure(data)))
 
   def secret[A](using ctx: Context)(value: A): Output[A] =
@@ -137,35 +137,3 @@ object Output:
             Output.traverseMap(m.asInstanceOf[Map[String, Output[A]]])
           else if isSecret then Output.secret(m.asInstanceOf[Map[String, A]])
           else Output(m.asInstanceOf[Map[String, A]])
-
-// prototype, not really useful, sadly
-// object OutputLift extends OutputGiven0:
-
-//   def lift[F[+_], A, In <: Output[A] | F[A] | A](using ctx: Context)(
-//     value: In
-//   )(using ol: OutputLifter[In, A]): Output[A] = ol.lift(value)
-
-//   trait OutputLifter[F[+_], In, A]:
-//     def lift(in: => In): Output[F, A]
-
-// trait OutputGiven0 extends OutputGiven1:
-//   self: OutputLift.type =>
-
-//   given [F[+_], A](using Context.Of[F]): OutputLifter[F, Output[F, A], A] =
-//     new OutputLifter[F, Output[F, A], A]:
-//       def lift(in: => Output[F, A]): Output[F, A] = in
-
-// trait OutputGiven1 extends OutputGiven2:
-//   self: OutputLift.type =>
-
-//   import scala.util.{NotGiven => Not}
-
-//   given [F[+_], A0, A >: A0](using ctx: Context.Of[F], ev: Not[IsOutputData[A0]]): OutputLifter[F, F[A0], A] =
-//     new OutputLifter[F, F[A0], A]:
-//       def lift(in: => F[A0]): Output[F, A0] = Output.apply[ctx.F].apply(using ev)(in)
-
-// trait OutputGiven2:
-//   self: OutputLift.type =>
-//   given [F[+_], A](using Context.Of[F]): OutputLifter[F, A, A] =
-//     new OutputLifter[F, A, A]:
-//       def lift(in: => A): Output[F, A] = Output(in)

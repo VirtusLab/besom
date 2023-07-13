@@ -2,44 +2,51 @@ package besom.internal
 
 import besom.util.*
 import RunResult.{given, *}
+import com.google.protobuf.struct.Struct
 
 class RegistersOutputsDerivationTest extends munit.FunSuite {
-  case class TestRegistersOutputs(a: Output[Int]) extends ComponentResource {
-    def urn: besom.internal.Output[String] = ???
-  }
+  case class TestRegistersOutputs(a: Output[Int])(using ComponentBase) extends ComponentResource
 
   test("derive an instance for TestRegistersOutputs") {
-    given Context = DummyContext().unsafeRunSync()
+    given Context                        = DummyContext().unsafeRunSync()
+    given ComponentBase                  = ComponentBase(Output("urn:foo:bar"))
     val intEncoder: Encoder[Output[Int]] = summon
 
     val testRegistersOutputs = TestRegistersOutputs(Output(1))
-    val instance = summon[RegistersOutputs[TestRegistersOutputs]]
+    val instance             = summon[RegistersOutputs[TestRegistersOutputs]]
+    val expectedStruct = Struct(
+      Map("a" -> intEncoder.encode(testRegistersOutputs.a).map(_._2).unsafeRunSync())
+    )
+
     assertEquals(
-      instance.toMapOfOutputs(testRegistersOutputs).view.mapValues(_.unsafeRunSync()).toMap,
-      Map("a" -> intEncoder.encode(testRegistersOutputs.a).unsafeRunSync())
+      instance.toMapOfOutputs(testRegistersOutputs).unsafeRunSync(),
+      expectedStruct
     )
   }
 
-  case class TestRegistersOutputs3(aField: Output[Int], alsoAField: Output[String], anotherFields: Output[Boolean]) extends ComponentResource {
-    def urn: besom.internal.Output[String] = ???
-  }
+  case class TestRegistersOutputs3(aField: Output[Int], alsoAField: Output[String], anotherFields: Output[Boolean])(
+    using ComponentBase
+  ) extends ComponentResource
 
   test("derive an instance for TestRegistersOutputs3") {
-    given Context = DummyContext().unsafeRunSync()
-    val intEncoder: Encoder[Output[Int]] = summon
-    val stringEncoder: Encoder[Output[String]] = summon
+    given Context                                = DummyContext().unsafeRunSync()
+    given ComponentBase                          = ComponentBase(Output("urn:foo:bar"))
+    val intEncoder: Encoder[Output[Int]]         = summon
+    val stringEncoder: Encoder[Output[String]]   = summon
     val booleanEncoder: Encoder[Output[Boolean]] = summon
 
     val testRegistersOutputs = TestRegistersOutputs3(Output(1), Output("XD"), Output(false))
-    val instance = summon[RegistersOutputs[TestRegistersOutputs3]]
-    val expected = Map(
-      "aField" -> intEncoder.encode(testRegistersOutputs.aField).unsafeRunSync(),
-      "alsoAField" -> stringEncoder.encode(testRegistersOutputs.alsoAField).unsafeRunSync(),
-      "anotherFields" -> booleanEncoder.encode(testRegistersOutputs.anotherFields).unsafeRunSync()
+    val instance             = summon[RegistersOutputs[TestRegistersOutputs3]]
+    val expectedStruct = Struct(
+      Map(
+        "aField" -> intEncoder.encode(testRegistersOutputs.aField).map(_._2).unsafeRunSync(),
+        "alsoAField" -> stringEncoder.encode(testRegistersOutputs.alsoAField).map(_._2).unsafeRunSync(),
+        "anotherFields" -> booleanEncoder.encode(testRegistersOutputs.anotherFields).map(_._2).unsafeRunSync()
+      )
     )
     assertEquals(
-      instance.toMapOfOutputs(testRegistersOutputs).view.mapValues(_.unsafeRunSync()).toMap,
-      expected
+      instance.toMapOfOutputs(testRegistersOutputs).unsafeRunSync(),
+      expectedStruct
     )
   }
 
