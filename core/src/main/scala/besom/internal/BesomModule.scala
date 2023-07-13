@@ -42,14 +42,15 @@ trait BesomModule:
 
   def log(using ctx: Context): BesomLogger = ctx.logger
 
-  def urn(using ctx: Context): Output[String] = Output(ctx.getParentURN.map(OutputData(_)))
+  def urn(using ctx: Context): Output[String] =
+    besom.internal.Output.ofData(ctx.getParentURN.map(OutputData(_)))
 
   def exports(outputs: (String, Output[Any])*)(using Context): Output[Map[String, Output[Any]]] = Output(outputs.toMap)
 
   def component[A <: ComponentResource & Product: RegistersOutputs](name: NonEmptyString, typ: ResourceType)(
     f: Context ?=> ComponentBase ?=> Output[A]
   )(using ctx: Context): Output[A] =
-    Output {
+    besom.internal.Output.ofData {
       ctx
         .registerComponentResource(name, typ)
         .flatMap { componentBase =>

@@ -15,12 +15,10 @@ import besom.util.NotProvided
 class Output[+A] private[internal] (using private[besom] val ctx: Context)(
   private val dataResult: Result[OutputData[A]]
 ):
-  import IsOutputData.given
-
-  def map[B](f: A => B): Output[B] = Output(dataResult.map(_.map(f)))
+  def map[B](f: A => B): Output[B] = Output.ofData(dataResult.map(_.map(f)))
 
   def flatMap[B](f: A => Output[B]): Output[B] =
-    Output(
+    Output.ofData(
       for
         outputData: OutputData[A]         <- dataResult
         nested: OutputData[OutputData[B]] <- outputData.traverseResult(a => f(a).getData)
@@ -29,7 +27,7 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
 
   // EXTREMELY EXPERIMENTAL
   def flatMap[F[_]: Result.ToFuture, B](f: A => F[B]): Output[B] =
-    Output(
+    Output.ofData(
       for
         outputData: OutputData[A]         <- dataResult
         nested: OutputData[OutputData[B]] <- outputData.traverseResult(a => Result.eval(f(a)).map(OutputData(_)))
@@ -37,7 +35,7 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
     )
 
   def zip[B](that: => Output[B])(using z: Zippable[A, B]): Output[z.Out] =
-    Output(dataResult.zip(that.getData).map((a, b) => a.zip(b)))
+    Output.ofData(dataResult.zip(that.getData).map((a, b) => a.zip(b)))
 
   def flatten[B](using ev: A <:< Output[B]): Output[B] = flatMap(a => ev(a))
 
@@ -65,25 +63,19 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
     }
 
   private[internal] def withIsSecret(isSecretEff: Result[Boolean]): Output[A] =
-    Output(
+    Output.ofData(
       for
         secret <- isSecretEff
         o      <- dataResult
       yield o.withIsSecret(secret)
     )
 
-sealed trait IsOutputData[A]
-object IsOutputData:
-  given [A](using A =:= OutputData[_]): IsOutputData[OutputData[_]] = null
-
-/** These factory methods should be the only way to create Output instances!
+/** These factory methods should be the only way to create Output instances in user code!
   */
 trait OutputFactory:
-  def apply[A](value: A)(using ctx: Context, ev: Not[IsOutputData[A]]): Output[A] = Output(value)
-  def ofData[A](data: OutputData[A])(using ctx: Context): Output[A]               = Output.ofData(data)
-  def apply[A](using ctx: Context)(value: => Result[OutputData[A]]): Output[A]    = Output(value)
-
-  def secret[A](value: A)(using ctx: Context): Output[A] = Output.secret(value)
+  def eval[F[_]: Result.ToFuture, A](value: F[A])(using ctx: Context): Output[A] = Output.eval(value)
+  def apply[A](value: A)(using ctx: Context): Output[A]                          = Output(value)
+  def secret[A](value: A)(using ctx: Context): Output[A]                         = Output.secret(value)
 
 object Output:
   // should be NonEmptyString
@@ -98,19 +90,24 @@ object Output:
   def empty(isSecret: Boolean = false)(using ctx: Context): Output[Nothing] =
     new Output(ctx.registerTask(Result.pure(OutputData.empty[Nothing](isSecret = isSecret))))
 
-  def apply[A](using ev: Not[IsOutputData[A]])(value: => Result[A])(using
+  def eval[F[_]: Result.ToFuture, A](value: F[A])(using
+    ctx: Context
+  ): Output[A] =
+    new Output[A](ctx.registerTask(Result.eval(value)).map(OutputData(_)))
+
+  def apply[A](value: => Result[A])(using
     ctx: Context
   ): Output[A] =
     new Output[A](ctx.registerTask(OutputData.traverseResult(value)))
 
-  // TODO could this be pure without implicit Context? it's not async in any way so?
-  def apply[A](value: A)(using ev: Not[IsOutputData[A]])(using ctx: Context): Output[A] =
+  // TODO could this be pure without implicit Context? it's not async in any way so? only test when all tests are written
+  def apply[A](value: A)(using ctx: Context): Output[A] =
     new Output[A](ctx.registerTask(Result.pure(OutputData(value))))
 
-  def apply[A](value: => Result[OutputData[A]])(using ctx: Context): Output[A] =
+  def ofData[A](value: => Result[OutputData[A]])(using ctx: Context): Output[A] =
     new Output[A](ctx.registerTask((value)))
 
-  // TODO could this be pure without implicit Context? it's not async in any way so?
+  // TODO could this be pure without implicit Context? it's not async in any way so? only test when all tests are written
   def ofData[A](data: OutputData[A])(using ctx: Context): Output[A] =
     new Output[A](ctx.registerTask(Result.pure(data)))
 

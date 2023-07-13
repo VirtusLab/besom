@@ -25,17 +25,20 @@ class Config private (
         ctx.logger.warn(s"Config key $key is a secret, refusing to fetch it as a plain string!") *>
           Result.pure(OutputData.empty())
 
-      Output(result)
+      Output.ofData(result)
     else Output.ofData(OutputData(Set.empty, configMap.get(fullKey(key)), isSecret = false))
 
   def getSecret(key: String)(using ctx: Context): Output[String] =
     if configSecretKeys.contains(key) then
       Output.ofData(OutputData(Set.empty, configMap.get(fullKey(key)), isSecret = true))
-    else Output(ctx.logger.warn(s"Config key $key is not a secret") *> Result.pure(OutputData.empty(isSecret = true)))
+    else
+      Output.ofData(
+        ctx.logger.warn(s"Config key $key is not a secret") *> Result.pure(OutputData.empty(isSecret = true))
+      )
 
   def getDouble(key: String)(using Context): Output[Double] =
     get(key).flatMap { value =>
-      Output {
+      Output.ofData {
         Result
           .evalEither(
             Try(value.toDouble).toEither.left.map(_ =>
@@ -48,7 +51,7 @@ class Config private (
 
   def getInt(key: String)(using Context): Output[Int] =
     get(key).flatMap { value =>
-      Output {
+      Output.ofData {
         Result
           .evalEither(
             Try(value.toInt).toEither.left.map(_ => RuntimeException(s"Config value $key is not a valid int: $value"))
@@ -59,7 +62,7 @@ class Config private (
 
   def getBoolean(key: String)(using Context): Output[Boolean] =
     get(key).flatMap { value =>
-      Output {
+      Output.ofData {
         Result
           .evalEither(
             Try(value.toBoolean).toEither.left.map(_ =>
@@ -72,7 +75,7 @@ class Config private (
 
   def getSecretDouble(key: String)(using Context): Output[Double] =
     getSecret(key).flatMap { value =>
-      Output {
+      Output.ofData {
         Result
           .evalEither(
             Try(value.toDouble).toEither.left.map(_ =>
@@ -85,7 +88,7 @@ class Config private (
 
   def getSecretInt(key: String)(using Context): Output[Int] =
     getSecret(key).flatMap { value =>
-      Output {
+      Output.ofData {
         Result
           .evalEither(
             Try(value.toInt).toEither.left.map(_ =>
@@ -98,7 +101,7 @@ class Config private (
 
   def getSecretBoolean(key: String)(using Context): Output[Boolean] =
     getSecret(key).flatMap { value =>
-      Output {
+      Output.ofData {
         Result
           .evalEither(
             Try(value.toBoolean).toEither.left.map(_ =>

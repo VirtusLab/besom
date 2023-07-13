@@ -118,7 +118,7 @@ class ContextImpl(
     given Context = this
 
     MDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
-      Output(ResourceOps().registerResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
+      Output.ofData(ResourceOps().registerResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
     }
 
   private[besom] def registerResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
@@ -129,7 +129,7 @@ class ContextImpl(
   ): Output[R] =
     given Context = this
     MDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
-      Output(ResourceOps().registerResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
+      Output.ofData(ResourceOps().registerResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
     }
 
   private[besom] def readResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
