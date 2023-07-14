@@ -7,7 +7,7 @@ import zio.Promise
 // TODO it would be good to make effects uninterruptible
 class ZIORuntime(val debugEnabled: Boolean = false)(using rt: zio.Runtime[Any]) extends Runtime[Task]:
   override def pure[A](a: A): Task[A]                                                      = ZIO.succeed(a)
-  override def fail(err: Throwable): Task[Nothing]                                         = ZIO.die(err)
+  override def fail(err: Throwable): Task[Nothing]                                         = ZIO.fail(err)
   override def defer[A](thunk: => A): Task[A]                                              = ZIO.attempt(thunk)
   override def flatMapBoth[A, B](fa: Task[A])(f: Either[Throwable, A] => Task[B]): Task[B] = fa.either.flatMap(f)
   override def fromFuture[A](f: => scala.concurrent.Future[A]): Task[A]                    = ZIO.fromFuture(_ => f)
