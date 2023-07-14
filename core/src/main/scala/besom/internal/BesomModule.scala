@@ -5,10 +5,10 @@ import besom.internal.logging.{LocalBesomLogger => logger, BesomLogger}
 import besom.util.NonEmptyString
 import besom.util.Types.ResourceType
 
-trait BesomModule:
+trait BesomModule extends BesomSyntax:
   type Eff[+A]
 
-  given rt: Runtime[Eff]
+  protected val rt: Runtime[Eff]
 
   object Output extends OutputFactory
 
@@ -29,44 +29,10 @@ trait BesomModule:
       userOutputs    <- program(using ctx).map(_.toResult).getValueOrElse(Result.pure(Struct()))
       -              <- Stack.registerStackOutputs(runInfo, userOutputs)(using ctx)
       _              <- ctx.waitForAllTasks
-      _              <- ctx.close
+      _              <- ctx.close() // TODO fix this via finalizers issue #105
+      _              <- logger.close() // TODO fix this via finalizers issue #105
     yield ()
 
     rt.unsafeRunSync(everything.run(using rt)) match
       case Left(err) => throw err
       case Right(_)  => sys.exit(0)
-
-  def isDryRun(using ctx: Context): Boolean = ctx.isDryRun
-
-  def log(using ctx: Context): BesomLogger = ctx.logger
-
-  def urn(using ctx: Context): Output[String] =
-    besom.internal.Output.ofData(ctx.getParentURN.map(OutputData(_)))
-
-  val exports: Export.type = Export
-
-  def component[A <: ComponentResource & Product: RegistersOutputs](name: NonEmptyString, typ: ResourceType)(
-    f: Context ?=> ComponentBase ?=> Output[A]
-  )(using ctx: Context): Output[A] =
-    besom.internal.Output.ofData {
-      ctx
-        .registerComponentResource(name, typ)
-        .flatMap { componentBase =>
-          val urnRes: Result[String] = componentBase.urn.getValueOrFail {
-            s"Urn for component resource $name is not available. This should not happen."
-          }
-
-          val componentContext = ComponentContext(ctx, urnRes)
-          val componentOutput  = f(using componentContext)(using componentBase)
-
-          componentOutput
-            .getValueOrFail {
-              "Component resource is not available. This should not happen."
-            }
-            .flatMap { a =>
-              val serializedOutputs = RegistersOutputs[A].serializeOutputs(a)
-              ctx.registerResourceOutputs(name, typ, urnRes, serializedOutputs) *> Result.pure(a)
-            }
-        }
-        .map(OutputData(_))
-    }

@@ -161,28 +161,6 @@ enum Result[+A]:
     Debug()
   )
 
-  // I don't think this is the correct way to do this.
-  // def memoize(using Debug): Result[A] =
-  //   val promise = scala.concurrent.Promise[A]
-  //   BiFlatMap(
-  //     this,
-  //     {
-  //       case Left(err) =>
-  //         promise.failure(err)
-
-  //     }
-  //   )
-
-  def map[B](f: A => B)(using Debug): Result[B]              = flatMap(a => Pure(f(a), Debug()))
-  def product[B](rb: Result[B])(using Debug): Result[(A, B)] = flatMap(a => rb.map(b => (a, b)))
-  def zip[B](rb: => Result[B])(using z: Zippable[A, B])(using Debug) =
-    product(rb).map((a, b) => z.zip(a, b))
-  def void(using Debug): Result[Unit]                   = flatMap(_ => Result.unit)
-  def fork[A2 >: A](using Debug): Result[Fiber[A2]]     = Result.Fork(this, Debug())
-  def tap(f: A => Result[Unit])(using Debug): Result[A] = flatMap(a => f(a).flatMap(_ => Result.pure(a)))
-  def tapBoth(f: Either[Throwable, A] => Result[Unit])(using Debug): Result[A] =
-    transformM(e => f(e) *> Result.pure(e))
-  def delay(duration: Long)(using Debug): Result[A] = Result.Sleep(() => this, duration, Debug())
   def either(using Debug): Result[Either[Throwable, A]] =
     BiFlatMap(
       this,
@@ -190,8 +168,21 @@ enum Result[+A]:
       Debug()
     )
 
+  def delay(duration: Long)(using Debug): Result[A] = Result.Sleep(() => this, duration, Debug())
+  def fork[A2 >: A](using Debug): Result[Fiber[A2]] = Result.Fork(this, Debug())
+
+  def map[B](f: A => B)(using Debug): Result[B]              = flatMap(a => Pure(f(a), Debug()))
+  def product[B](rb: Result[B])(using Debug): Result[(A, B)] = flatMap(a => rb.map(b => (a, b)))
+  def zip[B](rb: => Result[B])(using z: Zippable[A, B])(using Debug) =
+    product(rb).map((a, b) => z.zip(a, b))
+  def void(using Debug): Result[Unit]                   = flatMap(_ => Result.unit)
+  def tap(f: A => Result[Unit])(using Debug): Result[A] = flatMap(a => f(a).flatMap(_ => Result.pure(a)))
+  def tapBoth(f: Either[Throwable, A] => Result[Unit])(using Debug): Result[A] =
+    transformM(e => f(e) *> Result.pure(e))
+  def as[B](b: B)(using Debug): Result[B] = map(_ => b)
+
   inline def *>[B](rb: => Result[B])(using Debug): Result[B] = flatMap(_ => rb)
-  inline def <*[B](rb: => Result[B])(using Debug): Result[A] = rb.flatMap(_ => this)
+  inline def <*[B](rb: => Result[B])(using Debug): Result[A] = flatMap(a => rb.as(a))
 
   def run[F[+_]](using F: Runtime[F]): F[A] = this match
     case Suspend(thunk, debug) =>

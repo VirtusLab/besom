@@ -18,6 +18,7 @@ trait Context extends TaskTracker:
   private[besom] def runInfo: RunInfo
   private[besom] def monitor: Monitor
   private[besom] def getParentURN: Result[String]
+  private[besom] def config: Config
 
   private[besom] def isDryRun: Boolean
   private[besom] def logger: BesomLogger
@@ -55,7 +56,7 @@ trait Context extends TaskTracker:
     outputs: Result[Struct]
   ): Result[Unit]
 
-  private[besom] def close: Result[Unit]
+  private[besom] def close(): Result[Unit]
 
 class ComponentContext(private val globalContext: Context, private val componentURN: Result[String]) extends Context:
   export globalContext.{getParentURN => _, *}
@@ -65,8 +66,8 @@ class ComponentContext(private val globalContext: Context, private val component
 class ContextImpl(
   private[besom] val runInfo: RunInfo,
   private[besom] val featureSupport: FeatureSupport,
-  val config: Config,
-  val logger: BesomLogger,
+  private[besom] val config: Config,
+  private[besom] val logger: BesomLogger,
   private[besom] val monitor: Monitor,
   private[besom] val engine: Engine,
   private[besom] val taskTracker: TaskTracker,
@@ -150,7 +151,7 @@ class ContextImpl(
       ResourceOps().registerResourceOutputsInternal(urnResult, outputs)
     }
 
-  private[besom] def close: Result[Unit] =
+  private[besom] def close(): Result[Unit] =
     for
       _ <- monitor.close()
       _ <- engine.close()
