@@ -15,3 +15,6 @@ platforms = ["jvm"]
 [modules.codegen]
 platforms = ["jvm"]
 scalaVersion = "2.13.10"
+
+[modules.compiler-plugin]
+platforms = ["jvm"]

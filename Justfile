@@ -58,6 +58,10 @@ publish-local-zio:
 # Publishes locally all SDK modules: core, cats-effect extension, zio extension
 publish-local-sdk: publish-local-core publish-local-cats publish-local-zio
 
+# Publishes locally besom compiler plugin
+publish-local-compiler-plugin:
+	scala-cli publish local compiler-plugin --version {{publish-version}} --doc=false
+
 # Cleans core build, sets up build for IDE again
 clean-core: 
 	scala-cli clean core && \
@@ -75,6 +79,11 @@ clean-zio:
 
 # Cleans all SDK builds, sets up all modules for IDE again
 clean-sdk: clean-core clean-cats clean-zio
+
+# Cleans besom compiler plugin build, sets up build for IDE again
+clean-compiler-plugin:
+	scala-cli clean compiler-plugin && \
+	scala-cli setup-ide compiler-plugin
 
 ####################
 # Language plugin
