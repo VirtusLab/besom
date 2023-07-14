@@ -95,5 +95,7 @@ import besom.internal.Output
   for
     nginx   <- nginxDeployment
     service <- nginxService
-  yield exports("name" -> nginx.metadata.name)
+  yield Pulumi.exports(
+    name = nginx.metadata.name
+  )
 }

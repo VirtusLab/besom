@@ -10,7 +10,7 @@ class Resources private (
   def add(resource: CustomResource, state: CustomResourceState): Result[Unit] =
     resources.update(_ + (resource -> state))
 
-  def add(resource: ComponentResource, state: ComponentResourceState): Result[Unit] =
+  def add(resource: ComponentBase, state: ComponentResourceState): Result[Unit] =
     resources.update(_ + (resource -> state))
 
   def add(resource: Resource, state: ResourceState): Result[Unit] = (resource, state) match
@@ -18,8 +18,8 @@ class Resources private (
       add(pr, prs)
     case (cr: CustomResource, crs: CustomResourceState) =>
       add(cr, crs)
-    case (compr: ComponentResource, comprs: ComponentResourceState) =>
-      add(compr, comprs)
+    case (compb: ComponentBase, comprs: ComponentResourceState) =>
+      add(compb, comprs)
     case _ => Result.fail(new Exception(s"resource ${resource} and state ${state} don't match"))
 
   def getStateFor(resource: ProviderResource): Result[ProviderResourceState] =

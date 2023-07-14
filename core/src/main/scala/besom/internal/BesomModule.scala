@@ -10,11 +10,9 @@ trait BesomModule:
 
   given rt: Runtime[Eff]
 
-  type Outputs = Result[Struct] // TODO this needs to be changed to an opaque probably
-
   object Output extends OutputFactory
 
-  def run(program: Context ?=> Output[Outputs]): Unit =
+  def run(program: Context ?=> Output[Exports]): Unit =
     val everything: Result[Unit] = for
       _              <- BesomLogger.setupLogger()
       runInfo        <- RunInfo.fromEnv
@@ -28,7 +26,7 @@ trait BesomModule:
       featureSupport <- FeatureSupport(monitor)
       _              <- logger.info(s"Resolved feature support, spawning context and executing user program.")
       ctx            <- Context(runInfo, taskTracker, monitor, engine, logger, featureSupport, config)
-      userOutputs    <- program(using ctx).getValueOrElse(Result.pure(Struct()))
+      userOutputs    <- program(using ctx).map(_.toResult).getValueOrElse(Result.pure(Struct()))
       -              <- Stack.registerStackOutputs(runInfo, userOutputs)(using ctx)
       _              <- ctx.waitForAllTasks
       _              <- ctx.close
@@ -45,7 +43,7 @@ trait BesomModule:
   def urn(using ctx: Context): Output[String] =
     besom.internal.Output.ofData(ctx.getParentURN.map(OutputData(_)))
 
-  def exports(outputs: (String, Output[Any])*)(using Context): Output[Map[String, Output[Any]]] = Output(outputs.toMap)
+  val exports: Export.type = Export
 
   def component[A <: ComponentResource & Product: RegistersOutputs](name: NonEmptyString, typ: ResourceType)(
     f: Context ?=> ComponentBase ?=> Output[A]

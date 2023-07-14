@@ -301,7 +301,7 @@ class ResourceOps(using ctx: Context, mdc: MDC[Label]):
             ctx.getParentURN.map(Some(_))
 
   private def resolveParentTransformations(typ: ResourceType, resourceOptions: ResourceOptions): Result[List[Unit]] =
-    ??? // TODO
+    Result.pure(List.empty) // TODO parent transformations
 
   private def applyTransformations(
     resourceOptions: ResourceOptions,
@@ -415,5 +415,5 @@ class ResourceOps(using ctx: Context, mdc: MDC[Label]):
             common = commonRS
           )
         case DependencyResource(urn) => throw new Exception("DependencyResource should not be registered")
-        case ComponentBase(urn)      => throw new Exception("ComponentBase should not be registered")
+        case ComponentBase(urn)      => ComponentResourceState(common = commonRS) // TODO: ComponentBase should not be registered"
     }
