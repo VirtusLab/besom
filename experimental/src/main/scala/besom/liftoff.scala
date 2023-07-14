@@ -82,7 +82,7 @@ import besom.internal.Output
       spec = ServiceSpecArgs(
         selector = labels,
         ports = List(
-          ServicePortArgs(name = "http", port = 80)
+          ServicePortArgs(name = "http", port = 1337)
         )
       ),
       metadata = ObjectMetaArgs(
@@ -96,6 +96,9 @@ import besom.internal.Output
     nginx   <- nginxDeployment
     service <- nginxService
   yield Pulumi.exports(
-    name = nginx.metadata.name
+    namespace = appNamespace.metadata.name,
+    nginxDeploymentName = nginx.metadata.name,
+    serviceName = nginxService.metadata.name,
+    serviceClusterIp = nginxService.spec.clusterIP
   )
 }
