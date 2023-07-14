@@ -63,7 +63,7 @@ object ResourceDecoder:
       case (urnPromise, idPromise, customPopertiesPromises) =>
         val allPromises = Vector(urnPromise, idPromise) ++ customPopertiesPromises.toList
 
-        val propertiesOutputs = allPromises.map(promise => Output(promise.get)).toArray
+        val propertiesOutputs = allPromises.map(promise => Output.ofData(promise.get)).toArray
         val resource          = fromProduct(Tuple.fromArray(propertiesOutputs))
 
         def failAllPromises(err: Throwable): Result[Unit] =

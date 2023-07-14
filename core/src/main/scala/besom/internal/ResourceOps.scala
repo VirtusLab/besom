@@ -1,13 +1,29 @@
 package besom.internal
 
-import com.google.protobuf.struct.Struct
-import pulumirpc.resource.RegisterResourceRequest
+import com.google.protobuf.struct.*
+import pulumirpc.resource.*
 import pulumirpc.resource.RegisterResourceRequest.PropertyDependencies
 
 import besom.util.*, Types.*
 import besom.internal.logging.*
+import fansi.Str
 
 class ResourceOps(using ctx: Context, mdc: MDC[Label]):
+
+  private[besom] def registerResourceOutputsInternal(
+    urnResult: Result[String],
+    outputs: Result[Struct]
+  ): Result[Unit] =
+    urnResult.flatMap { urn =>
+      outputs.flatMap { struct =>
+        val request = RegisterResourceOutputsRequest(
+          urn = urn,
+          outputs = if struct.fields.isEmpty then None else Some(struct)
+        )
+
+        ctx.monitor.registerResourceOutputs(request)
+      }
+    }
 
   private[besom] def resolveProviderReferences(state: ResourceState): Result[Map[String, String]] =
     Result
@@ -273,28 +289,23 @@ class ResourceOps(using ctx: Context, mdc: MDC[Label]):
 
   // This method returns an Option of Resource because for Stack there is no parent resource,
   // for any other resource the parent is either explicitly set in ResourceOptions or the stack is the parent.
-  private def resolveParent(typ: ResourceType, resourceOptions: ResourceOptions): Result[Option[Resource]] =
+  private def resolveParentUrn(typ: ResourceType, resourceOptions: ResourceOptions): Result[Option[String]] =
     if typ == Stack.RootPulumiStackTypeName then Result.pure(None)
     else
       resourceOptions.parent match
         case Some(parent) =>
           log.trace(s"resolveParent - parent found in ResourceOptions: $parent") *>
-            Result.pure(Some(parent))
+            parent.urn.getValue
         case None =>
-          log.trace(s"resolveParent - parent not found in ResourceOptions, using Stack") *>
-            ctx.getStack.map(Some(_))
+          log.trace(s"resolveParent - parent not found in ResourceOptions, using parent from Context") *>
+            ctx.getParentURN.map(Some(_))
 
-  private def resolveParentUrn(typ: ResourceType, resourceOptions: ResourceOptions): Result[Option[String]] =
-    resolveParent(typ, resourceOptions).flatMap {
-      case None =>
-        Result.pure(None)
-      case Some(parent) =>
-        parent.urn.getData.map(_.getValue)
-    }
+  private def resolveParentTransformations(typ: ResourceType, resourceOptions: ResourceOptions): Result[List[Unit]] =
+    Result.pure(List.empty) // TODO parent transformations
 
   private def applyTransformations(
     resourceOptions: ResourceOptions,
-    parent: Option[Resource]
+    parentTransformations: List[Unit] // TODO this needs transformations from ResourceState, not Resource
   ): Result[ResourceOptions] =
     Result.pure(resourceOptions) // TODO resource transformations
 
@@ -369,12 +380,12 @@ class ResourceOps(using ctx: Context, mdc: MDC[Label]):
     resourceOptions: ResourceOptions
   ): Result[ResourceState] =
     for
-      _             <- log.debug(s"createResourceState")
-      parent        <- resolveParent(typ, resourceOptions)
-      opts          <- applyTransformations(resourceOptions, parent) // todo add logging
-      aliases       <- collapseAliases(opts) // todo add logging
-      providers     <- mergeProviders(typ, opts)
-      maybeProvider <- getProvider(typ, providers, opts)
+      _                     <- log.debug(s"createResourceState")
+      parentTransformations <- resolveParentTransformations(typ, resourceOptions)
+      opts                  <- applyTransformations(resourceOptions, parentTransformations) // todo add logging
+      aliases               <- collapseAliases(opts) // todo add logging
+      providers             <- mergeProviders(typ, opts)
+      maybeProvider         <- getProvider(typ, providers, opts)
     yield {
       val commonRS = CommonResourceState(
         children = Set.empty,
@@ -404,4 +415,5 @@ class ResourceOps(using ctx: Context, mdc: MDC[Label]):
             common = commonRS
           )
         case DependencyResource(urn) => throw new Exception("DependencyResource should not be registered")
+        case ComponentBase(urn)      => ComponentResourceState(common = commonRS) // TODO: ComponentBase should not be registered"
     }

@@ -5,8 +5,8 @@ import scala.concurrent.*
 
 trait FutureMonadModule extends BesomModule:
   override final type Eff[+A] = scala.concurrent.Future[A]
-  given ExecutionContext    = scala.concurrent.ExecutionContext.global
-  given rt: Runtime[Future] = FutureRuntime()
+  given ExecutionContext            = scala.concurrent.ExecutionContext.global
+  protected val rt: Runtime[Future] = FutureRuntime()
 
   given Result.ToFuture[Eff] = new Result.ToFuture[Future]:
     def eval[A](fa: => Future[A]): () => Future[A] = () => fa

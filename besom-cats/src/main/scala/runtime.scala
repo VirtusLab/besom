@@ -42,12 +42,12 @@ trait CatsEffectModule extends BesomModule:
 
   def ioRuntime: IORuntime = cats.effect.unsafe.IORuntime.global
 
-  given rt: Runtime[Eff] = CatsRuntime()(using ioRuntime)
+  protected val rt: Runtime[Eff] = CatsRuntime()(using ioRuntime)
 
   given Result.ToFuture[Eff] = new Result.ToFuture[IO]:
     def eval[A](fa: => IO[A]): () => Future[A] = () => fa.unsafeToFuture()(using ioRuntime)
 
-  // override def run(program: Context ?=> Output[Outputs]): Future[Unit] = ???
+  // override def run(program: Context ?=> Output[Exports]): Future[Unit] = ???
 
 object Pulumi extends CatsEffectModule
 export Pulumi.*
