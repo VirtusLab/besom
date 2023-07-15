@@ -4,7 +4,6 @@ scalaVersion = "3.3.0"
 platforms = ["jvm"]
 dependsOn = ["core"]
 
-
 [modules.besom-cats]
 platforms = ["jvm"]
 dependsOn = ["core"]
@@ -17,4 +16,10 @@ platforms = ["jvm"]
 scalaVersion = "2.13.10"
 
 [modules.compiler-plugin]
+platforms = ["jvm"]
+
+[modules.compiler-plugin]
+platforms = ["jvm"]
+
+[modules.experimental]
 platforms = ["jvm"]

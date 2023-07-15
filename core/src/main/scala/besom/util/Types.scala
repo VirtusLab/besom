@@ -22,7 +22,9 @@ object Types:
       requireConst(s)
       inline if !constValue[Matches[s.type, ".+:.+:.+"]] then
         error(
-          "this string isn't a correct pulumi type identifier, it should contain two colons between three identifiers"
+          """A component resource must register a unique type name with the base constructor, for example: `pkg:index:MyComponent`. 
+To reduce the potential of other type name conflicts, this name contains the package and module name, in addition to the type: <package>:<module>:<type>. 
+These names are namespaced alongside non-component resources, such as `aws:lambda:Function`."""
         )
       else s
 
@@ -63,13 +65,13 @@ object Types:
 
     // This is implemented according to https://www.pulumi.com/docs/concepts/resources/names/#urns
     private[Types] val UrnRegex =
-      """urn:pulumi:(?<stack>[^:]+)::(?<project>[^:]+)::(?<parentType>.+)\$(?<resourceType>.+)::(?<resourceName>.+)""".r
+      """urn:pulumi:(?<stack>[^:]+)::(?<project>[^:]+)::(?<parentType>.+?)((\$(?<resourceType>.+))?)::(?<resourceName>.+)""".r
 
     private[besom] inline def apply(s: String): URN =
       requireConst(s)
       inline if !constValue[Matches[
           s.type,
-          """urn:pulumi:(?<stack>[^:]+)::(?<project>[^:]+)::(?<parentType>.+)\$(?<resourceType>.+)::(?<resourceName>.+)"""
+          """urn:pulumi:(?<stack>[^:]+)::(?<project>[^:]+)::(?<parentType>.+?)((\$(?<resourceType>.+))?)::(?<resourceName>.+)"""
         ]]
       then
         error(
@@ -90,12 +92,13 @@ object Types:
     //   }
 
     extension (urn: URN)
-      def asString: String     = urn
-      def stack: String        = urn match { case URN.UrnRegex(stack, _, _, _, _) => stack }
-      def project: String      = urn match { case URN.UrnRegex(_, project, _, _, _) => project }
-      def parentType: String   = urn match { case URN.UrnRegex(_, _, parentType, _, _) => parentType }
-      def resourceType: String = urn match { case URN.UrnRegex(_, _, _, resourceType, _) => resourceType }
-      def resourceName: String = urn match { case URN.UrnRegex(_, _, _, _, resourceName) => resourceName }
+      def asString: String   = urn
+      def stack: String      = URN.UrnRegex.findFirstMatchIn(urn).get.group("stack")
+      def project: String    = URN.UrnRegex.findFirstMatchIn(urn).get.group("project")
+      def parentType: String = URN.UrnRegex.findFirstMatchIn(urn).get.group("parentType")
+      def resourceType: Option[String] =
+        URN.UrnRegex.findFirstMatchIn(urn).map(_.group("resourceType")).flatMap(Option(_))
+      def resourceName: String = URN.UrnRegex.findFirstMatchIn(urn).get.group("resourceName")
 
   opaque type ResourceId = String
   object ResourceId:
