@@ -2,33 +2,13 @@ package besom.internal
 
 import besom.util.*, Types.*
 
-// type ResourceState struct {
-// 	m sync.RWMutex
-
-// 	urn URNOutput `pulumi:"urn"`
-
-// 	rawOutputs        Output
-// 	children          resourceSet
-// 	providers         map[string]ProviderResource
-// 	provider          ProviderResource
-// 	version           string
-// 	pluginDownloadURL string
-// 	aliases           []URNOutput
-// 	name              string
-// 	transformations   []ResourceTransformation
-
-// 	remoteComponent bool
-// }
-
 sealed trait ResourceState:
-  // def urn: Output[String] // TODO BALEET, URN is in resource anyway
-  // def rawOutputs: Output[_] // TODO BALEET this is for StackReference only and is a hack used by pulumi-go, we'll use the non-hacky way from pulumi-java
   def children: Set[Resource]
   def provider: Option[ProviderResource]
   def providers: Map[String, ProviderResource]
   def version: String
   def pluginDownloadUrl: String
-  // def aliases: List[Output[F, String]]
+  // def aliases: List[Output[String]]
   def name: NonEmptyString
   def typ: ResourceType
   // def transformations: List[ResourceTransformation]
@@ -45,14 +25,12 @@ sealed trait ResourceState:
 extension (rs: ResourceState) def asLabel: Label = Label.fromNameAndType(rs.name, rs.typ)
 
 case class CommonResourceState(
-  // urn: Output[String], // TODO BALEET, URN is in custom resource anyway
-  // rawOutputs: Output[_], // TODO BALEET this is for StackReference only and is a hack used by pulumi-go, we'll use the non-hacky way from pulumi-java
   children: Set[Resource],
   provider: Option[ProviderResource],
   providers: Map[String, ProviderResource],
   version: String,
   pluginDownloadUrl: String,
-  // aliases: List[Output[F, String]],
+  // aliases: List[Output[String]],
   name: NonEmptyString,
   typ: ResourceType,
   // transformations: List[ResourceTransformation],
@@ -61,7 +39,7 @@ case class CommonResourceState(
 
 case class CustomResourceState(
   common: CommonResourceState,
-  id: Output[String]
+  id: Output[ResourceId]
 ) extends ResourceState:
   export common.*
 

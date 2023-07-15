@@ -1,6 +1,6 @@
 package besom.internal
 
-import besom.util.*
+import besom.util.*, Types.*
 import RunResult.{given, *}
 import com.google.protobuf.struct.Struct
 
@@ -9,7 +9,7 @@ class RegistersOutputsDerivationTest extends munit.FunSuite {
 
   test("derive an instance for TestRegistersOutputs") {
     given Context                        = DummyContext().unsafeRunSync()
-    given ComponentBase                  = ComponentBase(Output("urn:foo:bar"))
+    given ComponentBase                  = ComponentBase(Output(URN.empty))
     val intEncoder: Encoder[Output[Int]] = summon
 
     val testRegistersOutputs = TestRegistersOutputs(Output(1))
@@ -30,7 +30,7 @@ class RegistersOutputsDerivationTest extends munit.FunSuite {
 
   test("derive an instance for TestRegistersOutputs3") {
     given Context                                = DummyContext().unsafeRunSync()
-    given ComponentBase                          = ComponentBase(Output("urn:foo:bar"))
+    given ComponentBase                          = ComponentBase(Output(URN.empty))
     val intEncoder: Encoder[Output[Int]]         = summon
     val stringEncoder: Encoder[Output[String]]   = summon
     val booleanEncoder: Encoder[Output[Boolean]] = summon

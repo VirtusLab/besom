@@ -2,6 +2,7 @@ package besom.internal
 
 import RunResult.{given, *}
 import com.google.protobuf.struct.*
+import besom.util.Types.*
 
 sealed abstract class TestEnum(val name: String, val value: String) extends besom.internal.StringEnum
 
@@ -21,8 +22,8 @@ case class TestArgs(a: Output[String], b: Output[PlainCaseClass]) derives ArgsEn
 case class TestProviderArgs(`type`: Output[String], pcc: Output[PlainCaseClass]) derives ProviderArgsEncoder
 
 class ContextTest extends munit.FunSuite:
-  case class TestResource(urn: Output[String], id: Output[String], url: Output[String]) extends CustomResource
-  case class AnotherTestResource(urn: Output[String], id: Output[String], url: Output[String]) extends CustomResource
+  case class TestResource(urn: Output[URN], id: Output[ResourceId], url: Output[String]) extends CustomResource
+  case class AnotherTestResource(urn: Output[URN], id: Output[ResourceId], url: Output[String]) extends CustomResource
 
   test("resource identity - empty outputs, same class") {
     given Context = DummyContext().unsafeRunSync()

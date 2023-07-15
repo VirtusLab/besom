@@ -9,6 +9,8 @@ import Asset.*
 import Archive.*
 import org.checkerframework.checker.units.qual.s
 import org.checkerframework.checker.units.qual.m
+import besom.util.Types.URN
+import besom.util.Types.ResourceId
 
 object Constants:
   final val UnknownValue           = "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
@@ -105,6 +107,14 @@ object Decoder extends DecoderInstancesLowPrio1:
   given stringDecoder: Decoder[String] with
     def mapping(value: Value, label: Label): String =
       if value.kind.isStringValue then value.getStringValue else error(s"$label: Expected a string!")
+
+  given urnDecoder: Decoder[URN] with
+    def mapping(value: Value, label: Label): URN =
+      if value.kind.isStringValue then
+        URN.from(value.getStringValue) match
+          case Success(value)     => value
+          case Failure(exception) => error(s"$label: Expected a valid URN string!", exception)
+      else error(s"$label: Expected a string!")
 
   given Decoder[Boolean] with
     def mapping(value: Value, label: Label): Boolean =
@@ -225,10 +235,12 @@ object Decoder extends DecoderInstancesLowPrio1:
                   error(s"$label: Expected a special resource signature!")
                 else
                   val structValue = innerValue.getStructValue
-                  val urn = structValue.fields
+                  val urnString = structValue.fields
                     .get(Constants.ResourceUrnName)
                     .map(_.getStringValue)
                     .getOrElse(error(s"$label: Expected a resource urn in resource struct!"))
+
+                  val urn = URN.from(urnString).get
 
                   OutputData(DependencyResource(Output(urn)))
           }
@@ -430,7 +442,7 @@ trait DecoderHelpers:
         decoderProduct(p, nameDecoderPairs)
 
   inline def error(msg: String): Nothing                   = throw DecodingError(msg)
-  inline def error(msg: String, cause: Exception): Nothing = throw DecodingError(msg, cause)
+  inline def error(msg: String, cause: Throwable): Nothing = throw DecodingError(msg, cause)
   inline def errorLeft(msg: String, cause: Throwable = null): Either[DecodingError, Nothing] = Left(
     DecodingError(msg, cause)
   )
@@ -578,13 +590,14 @@ object Encoder:
 
   given customResourceEncoder[A <: CustomResource](using
     ctx: Context,
-    outputStringEnc: Encoder[Output[String]]
+    outputIdEnc: Encoder[Output[ResourceId]],
+    outputURNEnc: Encoder[Output[URN]]
   ): Encoder[A] =
     new Encoder[A]:
       def encode(a: A): Result[(Set[Resource], Value)] =
-        outputStringEnc.encode(a.id).flatMap { (idResources, idValue) =>
+        outputIdEnc.encode(a.id).flatMap { (idResources, idValue) =>
           if ctx.featureSupport.keepResources then
-            outputStringEnc.encode(a.urn).flatMap { (urnResources, urnValue) =>
+            outputURNEnc.encode(a.urn).flatMap { (urnResources, urnValue) =>
               val fixedIdValue =
                 if idValue.kind.isStringValue && idValue.getStringValue == UnknownValue then Value(Kind.StringValue(""))
                 else idValue
@@ -602,11 +615,11 @@ object Encoder:
 
   given componentResourceEncoder[A <: ComponentResource](using
     ctx: Context,
-    outputStringEnc: Encoder[Output[String]]
+    outputURNEnc: Encoder[Output[URN]]
   ): Encoder[A] =
     new Encoder[A]:
       def encode(a: A): Result[(Set[Resource], Value)] =
-        outputStringEnc.encode(a.urn).flatMap { (urnResources, urnValue) =>
+        outputURNEnc.encode(a.urn).flatMap { (urnResources, urnValue) =>
           if ctx.featureSupport.keepResources then
             val result = Map(
               SpecialSigKey -> Value(Kind.StringValue(SpecialResourceSig)),
@@ -619,6 +632,12 @@ object Encoder:
 
   given stringEncoder: Encoder[String] with
     def encode(str: String): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> str.asValue)
+
+  given urnEncoder: Encoder[URN] with
+    def encode(urn: URN): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> urn.asString.asValue)
+
+  given idEncoder: Encoder[ResourceId] with
+    def encode(id: ResourceId): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> id.asString.asValue)
 
   given Encoder[NonEmptyString] with
     def encode(nestr: NonEmptyString): Result[(Set[Resource], Value)] =

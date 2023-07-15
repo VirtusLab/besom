@@ -2,8 +2,9 @@ package besom.internal
 
 import RunResult.{given, *}
 import scala.collection.mutable
+import besom.util.Types.*
 
-case class TestResource(urn: Output[String], id: Output[String], url: Output[String]) extends CustomResource
+case class TestResource(urn: Output[URN], id: Output[ResourceId], url: Output[String]) extends CustomResource
 
 class LoggingTest extends munit.FunSuite:
   case class StructuralLog(a: Int, b: String, c: Boolean)
@@ -16,8 +17,9 @@ class LoggingTest extends munit.FunSuite:
   given Context = DummyContext().unsafeRunSync()
 
   test("plain logging works") {
+    val urn = URN("urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource")
     val logger   = BesomLogger.local().unsafeRunSync()
-    val res      = TestResource(Output("foo"), Output("bar"), Output("url"))
+    val res      = TestResource(Output(urn), Output(ResourceId("bar")), Output("url"))
     val messages = mutable.ArrayBuffer.empty[LogRecord]
 
     scribe.Logger.root

@@ -59,7 +59,7 @@ object ResourceDecoder:
       Vector.fill(customPropertiesCount)(Promise[OutputData[Option[Any]]]())
     )
 
-    Promise[OutputData[String]]().zip(Promise[OutputData[String]]()).zip(customPropertiesResults).map {
+    Promise[OutputData[URN]]().zip(Promise[OutputData[ResourceId]]()).zip(customPropertiesResults).map {
       case (urnPromise, idPromise, customPopertiesPromises) =>
         val allPromises = Vector(urnPromise, idPromise) ++ customPopertiesPromises.toList
 

@@ -4,6 +4,7 @@ import besom.internal.logging.BesomLogger
 import scala.reflect.Typeable
 import besom.util.NonEmptyString
 import besom.util.Types.ResourceType
+import besom.util.Types.URN
 
 /*
  * This trait is the main export point that exposes Besom specific functions and types to the user.
@@ -16,7 +17,7 @@ trait BesomSyntax:
 
   def log(using ctx: Context): BesomLogger = ctx.logger
 
-  def urn(using ctx: Context): Output[String] =
+  def urn(using ctx: Context): Output[URN] =
     Output.ofData(ctx.getParentURN.map(OutputData(_)))
 
   val exports: Export.type = Export
@@ -28,7 +29,7 @@ trait BesomSyntax:
       ctx
         .registerComponentResource(name, typ)
         .flatMap { componentBase =>
-          val urnRes: Result[String] = componentBase.urn.getValueOrFail {
+          val urnRes: Result[URN] = componentBase.urn.getValueOrFail {
             s"Urn for component resource $name is not available. This should not happen."
           }
 

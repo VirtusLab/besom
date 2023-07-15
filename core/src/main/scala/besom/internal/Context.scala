@@ -17,7 +17,7 @@ trait Context extends TaskTracker:
   private[besom] def resources: Resources
   private[besom] def runInfo: RunInfo
   private[besom] def monitor: Monitor
-  private[besom] def getParentURN: Result[String]
+  private[besom] def getParentURN: Result[URN]
   private[besom] def config: Config
 
   private[besom] def isDryRun: Boolean
@@ -52,16 +52,16 @@ trait Context extends TaskTracker:
   private[besom] def registerResourceOutputs(
     name: NonEmptyString,
     typ: ResourceType,
-    urnResult: Result[String],
+    urnResult: Result[URN],
     outputs: Result[Struct]
   ): Result[Unit]
 
   private[besom] def close(): Result[Unit]
 
-class ComponentContext(private val globalContext: Context, private val componentURN: Result[String]) extends Context:
+class ComponentContext(private val globalContext: Context, private val componentURN: Result[URN]) extends Context:
   export globalContext.{getParentURN => _, *}
 
-  def getParentURN: Result[String] = componentURN
+  def getParentURN: Result[URN] = componentURN
 
 class ContextImpl(
   private[besom] val runInfo: RunInfo,
@@ -80,7 +80,7 @@ class ContextImpl(
 
   private[besom] def isDryRun: Boolean = runInfo.dryRun
 
-  private[besom] def getParentURN: Result[String] =
+  private[besom] def getParentURN: Result[URN] =
     stackPromise.get.flatMap(_.urn.getData).map(_.getValue).flatMap {
       case Some(urn) => Result.pure(urn)
       case None      => Result.fail(Exception("Stack urn is not available. This should not happen."))
@@ -143,7 +143,7 @@ class ContextImpl(
   private[besom] def registerResourceOutputs(
     name: NonEmptyString,
     typ: ResourceType,
-    urnResult: Result[String],
+    urnResult: Result[URN],
     outputs: Result[Struct]
   ): Result[Unit] =
     given Context = this

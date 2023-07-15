@@ -10,6 +10,7 @@ import scala.util.{NotGiven => Not}
 import scala.language.implicitConversions
 import pulumirpc.engine.{LogRequest, LogSeverity}
 import besom.util.Types.Label
+import besom.util.Types.URN
 
 object logging:
 
@@ -63,11 +64,11 @@ object logging:
     def toLogString: String   = record.logOutput.plainText
     def toPlainString: String = record.toLogString.replaceAll("\u001B\\[[;\\d]*m", "") // drops ANSI color codes
 
-  def makeLogRequest(record: LogRecord, urn: String, streamId: Int, ephemeral: Boolean): LogRequest =
+  def makeLogRequest(record: LogRecord, urn: URN, streamId: Int, ephemeral: Boolean): LogRequest =
     LogRequest(
       severity = record.toSeverity,
       message = record.toLogString, // I really hope pulumi can deal with ANSI colored strings
-      urn = urn,
+      urn = urn.asString,
       streamId = streamId,
       ephemeral = ephemeral
     )
@@ -88,13 +89,13 @@ object logging:
 
     def log(record: LogRecord): Result[Unit] = Result(Logger(record.className).log(record))
 
-    def log(record: LogRecord, urn: String, streamId: Int, ephemeral: Boolean): Result[Unit] =
+    def log(record: LogRecord, urn: URN, streamId: Int, ephemeral: Boolean): Result[Unit] =
       for
         _ <- log(record) // direct logging
         _ <- queue.offer(makeLogRequest(record, urn, streamId, ephemeral)) // logging via RPC (async via queue)
       yield ()
 
-    def log(level: Level, mdc: MDC[_], urn: String, streamId: Int, ephemeral: Boolean, messages: LoggableMessage*)(using
+    def log(level: Level, mdc: MDC[_], urn: URN, streamId: Int, ephemeral: Boolean, messages: LoggableMessage*)(using
       pkg: Pkg,
       fileName: FileName,
       name: Name,
@@ -112,8 +113,8 @@ object logging:
     ): Result[Unit] =
       res match
         case Some(r) =>
-          r.urn.getValueOrElse("").flatMap(urn => log(Level.Trace, mdc, urn, streamId, ephemeral, message))
-        case None => log(Level.Trace, mdc, "", streamId, ephemeral, message)
+          r.urn.getValueOrElse(URN.empty).flatMap(urn => log(Level.Trace, mdc, urn, streamId, ephemeral, message))
+        case None => log(Level.Trace, mdc, URN.empty, streamId, ephemeral, message)
 
     def debug(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
       using
@@ -125,8 +126,8 @@ object logging:
     ): Result[Unit] =
       res match
         case Some(r) =>
-          r.urn.getValueOrElse("").flatMap(urn => log(Level.Debug, mdc, urn, streamId, ephemeral, message))
-        case None => log(Level.Debug, mdc, "", streamId, ephemeral, message)
+          r.urn.getValueOrElse(URN.empty).flatMap(urn => log(Level.Debug, mdc, urn, streamId, ephemeral, message))
+        case None => log(Level.Debug, mdc, URN.empty, streamId, ephemeral, message)
 
     def info(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
       using
@@ -138,8 +139,8 @@ object logging:
     ): Result[Unit] =
       res match
         case Some(r) =>
-          r.urn.getValueOrElse("").flatMap(urn => log(Level.Info, mdc, urn, streamId, ephemeral, message))
-        case None => log(Level.Info, mdc, "", streamId, ephemeral, message)
+          r.urn.getValueOrElse(URN.empty).flatMap(urn => log(Level.Info, mdc, urn, streamId, ephemeral, message))
+        case None => log(Level.Info, mdc, URN.empty, streamId, ephemeral, message)
 
     def warn(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
       using
@@ -151,8 +152,8 @@ object logging:
     ): Result[Unit] =
       res match
         case Some(r) =>
-          r.urn.getValueOrElse("").flatMap(urn => log(Level.Warn, mdc, urn, streamId, ephemeral, message))
-        case None => log(Level.Warn, mdc, "", streamId, ephemeral, message)
+          r.urn.getValueOrElse(URN.empty).flatMap(urn => log(Level.Warn, mdc, urn, streamId, ephemeral, message))
+        case None => log(Level.Warn, mdc, URN.empty, streamId, ephemeral, message)
 
     def error(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
       using
@@ -164,8 +165,8 @@ object logging:
     ): Result[Unit] =
       res match
         case Some(r) =>
-          r.urn.getValueOrElse("").flatMap(urn => log(Level.Error, mdc, urn, streamId, ephemeral, message))
-        case None => log(Level.Error, mdc, "", streamId, ephemeral, message)
+          r.urn.getValueOrElse(URN.empty).flatMap(urn => log(Level.Error, mdc, urn, streamId, ephemeral, message))
+        case None => log(Level.Error, mdc, URN.empty, streamId, ephemeral, message)
 
   object BesomLogger:
     def apply(engine: Engine, taskTracker: TaskTracker): Result[BesomLogger] =
