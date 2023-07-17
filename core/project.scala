@@ -20,7 +20,7 @@
 //> using lib "com.outr::scribe-file:3.11.3"
 //> using lib "com.lihaoyi::pprint:0.6.6" // TODO BALEET
 
-//> using options "-java-output-version:8", "-Ysafe-init"
+//> using options "-java-output-version:11", "-Ysafe-init"
 
 //#> using options "-Xmax-inlines:64"
 

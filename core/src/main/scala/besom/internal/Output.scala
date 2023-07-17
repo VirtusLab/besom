@@ -2,6 +2,7 @@ package besom.internal
 
 import scala.util.{NotGiven => Not}
 import besom.util.NotProvided
+import scala.collection.BuildFrom
 
 /** Output is a wrapper for a monadic effect used to model async execution that allows Pulumi to track information about
   * dependencies between resources and properties of data (whether it's known or a secret for instance).
@@ -82,10 +83,14 @@ object Output:
   def traverseMap[A](using ctx: Context)(map: Map[String, Output[A]]): Output[Map[String, A]] =
     sequence(map.map((key, value) => value.map(result => (key, result))).toVector).map(_.toMap)
 
-  def sequence[A](using ctx: Context)(v: Vector[Output[A]]): Output[Vector[A]] =
-    v.foldLeft[Output[Vector[A]]](Output(Vector.empty[A])) { case (out, curr) =>
-      curr.flatMap(a => out.map(_ appended a))
-    }
+  def sequence[A, CC[X] <: IterableOnce[X], To](
+    coll: CC[Output[A]]
+  )(using bf: BuildFrom[CC[Output[A]], A, To], ctx: Context): Output[To] =
+    coll.iterator
+      .foldLeft(Output(bf.newBuilder(coll))) { (acc, curr) =>
+        acc.zip(curr).map { case (b, r) => b += r }
+      }
+      .map(_.result())
 
   def empty(isSecret: Boolean = false)(using ctx: Context): Output[Nothing] =
     new Output(ctx.registerTask(Result.pure(OutputData.empty[Nothing](isSecret = isSecret))))

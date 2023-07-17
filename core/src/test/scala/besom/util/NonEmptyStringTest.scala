@@ -30,6 +30,13 @@ class NonEmptyStringTest extends munit.FunSuite with CompileAssertions:
       """)
   }
 
+  test("fails to compile when creating via smart constructor with blank string") {
+    failsToCompile("""
+      import besom.util.NonEmptyString.*
+      val x: NonEmptyString = NonEmptyString.from("  ")
+      """)
+  }
+
   test("fails to compile when calling smart constructor with a dynamic string") {
     failsToCompile("""
       import besom.util.NonEmptyString.*
@@ -44,6 +51,20 @@ class NonEmptyStringTest extends munit.FunSuite with CompileAssertions:
     def test(param: String) = s"Got: $param"
     test(NonEmptyString.from("a random string"))
     val str: String = NonEmptyString.from("a random string")
+    """)
+  }
+
+  test("NonEmptyString can be created from string interpolation with non-empty parts") {
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val x: NonEmptyString = s"abc${"def"}ghi"
+    """)
+  }
+
+  test("NonEmptyString can't be created from string interpolation with empty parts") {
+    failsToCompile("""
+    import besom.util.NonEmptyString.*
+    val x: NonEmptyString = s"${"whatever, this won't work"}"
     """)
   }
 
