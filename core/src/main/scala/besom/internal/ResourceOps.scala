@@ -297,8 +297,10 @@ class ResourceOps(using ctx: Context, mdc: MDC[Label]):
           log.trace(s"resolveParent - parent found in ResourceOptions: $parent") *>
             parent.urn.getValue
         case None =>
-          log.trace(s"resolveParent - parent not found in ResourceOptions, using parent from Context") *>
-            ctx.getParentURN.map(Some(_))
+          for
+            parentUrn <- ctx.getParentURN
+            _         <- log.trace(s"resolveParent - parent not found in ResourceOptions, from Context: $parentUrn")
+          yield Some(parentUrn)
 
   private def resolveParentTransformations(typ: ResourceType, resourceOptions: ResourceOptions): Result[List[Unit]] =
     Result.pure(List.empty) // TODO parent transformations

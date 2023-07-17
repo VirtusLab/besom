@@ -26,35 +26,35 @@ trait Context extends TaskTracker:
   private[besom] def registerComponentResource(
     name: NonEmptyString,
     typ: ResourceType
-  ): Result[ComponentBase]
+  )(using Context): Result[ComponentBase]
 
   private[besom] def registerProvider[R <: Resource: ResourceDecoder, A: ProviderArgsEncoder](
     typ: ProviderType,
     name: NonEmptyString,
     args: A,
     options: CustomResourceOptions
-  ): Output[R]
+  )(using Context): Output[R]
 
   private[besom] def registerResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
     typ: ResourceType,
     name: NonEmptyString,
     args: A,
     options: ResourceOptions
-  ): Output[R]
+  )(using Context): Output[R]
 
   private[besom] def readResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
     typ: ResourceType,
     name: NonEmptyString,
     args: A,
     options: ResourceOptions
-  ): Output[R]
+  )(using Context): Output[R]
 
   private[besom] def registerResourceOutputs(
     name: NonEmptyString,
     typ: ResourceType,
     urnResult: Result[URN],
     outputs: Result[Struct]
-  ): Result[Unit]
+  )(using Context): Result[Unit]
 
   private[besom] def close(): Result[Unit]
 
@@ -92,22 +92,16 @@ class ContextImpl(
   private[besom] def registerComponentResource(
     name: NonEmptyString,
     typ: ResourceType
-  ): Result[ComponentBase] =
-    given Context = this
-
+  )(using Context): Result[ComponentBase] =
     val label = Label.fromNameAndType(name, typ)
 
     MDC(Key.LabelKey, label) {
-      for
-        comp <- ResourceOps().registerResourceInternal[ComponentBase, EmptyArgs](
-          typ,
-          name,
-          EmptyArgs(),
-          ComponentResourceOptions(using this)() // TODO pass initial ResourceTransformations here
-        )
-
-        urn <- comp.urn.getValue
-      yield comp
+      ResourceOps().registerResourceInternal[ComponentBase, EmptyArgs](
+        typ,
+        name,
+        EmptyArgs(),
+        ComponentResourceOptions(using this)() // TODO pass initial ResourceTransformations here
+      )
     }
 
   private[besom] def registerProvider[R <: Resource: ResourceDecoder, A: ProviderArgsEncoder](
@@ -115,9 +109,7 @@ class ContextImpl(
     name: NonEmptyString,
     args: A,
     options: CustomResourceOptions
-  ): Output[R] =
-    given Context = this
-
+  )(using Context): Output[R] =
     MDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
       Output.ofData(ResourceOps().registerResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
     }
@@ -127,8 +119,7 @@ class ContextImpl(
     name: NonEmptyString,
     args: A,
     options: ResourceOptions
-  ): Output[R] =
-    given Context = this
+  )(using Context): Output[R] =
     MDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
       Output.ofData(ResourceOps().registerResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
     }
@@ -138,15 +129,14 @@ class ContextImpl(
     name: NonEmptyString,
     args: A,
     options: ResourceOptions
-  ): Output[R] = ???
+  )(using Context): Output[R] = ???
 
   private[besom] def registerResourceOutputs(
     name: NonEmptyString,
     typ: ResourceType,
     urnResult: Result[URN],
     outputs: Result[Struct]
-  ): Result[Unit] =
-    given Context = this
+  )(using Context): Result[Unit] =
     MDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
       ResourceOps().registerResourceOutputsInternal(urnResult, outputs)
     }
