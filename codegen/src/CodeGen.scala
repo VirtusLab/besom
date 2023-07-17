@@ -58,6 +58,8 @@ object CodeGen {
       case StringType => t"String"
       case IntegerType => t"Int"
       case NumberType => t"Double"
+      case UrnType => t"besom.util.Types.URN"
+      case ResourceIdType => t"besom.util.Types.ResourceId"
       case ArrayType(elemType) => t"scala.collection.immutable.List[${asScalaType(elemType, asArgsType)}]"
       case MapType(elemType) => t"scala.Predef.Map[String, ${asScalaType(elemType, asArgsType)}]"
       case unionType: UnionType =>
@@ -436,8 +438,8 @@ object CodeGen {
     }
 
     val resourceBaseProperties = Seq(
-      "urn" -> PropertyDefinition(typeReference = StringType),
-      "id" -> PropertyDefinition(typeReference = StringType)
+      "urn" -> PropertyDefinition(typeReference = UrnType),
+      "id" -> PropertyDefinition(typeReference = ResourceIdType)
     )
 
     val resourceProperties = {

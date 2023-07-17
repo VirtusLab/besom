@@ -24,7 +24,7 @@ object NonEmptyString:
         val atLeastOneSegmentIsNonEmptyAndNonBlank =
           parts
             .collect { case Expr(str) => str }
-            .exists(s => s.nonEmpty && !s.isBlank)
+            .exists(!_.isBlank)
 
         if atLeastOneSegmentIsNonEmptyAndNonBlank then expr.asExprOf[NonEmptyString]
         else report.errorAndAbort("This interpolated string is possibly empty, empty strings are not allowed here!")
@@ -32,7 +32,7 @@ object NonEmptyString:
         val atLeastOneSegmentIsNonEmptyAndNonBlank =
           parts
             .collect { case Expr(str) => str }
-            .exists(s => s.nonEmpty && !s.isBlank)
+            .exists(!_.isBlank)
 
         if atLeastOneSegmentIsNonEmptyAndNonBlank then expr.asExprOf[NonEmptyString]
         else report.errorAndAbort("This interpolated string is possibly empty, empty strings are not allowed here!")
@@ -40,7 +40,7 @@ object NonEmptyString:
         val atLeastOneSegmentIsNonEmptyAndNonBlank =
           parts
             .collect { case Expr(str) => str }
-            .exists(s => s.nonEmpty && !s.isBlank)
+            .exists(!_.isBlank)
 
         if atLeastOneSegmentIsNonEmptyAndNonBlank then expr.asExprOf[NonEmptyString]
         else report.errorAndAbort("This interpolated string is possibly empty, empty strings are not allowed here!")
@@ -56,3 +56,6 @@ object NonEmptyString:
             )
 
   implicit inline def str2NonEmptyString(inline s: String): NonEmptyString = NonEmptyString.from(s)
+
+  extension (s: String)
+    private def isBlank = s.trim.isEmpty
