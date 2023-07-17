@@ -162,10 +162,12 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
     )
 
     for
-      _ <- Output.sequence((1 to nodes).map(createHostPathVolume))
-      _ <- redisConfigMap
-      _ <- redisStatefulSet
-      _ <- redisService
+      caughtUrn <- urn
+      _         <- Output(log.info(s"Caught urn: $caughtUrn"))
+      _         <- Output.sequence((1 to nodes).map(createHostPathVolume))
+      _         <- redisConfigMap
+      _         <- redisStatefulSet
+      _         <- redisService
     yield Redis(Output(s"redis://redis-cluster-service-$name:6379"))
   }
 
