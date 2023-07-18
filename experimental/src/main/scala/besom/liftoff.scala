@@ -32,12 +32,18 @@ case class Redis(connectionString: Output[String])(using ComponentBase) extends 
 
 def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): Output[Redis] =
   component(name, "besom:liftoff:Redis") {
+    val redisNamespace = namespace(s"redis-cluster-namespace-$name")
+
+    val labels = Map("app" -> name)
+
     def createHostPathVolume(num: Int): Output[PersistentVolume] =
       persistentVolume(
-        s"redis-pv-$name-$num",
+        s"redis-cluster-pv-$num-$name",
         PersistentVolumeArgs(
           metadata = ObjectMetaArgs(
-            labels = Map("type" -> "local")
+            namespace = redisNamespace.metadata.name.orEmpty,
+            labels = Map("type" -> "local") ++ labels,
+            name = s"redis-cluster-pv-$num-$name"
           ),
           spec = PersistentVolumeSpecArgs(
             storageClassName = "manual",
@@ -51,6 +57,11 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
     val redisConfigMap = configMap(
       s"redis-cluster-configmap-$name",
       ConfigMapArgs(
+        metadata = ObjectMetaArgs(
+          namespace = redisNamespace.metadata.name.orEmpty,
+          labels = labels,
+          name = s"redis-cluster-configmap-$name"
+        ),
         data = Map("redis.conf" -> s"""cluster-enabled yes
                             |cluster-require-full-coverage no
                             |cluster-node-timeout 15000
@@ -66,15 +77,22 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
     val redisStatefulSet = statefulSet(
       s"redis-cluster-statefulset-$name",
       StatefulSetArgs(
+        metadata = ObjectMetaArgs(
+          name = s"redis-cluster-statefulset-$name",
+          namespace = redisNamespace.metadata.name.orEmpty,
+          labels = labels
+        ),
         spec = StatefulSetSpecArgs(
           serviceName = s"redis-cluster-statefulset-$name",
           replicas = nodes,
           selector = LabelSelectorArgs(
-            matchLabels = Map("app" -> name)
+            matchLabels = labels
           ),
           template = PodTemplateSpecArgs(
             metadata = ObjectMetaArgs(
-              labels = Map("app" -> name)
+              name = s"redis-cluster-statefulset-$name",
+              namespace = redisNamespace.metadata.name.orEmpty,
+              labels = labels
             ),
             spec = PodSpecArgs(
               containers = ContainerArgs(
@@ -126,7 +144,9 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
           volumeClaimTemplates = List(
             PersistentVolumeClaimArgs(
               metadata = ObjectMetaArgs(
-                name = "data"
+                name = "data",
+                labels = labels,
+                namespace = redisNamespace.metadata.name.orEmpty
               ),
               spec = PersistentVolumeClaimSpecArgs(
                 accessModes = List("ReadWriteOnce"),
@@ -146,7 +166,8 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
       ServiceArgs(
         metadata = ObjectMetaArgs(
           name = s"redis-cluster-service-$name",
-          labels = Map("app" -> name)
+          labels = labels,
+          namespace = redisNamespace.metadata.name.orEmpty
         ),
         spec = ServiceSpecArgs(
           ports = List(
@@ -156,12 +177,13 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
               targetPort = 6379
             )
           ),
-          selector = Map("app" -> name)
+          selector = labels
         )
       )
     )
 
     for
+      _ <- redisNamespace
       _ <- Output.sequence((1 to nodes).map(createHostPathVolume))
       _ <- redisConfigMap
       _ <- redisStatefulSet
@@ -253,7 +275,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
   for
     nginx   <- nginxDeployment
     service <- nginxService
-    redis   <- redisCluster("redis-cluster", 3)
+    redis   <- redisCluster("cache", 3)
   yield Pulumi.exports(
     namespace = appNamespace.metadata.name,
     nginxDeploymentName = nginx.metadata.name,
