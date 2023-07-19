@@ -255,6 +255,11 @@ object Result:
 
   def deferFuture[A](thunk: => Future[A])(using Debug): Result[A] = Result.Suspend(() => thunk, Debug())
 
+  def bracket[A, B](acquire: => Result[A])(release: A => Result[Unit])(use: A => Result[B])(using Debug): Result[B] =
+    acquire.flatMap { a =>
+      use(a).transformM(r => release(a).as(r))
+    }
+
   trait ToFuture[F[_]]:
     def eval[A](fa: => F[A]): () => Future[A]
 

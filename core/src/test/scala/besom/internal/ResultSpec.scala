@@ -128,6 +128,40 @@ trait ResultSpec[F[+_]: RunResult] extends munit.FunSuite:
   //   run(program)
   // }
 
+  test("bracket works in correct order") {
+    val program =
+      for
+        ref <- Ref[String]("")
+        append = (s: String) => ref.update(_ + s)
+        _  <- Result.bracket(append("1a"))(_ => append("1r")) { _ =>
+          Result.bracket(append("2a"))(_ => append("2r")) { _ =>
+            Result.bracket(append("3a"))(_ => append("3r"))(_ => append("use"))
+          }
+        }
+        res <- ref.get
+      yield res
+
+    val lhs = program.unsafeRunSync()
+
+    assertEquals(lhs, "1a2a3ause3r2r1r")
+  }
+
+  test("bracket works in case of failure") {
+    val program =
+      for
+        ref <- Ref[String]("")
+        append = (s: String) => ref.update(_ + s)
+        _ <- Result.bracket(append("a"))(_ => append("r")) { _ =>
+          Result.fail(new RuntimeException("Oopsy daisy"))
+        }.either
+        res <- ref.get
+      yield res
+    
+    val lhs = program.unsafeRunSync()
+
+    assertEquals(lhs, "ar")
+  }
+
 // TODO test laziness of operators (for Future mostly) somehow
 // TODO zip should be probably parallelised
 // TODO test cancellation doesn't break anything for product, fork etc
