@@ -7,6 +7,7 @@ import scala.util.Success
 import scala.concurrent.duration.Duration
 
 import logging.{LocalBesomLogger => logger}
+import scala.annotation.implicitNotFound
 
 trait Fiber[+A]:
   def join: Result[A]
@@ -108,24 +109,24 @@ trait Runtime[F[+_]]:
   def fork[A](fa: => F[A]): F[Fiber[A]]
   def sleep[A](fa: => F[A], duration: Long): F[A]
   
-  final case class M[+A](inner: Finalizers => F[A])
-  def pureM[A](a: A): M[A] = M(_ => pure(a))
-  def failM(err: Throwable): M[Nothing] = M(_ => fail(err))
-  def deferM[A](thunk: => A): M[A] = M(_ => defer(thunk))
-  def blockingM[A](thunk: => A): M[A] = M(_ => blocking(thunk))
-  def flatMapBothM[A, B](fa: M[A])(f: Either[Throwable, A] => M[B]): M[B] = M { finalizers =>
+  private[internal] final case class M[+A](inner: Finalizers => F[A])
+  private[internal] def pureM[A](a: A): M[A] = M(_ => pure(a))
+  private[internal] def failM(err: Throwable): M[Nothing] = M(_ => fail(err))
+  private[internal] def deferM[A](thunk: => A): M[A] = M(_ => defer(thunk))
+  private[internal] def blockingM[A](thunk: => A): M[A] = M(_ => blocking(thunk))
+  private[internal] def flatMapBothM[A, B](fa: M[A])(f: Either[Throwable, A] => M[B]): M[B] = M { finalizers =>
     flatMapBoth(fa.inner(finalizers)) { either =>
       f(either).inner(finalizers)
     }
   }
-  def fromFutureM[A](f: => scala.concurrent.Future[A]): M[A] = M(_ => fromFuture(f))
-  def forkM[A](fa: => M[A]): M[Fiber[A]] = M { finalizers =>
+  private[internal] def fromFutureM[A](f: => scala.concurrent.Future[A]): M[A] = M(_ => fromFuture(f))
+  private[internal] def forkM[A](fa: => M[A]): M[Fiber[A]] = M { finalizers =>
     fork(fa.inner(finalizers))
   }
-  def sleepM[A](fa: => M[A], duration: Long): M[A] = M { finalizers =>
+  private[internal] def sleepM[A](fa: => M[A], duration: Long): M[A] = M { finalizers =>
     sleep(fa.inner(finalizers), duration)
   }
-  def getFinalizersM: M[Finalizers] = M(fs => pure(fs))
+  private[internal] def getFinalizersM: M[Finalizers] = M(fs => pure(fs))
 
 
   private[besom] def debugEnabled: Boolean
@@ -142,7 +143,11 @@ object Debug:
   def apply()(using d: Debug): Debug = d
 
 private[internal] type Finalizers = Ref[Map[Scope, List[Result[Unit]]]]
-trait Scope
+@implicitNotFound(s"""|Resource can only be used inside a block with a defined Scope.
+                      |
+                      |To start a new scope use `Result.scoped { ... }`
+                      |Otherwise add a `using Scope` parameter to your method.""".stripMargin)
+private[internal] trait Scope
 
 enum Result[+A]:
   case Suspend(thunk: () => Future[A], debug: Debug)
