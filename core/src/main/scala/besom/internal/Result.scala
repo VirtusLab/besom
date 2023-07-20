@@ -107,6 +107,26 @@ trait Runtime[F[+_]]:
   def fromFuture[A](f: => scala.concurrent.Future[A]): F[A]
   def fork[A](fa: => F[A]): F[Fiber[A]]
   def sleep[A](fa: => F[A], duration: Long): F[A]
+  
+  final case class M[+A](inner: Finalizers => F[A])
+  def pureM[A](a: A): M[A] = M(_ => pure(a))
+  def failM(err: Throwable): M[Nothing] = M(_ => fail(err))
+  def deferM[A](thunk: => A): M[A] = M(_ => defer(thunk))
+  def blockingM[A](thunk: => A): M[A] = M(_ => blocking(thunk))
+  def flatMapBothM[A, B](fa: M[A])(f: Either[Throwable, A] => M[B]): M[B] = M { finalizers =>
+    flatMapBoth(fa.inner(finalizers)) { either =>
+      f(either).inner(finalizers)
+    }
+  }
+  def fromFutureM[A](f: => scala.concurrent.Future[A]): M[A] = M(_ => fromFuture(f))
+  def forkM[A](fa: => M[A]): M[Fiber[A]] = M { finalizers =>
+    fork(fa.inner(finalizers))
+  }
+  def sleepM[A](fa: => M[A], duration: Long): M[A] = M { finalizers =>
+    sleep(fa.inner(finalizers), duration)
+  }
+  def getFinalizersM: M[Finalizers] = M(fs => pure(fs))
+
 
   private[besom] def debugEnabled: Boolean
 
@@ -121,6 +141,9 @@ object Debug:
     new Debug(fullName, file, line)
   def apply()(using d: Debug): Debug = d
 
+private[internal] type Finalizers = Ref[Map[Scope, List[Result[Unit]]]]
+trait Scope
+
 enum Result[+A]:
   case Suspend(thunk: () => Future[A], debug: Debug)
   case Pure(a: A, debug: Debug)
@@ -130,6 +153,7 @@ enum Result[+A]:
   case BiFlatMap[B, A](r: Result[B], f: Either[Throwable, B] => Result[A], debug: Debug) extends Result[A]
   case Fork(r: Result[A], debug: Debug) extends Result[Fiber[A]]
   case Sleep(r: () => Result[A], duration: Long, debug: Debug)
+  case GetFinalizers(debug: Debug) extends Result[Finalizers]
 
   def flatMap[B](f: A => Result[B])(using Debug): Result[B] = BiFlatMap(
     this,
@@ -170,7 +194,7 @@ enum Result[+A]:
 
   def delay(duration: Long)(using Debug): Result[A] = Result.Sleep(() => this, duration, Debug())
   def fork[A2 >: A](using Debug): Result[Fiber[A2]] = Result.Fork(this, Debug())
-
+  
   def map[B](f: A => B)(using Debug): Result[B]              = flatMap(a => Pure(f(a), Debug()))
   def product[B](rb: Result[B])(using Debug): Result[(A, B)] = flatMap(a => rb.map(b => (a, b)))
   def zip[B](rb: => Result[B])(using z: Zippable[A, B])(using Debug) =
@@ -184,7 +208,13 @@ enum Result[+A]:
   inline def *>[B](rb: => Result[B])(using Debug): Result[B] = flatMap(_ => rb)
   inline def <*[B](rb: => Result[B])(using Debug): Result[A] = flatMap(a => rb.as(a))
 
-  def run[F[+_]](using F: Runtime[F]): F[A] = this match
+  def run[F[+_]](using F: Runtime[F]): F[A] =
+    F.flatMapBoth(Ref(Map.empty[Scope, List[Result[Unit]]]).runF[F]) {
+      case Right(finalizersRef) => this.runM[F].inner(finalizersRef)
+      case Left(err) => F.fail(err)
+    }
+
+  private def runF[F[+_]](using F: Runtime[F]): F[A] = this match
     case Suspend(thunk, debug) =>
       if (F.debugEnabled) logger.trace(s"interpreting Suspend from $debug")
       F.fromFuture(thunk())
@@ -203,13 +233,46 @@ enum Result[+A]:
       F.blocking(thunk())
     case BiFlatMap(fa, f, debug) =>
       if (F.debugEnabled) logger.trace(s"interpreting BiFlatMap from $debug")
-      F.flatMapBoth(fa.run[F])(either => f(either).run[F])
+      F.flatMapBoth(fa.runF[F])(either => f(either).runF[F].asInstanceOf[F[A]])
     case Fork(fa, debug) =>
       if (F.debugEnabled) logger.trace(s"interpreting Fork from $debug")
-      F.fork(fa.run[F])
+      F.fork(fa.runF[F]).asInstanceOf[F[A]]
     case Sleep(fa, duration, debug) =>
       if (F.debugEnabled) logger.trace(s"interpreting Sleep from $debug")
-      F.sleep(fa().run[F], duration)
+      F.sleep(fa().runF[F], duration)
+    case GetFinalizers(debug) =>
+      if (F.debugEnabled) logger.trace(s"interpreting GetFinalizers from $debug")
+      F.fail(new RuntimeException("Panic: GetFinalizers should not be called on base monad F")).asInstanceOf[F[A]]
+
+  private def runM[F[+_]](using F: Runtime[F]): F.M[A] = this match
+    case Suspend(thunk, debug) =>
+      if (F.debugEnabled) logger.trace(s"interpreting Suspend from $debug")
+      F.fromFutureM(thunk())
+    case Pure(value, debug) =>
+      if (F.debugEnabled) logger.trace(s"interpreting Pure from $debug")
+      F.pureM(value)
+    case Fail(err, debug) =>
+      if (F.debugEnabled) logger.trace(s"interpreting Fail from $debug")
+      F.failM(err).asInstanceOf[F.M[A]]
+    // TODO test that Defer catches for all implementations always
+    case Defer(thunk, debug) =>
+      if (F.debugEnabled) logger.trace(s"interpreting Defer from $debug")
+      F.deferM(thunk())
+    case Blocking(thunk, debug) =>
+      if (F.debugEnabled) logger.trace(s"interpreting Blocking from $debug")
+      F.blockingM(thunk())
+    case BiFlatMap(fa, f, debug) =>
+      if (F.debugEnabled) logger.trace(s"interpreting BiFlatMap from $debug")
+      F.flatMapBothM(fa.runM[F])(either => f(either).runM[F].asInstanceOf[F.M[A]])
+    case Fork(fa, debug) =>
+      if (F.debugEnabled) logger.trace(s"interpreting Fork from $debug")
+      F.forkM(fa.runM[F]).asInstanceOf[F.M[A]]
+    case Sleep(fa, duration, debug) =>
+      if (F.debugEnabled) logger.trace(s"interpreting Sleep from $debug")
+      F.sleepM(fa().runM[F], duration)
+    case GetFinalizers(debug) =>
+      if (F.debugEnabled) logger.trace(s"interpreting GetFinalizers from $debug")
+      F.getFinalizersM
 
 object Result:
   import scala.collection.BuildFrom
@@ -259,6 +322,27 @@ object Result:
     acquire.flatMap { a =>
       use(a).transformM(r => release(a).as(r))
     }
+
+  def getFinalizers(using Debug): Result[Finalizers] = GetFinalizers(Debug())
+
+  def scoped[A](inner: Scope ?=> Result[A])(using Debug): Result[A] =
+    given scope: Scope = new Scope {}
+    inner.transformM { a =>
+      for
+        finalizersRef <- getFinalizers
+        finalizers <- finalizersRef.get
+        currentFinalizers = finalizers.getOrElse(scope, Nil)
+        _ <- Result.sequence(currentFinalizers)
+        _ <- finalizersRef.update(_.removed(scope))
+      yield a
+    }
+
+  def resource[A](acquire: => Result[A])(release: A => Result[Unit])(using scope: Scope)(using Debug): Result[A] =
+    for
+      a <- acquire
+      finalizersRef <- getFinalizers
+      _ <- finalizersRef.update(_.updatedWith(scope)(finalizers => Some(release(a) :: finalizers.toList.flatten)))
+    yield a
 
   trait ToFuture[F[_]]:
     def eval[A](fa: => F[A]): () => Future[A]
