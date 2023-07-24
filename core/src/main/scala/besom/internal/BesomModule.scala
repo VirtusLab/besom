@@ -13,25 +13,24 @@ trait BesomModule extends BesomSyntax:
   object Output extends OutputFactory
 
   def run(program: Context ?=> Output[Exports]): Unit =
-    val everything: Result[Unit] = for
+    val everything: Result[Unit] = Result.scoped { for
       _              <- BesomLogger.setupLogger()
       runInfo        <- RunInfo.fromEnv
       _              <- logger.info(s"Besom starting up in ${if runInfo.dryRun then "dry run" else "live"} mode.")
       taskTracker    <- TaskTracker()
-      monitor        <- Monitor(runInfo.monitorAddress)
-      engine         <- Engine(runInfo.engineAddress)
+      monitor        <- Result.resource(Monitor(runInfo.monitorAddress))(_.close())
+      engine         <- Result.resource(Engine(runInfo.engineAddress))(_.close())
       _              <- logger.info(s"Established connections to monitor and engine, spawning streaming pulumi logger.")
-      logger         <- BesomLogger(engine, taskTracker)
+      logger         <- Result.resource(BesomLogger(engine, taskTracker))(_.close())
       config         <- Config(runInfo.project)
       featureSupport <- FeatureSupport(monitor)
       _              <- logger.info(s"Resolved feature support, spawning context and executing user program.")
-      ctx            <- Context(runInfo, taskTracker, monitor, engine, logger, featureSupport, config)
+      ctx            <- Result.resource(Context(runInfo, taskTracker, monitor, engine, logger, featureSupport, config))(_.close())
       userOutputs    <- program(using ctx).map(_.toResult).getValueOrElse(Result.pure(Struct()))
       -              <- Stack.registerStackOutputs(runInfo, userOutputs)(using ctx)
       _              <- ctx.waitForAllTasks
-      _              <- ctx.close() // TODO fix this via finalizers issue #105
-      _              <- logger.close() // TODO fix this via finalizers issue #105
-    yield ()
+      yield ()
+    }
 
     rt.unsafeRunSync(everything.run(using rt)) match
       case Left(err) => throw err
