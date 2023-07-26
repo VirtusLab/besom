@@ -151,6 +151,9 @@ object IntegerType extends PrimitiveType
 object NumberType extends PrimitiveType
 object BooleanType extends PrimitiveType
 
+object UrnType extends TypeReference
+object ResourceIdType extends TypeReference
+
 case class ArrayType(items: TypeReference) extends TypeReference
 case class MapType(additionalProperties: TypeReference) extends TypeReference
 case class UnionType(oneOf: List[TypeReference], `type`: Option[PrimitiveType]) extends TypeReference

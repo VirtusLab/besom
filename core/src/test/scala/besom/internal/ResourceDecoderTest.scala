@@ -10,8 +10,8 @@ class ResourceDecoderTest extends munit.FunSuite:
   case class CustomStruct(a: String, b: Double) derives Decoder
 
   case class TestResource(
-    urn: Output[String],
-    id: Output[String],
+    urn: Output[URN],
+    id: Output[ResourceId],
     property1: Output[Option[String]],
     property2: Output[Int],
     property3: Output[CustomStruct]
@@ -26,12 +26,12 @@ class ResourceDecoderTest extends munit.FunSuite:
 
     given Context = DummyContext().unsafeRunSync()
 
-    val dependencyResource = DependencyResource(Output("xd"))
+    val dependencyResource = DependencyResource(Output(URN.empty))
 
     val errorOrResourceResult = Right(
       RawResourceResult(
-        urn = "fakeUrn",
-        id = Some("fakeId"),
+        urn = URN("urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource"),
+        id = Some(ResourceId("fakeId")),
         data = Struct(
           Map(
             "property1" -> Some("abc").asValue,
@@ -62,7 +62,11 @@ class ResourceDecoderTest extends munit.FunSuite:
           assert(clue(dependencies) == clue(expectedDependencies))
           assert(clue(isSecret) == clue(expectedIsSecret)) // TODO: test some output with isSecret = true?
 
-    checkOutput(resource.urn)("fakeUrn", Set(resource), false)
+    checkOutput(resource.urn)(
+      "urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource",
+      Set(resource),
+      false
+    )
     checkOutput(resource.id)("fakeId", Set(resource), false)
     checkOutput(resource.property1)(Some("abc"), Set(resource), false)
     checkOutput(resource.property2)(123, Set(resource, dependencyResource), false)

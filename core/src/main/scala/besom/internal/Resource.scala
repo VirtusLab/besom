@@ -9,13 +9,13 @@ import scala.annotation.implicitNotFound
 import besom.util.*
 
 sealed trait Resource:
-  def urn: Output[String]
+  def urn: Output[URN]
   private[internal] def isCustom: Boolean = this match
     case _: CustomResource => true
     case _                 => false
 
 trait CustomResource extends Resource:
-  def id: Output[String]
+  def id: Output[ResourceId]
 
 trait ComponentResource(using
   @implicitNotFound(
@@ -23,16 +23,16 @@ trait ComponentResource(using
   )
   base: ComponentBase
 ) extends Resource:
-  override def urn: Output[String] = base.urn
+  override def urn: Output[URN] = base.urn
 
 trait ProviderResource extends CustomResource:
   private[internal] def registrationId: Result[String] =
     for
-      urn <- urn.getValueOrElse("")
+      urn <- urn.getValueOrElse(URN.empty)
       id  <- id.getValueOrElse(Constants.UnknownValue)
     yield s"${urn}::${id}"
 
-case class DependencyResource(urn: Output[String]) extends Resource derives ResourceDecoder
+case class DependencyResource(urn: Output[URN]) extends Resource derives ResourceDecoder
 
 case class Stack()(using ComponentBase) extends ComponentResource
 object Stack:
@@ -55,4 +55,4 @@ object Stack:
     for given ComponentBase <- ctx.registerComponentResource(stackName(runInfo), RootPulumiStackTypeName)
     yield Stack()
 
-case class ComponentBase(urn: Output[String]) extends Resource derives ResourceDecoder
+case class ComponentBase(urn: Output[URN]) extends Resource derives ResourceDecoder

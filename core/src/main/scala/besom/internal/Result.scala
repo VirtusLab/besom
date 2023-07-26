@@ -321,6 +321,9 @@ object Result:
       }
       .map(_.result())
 
+  def sequenceMap[K, V](map: Map[K, Result[V]])(using Debug): Result[Map[K, V]] =
+    sequence(map.view.map { case (k, v) => v.map(k -> _) }.toVector).map(_.toMap)
+
   def deferFuture[A](thunk: => Future[A])(using Debug): Result[A] = Result.Suspend(() => thunk, Debug())
 
   def bracket[A, B](acquire: => Result[A])(release: A => Result[Unit])(use: A => Result[B])(using Debug): Result[B] =

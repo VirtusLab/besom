@@ -50,7 +50,7 @@ final case class CustomResourceOptions private[internal] (
   provider: Option[ProviderResource],
   deleteBeforeReplace: Boolean,
   additionalSecretOutputs: List[String],
-  importId: Option[String]
+  importId: Option[NonEmptyString] // TODO should this be Id?
 ) extends ResourceOptions,
       CommonResourceOptions:
   export common.*
@@ -64,7 +64,7 @@ final case class ComponentResourceOptions private[internal] (
 
 final case class StackReferenceResourceOptions private[internal] (
   common: CommonResourceOptions,
-  id: Option[Output[NonEmptyString]] // TODO: This is for StackReference
+  id: Option[Output[NonEmptyString]] // TODO: This is for StackReference, should this be Id?
 ) extends ResourceOptions,
       CommonResourceOptions:
   export common.*
@@ -87,7 +87,7 @@ object CustomResourceOptions:
     pluginDownloadUrl: String | NotProvided = NotProvided,
     deleteBeforeReplace: Boolean = false,
     additionalSecretOutputs: List[String] = List.empty,
-    importId: String | NotProvided = NotProvided
+    importId: NonEmptyString | NotProvided = NotProvided
   ): CustomResourceOptions =
     val common = CommonResourceOptionsImpl(
       parent = parent.asOption,

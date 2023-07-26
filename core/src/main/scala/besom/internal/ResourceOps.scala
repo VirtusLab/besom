@@ -11,13 +11,13 @@ import fansi.Str
 class ResourceOps(using ctx: Context, mdc: MDC[Label]):
 
   private[besom] def registerResourceOutputsInternal(
-    urnResult: Result[String],
+    urnResult: Result[URN],
     outputs: Result[Struct]
   ): Result[Unit] =
     urnResult.flatMap { urn =>
       outputs.flatMap { struct =>
         val request = RegisterResourceOutputsRequest(
-          urn = urn,
+          urn = urn.asString,
           outputs = if struct.fields.isEmpty then None else Some(struct)
         )
 
@@ -36,7 +36,7 @@ class ResourceOps(using ctx: Context, mdc: MDC[Label]):
 
   private[besom] def resolveTransitivelyReferencedComponentResourceUrns(
     resources: Set[Resource]
-  ): Result[Set[String]] =
+  ): Result[Set[URN]] =
     def findAllReachableResources(left: Set[Resource], acc: Set[Resource]): Result[Set[Resource]] =
       if left.isEmpty then Result.pure(acc)
       else
@@ -64,13 +64,13 @@ class ResourceOps(using ctx: Context, mdc: MDC[Label]):
     }
 
   case class AggregatedDependencyUrns(
-    allDeps: Set[String],
-    allDepsByProperty: Map[String, Set[String]]
+    allDeps: Set[URN],
+    allDepsByProperty: Map[String, Set[URN]]
   )
 
   case class PreparedInputs(
     serializedArgs: Struct,
-    parentUrn: Option[String],
+    parentUrn: Option[URN],
     providerId: Option[String],
     providerRefs: Map[String, String],
     depUrns: AggregatedDependencyUrns,
@@ -179,15 +179,15 @@ class ResourceOps(using ctx: Context, mdc: MDC[Label]):
             RegisterResourceRequest(
               `type` = state.typ,
               name = state.name,
-              parent = inputs.parentUrn.getOrElse(""), // protobuf expects empty string and not null
+              parent = inputs.parentUrn.getOrElse(URN.empty).asString, // protobuf expects empty string and not null
               custom = resource.isCustom,
               `object` = Some(inputs.serializedArgs), // TODO when could this be None?
               protect = inputs.options.protect, // TODO we don't do what pulumi-java does, we do what pulumi-go does
-              dependencies = inputs.depUrns.allDeps.toList,
+              dependencies = inputs.depUrns.allDeps.toList.map(_.asString),
               provider = inputs.providerId.getOrElse(""), // protobuf expects empty string and not null
               providers = inputs.providerRefs,
               propertyDependencies = inputs.depUrns.allDepsByProperty.map { case (key, value) =>
-                key -> PropertyDependencies(value.toList)
+                key -> PropertyDependencies(value.toList.map(_.asString))
               }.toMap,
               deleteBeforeReplaceDefined = true,
               deleteBeforeReplace = inputs.options match
@@ -289,7 +289,7 @@ class ResourceOps(using ctx: Context, mdc: MDC[Label]):
 
   // This method returns an Option of Resource because for Stack there is no parent resource,
   // for any other resource the parent is either explicitly set in ResourceOptions or the stack is the parent.
-  private def resolveParentUrn(typ: ResourceType, resourceOptions: ResourceOptions): Result[Option[String]] =
+  private def resolveParentUrn(typ: ResourceType, resourceOptions: ResourceOptions): Result[Option[URN]] =
     if typ == Stack.RootPulumiStackTypeName then Result.pure(None)
     else
       resourceOptions.parent match
@@ -297,8 +297,10 @@ class ResourceOps(using ctx: Context, mdc: MDC[Label]):
           log.trace(s"resolveParent - parent found in ResourceOptions: $parent") *>
             parent.urn.getValue
         case None =>
-          log.trace(s"resolveParent - parent not found in ResourceOptions, using parent from Context") *>
-            ctx.getParentURN.map(Some(_))
+          for
+            parentUrn <- ctx.getParentURN
+            _         <- log.trace(s"resolveParent - parent not found in ResourceOptions, from Context: $parentUrn")
+          yield Some(parentUrn)
 
   private def resolveParentTransformations(typ: ResourceType, resourceOptions: ResourceOptions): Result[List[Unit]] =
     Result.pure(List.empty) // TODO parent transformations
@@ -415,5 +417,6 @@ class ResourceOps(using ctx: Context, mdc: MDC[Label]):
             common = commonRS
           )
         case DependencyResource(urn) => throw new Exception("DependencyResource should not be registered")
-        case ComponentBase(urn)      => ComponentResourceState(common = commonRS) // TODO: ComponentBase should not be registered"
+        case ComponentBase(urn) =>
+          ComponentResourceState(common = commonRS) // TODO: ComponentBase should not be registered"
     }
