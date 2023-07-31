@@ -8,6 +8,10 @@ dependsOn = ["core"]
 platforms = ["jvm"]
 dependsOn = ["core"]
 
+[modules.experimental]
+platforms = ["jvm"]
+dependsOn = ["core"]
+
 [modules.core]
 platforms = ["jvm"]
 

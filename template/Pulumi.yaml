@@ -1,0 +1,6 @@
+name: ${PROJECT}
+description: ${DESCRIPTION}
+runtime: scala
+template:
+  description: A minimal Kubernetes Scala Pulumi program
+  important: true

@@ -58,6 +58,8 @@ trait Context extends TaskTracker:
 
   private[besom] def close(): Result[Unit]
 
+  def getLogger = logger
+
 class ComponentContext(private val globalContext: Context, private val componentURN: Result[URN]) extends Context:
   export globalContext.{getParentURN => _, *}
 

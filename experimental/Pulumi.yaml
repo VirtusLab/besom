@@ -1,3 +1,6 @@
 name: besom
 description: Experimental playground for Besom
 runtime: scala
+config:
+  besom-liftoff:A: "aaaaaaaa"
+  tets:B: "bbbbbbb"
