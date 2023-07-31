@@ -2,12 +2,18 @@
 **Besom** - a broom made of twigs tied round a stick. Brooms and besoms are used for protection, to ward off evil spirits, and cleansing of ritual spaces. Also, an experimental pulumi-scala implementation, incidentally.
 
 ## Getting started
-1. Prerequisites: Pulumi, Just, Java
-2. Publish locally and install necessary Besom Packages:
+1. Prerequisites: Pulumi, Just, Java, scala-cli, go
+2. Set scala-cli power to true `scala-cli config power true`
+3. Publish locally and install necessary Besom Packages:
 ```bash
 just publish-local-sdk
 just publish-local-compiler-plugin
 just install-language-plugin
+```
+4. Generate and publish k8s provider:
+```bash
+just generate-provider-sdk kubernetes
+just publish-local-provider-sdk kubernetes
 ```
 3. Write your own infrastructure. You can use the template available in this repository:
 ```shell
