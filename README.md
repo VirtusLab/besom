@@ -53,11 +53,6 @@ lazy val infra = project.in(file("infrastructure")).settings(
    ```
 This just informs your IDE about the existence of infrastructure module DO NOT REMOVE DEPENDENCIES FROM `project.scala` they are necessary in both places.
 
-If there is still no code completion install scala compose:
-1. clone [the repository](https://github.com/VirtusLab/scala-compose)
-2. run `./mill -i show scala-compose.nativeImage`
-3. run in your project directory `${path_to_outputed_binary} setup-ide --conf-dir .`
-
 ## Tips
 - Pass `Context` everywhere you are using pulumi, for example when you are creating a resource.
 - Don't be afraid to split your code into different files. You can easily import them back into `Main`
