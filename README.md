@@ -2,9 +2,9 @@
 **Besom** - a broom made of twigs tied round a stick. Brooms and besoms are used for protection, to ward off evil spirits, and cleansing of ritual spaces. Also, an experimental pulumi-scala implementation, incidentally.
 
 ## Getting started
-1. Prerequisites: Pulumi, Just, Java, scala-cli, go
+1. Prerequisites: pulumi, just, java, scala-cli, go
 2. Set scala-cli power to true `scala-cli config power true`
-3. Publish locally and install necessary Besom Packages:
+3. Publish locally and install necessary Besom packages:
 ```bash
 just publish-local-sdk
 just publish-local-compiler-plugin
@@ -31,7 +31,7 @@ pulumi new ../besom/template
 
 `project.scala` is the file containing your dependencies.
 
-`Main.scala` is the entrypoint for your pulumi infrastructre as code. Resources created in `Pulumi.run{ ... }` block will be created by pulumi.
+`Main.scala` is the entrypoint for your infrastructure as code. Resources created in `Pulumi.run{ ... }` block will be created by pulumi.
 
 ## Setting up the code editor
 
@@ -41,9 +41,9 @@ If you are using IntelliJ:
 
 If you are using VSCode:
 1. install Metals
-2. open folder with your infra and start Metals.
+2. open folder with your infrastructure and start Metals.
 
-This might not be enough if infra is just a part (a module) of your existing scala project. For this to work you have to make your build tool aware of infra code, for **sbt** create a corresponding module: 
+This might not be enough if infrastructure is just a part (a module) of your existing scala project. For this to work you have to make your build tool aware of infrastructure code, for **sbt** create a corresponding module: 
    ```scala
 lazy val infra = project.in(file("infrastructure")).settings(
    libraryDependencies ++= Seq(
@@ -51,12 +51,10 @@ lazy val infra = project.in(file("infrastructure")).settings(
    "org.virtuslab" %% "besom-core" % "0.0.1-SNAPSHOT"
    ))
    ```
-This just informs your IDE about the existence of infrastructure module DO NOT REMOVE DEPENDENCIES FROM `project.scala` they are necessary in both places.
+This just informs your IDE about the existence of infrastructure module Do not remove dependencies from `project.scala` they are necessary in both places.
 
 ## Tips
 - Pass `Context` everywhere you are using pulumi, for example when you are creating a resource.
-- Don't be afraid to split your code into different files. You can easily import them back into `Main`
 - Call your functions and use your variables. If the code is unused it will not be processed by pulumi and some resources might be missing.
-- Listen to the compiler. On your `pulumi up` the code will be compiled it will show you issues in your code.
 - Use whatever scala concepts you are familiar with, infrastructure as code in Besom is still a scala program, so you have the full potential of the language to work with.
 - Pay attention to the types. You will be instantiating case classes to pass parameters, note their package of origin.
