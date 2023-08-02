@@ -195,7 +195,7 @@ object CodeGen {
     val providerPackageParts = typeMapper.moduleToPackageParts(providerName)
     val typeCoordinates = PulumiTypeCoordinates(
       providerPackageParts = typeMapper.moduleToPackageParts(providerName),
-      modulePackageParts = typeMapper.moduleToPackageParts(providerName) :+ indexModuleName,
+      modulePackageParts = Seq(indexModuleName),
       typeName = "Provider"
     )
     sourceFilesForResource(
