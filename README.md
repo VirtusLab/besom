@@ -3,7 +3,6 @@
 
 ## Getting started
 1. Prerequisites: pulumi, just, java, scala-cli, go
-2. Set scala-cli power to true `scala-cli config power true`
 3. Publish locally and install necessary Besom packages:
 ```bash
 just publish-local-sdk
@@ -24,7 +23,7 @@ for example:
 cd ..
 mkdir infra
 cd infra
-pulumi new ../besom/template
+pulumi new ../besom/template/kubernetes
 ```
 ## Explaining the file structure
 `Pulumi.yaml` is your main pulumi file, explained [here](https://www.pulumi.com/docs/concepts/projects/project-file/). 
@@ -55,6 +54,6 @@ This just informs your IDE about the existence of infrastructure module Do not r
 
 ## Tips
 - Pass `Context` everywhere you are using pulumi, for example when you are creating a resource.
-- Call your functions and use your variables. If the code is unused it will not be processed by pulumi and some resources might be missing.
+- Make sure your code is called by pulumi. Either by referencing your resources in some other ones or having their Output monad merged with others. 
 - Use whatever scala concepts you are familiar with, infrastructure as code in Besom is still a scala program, so you have the full potential of the language to work with.
 - Pay attention to the types. You will be instantiating case classes to pass parameters, note their package of origin.
