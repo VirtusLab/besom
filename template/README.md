@@ -9,13 +9,13 @@ This template uses Pulumi random API to output a pet name by using [RandomPet](h
 
 It will set up file structure for you and let you go in any direction you need.
 
-After running `pulumi up` you should see a name of your pet in Outputs of the update.
+After running `pulumi up` you should see the name of your pet in the Outputs of the update.
 
 ## Kubernets 
 **Dependencies:** kubernetes provider, local kubernetes
 
-This template requiers you to have kubernetes set up locally, you can do this via docker desktop - [how to](https://docs.docker.com/desktop/kubernetes/). 
+This template requires you to have kubernetes set up locally, you can do this via docker desktop - [how to](https://docs.docker.com/desktop/kubernetes/). 
 
-It deploys nginx to your kubernetes cluster. It's identical to offical Pulumi kuberenetes template for example [the TypeScript one](https://github.com/pulumi/templates/tree/master/kubernetes-typescript).
+It deploys nginx to your kubernetes cluster. It's identical to the offical Pulumi kuberenetes template for example [the TypeScript one](https://github.com/pulumi/templates/tree/master/kubernetes-typescript).
 
 After running `pulumi up` you can check the deployment using `kubectl get pods` you should see your nginx pod running.

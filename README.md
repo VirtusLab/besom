@@ -1,9 +1,9 @@
 # Besom
-**Besom** - a broom made of twigs tied round a stick. Brooms and besoms are used for protection, to ward off evil spirits, and cleansing of ritual spaces. Also, an experimental pulumi-scala implementation, incidentally.
+**Besom** - a broom made of twigs tied around a stick. Brooms and besoms are used for protection, to ward off evil spirits, and cleansing of ritual spaces. Also, an experimental pulumi-scala implementation, incidentally.
 
 ## Getting started
 
-### Publish necessery packages
+### Publish necessary packages
 Prerequisites: pulumi, just, java, scala-cli, go
 
 Publish locally and install necessary Besom packages:
@@ -28,9 +28,9 @@ just publish-local-provider-sdk kubernetes
 ```
 
 ### Initialize your code with a template
-You can start writing your own code at this point but to help you set up Besom comes with Pulumi templates. More information about templates in `./template/README`
+You can start writing your code at this point but to help you set up Besom comes with Pulumi templates. More information about templates in `./template/README`
 
-To initialize your poject with chosen template run this in empty folder for your infrastrucure:
+To initialize your project with chosen template run this in an empty folder:
 ```shell
 pulumi new ${path_to_the_template}
 ```
@@ -47,7 +47,7 @@ pulumi new ../besom/template/kubernetes
 
 `project.scala` is the file containing your dependencies.
 
-`Main.scala` is the entrypoint for your infrastructure as code. Resources created in `Pulumi.run{ ... }` block will be created by Pulumi.
+`Main.scala` is the entry point for your infrastructure as code. Resources created in `Pulumi.run{ ... }` block will be created by Pulumi.
 
 ## Setting up the code editor
 
@@ -57,7 +57,7 @@ If you are using IntelliJ:
 
 If you are using VSCode:
 1. install Metals
-2. open folder with your infrastructure and start Metals.
+2. open the folder with your infrastructure and start Metals.
 
 This might not be enough if your infrastructure is just a part (a module) of your existing scala project. For this to work you have to make your build tool aware of the infrastructure code, for **sbt** create a corresponding module: 
    ```scala
@@ -67,7 +67,7 @@ lazy val infra = project.in(file("infrastructure")).settings(
    "org.virtuslab" %% "besom-core" % "0.0.1-SNAPSHOT"
    ))
    ```
-This just informs your IDE about the existence of infrastructure module Do not remove dependencies from `project.scala` they are necessary in both places.
+This just informs your IDE about the existence of the infrastructure module Do not remove dependencies from `project.scala` they are necessary in both places.
 
 ## Tips
 - Pass `Context` everywhere you are using Pulumi, for example when you are creating a resource.
