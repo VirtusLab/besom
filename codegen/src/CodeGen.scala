@@ -16,8 +16,8 @@ object CodeGen {
 
   val commonImportedIdentifiers = Seq(
     "besom.util.NotProvided",
-    "besom.internal.Output",
-    "besom.internal.Context"
+    "besom.types.Output",
+    "besom.types.Context"
   )
 
   class TypeMapper(
@@ -58,8 +58,8 @@ object CodeGen {
       case StringType => t"String"
       case IntegerType => t"Int"
       case NumberType => t"Double"
-      case UrnType => t"besom.util.Types.URN"
-      case ResourceIdType => t"besom.util.Types.ResourceId"
+      case UrnType => t"besom.types.URN"
+      case ResourceIdType => t"besom.types.ResourceId"
       case ArrayType(elemType) => t"scala.collection.immutable.List[${asScalaType(elemType, asArgsType)}]"
       case MapType(elemType) => t"scala.Predef.Map[String, ${asScalaType(elemType, asArgsType)}]"
       case unionType: UnionType =>
@@ -67,9 +67,9 @@ object CodeGen {
       case namedType: NamedType =>
         namedType.typeUri match {
           case "pulumi.json#/Archive" =>
-            t"besom.internal.Archive"
+            t"besom.types.Archive"
           case "pulumi.json#/Asset" =>
-            t"besom.internal.Asset"
+            t"besom.types.Asset"
           case "pulumi.json#/Any" =>
             t"besom.types.PulumiAny"
           case "pulumi.json#/Json" =>
@@ -277,12 +277,12 @@ object CodeGen {
     val argsClassName = Type.Name(argsClassCoordinates.className).syntax
     
     val baseFileImports = makeImportStatements(commonImportedIdentifiers ++ Seq(
-      "besom.internal.Decoder"
+      "besom.types.Decoder"
     ))
 
     val argsFileImports = makeImportStatements(commonImportedIdentifiers ++ Seq(
-      "besom.internal.Encoder",
-      "besom.internal.ArgsEncoder"
+      "besom.types.Encoder",
+      "besom.types.ArgsEncoder"
     ))
 
     val objectProperties = {
@@ -417,13 +417,13 @@ object CodeGen {
     val baseFileImports = {
       val conditionalIdentifiers =
         if (isProvider)
-          Seq("besom.internal.ProviderResource")
+          Seq("besom.types.ProviderResource")
         else
-          Seq("besom.internal.CustomResource")
+          Seq("besom.types.CustomResource")
       val unconditionalIdentifiers = Seq(
-        "besom.internal.ResourceDecoder",
-        "besom.internal.CustomResourceOptions",
-        "besom.util.NonEmptyString",
+        "besom.types.ResourceDecoder",
+        "besom.types.CustomResourceOptions",
+        "besom.types.NonEmptyString",
       )
       makeImportStatements(commonImportedIdentifiers ++ conditionalIdentifiers ++ unconditionalIdentifiers)
     }
@@ -431,9 +431,9 @@ object CodeGen {
     val argsFileImports = {
       val conditionalIdentifiers =
         if (isProvider)
-          Seq("besom.internal.ProviderArgsEncoder")
+          Seq("besom.types.ProviderArgsEncoder")
         else
-          Seq("besom.internal.ArgsEncoder")
+          Seq("besom.types.ArgsEncoder")
       makeImportStatements(commonImportedIdentifiers ++ conditionalIdentifiers)
     }
 

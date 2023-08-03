@@ -74,9 +74,19 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
 /** These factory methods should be the only way to create Output instances in user code!
   */
 trait OutputFactory:
-  def eval[F[_]: Result.ToFuture, A](value: F[A])(using ctx: Context): Output[A] = Output.eval(value)
-  def apply[A](value: A)(using ctx: Context): Output[A]                          = Output(value)
-  def secret[A](value: A)(using ctx: Context): Output[A]                         = Output.secret(value)
+  def eval[F[_]: Result.ToFuture, A](value: F[A])(using Context): Output[A] = Output.eval(value)
+  def apply[A](value: A)(using Context): Output[A]                          = Output(value)
+  def secret[A](value: A)(using Context): Output[A]                         = Output.secret(value)
+  def sequence[A](coll: List[Output[A]])(using Context): Output[List[A]]    = Output.sequence(coll)
+  def traverse[A, B](coll: List[A])(f: A => Output[B])(using Context): Output[List[B]] =
+    sequence(coll.map(f))
+trait OutputExtensionsFactory:
+  implicit final class OutputSequenceOps[A](coll: List[Output[A]]):
+    def sequence(using Context): Output[List[A]] =
+      Output.sequence(coll)
+  implicit final class OutputTraverseOps[A](coll: List[A]):
+    def traverse[B](f: Any => Output[B])(using Context): Output[List[B]] =
+      coll.map(f).sequence
 
 object Output:
   // should be NonEmptyString

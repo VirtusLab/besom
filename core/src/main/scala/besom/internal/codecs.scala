@@ -4,13 +4,12 @@ import scala.deriving.Mirror
 import com.google.protobuf.struct.*, Value.Kind
 import besom.internal.ProtobufUtil.*
 import scala.util.*
-import besom.util.*, Types.Label
+import besom.util.*
+import besom.types.*
 import Asset.*
 import Archive.*
 import org.checkerframework.checker.units.qual.s
 import org.checkerframework.checker.units.qual.m
-import besom.util.Types.URN
-import besom.util.Types.ResourceId
 
 object Constants:
   final val UnknownValue           = "04da6b54-80e4-46f7-96ec-b56ff0331ba9"

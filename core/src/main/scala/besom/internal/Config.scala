@@ -154,3 +154,6 @@ object Config:
       configSecretKeys <- Result.evalTry(Env.getConfigSecretKeys(EnvConfigSecretKeys))
       config           <- Config(projectName, configMap, configSecretKeys)
     yield config
+
+trait ConfigFactory:
+  def apply(projectName: NonEmptyString)(using Context): Output[Config] = Output(Config(projectName))

@@ -69,6 +69,43 @@ final case class StackReferenceResourceOptions private[internal] (
       CommonResourceOptions:
   export common.*
 
+trait CustomResourceOptionsFactory:
+  def apply(using Context)(
+    parent: Resource | NotProvided = NotProvided,
+    dependsOn: Output[List[Resource]] = Output(List.empty[Resource]),
+    deletedWith: Resource | NotProvided = NotProvided,
+    protect: Boolean = false,
+    ignoreChanges: List[String] = List.empty,
+    version: NonEmptyString | NotProvided = NotProvided, // TODO? UGLY AF
+    provider: ProviderResource | NotProvided = NotProvided,
+    customTimeouts: String | NotProvided = NotProvided, // CustomTimeouts // TODO
+    // resourceTransformations: List[ResourceTransformation], // TODO
+    // aliases: List[Output[Alias]], // TODO
+    urn: String | NotProvided = NotProvided, // TODO better type
+    replaceOnChanges: List[String] = List.empty, // TODO?
+    retainOnDelete: Boolean = false,
+    pluginDownloadUrl: String | NotProvided = NotProvided,
+    deleteBeforeReplace: Boolean = false,
+    additionalSecretOutputs: List[String] = List.empty,
+    importId: NonEmptyString | NotProvided = NotProvided
+  ): CustomResourceOptions = CustomResourceOptions.apply(
+    parent = parent,
+    dependsOn = dependsOn,
+    deletedWith = deletedWith,
+    protect = protect,
+    ignoreChanges = ignoreChanges,
+    version = version,
+    provider = provider,
+    customTimeouts = customTimeouts,
+    urn = urn,
+    replaceOnChanges = replaceOnChanges,
+    retainOnDelete = retainOnDelete,
+    pluginDownloadUrl = pluginDownloadUrl,
+    deleteBeforeReplace = deleteBeforeReplace,
+    additionalSecretOutputs = additionalSecretOutputs,
+    importId = importId
+  )
+
 object CustomResourceOptions:
   def apply(using Context)(
     parent: Resource | NotProvided = NotProvided,

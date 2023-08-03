@@ -4,7 +4,7 @@ import com.google.protobuf.struct.*, Value.Kind
 import Constants.*
 import Decoder.*
 import ProtobufUtil.*
-import besom.util.Types.Label
+import besom.types.Label
 
 object DecoderTest:
   case class TestCaseClass(

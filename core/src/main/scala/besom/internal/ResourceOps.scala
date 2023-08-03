@@ -4,7 +4,8 @@ import com.google.protobuf.struct.*
 import pulumirpc.resource.*
 import pulumirpc.resource.RegisterResourceRequest.PropertyDependencies
 
-import besom.util.*, Types.*
+import besom.util.*
+import besom.types.*
 import besom.internal.logging.*
 import fansi.Str
 

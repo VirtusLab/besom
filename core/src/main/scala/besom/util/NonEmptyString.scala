@@ -59,3 +59,12 @@ object NonEmptyString:
 
   extension (s: String)
     private def isBlank = s.trim.isEmpty
+
+trait NonEmptyStringFactory:
+  def apply(s: String): Option[NonEmptyString] = NonEmptyString(s)
+  inline def from(s: String): NonEmptyString   = NonEmptyString.from(s)
+
+trait NonEmptyStringExtensionsFactory:
+  implicit final class NonEmptyStringOps(nes: NonEmptyString):
+    inline def +++(other: String): NonEmptyString = nes +++ other
+    inline def asString: String                   = nes.asString
