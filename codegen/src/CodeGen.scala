@@ -195,7 +195,7 @@ object CodeGen {
     val providerPackageParts = typeMapper.moduleToPackageParts(providerName)
     val typeCoordinates = PulumiTypeCoordinates(
       providerPackageParts = typeMapper.moduleToPackageParts(providerName),
-      modulePackageParts = typeMapper.moduleToPackageParts(providerName) :+ indexModuleName,
+      modulePackageParts = Seq(indexModuleName),
       typeName = "Provider"
     )
     sourceFilesForResource(
@@ -328,7 +328,7 @@ object CodeGen {
     val baseClassComment = ""
 
     val baseClass =
-      s"""|case class $baseClassName(
+      s"""|case class $baseClassName private(
           |${baseClassParams.map(arg => s"  ${arg}").mkString(",\n")}
           |) derives Decoder""".stripMargin
 
@@ -349,7 +349,7 @@ object CodeGen {
         s"""object $baseClassName"""
       }
     val argsClass =
-      s"""|case class $argsClassName(
+      s"""|case class $argsClassName private(
           |${argsClassParams.map(param => s"  ${param}").mkString(",\n")}
           |) derives Encoder, ArgsEncoder""".stripMargin
 
@@ -497,7 +497,7 @@ object CodeGen {
     val resourceBaseClass = if (isProvider) "ProviderResource" else "CustomResource"
 
     val baseClass =
-      s"""|case class $baseClassName(
+      s"""|case class $baseClassName private(
           |${baseClassParams.map(param => s"  ${param}").mkString(",\n")}
           |) extends ${resourceBaseClass} derives ResourceDecoder""".stripMargin
 
@@ -531,7 +531,7 @@ object CodeGen {
     val argsEncoderClassName = if (isProvider) "ProviderArgsEncoder" else "ArgsEncoder"
 
     val argsClass =
-      s"""|case class $argsClassName(
+      s"""|case class $argsClassName private(
           |${argsClassParams.map(arg => s"  ${arg}").mkString(",\n")}
           |) derives ${argsEncoderClassName}""".stripMargin
 
