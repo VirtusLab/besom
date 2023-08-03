@@ -23,9 +23,6 @@ import k8s.core.v1.{
   PersistentVolumeArgs
 }
 import besom.internal.Output
-import besom.internal.Context
-
-@main def main = Pulumi.run(f)
 
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.numeric.*
