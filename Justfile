@@ -45,22 +45,22 @@ test-sdk: compile-sdk test-core test-cats test-zio
 
 # Publishes locally core besom SDK
 publish-local-core:
-  scala-cli publish local core --version {{publish-version}} --doc=false
+  scala-cli --power publish local core --version {{publish-version}} --doc=false
 
 # Publishes locally besom cats-effect extension
 publish-local-cats:
-	scala-cli publish local besom-cats --version {{publish-version}} --doc=false
+	scala-cli --power publish local besom-cats --version {{publish-version}} --doc=false
 
 # Publishes locally besom zio extension
 publish-local-zio:
-	scala-cli publish local besom-zio --version {{publish-version}} --doc=false
+	scala-cli --power publish local besom-zio --version {{publish-version}} --doc=false
 
 # Publishes locally all SDK modules: core, cats-effect extension, zio extension
 publish-local-sdk: publish-local-core publish-local-cats publish-local-zio
 
 # Publishes locally besom compiler plugin
 publish-local-compiler-plugin:
-	scala-cli publish local compiler-plugin --version {{publish-version}} --doc=false
+	scala-cli --power publish local compiler-plugin --version {{publish-version}} --doc=false
 
 # Cleans core build, sets up build for IDE again
 clean-core: 
@@ -92,7 +92,7 @@ clean-compiler-plugin:
 # Builds .jar file with language plugin bootstrap library
 build-bootstrap:
 	mkdir -p {{language-plugin-output-dir}} && \
-	scala-cli package language-plugin/bootstrap --assembly -o {{language-plugin-output-dir}}/bootstrap.jar -f
+	scala-cli --power package language-plugin/bootstrap --assembly -o {{language-plugin-output-dir}}/bootstrap.jar -f
 
 # Builds pulumi-language-scala binary
 build-language-host:
@@ -146,7 +146,7 @@ compile-provider-sdk schema-name:
 
 # Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes`
 publish-local-provider-sdk schema-name:
-	scala-cli publish local {{codegen-output-dir}}/{{schema-name}} --doc=false
+	scala-cli --power publish local {{codegen-output-dir}}/{{schema-name}} --doc=false
 
 
 ####################
