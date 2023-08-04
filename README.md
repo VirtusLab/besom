@@ -8,7 +8,7 @@ Prerequisites: pulumi, just, java, scala-cli, go
 
 Publish locally and install necessary Besom packages:
 ```bash
-just publish-local-sdk
+just publish-local-core
 just publish-local-compiler-plugin
 just install-language-plugin
 ```
