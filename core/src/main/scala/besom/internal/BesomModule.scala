@@ -19,7 +19,7 @@ trait EffectBesomModule extends BesomSyntax:
         engine         <- Result.resource(Engine(runInfo.engineAddress))(_.close())
         _              <- logger.info(s"Established connections to monitor and engine, spawning streaming pulumi logger.")
         logger         <- Result.resource(BesomLogger(engine, taskTracker))(_.close())
-        config         <- Config(runInfo.project)
+        config         <- Config.forProject(runInfo.project)
         featureSupport <- FeatureSupport(monitor)
         _              <- logger.info(s"Resolved feature support, spawning context and executing user program.")
         ctx            <- Result.resource(Context(runInfo, taskTracker, monitor, engine, logger, featureSupport, config))(_.close())
