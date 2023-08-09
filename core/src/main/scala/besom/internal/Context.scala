@@ -10,7 +10,13 @@ case class InvokeOptions()
 
 type Providers = Map[String, ProviderResource]
 
-@implicitNotFound("TODO Context is missing, this message has to be improved") // TODO
+@implicitNotFound(s"""|Pulumi code has to be written with a Context in scope.
+                      |
+                      |Context is available by default in your main pulumi function, inside of `Pulumi.run`.
+                      |NOTE: Every pulumi program should only have ONE `Pulumi.run` call.
+                      |
+                      |If you are writing code outside of `Pulumi.run`, you can pass a Context explicitly.
+                      |This can be done by just adding a `(using Context)` clause to your function.""".stripMargin)
 trait Context extends TaskTracker:
   private[besom] def initializeStack: Result[Unit]
   private[besom] def featureSupport: FeatureSupport
