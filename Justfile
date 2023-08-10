@@ -4,10 +4,32 @@ publish-version := "0.0.1-SNAPSHOT"
 language-plugin-output-dir := justfile_directory() + "/.out/language-plugin"
 codegen-output-dir := justfile_directory() + "/.out/codegen"
 schemas-output-dir := justfile_directory() + "/.out/schemas"
+coverage-output-dir := justfile_directory() + "/.out/coverage"
+coverage-output-dir-core := coverage-output-dir + "/core"
+coverage-output-dir-cats := coverage-output-dir + "/cats"
+coverage-output-dir-zio := coverage-output-dir + "/zio"
+coverage-reports-dir := coverage-output-dir + "/reports"
+
+coverage := "false"
+
+# replace with a function when https://github.com/casey/just/pull/1069 is merged
+scala-options-core := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-core } else { "" }
+scala-options-cats := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-cats } else { "" }
+scala-options-zio := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-zio } else { "" }
 
 # This list of available targets
 default:
     @just --list
+
+####################
+# Aggregate tasks
+####################
+
+# Cleans everything
+clean-all: clean-sdk clean-out clean-compiler-plugin
+
+# Compiles everything
+compile-all: compile-sdk compile-codegen build-language-plugin
 
 ####################
 # Language SDK
@@ -15,7 +37,7 @@ default:
 
 # Compiles core besom SDK
 compile-core:
-	scala-cli compile core
+	scala-cli compile core -v -v -v
 
 # Compiles besom cats-effect extension
 compile-cats:
@@ -26,19 +48,26 @@ compile-zio:
 	scala-cli compile besom-zio
 
 # Compiles all SDK modules
-compile-sdk: publish-local-core compile-cats compile-zio
+compile-sdk: publish-local-core compile-cats compile-zio compile-compiler-plugin
+
+# Compiles besom compiler plugin
+compile-compiler-plugin:
+	scala-cli compile compiler-plugin
 
 # Runs tests for core besom SDK
 test-core:
-	scala-cli test core
+	@if [[ {{ coverage }} == "true" ]]; then mkdir -p {{coverage-output-dir-core}}; fi
+	scala-cli test core {{ scala-options-core }}
 
 # Runs tests for besom cats-effect extension
 test-cats:
-	scala-cli test besom-cats
+	@if [[ {{ coverage }} == "true" ]]; then mkdir -p {{coverage-output-dir-cats}}; fi
+	scala-cli test besom-cats {{ scala-options-cats }}
 
 # Runs tests for besom zio extension
 test-zio:
-	scala-cli test besom-zio
+	@if [[ {{ coverage }} == "true" ]]; then mkdir -p {{coverage-output-dir-zio}}; fi
+	scala-cli test besom-zio {{ scala-options-zio }}
 
 # Runs all tests
 test-sdk: compile-sdk test-core test-cats test-zio
@@ -62,28 +91,28 @@ publish-local-sdk: publish-local-core publish-local-cats publish-local-zio
 publish-local-compiler-plugin:
 	scala-cli --power publish local compiler-plugin --project-version {{publish-version}} --doc=false
 
-# Cleans core build, sets up build for IDE again
+# Cleans core build
 clean-core: 
-	scala-cli clean core && \
-	scala-cli setup-ide core
+	scala-cli clean core 
 
-# Cleans besom cats-effect extension build, sets up build for IDE again
+# Cleans besom cats-effect extension build
 clean-cats:
-	scala-cli clean besom-cats && \
-	scala-cli setup-ide besom-cats
+	scala-cli clean besom-cats 
 
-# Cleans besom ZIO extension build, sets up build for IDE again
+# Cleans besom ZIO extension build
 clean-zio:
-	scala-cli clean besom-zio && \
-	scala-cli setup-ide besom-zio
+	scala-cli clean besom-zio 
 
 # Cleans all SDK builds, sets up all modules for IDE again
 clean-sdk: clean-core clean-cats clean-zio
 
-# Cleans besom compiler plugin build, sets up build for IDE again
+# Cleans besom compiler plugin build
 clean-compiler-plugin:
-	scala-cli clean compiler-plugin && \
-	scala-cli setup-ide compiler-plugin
+	scala-cli clean compiler-plugin
+
+# Cleans the ./.out directory
+clean-out:
+	rm -rf ./.out
 
 ####################
 # Language plugin

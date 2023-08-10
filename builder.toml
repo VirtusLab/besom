@@ -21,3 +21,6 @@ platforms = ["jvm"]
 [modules.experimental]
 platforms = ["jvm"]
 dependsOn = ["core"]
+
+[modules.scripts]
+platforms = ["jvm"]
