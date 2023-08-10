@@ -77,16 +77,21 @@ trait OutputFactory:
   def eval[F[_]: Result.ToFuture, A](value: F[A])(using Context): Output[A] = Output.eval(value)
   def apply[A](value: A)(using Context): Output[A]                          = Output(value)
   def secret[A](value: A)(using Context): Output[A]                         = Output.secret(value)
-  def sequence[A](coll: List[Output[A]])(using Context): Output[List[A]]    = Output.sequence(coll)
-  def traverse[A, B](coll: List[A])(f: A => Output[B])(using Context): Output[List[B]] =
-    sequence(coll.map(f))
+  def sequence[A, CC[X] <: IterableOnce[X], To](
+    coll: CC[Output[A]]
+  )(using BuildFrom[CC[Output[A]], A, To], Context): Output[To] = Output.sequence(coll)
+  def traverse[A, CC[X] <: IterableOnce[X], B, To](
+    coll: CC[A]
+  )(
+    f: A => Output[B]
+  )(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] = sequence(coll.map(f).asInstanceOf[CC[Output[B]]])
 trait OutputExtensionsFactory:
-  implicit final class OutputSequenceOps[A](coll: List[Output[A]]):
-    def sequence(using Context): Output[List[A]] =
+  implicit final class OutputSequenceOps[A, CC[X] <: IterableOnce[X], To](coll: CC[Output[A]]):
+    def sequence(using BuildFrom[CC[Output[A]], A, To], Context): Output[To] =
       Output.sequence(coll)
-  implicit final class OutputTraverseOps[A](coll: List[A]):
-    def traverse[B](f: Any => Output[B])(using Context): Output[List[B]] =
-      coll.map(f).sequence
+  implicit final class OutputTraverseOps[A, CC[X] <: IterableOnce[X]](coll: CC[A]):
+    def traverse[B, To](f: A => Output[B])(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] =
+      coll.map(f).asInstanceOf[CC[Output[B]]].sequence
 
 object Output:
   // should be NonEmptyString

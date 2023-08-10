@@ -80,16 +80,8 @@ object logging:
     def log(record: LogRecord): Result[Unit] = Result(Logger(record.className).log(record))
     def close(): Result[Unit]                = Result.unit
 
-  trait UserLoggerFactory:
-    def info(msg: String)(using ctx: Context): Output[Unit] = Output(ctx.logger.info(msg))
-    
-    def debug(msg: String)(using ctx: Context): Output[Unit] = Output(ctx.logger.debug(msg))
-    
-    def error(msg: String)(using ctx: Context): Output[Unit] = Output(ctx.logger.error(msg))
-    
-    def trace(msg: String)(using ctx: Context): Output[Unit] = Output(ctx.logger.trace(msg))
-    
-    def warn(msg: String)(using ctx: Context): Output[Unit] = Output(ctx.logger.warn(msg))
+  class UserLoggerFactory(using ctx: Context) extends LoggerSupport[Output[Unit]]:
+    override def log(record: LogRecord): Output[Unit] = Output[Unit](ctx.logger.log(record))
 
   class DualBesomLogger private[logging] (
     private val queue: Queue[LogRequest | Queue.Stop],

@@ -447,7 +447,7 @@ trait DecoderHelpers:
   )
 
   // this is, effectively, Decoder[Enum]
-  def decoderSum[A](s: Mirror.SumOf[A], elems: => List[String -> Decoder[?]]): Decoder[A] =
+  def decoderSum[A](s: Mirror.SumOf[A], elems: => List[(String, Decoder[?])]): Decoder[A] =
     new Decoder[A]:
       private val enumNameToDecoder                   = elems.toMap
       private def getDecoder(key: String): Decoder[A] = enumNameToDecoder(key).asInstanceOf[Decoder[A]]
@@ -462,7 +462,7 @@ trait DecoderHelpers:
 
       override def mapping(value: Value, label: Label): A = ???
 
-  def decoderProduct[A](p: Mirror.ProductOf[A], elems: => List[String -> Decoder[?]]): Decoder[A] =
+  def decoderProduct[A](p: Mirror.ProductOf[A], elems: => List[(String, Decoder[?])]): Decoder[A] =
     new Decoder[A]:
       override def decode(value: Value, label: Label): Either[DecodingError, OutputData[A]] =
         decodeAsPossibleSecret(value, label).flatMap { odv =>
@@ -551,12 +551,12 @@ object Encoder:
   import Constants.*
   import spray.json.*
 
-  def encoderSum[A](mirror: Mirror.SumOf[A], nameEncoderPairs: List[String -> Encoder[?]]): Encoder[A] =
+  def encoderSum[A](mirror: Mirror.SumOf[A], nameEncoderPairs: List[(String, Encoder[?])]): Encoder[A] =
     new Encoder[A]:
       private val encoderMap                                    = nameEncoderPairs.toMap
       override def encode(a: A): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> a.toString.asValue)
 
-  def encoderProduct[A](nameEncoderPairs: List[String -> Encoder[?]]): Encoder[A] =
+  def encoderProduct[A](nameEncoderPairs: List[(String, Encoder[?])]): Encoder[A] =
     new Encoder[A]:
       override def encode(a: A): Result[(Set[Resource], Value)] =
         Result
@@ -848,7 +848,7 @@ trait ArgsEncoder[A]:
 
 object ArgsEncoder:
   def argsEncoderProduct[A](
-    elems: List[String -> Encoder[?]]
+    elems: List[(String, Encoder[?])]
   ): ArgsEncoder[A] =
     new ArgsEncoder[A]:
       override def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Struct)] =
@@ -888,7 +888,7 @@ trait ProviderArgsEncoder[A] extends ArgsEncoder[A]:
 
 object ProviderArgsEncoder:
   def providerArgsEncoderProduct[A](
-    elems: List[String -> JsonEncoder[?]]
+    elems: List[(String, JsonEncoder[?])]
   ): ProviderArgsEncoder[A] =
     new ProviderArgsEncoder[A]:
       override def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Struct)] =

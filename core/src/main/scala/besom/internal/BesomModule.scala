@@ -36,5 +36,4 @@ trait EffectBesomModule extends BesomSyntax:
 trait BesomModule extends EffectBesomModule {
   export besom.types.{ *, given }
   export besom.util.interpolator.{ *, given }
-  export besom.util.{ -> }
 }
