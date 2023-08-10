@@ -163,6 +163,8 @@ object CodeGen {
 
     val fileContent =
       s"""|//> using scala "3.3.0"
+          |//> using options "-java-output-version:11"
+          |
           |//> using lib "org.virtuslab::besom-core:${besomVersion}"
           |
           |//> using resourceDir "resources"

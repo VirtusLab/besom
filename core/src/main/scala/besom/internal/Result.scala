@@ -64,6 +64,7 @@ object WorkGroup:
 // TODO: implementations of Promise for CE and ZIO?
 trait Promise[A]:
   def get: Result[A]
+  def isCompleted: Result[Boolean]
   def fulfill(a: A): Result[Unit]
   def fulfillAny(a: Any): Result[Unit] = fulfill(a.asInstanceOf[A]) // TODO fix this in CustomPropertyExtractor
   def fail(t: Throwable): Result[Unit]
@@ -73,6 +74,7 @@ object Promise:
     new Promise:
       private val internal                          = scala.concurrent.Promise[A]()
       override def get: Result[A]                   = Result.deferFuture(internal.future)
+      override def isCompleted: Result[Boolean]     = Result.defer(internal.isCompleted)
       override def fulfill(a: A): Result[Unit]      = Result.defer(internal.success(a))
       override def fail(t: Throwable): Result[Unit] = Result.defer(internal.failure(t))
   }
@@ -108,12 +110,12 @@ trait Runtime[F[+_]]:
   def fromFuture[A](f: => scala.concurrent.Future[A]): F[A]
   def fork[A](fa: => F[A]): F[Fiber[A]]
   def sleep[A](fa: => F[A], duration: Long): F[A]
-  
+
   private[internal] final case class M[+A](inner: Finalizers => F[A])
-  private[internal] def pureM[A](a: A): M[A] = M(_ => pure(a))
+  private[internal] def pureM[A](a: A): M[A]              = M(_ => pure(a))
   private[internal] def failM(err: Throwable): M[Nothing] = M(_ => fail(err))
-  private[internal] def deferM[A](thunk: => A): M[A] = M(_ => defer(thunk))
-  private[internal] def blockingM[A](thunk: => A): M[A] = M(_ => blocking(thunk))
+  private[internal] def deferM[A](thunk: => A): M[A]      = M(_ => defer(thunk))
+  private[internal] def blockingM[A](thunk: => A): M[A]   = M(_ => blocking(thunk))
   private[internal] def flatMapBothM[A, B](fa: M[A])(f: Either[Throwable, A] => M[B]): M[B] = M { finalizers =>
     flatMapBoth(fa.inner(finalizers)) { either =>
       f(either).inner(finalizers)
@@ -127,7 +129,6 @@ trait Runtime[F[+_]]:
     sleep(fa.inner(finalizers), duration)
   }
   private[internal] def getFinalizersM: M[Finalizers] = M(fs => pure(fs))
-
 
   private[besom] def debugEnabled: Boolean
 
@@ -199,7 +200,7 @@ enum Result[+A]:
 
   def delay(duration: Long)(using Debug): Result[A] = Result.Sleep(() => this, duration, Debug())
   def fork[A2 >: A](using Debug): Result[Fiber[A2]] = Result.Fork(this, Debug())
-  
+
   def map[B](f: A => B)(using Debug): Result[B]              = flatMap(a => Pure(f(a), Debug()))
   def product[B](rb: Result[B])(using Debug): Result[(A, B)] = flatMap(a => rb.map(b => (a, b)))
   def zip[B](rb: => Result[B])(using z: Zippable[A, B])(using Debug) =
@@ -216,7 +217,7 @@ enum Result[+A]:
   def run[F[+_]](using F: Runtime[F]): F[A] =
     F.flatMapBoth(Ref(Map.empty[Scope, List[Result[Unit]]]).runF[F]) {
       case Right(finalizersRef) => this.runM[F].inner(finalizersRef)
-      case Left(err) => F.fail(err)
+      case Left(err)            => F.fail(err)
     }
 
   private def runF[F[+_]](using F: Runtime[F]): F[A] = this match
@@ -338,7 +339,7 @@ object Result:
     inner.transformM { a =>
       for
         finalizersRef <- getFinalizers
-        finalizers <- finalizersRef.get
+        finalizers    <- finalizersRef.get
         currentFinalizers = finalizers.getOrElse(scope, Nil)
         _ <- Result.sequence(currentFinalizers)
         _ <- finalizersRef.update(_.removed(scope))
@@ -347,7 +348,7 @@ object Result:
 
   def resource[A](acquire: => Result[A])(release: A => Result[Unit])(using scope: Scope)(using Debug): Result[A] =
     for
-      a <- acquire
+      a             <- acquire
       finalizersRef <- getFinalizers
       _ <- finalizersRef.update(_.updatedWith(scope)(finalizers => Some(release(a) :: finalizers.toList.flatten)))
     yield a

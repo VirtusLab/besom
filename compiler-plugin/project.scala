@@ -8,4 +8,5 @@
 
 //> using lib "org.scala-lang::scala3-compiler:3.3.0"
 
+// this is intentional - we need compiler plugin to work with the same range of jvms as the compiler itself
 //> using options "-java-output-version:8"

@@ -3,6 +3,8 @@
 package executors
 
 import (
+	"fmt"
+	"os"
 	"strings"
 
 	"github.com/virtuslab/besom/language-host/fsys"
@@ -52,18 +54,41 @@ func (sbt) isSbtProject(opts ScalaExecutorOptions) (bool, error) {
 }
 
 func (sbt) newSbtExecutor(cmd string, bootstrapLibJarPath string) (*ScalaExecutor, error) {
-	pulginsSbtCommandParts := []string{
+	sbtModule := os.Getenv("BESOM_SBT_MODULE")
+
+	se := &ScalaExecutor{
+		Cmd:        cmd,
+		BuildArgs:  makeArgs(sbtModule, []string{}, "compile"),
+		RunArgs:    makeArgs(sbtModule, []string{}, "run"),
+		PluginArgs: append([]string{"-error"}, makePluginsSbtCommandParts(sbtModule, bootstrapLibJarPath)),
+	}
+
+	fmt.Println("BuildArgs ", se.BuildArgs)
+	fmt.Println("RunArgs ", se.RunArgs)
+	fmt.Println("PluginArgs ", se.PluginArgs)
+
+	return se, nil
+}
+
+func makePluginsSbtCommandParts(sbtModule string, bootstrapLibJarPath string) string {
+	if sbtModule != "" {
+		sbtModule = sbtModule + " / "
+	}
+
+	pluginsSbtCommandParts := []string{
 		// STDOUT needs to be clean of sbt output, because we expect a JSON with plugin results
 		`; set outputStrategy := Some(StdoutOutput)`,
-		`; set Compile / unmanagedJars += Attributed.blank(file("` + bootstrapLibJarPath + `"))`,
-		`; runMain besom.bootstrap.PulumiPluginsDiscoverer`,
+		fmt.Sprintf(`; set %sCompile / unmanagedJars += Attributed.blank(file("`+bootstrapLibJarPath+`"))`, sbtModule),
+		fmt.Sprintf(`; %srunMain besom.bootstrap.PulumiPluginsDiscoverer`, sbtModule),
 	}
-	pulginsSbtCommand := strings.Join(pulginsSbtCommandParts, " ")
+	pluginsSbtCommand := strings.Join(pluginsSbtCommandParts, " ")
 
-	return &ScalaExecutor{
-		Cmd:        cmd,
-		BuildArgs:  []string{"-batch", "compile"},
-		RunArgs:    []string{"-batch", "run"},
-		PluginArgs: []string{"-batch", "-error", pulginsSbtCommand},
-	}, nil
+	return pluginsSbtCommand
+}
+
+func makeArgs(sbtModule string, flags []string, cmd string) []string {
+	if sbtModule != "" {
+		return append([]string{"-batch", fmt.Sprintf("%s/%s", sbtModule, cmd)})
+	}
+	return []string{"-batch", "run"}
 }

@@ -76,7 +76,7 @@ class ContextImpl(
 ) extends Context
     with TaskTracker:
 
-  export taskTracker.{registerTask, waitForAllTasks}
+  export taskTracker.{registerTask, waitForAllTasks, fail}
 
   private[besom] def isDryRun: Boolean = runInfo.dryRun
 
@@ -100,7 +100,7 @@ class ContextImpl(
         typ,
         name,
         EmptyArgs(),
-        ComponentResourceOptions(using this)() // TODO pass initial ResourceTransformations here
+        ComponentResourceOptions() // TODO pass initial ResourceTransformations here
       )
     }
 
