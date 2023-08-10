@@ -71,23 +71,23 @@ final case class StackReferenceResourceOptions private[internal] (
 
 object CustomResourceOptions:
   def apply(using Context)(
-    parent: Resource | NotProvided = NotProvided,
+    parent: Optional[Resource] = None,
     dependsOn: Output[List[Resource]] = Output(List.empty[Resource]),
-    deletedWith: Resource | NotProvided = NotProvided,
+    deletedWith: Optional[Resource] = None,
     protect: Boolean = false,
     ignoreChanges: List[String] = List.empty,
-    version: NonEmptyString | NotProvided = NotProvided, // TODO? UGLY AF
-    provider: ProviderResource | NotProvided = NotProvided,
-    customTimeouts: String | NotProvided = NotProvided, // CustomTimeouts // TODO
+    version: Optional[NonEmptyString] = None,
+    provider: Optional[ProviderResource] = None,
+    customTimeouts: Optional[String] = None, // CustomTimeouts // TODO
     // resourceTransformations: List[ResourceTransformation], // TODO
     // aliases: List[Output[Alias]], // TODO
-    urn: String | NotProvided = NotProvided, // TODO better type
+    urn: Optional[String] = None, // TODO better type
     replaceOnChanges: List[String] = List.empty, // TODO?
     retainOnDelete: Boolean = false,
-    pluginDownloadUrl: String | NotProvided = NotProvided,
+    pluginDownloadUrl: Optional[String] = None,
     deleteBeforeReplace: Boolean = false,
     additionalSecretOutputs: List[String] = List.empty,
-    importId: NonEmptyString | NotProvided = NotProvided
+    importId: Optional[NonEmptyString] = None
   ): CustomResourceOptions =
     val common = CommonResourceOptionsImpl(
       parent = parent.asOption,
@@ -113,20 +113,20 @@ object CustomResourceOptions:
 object ComponentResourceOptions:
   def apply(using Context)(
     providers: List[ProviderResource] = List.empty,
-    id: Output[NonEmptyString] | NotProvided = NotProvided,
-    parent: Resource | NotProvided = NotProvided,
+    id: Output[Optional[NonEmptyString]] = Output(None),
+    parent: Optional[Resource] = None,
     dependsOn: Output[List[Resource]] = Output(List.empty[Resource]),
     protect: Boolean = false,
     ignoreChanges: List[String] = List.empty,
-    version: NonEmptyString | NotProvided = NotProvided, // TODO? UGLY AF
-    customTimeouts: String | NotProvided = NotProvided, // CustomTimeouts // TODO
+    version: Optional[NonEmptyString] = None,
+    customTimeouts: Optional[String] = None, // CustomTimeouts // TODO
     // resourceTransformations: List[ResourceTransformation], // TODO
     // aliases: List[Output[Alias]], // TODO
-    urn: String | NotProvided = NotProvided, // TODO better type
+    urn: Optional[String] = None, // TODO better type
     replaceOnChanges: List[String] = List.empty, // TODO?
     retainOnDelete: Boolean = false,
-    pluginDownloadUrl: String | NotProvided = NotProvided,
-    deletedWith: Resource | NotProvided = NotProvided
+    pluginDownloadUrl: Optional[String] = None,
+    deletedWith: Optional[Resource] = None
   ): ComponentResourceOptions =
     val common = CommonResourceOptionsImpl(
       parent = parent.asOption,
@@ -142,3 +142,80 @@ object ComponentResourceOptions:
       deletedWith = deletedWith.asOption
     )
     new ComponentResourceOptions(common, providers)
+
+
+
+// object CustomResourceOptions:
+//   def apply(using Context)(
+//     parent: Resource | NotProvided = NotProvided,
+//     dependsOn: Output[List[Resource]] = Output(List.empty[Resource]),
+//     deletedWith: Resource | NotProvided = NotProvided,
+//     protect: Boolean = false,
+//     ignoreChanges: List[String] = List.empty,
+//     version: NonEmptyString | NotProvided = NotProvided, // TODO? UGLY AF
+//     provider: ProviderResource | NotProvided = NotProvided,
+//     customTimeouts: String | NotProvided = NotProvided, // CustomTimeouts // TODO
+//     // resourceTransformations: List[ResourceTransformation], // TODO
+//     // aliases: List[Output[Alias]], // TODO
+//     urn: String | NotProvided = NotProvided, // TODO better type
+//     replaceOnChanges: List[String] = List.empty, // TODO?
+//     retainOnDelete: Boolean = false,
+//     pluginDownloadUrl: String | NotProvided = NotProvided,
+//     deleteBeforeReplace: Boolean = false,
+//     additionalSecretOutputs: List[String] = List.empty,
+//     importId: NonEmptyString | NotProvided = NotProvided
+//   ): CustomResourceOptions =
+//     val common = CommonResourceOptionsImpl(
+//       parent = parent.asOption,
+//       dependsOn = dependsOn,
+//       protect = protect,
+//       ignoreChanges = ignoreChanges,
+//       version = version.asOption.getOrElse(""), // grpc & go are "strongly" typed
+//       customTimeouts = customTimeouts.asOption,
+//       urn = urn.asOption,
+//       replaceOnChanges = replaceOnChanges,
+//       retainOnDelete = retainOnDelete,
+//       pluginDownloadUrl = pluginDownloadUrl.asOption.getOrElse(""),
+//       deletedWith = deletedWith.asOption
+//     )
+//     new CustomResourceOptions(
+//       common,
+//       provider = provider.asOption,
+//       deleteBeforeReplace = deleteBeforeReplace,
+//       additionalSecretOutputs = additionalSecretOutputs,
+//       importId = importId.asOption
+//     )
+
+
+// object ComponentResourceOptions:
+//   def apply(using Context)(
+//     providers: List[ProviderResource] = List.empty,
+//     id: Output[NonEmptyString] | NotProvided = NotProvided,
+//     parent: Resource | NotProvided = NotProvided,
+//     dependsOn: Output[List[Resource]] = Output(List.empty[Resource]),
+//     protect: Boolean = false,
+//     ignoreChanges: List[String] = List.empty,
+//     version: NonEmptyString | NotProvided = NotProvided, // TODO? UGLY AF
+//     customTimeouts: String | NotProvided = NotProvided, // CustomTimeouts // TODO
+//     // resourceTransformations: List[ResourceTransformation], // TODO
+//     // aliases: List[Output[Alias]], // TODO
+//     urn: String | NotProvided = NotProvided, // TODO better type
+//     replaceOnChanges: List[String] = List.empty, // TODO?
+//     retainOnDelete: Boolean = false,
+//     pluginDownloadUrl: String | NotProvided = NotProvided,
+//     deletedWith: Resource | NotProvided = NotProvided
+//   ): ComponentResourceOptions =
+//     val common = CommonResourceOptionsImpl(
+//       parent = parent.asOption,
+//       dependsOn = dependsOn,
+//       protect = protect,
+//       ignoreChanges = ignoreChanges,
+//       version = version.asOption.getOrElse(""), // TODO grpc & go are "strongly" typed
+//       customTimeouts = customTimeouts.asOption,
+//       urn = urn.asOption,
+//       replaceOnChanges = replaceOnChanges,
+//       retainOnDelete = retainOnDelete,
+//       pluginDownloadUrl = pluginDownloadUrl.asOption.getOrElse(""),
+//       deletedWith = deletedWith.asOption
+//     )
+//     new ComponentResourceOptions(common, providers)

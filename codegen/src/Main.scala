@@ -5,36 +5,55 @@ import java.util.Arrays
 object Main {
   def main(args: Array[String]): Unit = {
     args.toList match {
-      case schemasDirPath :: outputDirBasePath :: providerName :: Nil =>
+      case schemasDirPath :: outputDirBasePath :: providerName :: schemaVersion :: Nil =>
         generatePackageSources(
           schemasDirPath = os.Path(schemasDirPath),
           outputDirBasePath = os.Path(outputDirBasePath),
-          providerName = providerName
+          providerName = providerName,
+          schemaVersion = schemaVersion
         )
       case _ =>
-        System.err.println("Codegen's expected arguments: <schemasDirPath> <outputDirBasePath> <providerName>")
+        System.err.println("Codegen's expected arguments: <schemasDirPath> <outputDirBasePath> <providerName> <schemaVersion>")
         sys.exit(1)
     }
   }
 
-  def generatePackageSources(schemasDirPath: os.Path, outputDirBasePath: os.Path, providerName: String): Unit = {
-    val schemaFilePath = schemasDirPath / s"${providerName}.json"
-    val destinationDir = outputDirBasePath / providerName
-
+  def generatePackageSources(schemasDirPath: os.Path, outputDirBasePath: os.Path, providerName: String, schemaVersion: String): Unit = {
     println(s"Generating provider SDK for $providerName")
+    
+    val schemaProvider = new SchemaProvider(schemaCacheDirPath = schemasDirPath)
+    // val schemaFilePath = schemasDirPath / s"${providerName}.json"
+    val destinationDir = outputDirBasePath / providerName / schemaVersion
 
     os.remove.all(destinationDir)
     os.makeDir.all(destinationDir)
 
-    val pulumiPackage = metaschema.PulumiPackage.fromFile(schemaFilePath)
-    val providerConfig = Config.providersConfigs(providerName)
+    val pulumiPackage = schemaProvider.pulumiPackage(providerName = providerName, schemaVersion = schemaVersion)
+    // val pulumiPackage = metaschema.PulumiPackage.fromFile(schemaFilePath)
+    implicit val providerConfig = Config.providersConfigs(providerName)
 
     implicit val logger: Logger = new Logger
 
+    // val moduleToPackageParts = pulumiPackage.language.java.packages.view.mapValues { pkg =>
+    //   pkg.split("\\.").filter(_.nonEmpty).toSeq
+    // }.toMap.withDefault(pkg => Seq(pkg))
+
+    implicit val typeMapper: TypeMapper = new TypeMapper(
+      defaultProviderName = providerName,
+      defaultSchemaVersion = schemaVersion,
+      schemaProvider = schemaProvider,
+      //moduleToPackageParts = moduleToPackageParts,
+      // enumTypeTokens = enumTypeTokens,
+      // objectTypeTokens = objectTypeTokens,
+      // resourceTypeTokens = resourceTypeTokens,
+      moduleFormat = pulumiPackage.meta.moduleFormat.r
+    )
+
+    val codeGen = new CodeGen
+
     try {
-      CodeGen.sourcesFromPulumiPackage(
+      codeGen.sourcesFromPulumiPackage(
         pulumiPackage,
-        providerConfig,
         besomVersion = "0.0.1-SNAPSHOT"
       ).foreach { sourceFile =>
         val filePath = destinationDir / sourceFile.filePath.osSubPath

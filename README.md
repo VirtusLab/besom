@@ -4,7 +4,7 @@
 ## Getting started
 
 ### Publish necessary packages
-Prerequisites: pulumi, just, java, scala-cli, go
+Prerequisites: pulumi, just, java (JDK >= 9), scala-cli, go
 
 Publish locally and install necessary Besom packages:
 ```bash

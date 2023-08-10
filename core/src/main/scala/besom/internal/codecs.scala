@@ -46,7 +46,7 @@ case class DecodingError(message: String, cause: Throwable = null) extends Excep
  *                     Write a test, OutputData.combine should have taken care of it in sequence/traverse chains.
  * [✓] TODO: stack-aware error reporting
  * [ ][ ] TODO: a better way than current Try/throw combo to traverse OutputData's lack of error channel
- * [✓][ ] TODO: Decoder[A] where A <: Product - derivation
+ * [✓][ ] TODO: Decoder[A] where A <: ProductLike - derivation
  * [✓][ ] TODO: Decoder[Enum]
  * [✓][ ] TODO: Decoders for dependency resources (interesting problem, what about Context? shouldn't they use ResourceDecoder?)
  * [ ][ ] TODO: Decoder[Output[A]] (interesting problem, possibly unnecessary, what about Context?)
@@ -431,15 +431,28 @@ trait DecoderHelpers:
 
     override def mapping(value: Value, label: Label): A | B = ???
 
-  inline def derived[A](using m: Mirror.Of[A]): Decoder[A] =
+  // inline def derived[A](using m: Mirror.Of[A]): Decoder[A] =
+  //   lazy val labels           = CodecMacros.summonLabels[m.MirroredElemLabels]
+  //   lazy val instances        = CodecMacros.summonDecoders[m.MirroredElemTypes]
+  //   lazy val nameDecoderPairs = labels.zip(instances)
+
+  //   inline m match
+  //     case s: Mirror.SumOf[A] => decoderSum(nameDecoderPairs)
+  //     case p: Mirror.ProductOf[A] =>
+  //       decoderProduct(p.fromProduct, nameDecoderPairs)
+
+  // inline def error(msg: String): Nothing                   = throw DecodingError(msg)
+  // inline def error(msg: String, cause: Throwable): Nothing = throw DecodingError(msg, cause)
+  // inline def errorLeft(msg: String, cause: Throwable = null): Either[DecodingError, Nothing] = Left(
+  //   DecodingError(msg, cause)
+  // )
+
+  // inline def derived[A](using m: ProductLikeMirror[A]): Decoder[A] =
+  inline def derived[A](using m: Mirror.ProductOf[A]): Decoder[A] =
     lazy val labels           = CodecMacros.summonLabels[m.MirroredElemLabels]
     lazy val instances        = CodecMacros.summonDecoders[m.MirroredElemTypes]
     lazy val nameDecoderPairs = labels.zip(instances)
-
-    inline m match
-      case s: Mirror.SumOf[A] => decoderSum(s, nameDecoderPairs)
-      case p: Mirror.ProductOf[A] =>
-        decoderProduct(p, nameDecoderPairs)
+    decoderProduct(m.fromProduct, nameDecoderPairs)
 
   inline def error(msg: String): Nothing                   = throw DecodingError(msg)
   inline def error(msg: String, cause: Throwable): Nothing = throw DecodingError(msg, cause)
@@ -448,7 +461,7 @@ trait DecoderHelpers:
   )
 
   // this is, effectively, Decoder[Enum]
-  def decoderSum[A](s: Mirror.SumOf[A], elems: => List[String -> Decoder[?]]): Decoder[A] =
+  def decoderSum[A](elems: => List[String -> Decoder[?]]): Decoder[A] =
     new Decoder[A]:
       private val enumNameToDecoder                   = elems.toMap
       private def getDecoder(key: String): Decoder[A] = enumNameToDecoder(key).asInstanceOf[Decoder[A]]
@@ -463,7 +476,8 @@ trait DecoderHelpers:
 
       override def mapping(value: Value, label: Label): A = ???
 
-  def decoderProduct[A](p: Mirror.ProductOf[A], elems: => List[String -> Decoder[?]]): Decoder[A] =
+  // def decoderProduct[A](fromProduct: ProductLike => A, elems: => List[String -> Decoder[?]]): Decoder[A] =
+  def decoderProduct[A](fromProduct: Product => A, elems: => List[String -> Decoder[?]]): Decoder[A] =
     new Decoder[A]:
       override def decode(value: Value, label: Label): Either[DecodingError, OutputData[A]] =
         decodeAsPossibleSecret(value, label).flatMap { odv =>
@@ -483,12 +497,12 @@ trait DecoderHelpers:
                               case Left(decodingError) => throw decodingError
                               case Right(odField)      => Right(acc.zip(odField))
                     }
-                    .map(_.map(p.fromProduct(_)))
+                    .map(_.map(fromProduct))
 
                 innerEither match
                   case Left(error) => throw error
                   case Right(odA)  => odA
-              else throw DecodingError(s"$label: Expected a struct to deserialize Product!")
+              else throw DecodingError(s"$label: Expected a struct to deserialize ProductLike!")
             }
           } match
             case Failure(exception) => errorLeft(s"$label: Encountered an error", exception)
@@ -552,7 +566,7 @@ object Encoder:
   import Constants.*
   import spray.json.*
 
-  def encoderSum[A](mirror: Mirror.SumOf[A], nameEncoderPairs: List[String -> Encoder[?]]): Encoder[A] =
+  def encoderSum[A](nameEncoderPairs: List[String -> Encoder[?]]): Encoder[A] =
     new Encoder[A]:
       private val encoderMap                                    = nameEncoderPairs.toMap
       override def encode(a: A): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> a.toString.asValue)
@@ -562,8 +576,8 @@ object Encoder:
       override def encode(a: A): Result[(Set[Resource], Value)] =
         Result
           .sequence {
-            a.asInstanceOf[Product]
-              .productIterator
+            a.asInstanceOf[ProductLike]
+              .productElems
               .zip(nameEncoderPairs)
               .map { case (v, (label, encoder)) =>
                 encoder.asInstanceOf[Encoder[Any]].encode(v).map(res => label -> res)
@@ -580,13 +594,25 @@ object Encoder:
             resources -> labelsToValuesMap.asValue
           }
 
-  inline def derived[A](using m: Mirror.Of[A]): Encoder[A] =
+  // inline def derived[A](using m: Mirror.Of[A]): Encoder[A] =
+  //   lazy val labels           = CodecMacros.summonLabels[m.MirroredElemLabels]
+  //   lazy val instances        = CodecMacros.summonEncoders[m.MirroredElemTypes]
+  //   lazy val nameEncoderPairs = labels.zip(instances)
+  //   inline m match
+  //     case _: Mirror.SumOf[A]     => encoderSum(nameEncoderPairs)
+  //     case _: Mirror.ProductOf[A] => encoderProduct(nameEncoderPairs)
+
+  // inline def derived[A](using m: Mirror.ProductOf[A]): Encoder[A] =
+  //   lazy val labels           = CodecMacros.summonLabels[m.MirroredElemLabels]
+  //   lazy val instances        = CodecMacros.summonEncoders[m.MirroredElemTypes]
+  //   lazy val nameEncoderPairs = labels.zip(instances)
+  //   encoderProduct(nameEncoderPairs)
+
+  inline def derived[A](using m: ProductLikeMirror[A]): Encoder[A] =
     lazy val labels           = CodecMacros.summonLabels[m.MirroredElemLabels]
     lazy val instances        = CodecMacros.summonEncoders[m.MirroredElemTypes]
     lazy val nameEncoderPairs = labels.zip(instances)
-    inline m match
-      case s: Mirror.SumOf[A]     => encoderSum(s, nameEncoderPairs)
-      case _: Mirror.ProductOf[A] => encoderProduct(nameEncoderPairs)
+    encoderProduct(nameEncoderPairs)
 
   given customResourceEncoder[A <: CustomResource](using
     ctx: Context,
@@ -855,8 +881,8 @@ object ArgsEncoder:
       override def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Struct)] =
         Result
           .sequence {
-            a.asInstanceOf[Product]
-              .productIterator
+            a.asInstanceOf[ProductLike]
+              .productElems
               .zip(elems)
               .map { case (v, (label, encoder)) =>
                 encoder.asInstanceOf[Encoder[Any]].encode(v).map(res => label -> res)
@@ -877,11 +903,11 @@ object ArgsEncoder:
             mapOfResources -> struct
           }
 
-  inline def derived[A <: Product](using m: Mirror.ProductOf[A]): ArgsEncoder[A] =
+  // inline def derived[A <: Product](using m: Mirror.ProductOf[A]): ArgsEncoder[A] =
+  inline def derived[A <: ProductLike](using m: ProductLikeMirror[A]): ArgsEncoder[A] =
     lazy val labels: List[String]        = CodecMacros.summonLabels[m.MirroredElemLabels]
     lazy val instances: List[Encoder[?]] = CodecMacros.summonEncoders[m.MirroredElemTypes]
     lazy val nameEncoderPairs            = labels.zip(instances)
-
     argsEncoderProduct(nameEncoderPairs)
 
 trait ProviderArgsEncoder[A] extends ArgsEncoder[A]:
@@ -895,8 +921,8 @@ object ProviderArgsEncoder:
       override def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Struct)] =
         Result
           .sequence {
-            a.asInstanceOf[Product]
-              .productIterator
+            a.asInstanceOf[ProductLike]
+              .productElems
               .zip(elems)
               .map { case (v, (label, encoder)) =>
                 encoder.asInstanceOf[JsonEncoder[Any]].encode(v).map(res => label -> res)
@@ -917,7 +943,8 @@ object ProviderArgsEncoder:
             mapOfResources -> struct
           }
 
-  inline def derived[A <: Product](using m: Mirror.ProductOf[A]): ProviderArgsEncoder[A] =
+  // inline def derived[A <: Product](using m: Mirror.ProductOf[A]): ProviderArgsEncoder[A] =
+  inline def derived[A <: ProductLike](using m: ProductLikeMirror[A]): ProviderArgsEncoder[A] =
     lazy val labels: List[String]            = CodecMacros.summonLabels[m.MirroredElemLabels]
     lazy val instances: List[JsonEncoder[?]] = CodecMacros.summonJsonEncoders[m.MirroredElemTypes]
     lazy val nameEncoderPairs                = labels.zip(instances)
