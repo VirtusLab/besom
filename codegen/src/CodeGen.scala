@@ -685,6 +685,10 @@ object CodeGen {
       Lit.String(value)
     case BooleanConstValue(value) =>
       Lit.Boolean(value)
+    case IntConstValue(value) =>
+      Lit.Int(value)
+    case DoubleConstValue(value) =>
+      Lit.Double(value)
   }
 
   private val jvmMaxParamsCount = 253 // https://github.com/scala/bug/issues/7324 // TODO: Find some workaround to enable passing the remaining arguments

@@ -35,12 +35,12 @@ object ResourceDefinition {
   implicit val reader: Reader[ResourceDefinition] = macroR 
 }
 
-case class Language(java: Java = Java(packages = Map.empty))
+case class Language(java: Java = Java())
 object Language {
   implicit val reader: Reader[Language] = macroR 
 }
 
-case class Java(packages: Map[String, String])
+case class Java(packages: Map[String, String] = Map.empty, basePackage: Option[String] = None, buildFiles: Option[String] = None, dependencies: Map[String, String] = Map.empty)
 object Java {
   implicit val reader: Reader[Java] = macroR 
 }
@@ -60,15 +60,22 @@ sealed trait ConstValue
 object ConstValue {
   // TODO: Handle other possible data types?
   implicit val reader: Reader[ConstValue] = new SimpleReader[ConstValue] {
-    override def expectedMsg = "expected string or boolean"
+    override def expectedMsg = "expected string, boolean or integer"
     override def visitString(s: CharSequence, index: Int) = StringConstValue(s.toString)
     override def visitTrue(index: Int) = BooleanConstValue(true)
     override def visitFalse(index: Int) = BooleanConstValue(false)
+    override def visitFloat64(d: Double, index: Int) =
+      if (d.isWhole) 
+        IntConstValue(d.toInt)
+      else
+        DoubleConstValue(d)
   }
 }
 
 case class StringConstValue(value: String) extends ConstValue
 case class BooleanConstValue(value: Boolean) extends ConstValue
+case class DoubleConstValue(value: Double) extends ConstValue
+case class IntConstValue(value: Int) extends ConstValue
 
 trait ObjectTypeDetails {
   def properties: Map[String, PropertyDefinition]
