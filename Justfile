@@ -183,7 +183,8 @@ publish-local-provider-sdk schema-name schema-version:
 # Integration testing
 ####################
 
-# TODO here add task test-besom-integration
+test-besom-integration:
+  echo 'TODO TEST BESOM INTEGRATION TODO'
 
 ####################
 # Demo
