@@ -44,7 +44,7 @@ jobs:
     - uses: VirtusLab/scala-cli-setup@v1.0.4
       with: 
         jvm: graalvm-java11:22.3.1
-        apps: 
+        apps: scala-cli:1.0.4
     - uses: arduino/setup-protoc@v1
     - uses: actions/setup-go@v4
       with:
@@ -55,9 +55,6 @@ jobs:
         
     - name: Clean workspace
       run: just clean-all
-        
-    - name: Fetch & compile protobuf 
-      run: just compile-pulumi-protobufs
         
     - name: Compile everything
       run: just compile-all
