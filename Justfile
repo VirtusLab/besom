@@ -179,6 +179,11 @@ compile-provider-sdk schema-name:
 publish-local-provider-sdk schema-name schema-version:
 	scala-cli --power publish local {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --doc=false
 
+####################
+# Integration testing
+####################
+
+# TODO here add task test-besom-integration
 
 ####################
 # Demo
