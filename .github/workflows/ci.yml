@@ -12,6 +12,7 @@ env:
 
 jobs:
 
+  # TODO uncomment when codegen is fixed
   # format:
   #   runs-on: "ubuntu-latest"
   #   steps:
@@ -38,25 +39,26 @@ jobs:
     - uses: extractions/setup-just@v1
       with:
         just-version: '1.14.0' # just for sanity
-    # - uses: pulumi/actions@v4
+    - uses: pulumi/actions@v4
     - uses: coursier/cache-action@v6.4.3
     - uses: VirtusLab/scala-cli-setup@v1.0.4
       with: 
         jvm: graalvm-java11:22.3.1
         apps: 
     - uses: arduino/setup-protoc@v1
-    # - uses: actions/setup-go@v4
-    #   with:
-    #     go-version: 1.20
-
+    - uses: actions/setup-go@v4
+      with:
+        go-version: 1.20
+    
+    - name: Trust me bro
+      run: scala-cli config power true
+        
     - name: Clean workspace
-      run: | 
-        just clean-all
-
-    # - name: Fetch & compile protobuf 
-    #   run: |
-    #     scala-cli run ./scripts -M proto -- all
-
+      run: just clean-all
+        
+    - name: Fetch & compile protobuf 
+      run: just compile-pulumi-protobufs
+        
     - name: Compile everything
       run: just compile-all
 

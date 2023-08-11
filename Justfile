@@ -35,9 +35,12 @@ compile-all: compile-sdk compile-codegen build-language-plugin
 # Language SDK
 ####################
 
+compile-pulumi-protobufs:
+	scala-cli run ./scripts -M proto -- all
+
 # Compiles core besom SDK
 compile-core:
-	scala-cli compile core -v -v -v
+	scala-cli compile core 
 
 # Compiles besom cats-effect extension
 compile-cats:
@@ -74,22 +77,22 @@ test-sdk: compile-sdk test-core test-cats test-zio
 
 # Publishes locally core besom SDK
 publish-local-core:
-  scala-cli --power publish local core --project-version {{publish-version}} --doc=false
+  scala-cli publish local core --project-version {{publish-version}} --doc=false
 
 # Publishes locally besom cats-effect extension
 publish-local-cats:
-	scala-cli --power publish local besom-cats --project-version {{publish-version}} --doc=false
+	scala-cli publish local besom-cats --project-version {{publish-version}} --doc=false
 
 # Publishes locally besom zio extension
 publish-local-zio:
-	scala-cli --power publish local besom-zio --project-version {{publish-version}} --doc=false
+	scala-cli publish local besom-zio --project-version {{publish-version}} --doc=false
 
 # Publishes locally all SDK modules: core, cats-effect extension, zio extension
 publish-local-sdk: publish-local-core publish-local-cats publish-local-zio
 
 # Publishes locally besom compiler plugin
 publish-local-compiler-plugin:
-	scala-cli --power publish local compiler-plugin --project-version {{publish-version}} --doc=false
+	scala-cli publish local compiler-plugin --project-version {{publish-version}} --doc=false
 
 # Cleans core build
 clean-core: 
