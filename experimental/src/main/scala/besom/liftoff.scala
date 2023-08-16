@@ -2,11 +2,7 @@
 //> using dep "io.github.iltotore::iron:2.1.0"
 
 import besom.*
-import besom.util.NonEmptyString
 import besom.api.{kubernetes => k8s}
-
-// TODO fix these imports so that they get exported from BesomSyntax - issue #101
-import besom.internal.{Context, ComponentBase, ComponentResource, RegistersOutputs}
 
 import k8s.core.v1.inputs.*
 import k8s.apps.v1.inputs.*
@@ -22,7 +18,6 @@ import k8s.core.v1.{
   PersistentVolume,
   PersistentVolumeArgs
 }
-import besom.internal.Output
 
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.numeric.*

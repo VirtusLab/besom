@@ -4,7 +4,7 @@ import com.google.protobuf.struct.{Struct, Value}
 import scala.quoted.*
 import scala.deriving.Mirror
 import besom.internal.logging.*
-import besom.util.Types.*
+import besom.types.{ Label, URN, ResourceId }
 import org.checkerframework.checker.units.qual.C
 
 trait ResourceDecoder[A <: Resource]: // TODO rename to something more sensible

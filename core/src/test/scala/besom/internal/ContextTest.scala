@@ -2,7 +2,7 @@ package besom.internal
 
 import RunResult.{given, *}
 import com.google.protobuf.struct.*
-import besom.util.Types.*
+import besom.types.{ Output => _, * }
 
 sealed abstract class TestEnum(val name: String, val value: String) extends besom.internal.StringEnum
 

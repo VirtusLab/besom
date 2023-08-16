@@ -2,7 +2,7 @@ package besom.internal
 
 import RunResult.{given, *}
 import scala.collection.mutable
-import besom.util.Types.*
+import besom.types.*
 
 case class TestResource(urn: Output[URN], id: Output[ResourceId], url: Output[String]) extends CustomResource
 

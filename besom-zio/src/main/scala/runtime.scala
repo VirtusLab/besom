@@ -41,7 +41,7 @@ trait ZIOModule extends BesomModule:
   import scala.concurrent.*
   override final type Eff[+A] = zio.Task[A]
 
-  protected val rt: Runtime[Eff] = ZIORuntime()(using zio.Runtime.default)
+  protected lazy val rt: Runtime[Eff] = ZIORuntime()(using zio.Runtime.default)
 
   given Result.ToFuture[Eff] = new Result.ToFuture[Task]:
     def eval[A](fa: => Task[A]): () => Future[A] = () =>
@@ -52,4 +52,4 @@ trait ZIOModule extends BesomModule:
   // override def run(program: Context ?=> Output[Exports]): Future[Unit] = ???
 
 object Pulumi extends ZIOModule
-export Pulumi.*
+export Pulumi.{ *, given }

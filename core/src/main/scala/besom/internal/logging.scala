@@ -9,8 +9,8 @@ import scala.util.{NotGiven => Not}
 
 import scala.language.implicitConversions
 import pulumirpc.engine.{LogRequest, LogSeverity}
-import besom.util.Types.Label
-import besom.util.Types.URN
+import besom.types.Label
+import besom.types.URN
 
 object logging:
 
@@ -79,6 +79,9 @@ object logging:
   object LocalBesomLogger extends BesomLogger:
     def log(record: LogRecord): Result[Unit] = Result(Logger(record.className).log(record))
     def close(): Result[Unit]                = Result.unit
+
+  class UserLoggerFactory(using ctx: Context) extends LoggerSupport[Output[Unit]]:
+    override def log(record: LogRecord): Output[Unit] = Output[Unit](ctx.logger.log(record))
 
   class DualBesomLogger private[logging] (
     private val queue: Queue[LogRequest | Queue.Stop],

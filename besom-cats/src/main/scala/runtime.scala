@@ -42,7 +42,7 @@ trait CatsEffectModule extends BesomModule:
 
   def ioRuntime: IORuntime = cats.effect.unsafe.IORuntime.global
 
-  protected val rt: Runtime[Eff] = CatsRuntime()(using ioRuntime)
+  protected lazy val rt: Runtime[Eff] = CatsRuntime()(using ioRuntime)
 
   given Result.ToFuture[Eff] = new Result.ToFuture[IO]:
     def eval[A](fa: => IO[A]): () => Future[A] = () => fa.unsafeToFuture()(using ioRuntime)
@@ -50,4 +50,4 @@ trait CatsEffectModule extends BesomModule:
   // override def run(program: Context ?=> Output[Exports]): Future[Unit] = ???
 
 object Pulumi extends CatsEffectModule
-export Pulumi.*
+export Pulumi.{ *, given }

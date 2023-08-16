@@ -1,6 +1,6 @@
 package besom.util
 
-import besom.util.Types.URN
+import besom.types.URN
 
 class URNTest extends munit.FunSuite with CompileAssertions:
 
@@ -20,12 +20,12 @@ class URNTest extends munit.FunSuite with CompileAssertions:
 
   test("URN.apply should only work for correct URNs") {
     failsToCompile("""
-      import besom.util.Types.URN
+      import besom.types.URN
       URN("well::it's::not::a::urn")
       """)
 
     compiles("""
-      import besom.util.Types.URN
+      import besom.types.URN
       URN("urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource")
       """)
   }

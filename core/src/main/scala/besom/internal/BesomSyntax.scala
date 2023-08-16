@@ -3,8 +3,8 @@ package besom.internal
 import besom.internal.logging.BesomLogger
 import scala.reflect.Typeable
 import besom.util.NonEmptyString
-import besom.util.Types.ResourceType
-import besom.util.Types.URN
+import besom.types.ResourceType
+import besom.types.URN
 
 /*
  * This trait is the main export point that exposes Besom specific functions and types to the user.
@@ -15,7 +15,8 @@ trait BesomSyntax:
 
   def config(using ctx: Context): Config = ctx.config
 
-  def log(using ctx: Context): BesomLogger = ctx.logger
+  def log(using ctx: Context): besom.aliases.Logger =
+    besom.internal.logging.UserLoggerFactory(using ctx)
 
   def urn(using ctx: Context): Output[URN] =
     Output.ofData(ctx.getParentURN.map(OutputData(_)))

@@ -5,13 +5,19 @@ import besom.util.NonEmptyString
 import scala.util.Try
 
 class Config private (
-  val projectName: NonEmptyString,
+  val namespace: NonEmptyString,
+  private val isProjectName: Boolean,
   private val configMap: Map[String, String],
   private val configSecretKeys: Set[String]
 ):
-  private def fullKey(key: String): String = projectName + ":" + key
+  private def fullKey(key: String): String = namespace + ":" + key
 
-  private[besom] def unsafeGet(key: String): Option[String] = configMap.get(fullKey(key))
+  private def tryGet(key: String): Option[String] = configMap.get(fullKey(key)) match
+    case sme: Some[?] => sme
+    case None if isProjectName => configMap.get(key)
+    case None => None
+
+  private[besom] def unsafeGet(key: String): Option[String] = tryGet(key)
 
   /** This method differs in behavior from other Pulumi SDKs. In other SDKs, if you try to get a config key that is a
     * secret, you will obtain it (due to https://github.com/pulumi/pulumi/issues/7127 you won't even get a warning). We
@@ -26,11 +32,11 @@ class Config private (
           Result.pure(OutputData.empty())
 
       Output.ofData(result)
-    else Output.ofData(OutputData(Set.empty, configMap.get(fullKey(key)), isSecret = false))
+    else Output.ofData(OutputData(Set.empty, tryGet(key), isSecret = false))
 
   def getSecret(key: String)(using ctx: Context): Output[String] =
     if configSecretKeys.contains(key) then
-      Output.ofData(OutputData(Set.empty, configMap.get(fullKey(key)), isSecret = true))
+      Output.ofData(OutputData(Set.empty, tryGet(key), isSecret = true))
     else
       Output.ofData(
         ctx.logger.warn(s"Config key $key is not a secret") *> Result.pure(OutputData.empty(isSecret = true))
@@ -128,29 +134,40 @@ object Config:
     else key
 
   def apply(
-    projectName: NonEmptyString,
-    map: Map[NonEmptyString, String],
+    namespace: NonEmptyString,
+    isProjectName: Boolean,
+    configMap: Map[NonEmptyString, String],
     configSecretKeys: Set[NonEmptyString]
   ): Result[Config] = Result.defer {
+    new Config(
+      namespace = namespace,
+      isProjectName = isProjectName,
+      configMap = configMap.map { case (k, v) => (cleanKey(k), v) },
+      configSecretKeys = configSecretKeys.map(identity)
+    )
+  }
+
+  import Env.*
+  
+  private def apply(namespace: NonEmptyString, isProjectName: Boolean): Result[Config] =
+    for
+      configMap        <- Result.evalTry(Env.getConfigMap(EnvConfig))
+      configSecretKeys <- Result.evalTry(Env.getConfigSecretKeys(EnvConfigSecretKeys))
+      config           <- Config(namespace, isProjectName, configMap, configSecretKeys)
+    yield config
+
+  def forNamespace(namespace: NonEmptyString): Result[Config] =
+    Config(namespace, isProjectName = false)
+
+  def forProject(projectName: NonEmptyString): Result[Config] =
     val cleanedProjectName =
       if projectName.endsWith(":config") then
         NonEmptyString(projectName.replaceAll(":config$", "")).getOrElse {
           throw new RuntimeException(s"Invalid project name: $projectName - project name cannot be empty!")
         }
       else projectName
+    Config(projectName, isProjectName = true)
 
-    new Config(
-      projectName = cleanedProjectName,
-      configMap = map.map { case (k, v) => (cleanKey(k), v) },
-      configSecretKeys = configSecretKeys.map(identity)
-    )
-  }
-
-  import Env.*
-
-  def apply(projectName: NonEmptyString): Result[Config] =
-    for
-      configMap        <- Result.evalTry(Env.getConfigMap(EnvConfig))
-      configSecretKeys <- Result.evalTry(Env.getConfigSecretKeys(EnvConfigSecretKeys))
-      config           <- Config(projectName, configMap, configSecretKeys)
-    yield config
+trait ConfigFactory:
+  def apply(namespace: NonEmptyString)(using Context): Output[Config] =
+    Output(Config.forNamespace(namespace))

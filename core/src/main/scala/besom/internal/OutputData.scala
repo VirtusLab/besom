@@ -108,7 +108,7 @@ object OutputData:
     Known(resources, isSecret, None)
 
   def traverseResult[A](using ctx: Context)(value: => Result[A]): Result[OutputData[A]] =
-    empty[A]().traverseResult(_ => value)
+    value.map(OutputData.apply(_))
 
   def sequence[A, CC[X] <: IterableOnce[X], To](
     coll: CC[OutputData[A]]

@@ -3,7 +3,8 @@ package besom.internal
 import RunResult.{given, *}
 import com.google.protobuf.struct.*
 import ProtobufUtil.*
-import besom.util.*, Types.*
+import besom.util.*
+import besom.types.*
 import logging.*
 
 class ResourceDecoderTest extends munit.FunSuite:

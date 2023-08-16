@@ -1,7 +1,7 @@
 package besom.internal
 
 import com.google.protobuf.struct.Struct
-import besom.util.Types.*
+import besom.types.*
 
 case class RawResourceResult(urn: URN, id: Option[ResourceId], data: Struct, dependencies: Map[String, Set[Resource]])
 

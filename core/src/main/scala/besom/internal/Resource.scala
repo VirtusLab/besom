@@ -1,7 +1,7 @@
 package besom.internal
 
 import besom.util.NonEmptyString
-import besom.util.Types.*
+import besom.types.*
 import com.google.protobuf.struct.*
 import scala.quoted.*
 import scala.deriving.Mirror

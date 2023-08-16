@@ -1,7 +1,8 @@
 package besom.internal
 
 import com.google.protobuf.struct.*
-import besom.util.*, Types.*
+import besom.util.*
+import besom.types.{ ResourceType, URN, Label, ProviderType }
 import besom.internal.logging.*
 import scala.annotation.implicitNotFound
 import besom.internal.ComponentResource
