@@ -1,6 +1,6 @@
 package besom.internal
 
-import besom.util.*
+import besom.*
 import RunResult.{given, *}
 
 class InterpolatorTest extends munit.FunSuite {

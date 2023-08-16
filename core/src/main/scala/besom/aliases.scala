@@ -9,9 +9,6 @@ object aliases:
   type Config = besom.internal.Config
   object Config extends besom.internal.ConfigFactory
   type Logger = besom.internal.logging.UserLoggerFactory
-  object Logger:
-    def apply()(using ctx: Context) =
-      besom.internal.logging.UserLoggerFactory(using ctx)
   type NonEmptyString = besom.util.NonEmptyString
   object NonEmptyString extends besom.util.NonEmptyStringFactory
   object NonEmptyStringExtensions extends besom.util.NonEmptyStringExtensionsFactory
