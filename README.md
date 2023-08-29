@@ -1,6 +1,8 @@
 # Besom
 **Besom** - a broom made of twigs tied around a stick. Brooms and besoms are used for protection, to ward off evil spirits, and cleansing of ritual spaces. Also, an experimental pulumi-scala implementation, incidentally.
 
+![Besom logo](./website/static/img/Besom_logo_full_color.png)
+
 ## Getting started
 
 ### Publish necessary packages
