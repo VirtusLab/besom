@@ -1,6 +1,0 @@
-name: ${PROJECT}
-description: ${DESCRIPTION}
-runtime: scala
-template:
-  description: A minimal Scala Pulumi program
-  important: true
