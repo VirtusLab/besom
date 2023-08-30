@@ -13,9 +13,9 @@ coverage-reports-dir := coverage-output-dir + "/reports"
 coverage := "false"
 
 # replace with a function when https://github.com/casey/just/pull/1069 is merged
-scala-options-core := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-core } else { "" }
-scala-options-cats := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-cats } else { "" }
-scala-options-zio := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-zio } else { "" }
+scala-cli-options-core := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-core } else { "" }
+scala-cli-options-cats := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-cats } else { "" }
+scala-cli-options-zio := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-zio } else { "" }
 
 # This list of available targets
 default:
@@ -59,18 +59,18 @@ compile-compiler-plugin:
 
 # Runs tests for core besom SDK
 test-core:
-	@if [[ {{ coverage }} == "true" ]]; then mkdir -p {{coverage-output-dir-core}}; fi
-	scala-cli test core {{ scala-options-core }}
+	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-core}}; fi
+	scala-cli test core {{ scala-cli-options-core }}
 
 # Runs tests for besom cats-effect extension
 test-cats:
-	@if [[ {{ coverage }} == "true" ]]; then mkdir -p {{coverage-output-dir-cats}}; fi
-	scala-cli test besom-cats {{ scala-options-cats }}
+	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-cats}}; fi
+	scala-cli test besom-cats {{ scala-cli-options-cats }}
 
 # Runs tests for besom zio extension
 test-zio:
-	@if [[ {{ coverage }} == "true" ]]; then mkdir -p {{coverage-output-dir-zio}}; fi
-	scala-cli test besom-zio {{ scala-options-zio }}
+	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-zio}}; fi
+	scala-cli test besom-zio {{ scala-cli-options-zio }}
 
 # Runs all tests
 test-sdk: compile-sdk test-core test-cats test-zio
