@@ -58,8 +58,8 @@ func (sbt) newSbtExecutor(cmd string, bootstrapLibJarPath string) (*ScalaExecuto
 
 	se := &ScalaExecutor{
 		Cmd:        cmd,
-		BuildArgs:  makeArgs(sbtModule, []string{}, "compile"),
-		RunArgs:    makeArgs(sbtModule, []string{}, "run"),
+		BuildArgs:  makeArgs(sbtModule, "compile"),
+		RunArgs:    makeArgs(sbtModule, "run"),
 		PluginArgs: append([]string{"-error"}, makePluginsSbtCommandParts(sbtModule, bootstrapLibJarPath)),
 	}
 
@@ -78,7 +78,7 @@ func makePluginsSbtCommandParts(sbtModule string, bootstrapLibJarPath string) st
 	pluginsSbtCommandParts := []string{
 		// STDOUT needs to be clean of sbt output, because we expect a JSON with plugin results
 		`; set outputStrategy := Some(StdoutOutput)`,
-		fmt.Sprintf(`; set %sCompile / unmanagedJars += Attributed.blank(file("`+bootstrapLibJarPath+`"))`, sbtModule),
+		fmt.Sprintf(`; set %sCompile / unmanagedJars += Attributed.blank(file("%s"))`, sbtModule, bootstrapLibJarPath),
 		fmt.Sprintf(`; %srunMain besom.bootstrap.PulumiPluginsDiscoverer`, sbtModule),
 	}
 	pluginsSbtCommand := strings.Join(pluginsSbtCommandParts, " ")
@@ -86,9 +86,9 @@ func makePluginsSbtCommandParts(sbtModule string, bootstrapLibJarPath string) st
 	return pluginsSbtCommand
 }
 
-func makeArgs(sbtModule string, flags []string, cmd string) []string {
+func makeArgs(sbtModule string, cmd string) []string {
 	if sbtModule != "" {
 		return append([]string{"-batch", fmt.Sprintf("%s/%s", sbtModule, cmd)})
 	}
-	return []string{"-batch", "run"}
+	return []string{"-batch", cmd}
 }
