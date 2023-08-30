@@ -29,9 +29,7 @@ object DummyContext:
     runInfo: RunInfo = dummyRunInfo,
     featureSupport: FeatureSupport = dummyFeatureSupport,
     monitor: Monitor = dummyMonitor,
-    engine: Engine = dummyEngine,
-    keepResources: Boolean = false,
-    keepOutputValues: Boolean = false
+    engine: Engine = dummyEngine
   ): Result[Context] =
     for
       taskTracker  <- TaskTracker()

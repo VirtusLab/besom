@@ -241,6 +241,7 @@ class ResourceOps(using ctx: Context, mdc: MDC[Label]):
               )
               _         <- log.trace(s"Resolving resource ${state.asLabel} with: ${pprint(eitherErrorOrResult)}")
               errOrUnit <- resolver.resolve(eitherErrorOrResult).either
+              _         <- errOrUnit.fold(ctx.fail, _ => Result.unit) // fail context if resource resolution fails
               _ <- log.debug(
                 s"Resolved resource ${state.asLabel} ${errOrUnit.fold(t => s"with an error: ${t.getMessage()}", _ => "successfully")}"
               ) *>

@@ -10,7 +10,6 @@ object PulumiPluginsDiscoverer:
     val foundPlugins = pluginsFromClasspath
     print(JsArray(foundPlugins.values.toVector).compactPrint)
 
-  
   private val PluginRegex = "^(besom/(.+))/plugin.json$".r
 
   private def pluginsFromClasspath: Map[String, JsValue] =

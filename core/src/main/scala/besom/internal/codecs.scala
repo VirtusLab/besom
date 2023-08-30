@@ -34,8 +34,6 @@ case class DecodingError(message: String, cause: Throwable = null) extends Excep
 
 /*
  * Would be awesome to make error reporting better, ie:
- *  - make the Decoder typeclass decoding stack-aware
- *  - pass information about field name, key (in map) or index (in list)
  *  - make DecodingError work with any arity of errors and return aggregates
  *  - render yamled or jsoned version of top Value on error (so at the bottom of the stack!)
  *    this, along with the jq-like path to errors, would allow for very easy debugging
@@ -43,19 +41,7 @@ case class DecodingError(message: String, cause: Throwable = null) extends Excep
  * [ ] TODO IMPORTANT: Decoder[A] derivation for case classes and ADTs MUST respect secretness of constituent fields
  *                     Whole record/adt must be considered secret if one of the fields held in plain value is secret!
  *                     Write a test, OutputData.combine should have taken care of it in sequence/traverse chains.
- * [✓] TODO: stack-aware error reporting
- * [ ][ ] TODO: a better way than current Try/throw combo to traverse OutputData's lack of error channel
- * [✓][ ] TODO: Decoder[A] where A <: Product - derivation
- * [✓][ ] TODO: Decoder[Enum]
- * [✓][ ] TODO: Decoders for dependency resources (interesting problem, what about Context? shouldn't they use ResourceDecoder?)
- * [ ][ ] TODO: Decoder[Output[A]] (interesting problem, possibly unnecessary, what about Context?)
- * [✓][ ] TODO: Decoder[Asset]
- * [✓][ ] TODO: Decoder[Archive]
- * [✓][ ] TODO: Decoder[JsValue]
- * [✓][ ] TODO: Decoder[primitives]
- * [✓][ ] TODO: Decoder[A | B]
- * [✓][ ] TODO: Decoder[List[A]]
- * [✓][ ] TODO: Decoder[Map[String, A]]
+ * [ ] TODO: a better way than current Try/throw combo to traverse OutputData's lack of error channel
  */
 trait Decoder[A]:
   self =>
@@ -384,19 +370,6 @@ object Decoder extends DecoderInstancesLowPrio1:
         case Right(odv) => Right(odv)
     override def mapping(value: Value, label: Label): AssetOrArchive = ???
 
-  // TODO is this required at all?
-  // given outputDecoder[A](using innerDecoder: Decoder[A], ctx: Context): Decoder[Output[A]] = new Decoder[Output[A]]:
-  //   override def decode(value: Value, label: Label): Either[DecodingError, OutputData[Output[A]]] =
-  //     decodeAsPossibleSecret(value).flatMap { odv =>
-  //       Try {
-  //         odv.flatMap { innerValue =>
-  //           innerValue.
-  //         }
-  //       }
-  //     }
-
-  //   def mapping(value: Value): Output[A] = ???
-
 trait DecoderInstancesLowPrio1 extends DecoderInstancesLowPrio2:
   import spray.json.JsValue
 
@@ -602,7 +575,7 @@ object Encoder:
                 else idValue
 
               val result = Map(
-                SpecialSigKey -> Value(Kind.StringValue(SpecialResourceSig)),
+                SpecialSigKey -> SpecialResourceSig.asValue,
                 ResourceUrnName -> urnValue,
                 ResourceIdName -> fixedIdValue
               )
@@ -621,7 +594,7 @@ object Encoder:
         outputURNEnc.encode(a.urn).flatMap { (urnResources, urnValue) =>
           if ctx.featureSupport.keepResources then
             val result = Map(
-              SpecialSigKey -> Value(Kind.StringValue(SpecialResourceSig)),
+              SpecialSigKey -> SpecialResourceSig.asValue,
               ResourceUrnName -> urnValue
             )
 
@@ -675,23 +648,23 @@ object Encoder:
         case Some(value) => inner.encode(value)
         case None        => Result.pure(Set.empty -> Null)
 
-  // TODO pass keepResources from ctx
   given outputEncoder[A](using inner: Encoder[Option[A]]): Encoder[Output[A]] with
     def encode(outA: Output[A]): Result[(Set[Resource], Value)] = outA.getData.flatMap { oda =>
       oda match
-        case OutputData.Unknown(resources, isSecret) => // TODO Resource propagation
-          Result.pure(Set.empty -> UnknownValue.asValue) // TODO Resource propagation
+        case OutputData.Unknown(resources, isSecret) =>
+          Result.pure(resources -> UnknownValue.asValue)
 
-        case OutputData.Known(resources, isSecret, maybeValue) => // TODO Resource propagation
-          inner.encode(maybeValue).map { (innerResources, serializedValue) => // TODO Resource propagation
+        case OutputData.Known(resources, isSecret, maybeValue) =>
+          inner.encode(maybeValue).map { (innerResources, serializedValue) =>
+            val aggregatedResources = resources ++ innerResources
             if isSecret then
               val secretStruct = Map(
                 SpecialSigKey -> SpecialSecretSig.asValue,
                 SecretValueName -> serializedValue
               )
 
-              Set.empty -> secretStruct.asValue // TODO Resource propagation
-            else Set.empty -> serializedValue // TODO Resource propagation
+              aggregatedResources -> secretStruct.asValue
+            else aggregatedResources -> serializedValue
           }
     }
 

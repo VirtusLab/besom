@@ -1,15 +1,16 @@
-//> using scala "3.2.2"
+//> using scala "3.3.0"
 //> using lib "com.lihaoyi::os-lib:0.9.1"
 
 //> using dep "org.scalameta::munit::0.7.29"
 //> using lib "com.lihaoyi::sourcecode:0.3.0"
-//> using options "-java-output-version:8"
+//> using options "-java-output-version:11"
 
 class LanguagePluginExecutorTest extends munit.FunSuite {
   val resourcesDir = os.Path(sourcecode.File()) / os.up / os.up / "resources"
   val executorsDir = resourcesDir / "executors"
 
-  def getEnvVar(name: String) = sys.env.get(name).getOrElse(throw new Exception(s"Environment variable $name is not set"))
+  def getEnvVar(name: String) =
+    sys.env.get(name).getOrElse(throw new Exception(s"Environment variable $name is not set"))
 
   def publishLocalCustomResourcePlugin() =
     val tmpBuildDir = os.temp.dir()
@@ -17,16 +18,30 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
     os.proc("scala-cli", "--power", "publish", "local", ".").call(cwd = tmpBuildDir)
 
   def testExecutor(executorDir: os.Path) =
-    val tmpPulumiHome = os.temp.dir()
-    val env = Map("PULUMI_CONFIG_PASSPHRASE" -> "")
-    val stackName = "organization/language-plugin-test/executor-test"
-    val scalaPluginVersion = getEnvVar("PULUMI_SCALA_PLUGIN_VERSION")
+    val tmpPulumiHome        = os.temp.dir()
+    val env                  = Map("PULUMI_CONFIG_PASSPHRASE" -> "")
+    val stackName            = "organization/language-plugin-test/executor-test"
+    val scalaPluginVersion   = getEnvVar("PULUMI_SCALA_PLUGIN_VERSION")
     val scalaPluginLocalPath = getEnvVar("PULUMI_SCALA_PLUGIN_LOCAL_PATH")
-    
+
     os.proc("pulumi", "login", s"file://${tmpPulumiHome}").call()
-    os.proc("pulumi", "plugin", "install", "language", "scala", scalaPluginVersion, "--file", scalaPluginLocalPath).call()
+    os.proc(
+      "pulumi",
+      "plugin",
+      "install",
+      "language",
+      "scala",
+      scalaPluginVersion,
+      "--file",
+      scalaPluginLocalPath,
+      "--reinstall"
+    ).call()
     os.proc("pulumi", "stack", "--non-interactive", "init", stackName).call(cwd = executorDir, env = env)
-    val pulumiUpOutput = os.proc("pulumi", "up", "--non-interactive", "--stack", stackName, "--skip-preview").call(cwd = executorDir, env = env, check = false).out.text()
+    val pulumiUpOutput = os
+      .proc("pulumi", "up", "--non-interactive", "--stack", stackName, "--skip-preview")
+      .call(cwd = executorDir, env = env, check = false)
+      .out
+      .text()
 
     val expectedError = """java.lang.Exception: scala executor test got executed"""
 
@@ -46,13 +61,12 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
     val expectedPluginsInfo = Map("scala" -> "unknown", "random" -> "4.3.1")
 
     assert(clue(pluginsInfo) == expectedPluginsInfo)
-  
+
   override def beforeAll() =
     publishLocalCustomResourcePlugin()
 
   override def afterAll() =
     os.proc("pulumi", "logout").call()
-
 
   test("scala-cli") {
     // Prepare the sources of the test project
