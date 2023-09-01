@@ -40,12 +40,6 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
 
   def flatten[B](using ev: A <:< Output[B]): Output[B] = flatMap(a => ev(a))
 
-  def orEmpty[B](using ev: A <:< Option[B]): Output[B] = flatMap { a =>
-    ev(a) match
-      case Some(value) => Output(value)
-      case None        => Output.empty()
-  }
-
   def asPlaintext: Output[A] = withIsSecret(Result.pure(false))
 
   def asSecret: Output[A] = withIsSecret(Result.pure(true))
@@ -136,21 +130,3 @@ object Output:
 
   def secret[A](using ctx: Context)(maybeValue: Option[A]): Output[A] =
     new Output[A](ctx.registerTask(Result.pure(OutputData(Set.empty, maybeValue, isSecret = true))))
-
-  extension [A](v: A | Output[A] | NotProvided)
-    def asOutput(isSecret: Boolean = false)(using ctx: Context): Output[A] =
-      v match
-        case NotProvided     => Output.empty(isSecret)
-        case out: Output[_]  => out.asInstanceOf[Output[A]] // TODO TypeTest?
-        case a: A @unchecked => if isSecret then Output.secret(a) else Output(a)
-
-  extension [A](v: Map[String, A] | Map[String, Output[A]] | Output[Map[String, A]] | NotProvided)
-    def asOutputMap(isSecret: Boolean = false)(using ctx: Context): Output[Map[String, A]] =
-      v match
-        case NotProvided    => Output.empty(isSecret)
-        case out: Output[_] => out.asInstanceOf[Output[Map[String, A]]] // TODO TypeTest?
-        case m: Map[_, _] @unchecked =>
-          if m.exists((_, v) => v.isInstanceOf[Output[_]]) then
-            Output.traverseMap(m.asInstanceOf[Map[String, Output[A]]])
-          else if isSecret then Output.secret(m.asInstanceOf[Map[String, A]])
-          else Output(m.asInstanceOf[Map[String, A]])

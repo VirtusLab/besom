@@ -36,7 +36,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
         s"redis-cluster-pv-$num-$name",
         PersistentVolumeArgs(
           metadata = ObjectMetaArgs(
-            namespace = redisNamespace.metadata.name.orEmpty,
+            namespace = redisNamespace.metadata.name,
             labels = Map("type" -> "local") ++ labels,
             name = s"redis-cluster-pv-$num-$name"
           ),
@@ -53,7 +53,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
       s"redis-cluster-configmap-$name",
       ConfigMapArgs(
         metadata = ObjectMetaArgs(
-          namespace = redisNamespace.metadata.name.orEmpty,
+          namespace = redisNamespace.metadata.name,
           labels = labels,
           name = s"redis-cluster-configmap-$name"
         ),
@@ -74,7 +74,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
       StatefulSetArgs(
         metadata = ObjectMetaArgs(
           name = s"redis-cluster-statefulset-$name",
-          namespace = redisNamespace.metadata.name.orEmpty,
+          namespace = redisNamespace.metadata.name,
           labels = labels
         ),
         spec = StatefulSetSpecArgs(
@@ -86,7 +86,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
           template = PodTemplateSpecArgs(
             metadata = ObjectMetaArgs(
               name = s"redis-cluster-statefulset-$name",
-              namespace = redisNamespace.metadata.name.orEmpty,
+              namespace = redisNamespace.metadata.name,
               labels = labels
             ),
             spec = PodSpecArgs(
@@ -124,7 +124,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
                 VolumeArgs(
                   name = "conf",
                   configMap = ConfigMapVolumeSourceArgs(
-                    name = redisConfigMap.metadata.name.orEmpty
+                    name = redisConfigMap.metadata.name
                   )
                 ),
                 VolumeArgs(
@@ -141,7 +141,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
               metadata = ObjectMetaArgs(
                 name = "data",
                 labels = labels,
-                namespace = redisNamespace.metadata.name.orEmpty
+                namespace = redisNamespace.metadata.name
               ),
               spec = PersistentVolumeClaimSpecArgs(
                 accessModes = List("ReadWriteOnce"),
@@ -162,7 +162,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
         metadata = ObjectMetaArgs(
           name = s"redis-cluster-service-$name",
           labels = labels,
-          namespace = redisNamespace.metadata.name.orEmpty
+          namespace = redisNamespace.metadata.name
         ),
         spec = ServiceSpecArgs(
           ports = List(
@@ -199,7 +199,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
       metadata = ObjectMetaArgs(
         name = "index-html-configmap",
         labels = labels,
-        namespace = appNamespace.metadata.name.orEmpty
+        namespace = appNamespace.metadata.name
       ),
       data = Map(
         "index.html" -> html
@@ -217,7 +217,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
           metadata = ObjectMetaArgs(
             name = "nginx-deployment",
             labels = labels,
-            namespace = appNamespace.metadata.name.orEmpty
+            namespace = appNamespace.metadata.name
           ),
           spec = PodSpecArgs(
             containers = ContainerArgs(
@@ -238,7 +238,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
               VolumeArgs(
                 name = "index-html",
                 configMap = ConfigMapVolumeSourceArgs(
-                  name = indexHtmlConfigMap.metadata.name.orEmpty
+                  name = indexHtmlConfigMap.metadata.name
                 )
               )
             )
@@ -246,7 +246,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
         )
       ),
       metadata = ObjectMetaArgs(
-        namespace = appNamespace.metadata.name.orEmpty
+        namespace = appNamespace.metadata.name
       )
     )
   )
@@ -261,7 +261,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
         )
       ),
       metadata = ObjectMetaArgs(
-        namespace = appNamespace.metadata.name.orEmpty,
+        namespace = appNamespace.metadata.name,
         labels = labels
       )
     )

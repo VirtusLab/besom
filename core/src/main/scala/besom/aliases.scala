@@ -5,6 +5,9 @@ object aliases:
   object Output extends besom.internal.OutputFactory
   object OutputExtensions extends besom.internal.OutputExtensionsFactory
   export OutputExtensions.*
+  type Input[+A] = besom.internal.Input[A]
+  object Input:
+    export besom.internal.Input.*
   type Context = besom.internal.Context
   type Config = besom.internal.Config
   object Config extends besom.internal.ConfigFactory
