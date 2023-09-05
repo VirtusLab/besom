@@ -129,10 +129,11 @@ compile-codegen:
 # Download the schema for a specific provider, e.g. `just get-schema kubernetes`
 get-schema schema-name schema-version:
 	#!/usr/bin/env sh
-	mkdir -p {{schemas-output-dir}}
 	pulumi plugin install resource {{schema-name}} {{schema-version}};
 	schema_source={{ if schema-version == "" { schema-name } else { schema-name + "@" + schema-version } }}
-	pulumi package get-schema $schema_source > {{schemas-output-dir}}/{{schema-name}}/{{schema-version}}/schema.json
+	schema_dir="{{schemas-output-dir}}/{{schema-name}}/{{schema-version}}"
+	mkdir -p $schema_dir
+	pulumi package get-schema $schema_source > $schema_dir/schema.json
 
 # Generate scala API code for the given provider, e.g. `just generate-provider-sdk kubernetes`
 generate-provider-sdk schema-name schema-version:
@@ -168,8 +169,8 @@ clean-liftoff: destroy-liftoff
 
 # Cleans the deployment of ./experimental app completely, rebuilds core and kubernetes provider SDKs, deploys the app again
 clean-slate-liftoff: clean-sdk clean-liftoff
-	just generate-provider-sdk kubernetes 3.28.0 
+	just generate-provider-sdk kubernetes 3.30.2 
 	just publish-local-core
-	just publish-local-provider-sdk kubernetes 
+	just publish-local-provider-sdk kubernetes 3.30.2
 	just liftoff
 

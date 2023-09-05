@@ -167,14 +167,25 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
       "besom.ArgsEncoder"
     ))
 
-    val objectProperties = objectTypeDefinition.properties.toSeq.sortBy(_._1).map {
-      case (propertyName, propertyDefinition) =>
-        val isPropertyRequired = objectTypeDefinition.required.contains(propertyName)
-        makePropertyInfo(
-          propertyName = propertyName,
-          propertyDefinition = propertyDefinition,
-          isPropertyRequired = objectTypeDefinition.required.contains(propertyName)
-        )
+    val objectProperties = {
+      val allProperties = objectTypeDefinition.properties.toSeq.sortBy(_._1)
+      val truncatedProperties =
+        if (allProperties.size <= jvmMaxParamsCount)
+          allProperties
+        else {
+          logger.warn(s"Object type ${typeToken} has too many properties. Only first ${jvmMaxParamsCount} will be kept")
+          allProperties.take(jvmMaxParamsCount)
+        }
+      
+      truncatedProperties.map {
+        case (propertyName, propertyDefinition) =>
+          val isPropertyRequired = objectTypeDefinition.required.contains(propertyName)
+          makePropertyInfo(
+            propertyName = propertyName,
+            propertyDefinition = propertyDefinition,
+            isPropertyRequired = objectTypeDefinition.required.contains(propertyName)
+          )
+      }
     }
 
     val baseClassParams = objectProperties.map { propertyInfo =>
