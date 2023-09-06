@@ -4,9 +4,9 @@ import RunResult.{given, *}
 import com.google.protobuf.struct.*
 import besom.types.{ Output => _, * }
 
-sealed abstract class TestEnum(val name: String, val value: String) extends besom.internal.StringEnum
+sealed abstract class TestEnum(val name: String, val value: String) extends StringEnum
 
-object TestEnum extends besom.internal.EnumCompanion[TestEnum]("TestEnum"):
+object TestEnum extends EnumCompanion[TestEnum]("TestEnum"):
   object Test1 extends TestEnum("Test1", "Test1 value")
   object AnotherTest extends TestEnum("AnotherTest", "AnotherTest value")
   object `weird-test` extends TestEnum("weird-test", "weird-test value")

@@ -45,22 +45,22 @@ test-sdk: compile-sdk test-core test-cats test-zio
 
 # Publishes locally core besom SDK
 publish-local-core:
-  scala-cli --power publish local core --version {{publish-version}} --doc=false
+  scala-cli --power publish local core --project-version {{publish-version}} --doc=false
 
 # Publishes locally besom cats-effect extension
 publish-local-cats:
-	scala-cli --power publish local besom-cats --version {{publish-version}} --doc=false
+	scala-cli --power publish local besom-cats --project-version {{publish-version}} --doc=false
 
 # Publishes locally besom zio extension
 publish-local-zio:
-	scala-cli --power publish local besom-zio --version {{publish-version}} --doc=false
+	scala-cli --power publish local besom-zio --project-version {{publish-version}} --doc=false
 
 # Publishes locally all SDK modules: core, cats-effect extension, zio extension
 publish-local-sdk: publish-local-core publish-local-cats publish-local-zio
 
 # Publishes locally besom compiler plugin
 publish-local-compiler-plugin:
-	scala-cli --power publish local compiler-plugin --version {{publish-version}} --doc=false
+	scala-cli --power publish local compiler-plugin --project-version {{publish-version}} --doc=false
 
 # Cleans core build, sets up build for IDE again
 clean-core: 
@@ -127,26 +127,25 @@ compile-codegen:
 	scala-cli compile codegen
 
 # Download the schema for a specific provider, e.g. `just get-schema kubernetes`
-get-schema schema-name schema-version='':
+get-schema schema-name schema-version:
 	#!/usr/bin/env sh
-	mkdir -p {{schemas-output-dir}}
 	pulumi plugin install resource {{schema-name}} {{schema-version}};
 	schema_source={{ if schema-version == "" { schema-name } else { schema-name + "@" + schema-version } }}
-	pulumi package get-schema $schema_source > {{schemas-output-dir}}/{{schema-name}}.json
+	schema_dir="{{schemas-output-dir}}/{{schema-name}}/{{schema-version}}"
+	mkdir -p $schema_dir
+	pulumi package get-schema $schema_source > $schema_dir/schema.json
 
 # Generate scala API code for the given provider, e.g. `just generate-provider-sdk kubernetes`
-generate-provider-sdk schema-name schema-version='':
-	just get-schema {{schema-name}} {{schema-version}}
-	rm -rf {{codegen-output-dir}}/{{schema-name}}
-	scala-cli run codegen -- {{schemas-output-dir}} {{codegen-output-dir}} {{schema-name}}
+generate-provider-sdk schema-name schema-version:
+	scala-cli run codegen -- {{schemas-output-dir}} {{codegen-output-dir}} {{schema-name}} {{schema-version}}
 
 # Compiles the previously generated scala API code for the given provider, e.g. `just compile-provider-sdk kubernetes`
 compile-provider-sdk schema-name:
 	scala-cli compile {{codegen-output-dir}}/{{schema-name}}
 
 # Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes`
-publish-local-provider-sdk schema-name:
-	scala-cli --power publish local {{codegen-output-dir}}/{{schema-name}} --doc=false
+publish-local-provider-sdk schema-name schema-version:
+	scala-cli --power publish local {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --doc=false
 
 
 ####################
@@ -170,8 +169,8 @@ clean-liftoff: destroy-liftoff
 
 # Cleans the deployment of ./experimental app completely, rebuilds core and kubernetes provider SDKs, deploys the app again
 clean-slate-liftoff: clean-sdk clean-liftoff
-	just generate-provider-sdk kubernetes 3.28.0 
+	just generate-provider-sdk kubernetes 3.30.2 
 	just publish-local-core
-	just publish-local-provider-sdk kubernetes 
+	just publish-local-provider-sdk kubernetes 3.30.2
 	just liftoff
 

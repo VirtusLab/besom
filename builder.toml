@@ -18,9 +18,6 @@ scalaVersion = "2.13.10"
 [modules.compiler-plugin]
 platforms = ["jvm"]
 
-[modules.compiler-plugin]
-platforms = ["jvm"]
-
 [modules.experimental]
 platforms = ["jvm"]
 dependsOn = ["core"]

@@ -30,8 +30,10 @@ trait EffectBesomModule extends BesomSyntax:
     }
 
     rt.unsafeRunSync(everything.run(using rt)) match
-      case Left(err) => throw err
-      case Right(_)  => sys.exit(0)
+      case Left(err) =>
+        throw err
+      case Right(_)  =>
+        sys.exit(0)
 
 trait BesomModule extends EffectBesomModule {
   export besom.types.{ *, given }

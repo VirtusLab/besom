@@ -5,7 +5,7 @@ import scala.compiletime.ops.string.*
 import scala.language.implicitConversions
 import scala.util.Try
 import besom.util.NonEmptyString
-import besom.internal.{Decoder, Encoder}
+import besom.internal.{Decoder, Encoder, DecodingError}
 import besom.internal.ResourceDecoder
 import besom.internal.CustomResourceOptions
 import besom.internal.ArgsEncoder
@@ -141,5 +141,31 @@ object types:
     case RemoteArchive(uri: String)
     case AssetArchive(assets: Map[String, AssetOrArchive])
     // case InvalidArchive // TODO - should we use this?
+
+
+  sealed trait PulumiEnum:
+    def name: String
+
+  trait BooleanEnum extends PulumiEnum:
+    def value: Boolean
+
+  trait IntegerEnum extends PulumiEnum:
+    def value: Int
+
+  trait NumberEnum extends PulumiEnum:
+    def value: Double
+
+  trait StringEnum extends PulumiEnum:
+    def value: String
+
+  trait EnumCompanion[E <: PulumiEnum](enumName: String):
+    def allInstances: Seq[E]
+    private lazy val namesToInstances: Map[String, E] = allInstances.map(instance => instance.name -> instance).toMap
+
+    given Encoder[E] = Encoder.stringEncoder.contramap(instance => instance.name)
+    given Decoder[E] = Decoder.stringDecoder.emap { (name, label) =>
+      namesToInstances.get(name).toRight(DecodingError(s"$label: `${name}` is not a valid name of `${enumName}`"))
+    }
+
 
   export besom.aliases.{ *, given }

@@ -16,9 +16,9 @@ object DecoderTest:
   ) derives Decoder
 
 
-  sealed abstract class TestEnum(val name: String, val value: String) extends besom.internal.StringEnum
+  sealed abstract class TestEnum(val name: String, val value: String) extends besom.types.StringEnum
 
-  object TestEnum extends besom.internal.EnumCompanion[TestEnum]("TestEnum"):
+  object TestEnum extends besom.types.EnumCompanion[TestEnum]("TestEnum"):
     object A extends TestEnum("A", "A value")
     object B extends TestEnum("B", "B value")
 
