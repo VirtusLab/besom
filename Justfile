@@ -8,7 +8,6 @@ coverage-output-dir := justfile_directory() + "/.out/coverage"
 coverage-output-dir-core := coverage-output-dir + "/core"
 coverage-output-dir-cats := coverage-output-dir + "/cats"
 coverage-output-dir-zio := coverage-output-dir + "/zio"
-coverage-reports-dir := coverage-output-dir + "/reports"
 
 coverage := "false"
 
@@ -116,6 +115,10 @@ clean-compiler-plugin:
 # Cleans the ./.out directory
 clean-out:
 	rm -rf ./.out
+
+# Cleans the coverage out directory and sdk compilation output
+clean-coverage: clean-sdk
+	rm -rf {{coverage-output-dir}}
 
 ####################
 # Language plugin

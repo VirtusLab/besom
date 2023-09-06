@@ -23,5 +23,3 @@
 //> using options "-java-output-version:11", "-Ysafe-init"
 
 //#> using options "-Xmax-inlines:64"
-
-//#> using options "-coverage-out:coverage"
