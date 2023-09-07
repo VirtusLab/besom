@@ -7,7 +7,7 @@ class OutputTest extends munit.FunSuite:
 
   def takesNEString(nestring: Input.Optional[NonEmptyString])(using
     Context
-  ): Output[NonEmptyString] = nestring.asOutput()
+  ): Output[Option[NonEmptyString]] = nestring.asOptionOutput()
 
   def takesAList(list: Input[List[Input[String]]])(
     using Context
@@ -33,9 +33,9 @@ class OutputTest extends munit.FunSuite:
   test("multi-input type functions") {
     given Context = DummyContext().unsafeRunSync()
 
-    assert(takesNEString("string").getData.unsafeRunSync() == OutputData("string"))
-    assert(takesNEString(Output("string")).getData.unsafeRunSync() == OutputData("string"))
-    assert(takesNEString(None).getData.unsafeRunSync() == OutputData.empty())
+    assert(takesNEString("string").getData.unsafeRunSync() == OutputData(Some("string")))
+    assert(takesNEString(Output("string")).getData.unsafeRunSync() == OutputData(Some("string")))
+    assert(takesNEString(None).getData.unsafeRunSync() == OutputData(None))
 
     summon[Context].waitForAllTasks.unsafeRunSync()
   }

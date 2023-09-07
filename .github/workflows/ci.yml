@@ -2,7 +2,7 @@ name: Besom
 
 on:
   push:
-    branches: [ 'main', 'develop', 'fixing-ci' ] # TODO remove fixing-ci
+    branches: [ 'main', 'develop' ]
   pull_request:
     branches: [ 'main', 'develop' ]
     types: [ 'opened', 'reopened', 'synchronize', 'labeled' ]
