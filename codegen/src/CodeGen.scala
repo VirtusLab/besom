@@ -10,8 +10,8 @@ import besom.codegen.Utils._
 
 class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMapper, logger: Logger) {
   val commonImportedIdentifiers = Seq(
-    "besom.Output",
-    "besom.Context"
+    "besom.types.Output",
+    "besom.types.Context"
   )
 
   def sourcesFromPulumiPackage(pulumiPackage: PulumiPackage, besomVersion: String): Seq[SourceFile] = {
@@ -158,13 +158,13 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     val argsClassName = Type.Name(argsClassCoordinates.className).syntax
     
     val baseFileImports = makeImportStatements(commonImportedIdentifiers ++ Seq(
-      "besom.Decoder"
+      "besom.types.Decoder"
     ))
 
     val argsFileImports = makeImportStatements(commonImportedIdentifiers ++ Seq(
-      "besom.Input",
-      "besom.Encoder",
-      "besom.ArgsEncoder"
+      "besom.types.Input",
+      "besom.types.Encoder",
+      "besom.types.ArgsEncoder"
     ))
 
     val objectProperties = {
@@ -571,6 +571,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     "synchronized",
     "wait",
     "asInstanceOf",
+    "clone",
     "equals",
     "getClass",
     "hashCode",

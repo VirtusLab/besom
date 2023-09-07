@@ -89,8 +89,12 @@ class TypeMapper(
         objectClassCoordinates
       } else {
         (resourceClassCoordinates, objectClassCoordinates) match {
-          case (Some(coordinates), None) => Some(coordinates)
-          case (None, Some(coordinates)) => Some(coordinates)
+          case (Some(coordinates), None) =>
+            logger.warn(s"Assuming a '/resources/` prefix for type URI ${typeUri}")
+            Some(coordinates)
+          case (None, Some(coordinates)) =>
+            logger.warn(s"Assuming a '/types/` prefix for type URI ${typeUri}")
+            Some(coordinates)
           case (None, None) => None
           case _ => throw new Exception(s"Type URI ${typeUri} can refer to both a resource or an object type")
         }
