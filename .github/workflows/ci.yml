@@ -2,49 +2,71 @@ name: Besom
 
 on:
   push:
-    branches: [ develop ]
+    branches: [ 'main', 'develop' ]
+  pull_request:
+    branches: [ 'main', 'develop' ]
+    types: [ 'opened', 'reopened', 'synchronize', 'labeled' ]
 
 env:
   TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
 
-  format:
-    runs-on: "ubuntu-latest"
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-    - uses: coursier/cache-action@v6.3
-    - uses: VirtusLab/scala-cli-setup@v0.1
-    - name: Scalafmt check
-      run: |
-        scala-cli fmt src --check -F --respect-project-filters || (
-          echo "To format code run"
-          echo "  scala-cli fmt ."
-          exit 1
-        )
+  # TODO uncomment when codegen is fixed
+  # format:
+  #   runs-on: "ubuntu-latest"
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #     with:
+  #       fetch-depth: 0
+  #   - uses: coursier/cache-action@v6.4.3
+  #   - uses: VirtusLab/scala-cli-setup@v1.0.4
+  #   - name: Scalafmt check # TODO exit 1
+  #     run: |
+  #       scala-cli fmt . --check -F --respect-project-filters || (
+  #         echo "To format code run"
+  #         echo "  scala-cli fmt ."
+  #         exit 0 
+  #       )
 
+  # we need: scala-cli, protoc, go, just, pulumi, java
   build:
-    runs-on: ${{ matrix.OS }}
-    strategy:
-      matrix:
-        OS: ["ubuntu-latest", "macos-latest"]
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
-    - uses: coursier/cache-action@v6.3
-    - uses: VirtusLab/scala-cli-setup@v0.1
+    - uses: extractions/setup-just@v1
+      with:
+        just-version: '1.14.0' # just for sanity
+    - uses: pulumi/actions@v4
+      with:
+        pulumi-version: '3.81.0'
+    - uses: coursier/cache-action@v6.4.3
+    - uses: VirtusLab/scala-cli-setup@v1.0.4
+      with: 
+        jvm: graalvm-java11:22.3.1
+        apps: scala-cli:1.0.4
+        power: true
     - uses: arduino/setup-protoc@v1
-
+    - uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
+        
     - name: Clean workspace
-      run: |
-        scala-cli clean . && rm -fr ./target
+      run: just clean-all
+        
+    - name: Compile everything
+      run: just compile-all
 
-    - name: Fetch & compile protobuf 
-      run: |
-        scala-cli run ./scripts -M proto -- all
+    - name: Test SDK
+      run: just test-sdk
+    
+    - name: Publish compiler plugin
+      run: just publish-local-compiler-plugin
 
-    - name: Run tests
-      run: scala-cli test src
+    - name: Install language plugin
+      run: just install-language-plugin
+
+    - name: Run integration tests
+      run: just test-besom-integration

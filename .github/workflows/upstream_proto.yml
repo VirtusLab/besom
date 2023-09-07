@@ -1,0 +1,31 @@
+name: Verify upstream protobuf compatibility
+
+on:
+  schedule:
+    - cron: '0 0 */3 * *'
+
+jobs:
+  verify-pulumi-protos:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - uses: extractions/setup-just@v1
+      with:
+        just-version: '1.14.0' # just for sanity
+    - uses: coursier/cache-action@v6.4.3
+    - uses: VirtusLab/scala-cli-setup@v1.0.4
+      with: 
+        jvm: graalvm-java11:22.3.1
+        apps: scala-cli:1.0.4
+    - uses: arduino/setup-protoc@v1
+
+    - name: Trust me bro
+      run: scala-cli config power true
+
+    - name: Fetch & compile protobuf 
+      run: just compile-pulumi-protobufs
+    
+    - name: Compile SDK with rebuilt protobufs
+      run: just compile-sdk
