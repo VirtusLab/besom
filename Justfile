@@ -25,7 +25,7 @@ default:
 ####################
 
 # Cleans everything
-clean-all: clean-sdk clean-out clean-compiler-plugin
+clean-all: clean-sdk clean-out clean-compiler-plugin clean-codegen
 
 # Compiles everything
 compile-all: compile-sdk compile-codegen build-language-plugin
@@ -107,6 +107,9 @@ clean-zio:
 
 # Cleans all SDK builds, sets up all modules for IDE again
 clean-sdk: clean-core clean-cats clean-zio
+
+clean-codegen:
+	scala-cli clean codegen
 
 # Cleans besom compiler plugin build
 clean-compiler-plugin:
