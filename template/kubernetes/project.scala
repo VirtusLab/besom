@@ -1,3 +1,3 @@
 //> using scala "3.3.0"
-//> using lib "org.virtuslab::besom-core:0.0.1-SNAPSHOT"
-//> using lib "org.virtuslab::besom-kubernetes:0.0.1-SNAPSHOT"
+//> using dep "org.virtuslab::besom-core:4.13.2-beta.0.0.1"
+//> using dep "org.virtuslab::besom-kubernetes:4.1.1-beta.0.0.1"

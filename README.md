@@ -65,8 +65,8 @@ This might not be enough if your infrastructure is just a part (a module) of you
    ```scala
 lazy val infra = project.in(file("infrastructure")).settings(
    libraryDependencies ++= Seq(
-   "org.virtuslab" %% "besom-kubernetes" % "0.0.1-SNAPSHOT", // or any other sdk you are using
-   "org.virtuslab" %% "besom-core" % "0.0.1-SNAPSHOT"
+   "org.virtuslab" %% "besom-kubernetes" % "0.0.1-beta", // or any other sdk you are using
+   "org.virtuslab" %% "besom-core" % "0.0.1-beta"
    ))
    ```
 This just informs your IDE about the existence of the infrastructure module Do not remove dependencies from `project.scala` they are necessary in both places.
