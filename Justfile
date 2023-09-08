@@ -208,7 +208,7 @@ package-language-plugin GOOS GOARCH:
 	cp {{language-plugin-output-dir}}/bootstrap.jar $output_dir/
 	cp {{language-plugin-output-dir}}/pulumi-language-scala $output_dir/
 	cd $output_dir
-	tar czvf pulumi-language-scala-v0.0.1-SNAPSHOT-{{GOOS}}-{{GOARCH}}.tar.gz *
+	tar czvf pulumi-language-scala-v{{besom-version}}-{{GOOS}}-{{GOARCH}}.tar.gz *
 
 # Package the scala language plugin for all supported architectures
 package-language-plugins-all: build-language-plugin-bootstrap
