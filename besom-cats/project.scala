@@ -1,10 +1,15 @@
 //> using scala "3.3.0"
 
-//> using lib "org.virtuslab::besom-core:0.0.1-SNAPSHOT"
-//> using lib "org.typelevel::cats-effect:3.3.14"
+//> using dep "org.typelevel::cats-effect:3.3.14"
 
 //> using options "-java-output-version:11"
 
-//> using publish.organization "org.virtuslab"
 //> using publish.name "besom-cats"
-//> using publish.version "0.0.1-SNAPSHOT"
+//> using publish.organization "org.virtuslab"
+//> using publish.url "https://github.com/VirtusLab/besom"
+//> using publish.vcs "github:VirtusLab/besom"
+//> using publish.license "Apache-2.0"
+//> using publish.repository "central"
+//> using publish.developer "lbialy|łukasz Biały|https://github.com/lbialy"
+//> using publish.developer "prolativ|Michał Pałka|https://github.com/prolativ"
+//> using publish.developer "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban"

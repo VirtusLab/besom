@@ -14,7 +14,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     "besom.types.Context"
   )
 
-  def sourcesFromPulumiPackage(pulumiPackage: PulumiPackage, schemaVersion: String, besomVersion: String): Seq[SourceFile] = {
+  def sourcesFromPulumiPackage(pulumiPackage: PulumiPackage, schemaVersion: String, besomVersion: String, besomVersionSuffix: String): Seq[SourceFile] = {
     val scalaSources = (
       sourceFilesForProviderResource(pulumiPackage) ++
       sourceFilesForNonResourceTypes(pulumiPackage) ++
@@ -24,30 +24,38 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     scalaSources ++ Seq(
       projectConfigFile(
         pulumiPackageName = pulumiPackage.name,
-        besomVersion = besomVersion
+        schemaVersion = schemaVersion,
+        besomVersion = besomVersion,
+        besomVersionSuffix = besomVersionSuffix
       ),
       resourcePluginMetadataFile(
         pluginName = pulumiPackage.name,
-        pluginVersion = schemaVersion,
-        pluginDownloadUrl = pulumiPackage.pluginDownloadURL
+        pluginVersion = schemaVersion
       ),
     )
   }
 
-  def projectConfigFile(pulumiPackageName: String, besomVersion: String): SourceFile = {
+  def projectConfigFile(pulumiPackageName: String, schemaVersion: String, besomVersion: String, besomVersionSuffix: String): SourceFile = {
     // TODO use original package version from the schema as publish.version?
 
     val fileContent =
       s"""|//> using scala "3.3.0"
           |//> using options "-java-output-version:11"
           |
-          |//> using lib "org.virtuslab::besom-core:${besomVersion}"
+          |//> using dep "org.virtuslab::besom-core:${besomVersion}"
           |
           |//> using resourceDir "resources"
           |
-          |//> using publish.organization "org.virtuslab"
           |//> using publish.name "besom-${pulumiPackageName}"
-          |//> using publish.version "${besomVersion}"
+          |//> using publish.organization "org.virtuslab"
+          |//> using publish.version "${schemaVersion}${besomVersionSuffix}"
+          |//> using publish.url "https://github.com/VirtusLab/besom"
+          |//> using publish.vcs "github:VirtusLab/besom"
+          |//> using publish.license "Apache-2.0"
+          |//> using publish.repository "central"
+          |//> using publish.developer "lbialy|łukasz Biały|https://github.com/lbialy"
+          |//> using publish.developer "prolativ|Michał Pałka|https://github.com/prolativ"
+          |//> using publish.developer "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban"
           |""".stripMargin
 
     val filePath = FilePath(Seq("project.scala"))

@@ -1,6 +1,8 @@
 # Big idea behind using a Justfile is so that we can have modules like in sbt.
 
-besom-version := "0.0.1-SNAPSHOT"
+besom-version := "0.0.1-beta"
+besom-version-suffix := "-beta.0.0.1"
+
 language-plugin-output-dir := justfile_directory() + "/.out/language-plugin"
 codegen-output-dir := justfile_directory() + "/.out/codegen"
 schemas-output-dir := justfile_directory() + "/.out/schemas"
@@ -12,9 +14,20 @@ coverage-output-dir-zio := coverage-output-dir + "/zio"
 coverage := "false"
 
 # replace with a function when https://github.com/casey/just/pull/1069 is merged
-scala-cli-options-core := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-core } else { "" }
-scala-cli-options-cats := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-cats } else { "" }
-scala-cli-options-zio := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-zio } else { "" }
+scala-cli-coverage-options-core := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-core } else { "" }
+scala-cli-test-options-core := scala-cli-coverage-options-core
+
+scala-cli-core-dependency-option := "--dep org.virtuslab::besom-core:" + besom-version 
+
+scala-cli-main-options-cats := scala-cli-core-dependency-option
+scala-cli-coverage-options-cats := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-cats } else { "" }
+scala-cli-test-options-cats := scala-cli-main-options-cats + " " + scala-cli-coverage-options-cats
+
+scala-cli-main-options-zio := scala-cli-core-dependency-option
+scala-cli-coverage-options-zio := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-zio } else { "" }
+scala-cli-test-options-zio := scala-cli-main-options-zio + " " + scala-cli-coverage-options-zio
+
+publish-maven-auth-options := "--user env:OSSRH_USERNAME --password env:OSSRH_PASSWORD --gpg-key $PGP_KEY_ID --gpg-option --pinentry-mode --gpg-option loopback --gpg-option --passphrase --gpg-option $PGP_PASSWORD"
 
 # This list of available targets
 default:
@@ -43,11 +56,11 @@ compile-core:
 
 # Compiles besom cats-effect extension
 compile-cats:
-	scala-cli --power compile besom-cats
+	scala-cli --power compile besom-cats {{scala-cli-main-options-cats}}
 
 # Compiles besom zio extension
 compile-zio:
-	scala-cli --power compile besom-zio
+	scala-cli --power compile besom-zio {{scala-cli-main-options-zio}}
 
 # Compiles all SDK modules
 compile-sdk: publish-local-core compile-cats compile-zio compile-compiler-plugin
@@ -92,6 +105,27 @@ publish-local-sdk: publish-local-core publish-local-cats publish-local-zio
 # Publishes locally besom compiler plugin
 publish-local-compiler-plugin:
 	scala-cli --power publish local compiler-plugin --project-version {{besom-version}} --doc=false
+
+# Publishes core besom SDK
+publish-maven-core:
+  scala-cli publish core --project-version {{besom-version}} {{publish-maven-auth-options}}
+
+# Publishes besom cats-effect extension
+publish-maven-cats:
+	#!/usr/bin/env sh
+	scala-cli publish besom-cats {{ scala-cli-main-options-cats }} --project-version {{besom-version}} {{publish-maven-auth-options}}
+
+# Publishes besom zio extension
+publish-maven-zio:
+	scala-cli publish besom-zio {{ scala-cli-main-options-zio }} --project-version {{besom-version}} {{publish-maven-auth-options}}
+
+# Publishes besom compiler plugin
+publish-maven-compiler-plugin:
+	scala-cli publish compiler-plugin --project-version {{besom-version}} {{publish-maven-auth-options}}
+
+# Compiles and publishes the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes`
+publish-maven-provider-sdk schema-name schema-version:
+	scala-cli --power publish {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} {{publish-maven-auth-options}} --doc=false
 
 # Cleans core build
 clean-core: 
@@ -143,6 +177,7 @@ build-language-plugin: build-language-plugin-bootstrap build-language-host
 
 # Runs the tests for the language plugin assuming it has already been built
 run-language-plugin-tests:
+	PULUMI_SCALA_PLUGIN_VERSION={{besom-version}} \
 	PULUMI_SCALA_PLUGIN_LOCAL_PATH={{language-plugin-output-dir}} \
 	scala-cli test language-plugin/tests/src
 
@@ -183,7 +218,6 @@ package-language-plugins-all: build-language-plugin-bootstrap
 	just package-language-plugin windows arm64
 	just package-language-plugin windows amd64
 
-
 ####################
 # Codegen
 ####################
@@ -203,7 +237,7 @@ get-schema schema-name schema-version:
 
 # Generate scala API code for the given provider, e.g. `just generate-provider-sdk kubernetes`
 generate-provider-sdk schema-name schema-version:
-	scala-cli run codegen -- {{schemas-output-dir}} {{codegen-output-dir}} {{schema-name}} {{schema-version}} {{besom-version}}
+	scala-cli run codegen -- {{schemas-output-dir}} {{codegen-output-dir}} {{schema-name}} {{schema-version}} {{besom-version}} {{besom-version-suffix}}
 
 # Compiles the previously generated scala API code for the given provider, e.g. `just compile-provider-sdk kubernetes`
 compile-provider-sdk schema-name:
