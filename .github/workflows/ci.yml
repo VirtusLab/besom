@@ -60,7 +60,7 @@ jobs:
       run: just compile-all
 
     - name: Test SDK
-      run: just test-sdk
+      run: just coverage=true test-sdk
     
     - name: Publish compiler plugin
       run: just publish-local-compiler-plugin
@@ -70,3 +70,9 @@ jobs:
 
     - name: Run integration tests
       run: just test-besom-integration
+
+    # TODO(kπ) might have to run the tests with coverage before this step
+    - name: Generate coverage report
+      run: just coverage-report
+
+    # TODO(kπ) upload coverage data

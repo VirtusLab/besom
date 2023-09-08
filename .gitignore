@@ -14,7 +14,8 @@ target/
 **/Pulumi.*.yaml
 
 coverage/
-scoverage-reports/
+scoverage-report/
+coverage-report/
 
 # generated sources, run `scala-cli run ./scripts -M proto -- all`
 src/main/scala/besom/rpc 
