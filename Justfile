@@ -1,7 +1,7 @@
 # Big idea behind using a Justfile is so that we can have modules like in sbt.
 
-besom-version := "0.0.1-SNAPSHOT"
-besom-version-suffix := "-SNAPSHOT.0.0.1"
+besom-version := "0.0.1-beta"
+besom-version-suffix := "-beta.0.0.1"
 
 language-plugin-output-dir := justfile_directory() + "/.out/language-plugin"
 codegen-output-dir := justfile_directory() + "/.out/codegen"
@@ -246,7 +246,7 @@ compile-provider-sdk schema-name:
 
 # Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes`
 publish-local-provider-sdk schema-name schema-version:
-	scala-cli --power publish local {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --doc=false
+	scala-cli --power publish local {{codegen-output-dir}}/{{schema-name}}/{{schema-version}}
 
 ####################
 # Integration testing

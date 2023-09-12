@@ -41,6 +41,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     val fileContent =
       s"""|//> using scala "3.3.0"
           |//> using options "-java-output-version:11"
+          |//> using options "-skip-by-regex:.*"
           |
           |//> using dep "org.virtuslab::besom-core:${besomVersion}"
           |
