@@ -57,6 +57,9 @@ def findRepoUrl(yaml: String): Option[String] =
 def findVersion(yaml: String): Option[String] =
   yaml.split("\n").find(_.startsWith("version: ")).map(_.stripPrefix("version: "))
 
+def noPluginsInstalled: Boolean =
+  os.proc("pulumi", "plugin", "ls").call().out.lines().map(_.trim).contains("TOTAL plugin cache size: 0 B")
+
 def fetchPackageInfo(): Map[String, String] =
   val response  = quickRequest.get(uri"$packagesRepoApi").headers(headers).send()
   val files     = ujson.read(response.body).arr
@@ -111,6 +114,13 @@ def tryToFindServer(packageName: String, packageVersion: String, repoUrl: String
 @main def registry(command: String): Unit =
   command match
     case "packages" =>
+      if !noPluginsInstalled then
+        println(
+          "Warning: this command does not work properly when resource plugins are installed. " +
+            "It is advised to run `pulumi plugin rm --all` before running this command. Press enter to continue."
+        )
+        scala.io.StdIn.readLine
+
       val packageInfos = fetchPackageInfo().toVector
 
       val index = AtomicInteger(0)
