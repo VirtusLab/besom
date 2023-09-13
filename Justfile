@@ -16,6 +16,8 @@ scala-cli-options-core := if coverage == "true" { "-O -coverage-out:" + coverage
 scala-cli-options-cats := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-cats } else { "" }
 scala-cli-options-zio := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-zio } else { "" }
 
+pulumi-install-plugin-additional-args := env_var_or_default("PULUMI_PLUGIN_INSTALL_ARGS", "")
+
 # This list of available targets
 default:
     @just --list
@@ -167,7 +169,7 @@ compile-codegen:
 # Download the schema for a specific provider, e.g. `just get-schema kubernetes`
 get-schema schema-name schema-version:
 	#!/usr/bin/env sh
-	pulumi plugin install resource {{schema-name}} {{schema-version}};
+	pulumi plugin install resource {{schema-name}} {{schema-version}} {{pulumi-install-plugin-additional-args}};
 	schema_source={{ if schema-version == "" { schema-name } else { schema-name + "@" + schema-version } }}
 	schema_dir="{{schemas-output-dir}}/{{schema-name}}/{{schema-version}}"
 	mkdir -p $schema_dir
