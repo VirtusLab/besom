@@ -251,8 +251,9 @@ publish-local-provider-sdk schema-name schema-version:
 # Integration testing
 ####################
 
+# Runs integration tests for besom
 test-besom-integration:
-  echo 'TODO TEST BESOM INTEGRATION TODO'
+  scala-cli test integration-tests
 
 ####################
 # Demo
