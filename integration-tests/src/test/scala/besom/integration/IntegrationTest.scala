@@ -7,7 +7,10 @@ class IntegrationTest extends munit.FunSuite {
 
   test("compilation should fail with pulumi compiler plugin when using output parameter in an s interpolator") {
     var output = ""
-    val logger = ProcessLogger(line => output += line + "\n")
+    val logger = ProcessLogger { line =>
+      println(line)
+      output += line + "\n"
+    }
     "just publish-local-sdk".!(logger)
     "just publish-local-compiler-plugin".!(logger)
     val compilePluginTestStr =
@@ -20,7 +23,10 @@ class IntegrationTest extends munit.FunSuite {
 
   test("should successfully run besom examples") {
     var output = ""
-    val logger = ProcessLogger(line => output += line + "\n")
+    val logger = ProcessLogger { line =>
+      println(line)
+      output += line + "\n"
+    }
     "just publish-local-sdk".!(logger)
 
     "just generate-provider-sdk random 4.13.2".!(logger)
@@ -28,7 +34,7 @@ class IntegrationTest extends munit.FunSuite {
     Process("pulumi stack select test --create", File("integration-tests/src/test/resources/random-example")).!(logger)
     Process("pulumi up --yes", File("integration-tests/src/test/resources/random-example")).!(logger)
     Process("pulumi down --yes", File("integration-tests/src/test/resources/random-example")).!(logger)
-    assert(!output.contains("error"), output.split("\n").filter(_.contains("error")).mkString("\n"))
+    assert(!output.contains("error"))
     assert(output.contains("randomString:"))
     assert(output.contains("Duration:"))
 
@@ -38,7 +44,7 @@ class IntegrationTest extends munit.FunSuite {
     Process("pulumi stack select test --create", File("integration-tests/src/test/resources/time-example")).!(logger)
     Process("pulumi up --yes", File("integration-tests/src/test/resources/time-example")).!(logger)
     Process("pulumi down --yes", File("integration-tests/src/test/resources/time-example")).!(logger)
-    assert(!output.contains("error"), output.split("\n").filter(_.contains("error")).mkString("\n"))
+    assert(!output.contains("error"))
     assert(output.contains("rotatingTime:"))
     assert(output.contains("Duration:"))
   }

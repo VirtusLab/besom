@@ -9,6 +9,7 @@ on:
 
 env:
   TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  PULUMI_CONFIG_PASSPHRASE: 'passphrase'
 
 jobs:
 
@@ -73,6 +74,9 @@ jobs:
 
     - name: Install language plugin
       run: just install-language-plugin
+
+    - name: Login in to pulumi
+      run: pulumi login --local
 
     - name: Run integration tests
       run: just test-besom-integration
