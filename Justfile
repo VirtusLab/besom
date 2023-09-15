@@ -178,7 +178,6 @@ build-language-plugin: build-language-plugin-bootstrap build-language-host
 
 # Runs the tests for the language plugin assuming it has already been built
 run-language-plugin-tests:
-	PULUMI_SCALA_PLUGIN_VERSION={{besom-version}} \
 	PULUMI_SCALA_PLUGIN_LOCAL_PATH={{language-plugin-output-dir}} \
 	scala-cli test language-plugin/tests/src
 

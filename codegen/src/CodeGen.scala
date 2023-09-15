@@ -30,7 +30,8 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
       ),
       resourcePluginMetadataFile(
         pluginName = pulumiPackage.name,
-        pluginVersion = schemaVersion
+        pluginVersion = schemaVersion,
+        pluginDownloadUrl = pulumiPackage.pluginDownloadURL
       ),
     )
   }
@@ -64,15 +65,20 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     SourceFile(filePath = filePath, sourceCode = fileContent)
   }
 
-  def resourcePluginMetadataFile(pluginName: String, pluginVersion: String): SourceFile = {
+  def resourcePluginMetadataFile(pluginName: String, pluginVersion: String, pluginDownloadUrl: Option[String]): SourceFile = {
+    val pluginDownloadUrlJsonValue = pluginDownloadUrl match {
+      case Some(url) => s"\"${url}\""
+      case None => "null"
+    }
     val fileContent =
       s"""|{
           |  "resource": true,
           |  "name": "${pluginName}",
-          |  "version": "${pluginVersion}"
+          |  "version": "${pluginVersion}",
+          |  "server": ${pluginDownloadUrlJsonValue}
           |}
           |""".stripMargin
-    val filePath = FilePath(Seq("resources", "plugin.json"))
+    val filePath = FilePath(Seq("resources", "besom", "api", pluginName, "plugin.json"))
 
     SourceFile(filePath = filePath, sourceCode = fileContent)
   } 

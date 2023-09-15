@@ -6,7 +6,16 @@ import upickle.implicits.{key => fieldKey}
 import besom.codegen.UpickleApi
 import besom.codegen.UpickleApi._
 
-case class PulumiPackage(name: String, version: Option[String] = None, language: Language = Language(), meta: Meta = Meta(), types: Map[String, TypeDefinition] = Map.empty, provider: ResourceDefinition, resources: Map[String, ResourceDefinition] = Map.empty)
+case class PulumiPackage(
+  name: String,
+  version: Option[String] = None,
+  language: Language = Language(),
+  meta: Meta = Meta(),
+  pluginDownloadURL: Option[String] = None,
+  types: Map[String, TypeDefinition] = Map.empty,
+  provider: ResourceDefinition,
+  resources: Map[String, ResourceDefinition] = Map.empty
+)
 object PulumiPackage {
   implicit val reader: Reader[PulumiPackage] = macroR
 
