@@ -11,18 +11,16 @@ val packagesRepoApi = "https://api.github.com/repos/pulumi/registry/contents/the
 
 val pulumiverseApiUrl = "github://api.github.com/pulumiverse"
 
-def printProgress(message: String, current: Int, total: Int): Unit =
-  val percentage = (current.toDouble / total * 100).toInt
-  Console.out.synchronized {
-    print(s"\r$message: $percentage% [$current/$total]")
-  }
-
 def githubToken = sys.env.getOrElse("GITHUB_TOKEN", throw new Exception("Missing GITHUB_TOKEN"))
 
 def headers = Map("Authorization" -> s"token $githubToken")
 
 def getSchema(packageName: String, version: String): os.CommandResult =
   os.proc("just", "get-schema", packageName, version).call(check = false)
+
+def fetchPluginDownloadURLFromSchema(packageName: String, version: String): String =
+  val schema = ujson.read(os.read(os.pwd / ".out" / "schemas" / packageName / version / "schema.json"))
+  schema("pluginDownloadURL").str
 
 def installPlugin(
   packageName: String,
@@ -65,24 +63,19 @@ def fetchPackageInfo(): Map[String, String] =
   val files     = ujson.read(response.body).arr
   val yamlFiles = files.filter(file => file("name").str.endsWith(".yaml"))
 
-  val progress = AtomicInteger(0)
+  withProgress("Fetching package info", yamlFiles.size) {
+    yamlFiles
+      .parMap(10) { file =>
+        val packageName  = file("name").str.stripSuffix(".yaml")
+        val yamlUrl      = file("download_url").str
+        val yamlResponse = quickRequest.get(uri"$yamlUrl").headers(headers).send()
 
-  yamlFiles
-    .parMap(10) { file =>
-      val packageName  = file("name").str.stripSuffix(".yaml")
-      val yamlUrl      = file("download_url").str
-      val yamlResponse = quickRequest.get(uri"$yamlUrl").headers(headers).send()
+        reportProgress
 
-      val current = progress.incrementAndGet()
-
-      printProgress("Fetching package info", current, yamlFiles.size)
-
-      packageName -> yamlResponse.body
-    }
-    .toMap
-    .finalize { _ =>
-      println()
-    }
+        packageName -> yamlResponse.body
+      }
+      .toMap
+  }
 
 enum Server:
   case Registry
@@ -125,23 +118,22 @@ def tryToFindServer(packageName: String, packageVersion: String, repoUrl: String
 
       val index = AtomicInteger(0)
 
-      packageInfos
-        .parMap(10) { case (packageName, packageDetails) =>
-          val version =
-            findVersion(packageDetails).getOrElse(throw Exception(s"Failed to find version for $packageName"))
-          val repoUrl =
-            findRepoUrl(packageDetails).getOrElse(throw Exception(s"Failed to find repo_url for $packageName"))
-          val maybeServer = tryToFindServer(packageName, version, repoUrl)
+      withProgress("Finding servers", packageInfos.size) {
+        packageInfos
+          .parMap(10) { case (packageName, packageDetails) =>
+            val version =
+              findVersion(packageDetails).getOrElse(throw Exception(s"Failed to find version for $packageName"))
+            val repoUrl =
+              findRepoUrl(packageDetails).getOrElse(throw Exception(s"Failed to find repo_url for $packageName"))
+            val maybeServer = tryToFindServer(packageName, version, repoUrl)
 
-          val current = index.incrementAndGet()
+            val current = index.incrementAndGet()
 
-          printProgress("Finding servers", current, packageInfos.size)
+            reportProgress
 
-          (packageName, version, maybeServer)
-        }
-        .finalize { _ =>
-          println()
-        }
+            (packageName, version, maybeServer)
+          }
+      }
         .sortBy(_._3.isDefined)
         .foreach {
           case (packageName, version, None) => println(s"Failed to find server for: $packageName $version")

@@ -3,10 +3,6 @@ import scala.collection.Factory
 
 import ExecutionContext.Implicits.global
 
-extension [A](a: A)
-  def finalize(f: A => Unit): A = try a
-  finally f(a)
-
 extension [A](futA: Future[A])
   def await: A   = Await.result(futA, Duration.Inf)
   def done: Unit = Await.result(futA, Duration.Inf)
