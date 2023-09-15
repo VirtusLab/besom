@@ -252,7 +252,7 @@ publish-local-provider-sdk schema-name schema-version:
 ####################
 
 # Runs integration tests for besom
-test-besom-integration:
+test-compiler-plugin:
   scala-cli test integration-tests
 
 ####################
