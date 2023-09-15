@@ -39,13 +39,23 @@ class IntegrationTest extends munit.FunSuite {
     assert(output.contains("Duration:"))
 
     output = ""
-    "just generate-provider-sdk time 0.0.15".!(logger)
-    "just publish-local-provider-sdk time 0.0.15".!(logger)
-    Process("pulumi stack select test --create", File("integration-tests/src/test/resources/time-example")).!(logger)
-    Process("pulumi up --yes", File("integration-tests/src/test/resources/time-example")).!(logger)
-    Process("pulumi down --yes", File("integration-tests/src/test/resources/time-example")).!(logger)
+    "just generate-provider-sdk purrl 0.4.1".!(logger)
+    "just publish-local-provider-sdk purrl 0.4.1".!(logger)
+    Process("pulumi stack select test --create", File("integration-tests/src/test/resources/purrl-example")).!(logger)
+    Process("pulumi up --yes", File("integration-tests/src/test/resources/purrl-example")).!(logger)
+    Process("pulumi down --yes", File("integration-tests/src/test/resources/purrl-example")).!(logger)
     assert(!output.contains("error"))
-    assert(output.contains("rotatingTime:"))
+    assert(output.contains("purrlCommand:"))
+    assert(output.contains("Duration:"))
+
+    output = ""
+    "just generate-provider-sdk tls 4.10.0".!(logger)
+    "just publish-local-provider-sdk tls 4.10.0".!(logger)
+    Process("pulumi stack select test --create", File("integration-tests/src/test/resources/tls-example")).!(logger)
+    Process("pulumi up --yes", File("integration-tests/src/test/resources/tls-example")).!(logger)
+    Process("pulumi down --yes", File("integration-tests/src/test/resources/tls-example")).!(logger)
+    assert(!output.contains("error"))
+    assert(output.contains("privateKey:"))
     assert(output.contains("Duration:"))
   }
 
