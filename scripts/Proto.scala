@@ -68,9 +68,16 @@ def fetch(cwd: os.Path): Unit =
       println("You need git installed for this to work!")
       sys.exit(1)
 
-    val token = sys.env.getOrElse("TOKEN", sys.error("Access Token has to be defined!"))
+    val isCI = sys.env.get("CI").contains("true")
+    val token = sys.env.get("GITHUB_TOKEN")
 
-    os.proc("git", "clone", s"https://$token@github.com/pulumi/pulumi.git", targetPath)
+    val url = (isCI, token) match {
+      case (true, None) => sys.error("Expected GITHUB_TOKEN environment variable to be defined in CI")
+      case (_, Some(t)) => s"https://$t@github.com/pulumi/pulumi.git"
+      case (false, None) => s"https://github.com/pulumi/pulumi.git"
+    }
+
+    os.proc("git", "clone", "--depth=1", url, targetPath)
       .call(
         stdin = os.Inherit,
         stdout = os.Inherit,
