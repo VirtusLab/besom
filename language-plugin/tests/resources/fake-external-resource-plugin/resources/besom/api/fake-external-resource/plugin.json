@@ -1,0 +1,6 @@
+{
+  "resource": true,
+  "name": "aci",
+  "version": "0.0.6",
+  "server": "github://api.github.com/netascode/pulumi-aci"
+}

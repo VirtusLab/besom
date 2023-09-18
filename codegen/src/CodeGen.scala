@@ -14,7 +14,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     "besom.types.Context"
   )
 
-  def sourcesFromPulumiPackage(pulumiPackage: PulumiPackage, besomVersion: String): Seq[SourceFile] = {
+  def sourcesFromPulumiPackage(pulumiPackage: PulumiPackage, schemaVersion: String, besomVersion: String): Seq[SourceFile] = {
     val scalaSources = (
       sourceFilesForProviderResource(pulumiPackage) ++
       sourceFilesForNonResourceTypes(pulumiPackage) ++
@@ -28,11 +28,8 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
       ),
       resourcePluginMetadataFile(
         pluginName = pulumiPackage.name,
-        pluginVersion = pulumiPackage.version.getOrElse {
-          val defaultVersion = "0.0.1-SNAPSHOT"
-          logger.warn(s"Pulumi package version missing - defaulting to ${defaultVersion}")
-          defaultVersion
-        }
+        pluginVersion = schemaVersion,
+        pluginDownloadUrl = pulumiPackage.pluginDownloadURL
       ),
     )
   }
@@ -58,15 +55,20 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     SourceFile(filePath = filePath, sourceCode = fileContent)
   }
 
-  def resourcePluginMetadataFile(pluginName: String, pluginVersion: String): SourceFile = {
+  def resourcePluginMetadataFile(pluginName: String, pluginVersion: String, pluginDownloadUrl: Option[String]): SourceFile = {
+    val pluginDownloadUrlJsonValue = pluginDownloadUrl match {
+      case Some(url) => s"\"${url}\""
+      case None => "null"
+    }
     val fileContent =
       s"""|{
           |  "resource": true,
           |  "name": "${pluginName}",
-          |  "version": "${pluginVersion}"
+          |  "version": "${pluginVersion}",
+          |  "server": ${pluginDownloadUrlJsonValue}
           |}
           |""".stripMargin
-    val filePath = FilePath(Seq("resources", "plugin.json"))
+    val filePath = FilePath(Seq("resources", "besom", "api", pluginName, "plugin.json"))
 
     SourceFile(filePath = filePath, sourceCode = fileContent)
   } 
