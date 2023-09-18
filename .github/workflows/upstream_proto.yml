@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '0 0 */3 * *'
 
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 jobs:
   verify-pulumi-protos:
     runs-on: ubuntu-latest
