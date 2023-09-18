@@ -24,6 +24,6 @@ import besom.api.kubernetes.apps.v1.inputs.DeploymentSpecArgs
       )
     )
   yield Pulumi.exports(
-    name = nginxDeployment.metadata.name.orEmpty
+    name = nginxDeployment.metadata.name
   )
 }
