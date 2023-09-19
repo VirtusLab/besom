@@ -67,8 +67,10 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
       .toMap
 
     val expectedAboutPluginsVersions = Map("scala" -> "unknown", "random" -> "4.3.1", "aci" -> "0.0.6")
-
-    assert(clue(aboutPluginsVersions) == expectedAboutPluginsVersions)
+    assert {
+      clue(aboutInfoLines.mkString("\n"))
+      clue(aboutPluginsVersions) == expectedAboutPluginsVersions
+    }
 
     val pluginsLsLines = os.proc("pulumi", "plugin", "ls").call(cwd = executorDir, env = env).out.lines().toList
     val installedPluginsVersions = pluginsLsLines
@@ -82,7 +84,10 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
 
     val expectedInstalledPluginsVersions = Map("scala" -> scalaPluginVersion, "random" -> "4.3.1", "aci" -> "0.0.6")
 
-    assert(clue(installedPluginsVersions) == expectedInstalledPluginsVersions)
+    assert {
+      clue(pluginsLsLines.mkString("\n"))
+      clue(installedPluginsVersions) == expectedInstalledPluginsVersions
+    }
 
   override def beforeAll() =
     publishLocalResourcePlugins()
