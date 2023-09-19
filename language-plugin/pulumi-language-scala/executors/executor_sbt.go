@@ -78,7 +78,6 @@ func makePluginsSbtCommandParts(sbtModule string, bootstrapLibJarPath string) st
 	pluginsSbtCommandParts := []string{
 		// STDOUT needs to be clean of sbt output, because we expect a JSON with plugin results
 		`; set outputStrategy := Some(StdoutOutput)`,
-		"; set fork := true",
 		fmt.Sprintf(`; set %sCompile / unmanagedJars += Attributed.blank(file("%s"))`, sbtModule, bootstrapLibJarPath),
 		fmt.Sprintf(`; %srunMain besom.bootstrap.PulumiPluginsDiscoverer`, sbtModule),
 	}

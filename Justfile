@@ -155,7 +155,7 @@ install-language-plugin:
 	just build-language-plugin-bootstrap
 	just build-language-host
 	output_dir={{language-plugin-output-dir}}/local
-	rf -rf $output_dir
+	rm -rf $output_dir
 	mkdir -p $output_dir
 	cp {{language-plugin-output-dir}}/bootstrap.jar $output_dir/
 	cp {{language-plugin-output-dir}}/pulumi-language-scala $output_dir/

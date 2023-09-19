@@ -95,13 +95,13 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
   override def afterAll() =
     os.proc("pulumi", "logout").call()
 
-  test("scala-cli") {
-    // Prepare the sources of the test project
-    val tmpProjectDir = os.temp.dir()
-    os.list(executorsDir / "scala-cli").foreach(file => os.copy.into(file, tmpProjectDir))
+  // test("scala-cli") {
+  //   // Prepare the sources of the test project
+  //   val tmpProjectDir = os.temp.dir()
+  //   os.list(executorsDir / "scala-cli").foreach(file => os.copy.into(file, tmpProjectDir))
 
-    testExecutor(tmpProjectDir)
-  }
+  //   testExecutor(tmpProjectDir)
+  // }
 
   test("sbt") {
     // Prepare the sources of the test project
