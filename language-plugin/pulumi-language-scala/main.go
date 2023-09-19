@@ -222,7 +222,7 @@ func (host *scalaLanguageHost) determinePulumiPackages(
 	// Run our classpath introspection from the SDK and parse the resulting JSON
 	cmd := exec.Cmd
 	args := exec.PluginArgs
-	quiet := false
+	quiet := true
 	output, err := host.runHostCommand(ctx, exec.Dir, cmd, args, quiet)
 	if err != nil {
 		// Plugin determination is an advisory feature so it does not need to escalate to an error.
