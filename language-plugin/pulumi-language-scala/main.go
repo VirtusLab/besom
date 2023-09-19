@@ -289,10 +289,10 @@ func (host *scalaLanguageHost) runHostCommand(
 		logging.V(5).Infof("'%v %v' completed successfully\n", name, commandStr)
 	}
 
-	defer func() {
-		fmt.Println("stdoutBuffer: ***", stdoutBuffer.String(), "***")
-		fmt.Println("stderrBuffer: ***", stderrBuffer.String(), "***")
-	}()
+	// defer func() {
+	// 	fmt.Println("stdoutBuffer: ***", stdoutBuffer.String(), "***")
+	// 	fmt.Println("stderrBuffer: ***", stderrBuffer.String(), "***")
+	// }()
 
 	return hostCommandOutput{
 		stdout: stdoutBuffer.String(),
