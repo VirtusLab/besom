@@ -46,7 +46,7 @@ jobs:
     - uses: VirtusLab/scala-cli-setup@v1.0.4
       with: 
         jvm: graalvm-java11:22.3.1
-        apps: scala-cli:1.0.4
+        apps: sbt
         power: true
     - uses: arduino/setup-protoc@v1
     - uses: actions/setup-go@v4
