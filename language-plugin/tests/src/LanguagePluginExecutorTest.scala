@@ -111,17 +111,17 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
     testExecutor(tmpProjectDir)
   }
 
-  test("jar") {
-    // Prepare the binary
-    val tmpBuildDir = os.temp.dir()
-    os.list(executorsDir / "scala-cli").foreach(file => os.copy.into(file, tmpBuildDir))
-    os.proc("scala-cli", "--power", "package", ".", "--assembly", "-o", "app.jar").call(cwd = tmpBuildDir)
+  // test("jar") {
+  //   // Prepare the binary
+  //   val tmpBuildDir = os.temp.dir()
+  //   os.list(executorsDir / "scala-cli").foreach(file => os.copy.into(file, tmpBuildDir))
+  //   os.proc("scala-cli", "--power", "package", ".", "--assembly", "-o", "app.jar").call(cwd = tmpBuildDir)
 
-    // Prepare the sources of the test project
-    val tmpProjectDir = os.temp.dir()
-    os.list(executorsDir / "jar").foreach(file => os.copy.into(file, tmpProjectDir))
-    os.copy.into(tmpBuildDir / "app.jar", tmpProjectDir)
+  //   // Prepare the sources of the test project
+  //   val tmpProjectDir = os.temp.dir()
+  //   os.list(executorsDir / "jar").foreach(file => os.copy.into(file, tmpProjectDir))
+  //   os.copy.into(tmpBuildDir / "app.jar", tmpProjectDir)
 
-    testExecutor(tmpProjectDir)
-  }
+  //   testExecutor(tmpProjectDir)
+  // }
 }

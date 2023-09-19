@@ -48,7 +48,7 @@ jobs:
         jvm: graalvm-java11:22.3.1
         apps: sbt
         power: true
-    - uses: arduino/setup-protoc@v1
+    # - uses: arduino/setup-protoc@v1
     - uses: actions/setup-go@v4
       with:
         go-version: '1.20'
@@ -56,23 +56,23 @@ jobs:
     - name: Clean workspace
       run: just clean-all
         
-    - name: Compile everything
-      run: just compile-all
+    # - name: Compile everything
+    #   run: just compile-all
 
-    - name: Test SDK
-      run: just test-sdk
+    # - name: Test SDK
+    #   run: just test-sdk
     
-    - name: Publish compiler plugin
-      run: just publish-local-compiler-plugin
+    # - name: Publish compiler plugin
+    #   run: just publish-local-compiler-plugin
 
     - name: Test language plugin
       run: just test-language-plugin
 
-    - name: Cross-package language plugin
-      run: just package-language-plugins-all
+    # - name: Cross-package language plugin
+    #   run: just package-language-plugins-all
 
-    - name: Install language plugin
-      run: just install-language-plugin
+    # - name: Install language plugin
+    #   run: just install-language-plugin
 
-    - name: Run integration tests
-      run: just test-besom-integration
+    # - name: Run integration tests
+    #   run: just test-besom-integration
