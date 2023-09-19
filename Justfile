@@ -133,7 +133,7 @@ build-language-plugin-bootstrap:
 	scala-cli --power package language-plugin/bootstrap --assembly -o {{language-plugin-output-dir}}/bootstrap.jar -f
 
 # Builds pulumi-language-scala binary
-build-language-host:
+build-language-host $GOOS="" $GOARCH="":
 	mkdir -p {{language-plugin-output-dir}} && \
 	cd language-plugin/pulumi-language-scala && \
 	go build -o {{language-plugin-output-dir}}/pulumi-language-scala

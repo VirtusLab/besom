@@ -65,6 +65,12 @@ jobs:
     - name: Publish compiler plugin
       run: just publish-local-compiler-plugin
 
+    - name: Test language plugin
+      run: just test-language-plugin
+
+    - name: Cross-package language plugin
+      run: just package-language-plugins-all
+
     - name: Install language plugin
       run: just install-language-plugin
 
