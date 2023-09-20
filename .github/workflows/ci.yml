@@ -48,7 +48,7 @@ jobs:
         jvm: graalvm-java11:22.3.1
         apps: sbt
         power: true
-    # - uses: arduino/setup-protoc@v1
+    - uses: arduino/setup-protoc@v1
     - uses: actions/setup-go@v4
       with:
         go-version: '1.20'
