@@ -12,19 +12,26 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
   def getEnvVar(name: String) =
     sys.env.get(name).getOrElse(throw new Exception(s"Environment variable $name is not set"))
 
-  def publishLocalCustomResourcePlugin() =
+  def publishLocalResourcePlugin(pluginName: String) =
     val tmpBuildDir = os.temp.dir()
-    os.list(resourcesDir / "custom-resource-plugin").foreach(file => os.copy.into(file, tmpBuildDir))
+    os.list(resourcesDir / pluginName).foreach(file => os.copy.into(file, tmpBuildDir))
     os.proc("scala-cli", "--power", "publish", "local", ".").call(cwd = tmpBuildDir)
 
+  def publishLocalResourcePlugins() =
+    publishLocalResourcePlugin("fake-standard-resource-plugin")
+    publishLocalResourcePlugin("fake-external-resource-plugin")
+
   def testExecutor(executorDir: os.Path) =
-    val tmpPulumiHome        = os.temp.dir()
-    val env                  = Map("PULUMI_CONFIG_PASSPHRASE" -> "")
+    val tmpPulumiHome        = os.temp.dir().toString
+    val env                  = Map(
+      "PULUMI_CONFIG_PASSPHRASE" -> "",
+      "PULUMI_HOME" -> tmpPulumiHome
+    )
     val stackName            = "organization/language-plugin-test/executor-test"
-    val scalaPluginVersion   = getEnvVar("PULUMI_SCALA_PLUGIN_VERSION")
+    val scalaPluginVersion   = "0.0.1-TEST"
     val scalaPluginLocalPath = getEnvVar("PULUMI_SCALA_PLUGIN_LOCAL_PATH")
 
-    os.proc("pulumi", "login", s"file://${tmpPulumiHome}").call()
+    os.proc("pulumi", "login", s"file://${tmpPulumiHome}").call(env = env)
     os.proc(
       "pulumi",
       "plugin",
@@ -35,7 +42,7 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
       "--file",
       scalaPluginLocalPath,
       "--reinstall"
-    ).call()
+    ).call(env = env)
     os.proc("pulumi", "stack", "--non-interactive", "init", stackName).call(cwd = executorDir, env = env)
     val pulumiUpOutput = os
       .proc("pulumi", "up", "--non-interactive", "--stack", stackName, "--skip-preview")
@@ -47,23 +54,52 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
 
     assert(clue(pulumiUpOutput).contains(expectedError))
 
-    val aboutInfoLines = os.proc("pulumi", "about").call(cwd = executorDir, env = env).out.lines()
-    val pluginsInfo = aboutInfoLines
+    val aboutInfoLines = os.proc("pulumi", "about").call(cwd = executorDir, env = env).out.lines().toList
+
+    val aboutPluginsVersions = aboutInfoLines
       .dropWhile(_ != "Plugins") // Find the plugins section
       .drop(2) // Drop headers
       .takeWhile(_.nonEmpty) // Empty line separates sections
       .map { line =>
         val lineParts = line.split("""\s+""") // Parse each plugin line splitting on whitespace
-        lineParts(0) -> lineParts(1) // plugin name -> plugin version
+        lineParts(0) -> lineParts(1) // plugin_name -> plugin_version from extected format:   NAME    VERSION
       }
       .toMap
 
-    val expectedPluginsInfo = Map("scala" -> "unknown", "random" -> "4.3.1")
+    val expectedAboutPluginsVersions = Map("scala" -> "unknown", "random" -> "4.3.1", "aci" -> "0.0.6")
+    assert {
+      clue(aboutInfoLines.mkString("\n"))
+      clue(aboutPluginsVersions) == expectedAboutPluginsVersions
+    }
 
-    assert(clue(pluginsInfo) == expectedPluginsInfo)
+    val pluginsLsLines = os.proc("pulumi", "plugin", "ls").call(cwd = executorDir, env = env).out.lines().toList
+    val installedPluginsVersions = pluginsLsLines
+      .drop(1) // Drop headers
+      .takeWhile(_.nonEmpty) // Empty line separates sections
+      .map { line =>
+        val lineParts = line.split("""\s+""") // Parse each plugin line splitting on whitespace
+        lineParts(0) -> lineParts(2) // plugin_name -> plugin_version from extected format:   NAME   KIND      VERSION     SIZE   INSTALLED   LAST USED
+      }
+      .toMap
+
+    val expectedInstalledPluginsVersions = Map("scala" -> scalaPluginVersion, "random" -> "4.3.1", "aci" -> "0.0.6")
+
+    assert {
+      clue(pluginsLsLines.mkString("\n"))
+      clue(installedPluginsVersions) == expectedInstalledPluginsVersions
+    }
+
+  override def munitTests(): Seq[Test] = {
+    val isCI = sys.env.get("CI").contains("true")
+    val allTests = super.munitTests()
+    if (isCI) then
+      allTests.filterNot(_.tags.contains(LocalOnly))
+    else
+      allTests
+  }
 
   override def beforeAll() =
-    publishLocalCustomResourcePlugin()
+    publishLocalResourcePlugins()
 
   override def afterAll() =
     os.proc("pulumi", "logout").call()
@@ -76,7 +112,7 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
     testExecutor(tmpProjectDir)
   }
 
-  test("sbt") {
+  test("sbt".tag(LocalOnly)) {
     // Prepare the sources of the test project
     val tmpProjectDir = os.temp.dir()
     os.list(executorsDir / "sbt").foreach(file => os.copy.into(file, tmpProjectDir))
@@ -98,3 +134,5 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
     testExecutor(tmpProjectDir)
   }
 }
+
+case object LocalOnly extends munit.Tag("LocalOnly")

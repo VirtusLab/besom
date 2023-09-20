@@ -41,12 +41,12 @@ jobs:
         just-version: '1.14.0' # just for sanity
     - uses: pulumi/actions@v4
       with:
-        pulumi-version: '3.81.0'
+        pulumi-version: '3.83.0'
     - uses: coursier/cache-action@v6.4.3
     - uses: VirtusLab/scala-cli-setup@v1.0.4
       with: 
         jvm: graalvm-java11:22.3.1
-        apps: scala-cli:1.0.4
+        apps: sbt
         power: true
     - uses: arduino/setup-protoc@v1
     - uses: actions/setup-go@v4
@@ -64,6 +64,12 @@ jobs:
     
     - name: Publish compiler plugin
       run: just publish-local-compiler-plugin
+
+    - name: Test language plugin
+      run: just test-language-plugin
+
+    - name: Cross-package language plugin
+      run: just package-language-plugins-all
 
     - name: Install language plugin
       run: just install-language-plugin
