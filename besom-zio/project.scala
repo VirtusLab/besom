@@ -1,6 +1,6 @@
 //> using scala "3.3.0"
 
-//> using dep "dev.zio::zio:2.0.3"
+//> using dep "dev.zio::zio:2.0.17"
 
 //> using options "-java-output-version:11"
 

@@ -34,7 +34,7 @@ class CatsRuntime(val debugEnabled: Boolean = false)(using ioRuntime: IORuntime)
   override def sleep[A](fa: => IO[A], duration: Long): IO[A] = fa.delayBy(duration.millis)
 
   private[besom] override def unsafeRunSync[A](fa: IO[A]): Either[Throwable, A] =
-    fa.attempt.unsafeRunSync()
+    fa.uncancelable.attempt.unsafeRunSync()
 
 trait CatsEffectModule extends BesomModule:
   import scala.concurrent.*
@@ -44,8 +44,8 @@ trait CatsEffectModule extends BesomModule:
 
   protected lazy val rt: Runtime[Eff] = CatsRuntime()(using ioRuntime)
 
-  given Result.ToFuture[Eff] = new Result.ToFuture[IO]:
-    def eval[A](fa: => IO[A]): () => Future[A] = () => fa.unsafeToFuture()(using ioRuntime)
+  implicit val toFutureCatsEffectIO: Result.ToFuture[Eff] = new Result.ToFuture[IO]:
+    def eval[A](fa: => IO[A]): () => Future[A] = () => fa.uncancelable.unsafeToFuture()(using ioRuntime)
 
   // override def run(program: Context ?=> Output[Exports]): Future[Unit] = ???
 

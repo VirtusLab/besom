@@ -4,13 +4,32 @@
 //> using lib "org.virtuslab::besom-purrl:0.4.1-beta.0.0.1"
 
 import cats.effect.*
-import besom.cats.{*, given}
+import cats.effect.kernel.Outcome.*
+import besom.cats.*
 import besom.api.purrl.*
+import scala.concurrent.duration.*
 
 @main
 def main(): Unit = Pulumi.run {
 
   val url = Output.eval(IO("https://httpbin.org/get"))
+
+  val cancelledIOOutput1 = Output.eval(IO("Don't cancel me")).flatMap { _ =>
+    IO.canceled
+  }
+
+  val cancelledIOOutput2 = Output.eval(IO("Don't cancel me")).flatMap { _ =>
+    for 
+      fib <- (IO.sleep(3.seconds) *> IO("A valid result")).uncancelable.start
+      _   <- (IO.sleep(1.second) *> fib.cancel).start
+      res <- fib.join
+        .flatMap {
+          case Succeeded(fa) => fa
+          case Errored(e)    => IO.raiseError(e)
+          case Canceled()    => IO.raiseError(new Exception("Unexpected cancelation!"))
+        }
+    yield res
+  }
 
   def purrlCommand(url: String) = purrl(
     name = "purrl",
@@ -34,6 +53,9 @@ def main(): Unit = Pulumi.run {
 
   for
     urlValue <- url
+    _ <- cancelledIOOutput1
+    out2 <- cancelledIOOutput2
+    _ = assert(out2 == "A valid result")
     command <- purrlCommand(urlValue)
   yield Pulumi.exports(
     purrlCommand = command.response
