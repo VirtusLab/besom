@@ -93,7 +93,7 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
     val isCI = sys.env.get("CI").contains("true")
     val allTests = super.munitTests()
     if (isCI) then
-      allTests.filter(_.tags.contains(LocalOnly))
+      allTests.filterNot(_.tags.contains(LocalOnly))
     else
       allTests
   }
