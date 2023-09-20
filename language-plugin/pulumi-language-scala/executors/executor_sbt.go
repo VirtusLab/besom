@@ -63,10 +63,6 @@ func (sbt) newSbtExecutor(cmd string, bootstrapLibJarPath string) (*ScalaExecuto
 		PluginArgs: append([]string{"-batch", "-error"}, makePluginsSbtCommandParts(sbtModule, bootstrapLibJarPath)),
 	}
 
-	// fmt.Println("BuildArgs ", se.BuildArgs)
-	// fmt.Println("RunArgs ", se.RunArgs)
-	// fmt.Println("PluginArgs ", se.PluginArgs)
-
 	return se, nil
 }
 

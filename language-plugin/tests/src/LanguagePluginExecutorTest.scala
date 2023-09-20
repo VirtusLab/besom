@@ -54,6 +54,10 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
 
     assert(clue(pulumiUpOutput).contains(expectedError))
 
+
+    //Build tool warm up - needed for sbt in CI - TODO: fix 
+    os.proc("pulumi", "about").call(cwd = executorDir, env = env)
+
     val aboutInfoLines = os.proc("pulumi", "about").call(cwd = executorDir, env = env).out.lines().toList
 
     val aboutPluginsVersions = aboutInfoLines
@@ -107,6 +111,7 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
     // Prepare the sources of the test project
     val tmpProjectDir = os.temp.dir()
     os.list(executorsDir / "sbt").foreach(file => os.copy.into(file, tmpProjectDir))
+    // os.proc("sbt", "compile").call(cwd = tmpProjectDir)
 
     testExecutor(tmpProjectDir)
   }
