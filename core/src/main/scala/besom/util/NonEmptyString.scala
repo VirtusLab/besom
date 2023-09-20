@@ -51,9 +51,23 @@ object NonEmptyString:
             else if s.isBlank then report.errorAndAbort("Blank string is not allowed here!")
             else str.asExprOf[NonEmptyString]
           case None =>
-            report.errorAndAbort(
-              "Only constant strings or string interpolations are allowed here, use NonEmptyString.apply instead!"
-            )
+            Some(expr.asTerm)
+              .collect:
+                case Inlined(_, _, id: Ident) =>
+                  id.tpe.termSymbol.tree
+              .collect:
+                case ValDef(_, _, Some(rhs)) =>
+                  rhs.asExprOf[String].value
+              .flatten
+              .match
+                case Some(value) =>
+                  if value.isEmpty then report.errorAndAbort("Empty string is not allowed here!")
+                  else if value.isBlank then report.errorAndAbort("Blank string is not allowed here!")
+                  else Expr(value)
+                case None =>
+                  report.errorAndAbort(
+                    "Only constant strings, string interpolations or values defined as constants are allowed here, use NonEmptyString.apply instead!"
+                  )
 
   implicit inline def str2NonEmptyString(inline s: String): NonEmptyString = NonEmptyString.from(s)
 
