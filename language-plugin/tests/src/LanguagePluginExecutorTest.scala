@@ -54,10 +54,6 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
 
     assert(clue(pulumiUpOutput).contains(expectedError))
 
-
-    //Build tool warm up - needed for sbt in CI - TODO: fix 
-    os.proc("pulumi", "about").call(cwd = executorDir, env = env)
-
     val aboutInfoLines = os.proc("pulumi", "about").call(cwd = executorDir, env = env).out.lines().toList
 
     val aboutPluginsVersions = aboutInfoLines
@@ -93,40 +89,50 @@ class LanguagePluginExecutorTest extends munit.FunSuite {
       clue(installedPluginsVersions) == expectedInstalledPluginsVersions
     }
 
+  override def munitTests(): Seq[Test] = {
+    val isCI = sys.env.get("CI").contains("true")
+    val allTests = super.munitTests()
+    if (isCI) then
+      allTests.filter(_.tags.contains(LocalOnly))
+    else
+      allTests
+  }
+
   override def beforeAll() =
     publishLocalResourcePlugins()
 
   override def afterAll() =
     os.proc("pulumi", "logout").call()
 
-  // test("scala-cli") {
-  //   // Prepare the sources of the test project
-  //   val tmpProjectDir = os.temp.dir()
-  //   os.list(executorsDir / "scala-cli").foreach(file => os.copy.into(file, tmpProjectDir))
-
-  //   testExecutor(tmpProjectDir)
-  // }
-
-  test("sbt") {
+  test("scala-cli") {
     // Prepare the sources of the test project
     val tmpProjectDir = os.temp.dir()
-    os.list(executorsDir / "sbt").foreach(file => os.copy.into(file, tmpProjectDir))
-    // os.proc("sbt", "compile").call(cwd = tmpProjectDir)
+    os.list(executorsDir / "scala-cli").foreach(file => os.copy.into(file, tmpProjectDir))
 
     testExecutor(tmpProjectDir)
   }
 
-  // test("jar") {
-  //   // Prepare the binary
-  //   val tmpBuildDir = os.temp.dir()
-  //   os.list(executorsDir / "scala-cli").foreach(file => os.copy.into(file, tmpBuildDir))
-  //   os.proc("scala-cli", "--power", "package", ".", "--assembly", "-o", "app.jar").call(cwd = tmpBuildDir)
+  test("sbt".tag(LocalOnly)) {
+    // Prepare the sources of the test project
+    val tmpProjectDir = os.temp.dir()
+    os.list(executorsDir / "sbt").foreach(file => os.copy.into(file, tmpProjectDir))
 
-  //   // Prepare the sources of the test project
-  //   val tmpProjectDir = os.temp.dir()
-  //   os.list(executorsDir / "jar").foreach(file => os.copy.into(file, tmpProjectDir))
-  //   os.copy.into(tmpBuildDir / "app.jar", tmpProjectDir)
+    testExecutor(tmpProjectDir)
+  }
 
-  //   testExecutor(tmpProjectDir)
-  // }
+  test("jar") {
+    // Prepare the binary
+    val tmpBuildDir = os.temp.dir()
+    os.list(executorsDir / "scala-cli").foreach(file => os.copy.into(file, tmpBuildDir))
+    os.proc("scala-cli", "--power", "package", ".", "--assembly", "-o", "app.jar").call(cwd = tmpBuildDir)
+
+    // Prepare the sources of the test project
+    val tmpProjectDir = os.temp.dir()
+    os.list(executorsDir / "jar").foreach(file => os.copy.into(file, tmpProjectDir))
+    os.copy.into(tmpBuildDir / "app.jar", tmpProjectDir)
+
+    testExecutor(tmpProjectDir)
+  }
 }
+
+case object LocalOnly extends munit.Tag("LocalOnly")
