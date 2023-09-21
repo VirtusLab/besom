@@ -43,8 +43,8 @@ trait ZIOModule extends BesomModule:
 
   protected lazy val rt: Runtime[Eff] = ZIORuntime()(using zio.Runtime.default)
 
-  implicit val toFutureZIOTask: Result.ToFuture[Eff] = new Result.ToFuture[Task]:
-    def eval[A](fa: => Task[A]): () => Future[A] = () =>
+  implicit def toFutureZIOTask[E <: Throwable]: Result.ToFuture[IO[E, _]] = new Result.ToFuture[IO[E, _]]:
+    def eval[A](fa: => IO[E, A]): () => Future[A] = () =>
       Unsafe.unsafe { implicit unsafe =>
         zio.Runtime.default.unsafe.runToFuture(fa.uninterruptible)
       }
