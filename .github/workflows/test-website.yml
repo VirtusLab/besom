@@ -4,6 +4,8 @@ on:
   pull_request:
     branches:
       - develop
+    paths: 
+      - "website"
 jobs:
   test-deploy:
     name: Test deployment
