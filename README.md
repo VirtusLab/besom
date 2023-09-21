@@ -65,16 +65,60 @@ Resources created in `Pulumi.run{ ... }` block will be created by Pulumi.
 
 ## Setting up the code editor
 
-If you are using IntelliJ: 
-1. install scala plugin
-2. use BSP ([documentation](https://www.jetbrains.com/help/idea/bsp-support.html)),
-   hint: once you have `.bsp` directories you can import modules one by one
+Both IDEs support rely on BSP.
+
+### BSP setup
+Build experimental `scala-compose` and place on `$PATH`:
+```
+git clone git@github.com:VirtusLab/scala-compose.git
+cd scala-compose
+cat << EOF | git apply
+> diff --git a/project/publish.sc b/project/publish.sc
+> index e00f81ca..619d4c99 100644
+> --- a/project/publish.sc
+> +++ b/project/publish.sc
+> @@ -113,8 +113,9 @@ def finalPublishVersion = {
+>      }
+>    else
+>      T {
+> -      val state = VcsVersion.vcsState()
+> -      computePublishVersion(state, simple = true)
+> +      // val state = VcsVersion.vcsState()
+> +      // computePublishVersion(state, simple = true)
+> +      "1.0.4"
+>      }
+>  }
+>
+> EOF
+./mill -i show scala-compose.nativeImage
+cp out/scala-compose/base-image/nativeImage.dest/scala-cli ~/bin/scala-compose
+```
+
+Use `scala-compose` in `besom` directory:
+```bash
+scala-compose setup-ide --conf-dir .
+```
+
+### IntelliJ setup
+IntelliJ support is experimental.
+
+1. Make sure you have the latest IntelliJ
+2. Install Scala plugin and set update chanel to "Nightly Builds"
+3. Use BSP ([documentation](https://www.jetbrains.com/help/idea/bsp-support.html))
+
+Make sure you have `.bsp` directory before you open the project in IntelliJ.
+
+Additionally, please set `scalafmt` as the formatter.
+
+### VSCode setup
 
 If you are using VSCode:
-1. install Metals
-2. open the folder with your infrastructure and start Metals.
+1. Install [Metals](https://scalameta.org/metals/docs/editors/vscode#installation)
+2. Open the project in Metals.
 
-This might not be enough if your infrastructure is just a part (a module) of your existing scala project. 
+Make sure you have `.bsp` directory before you open the project in IntelliJ.
+
+This might not be enough if your infrastructure is just a part (a module) of your existing Scala project. 
 For this to work you have to make your build tool aware of the infrastructure code, 
 for **sbt** create a corresponding module: 
    ```scala
