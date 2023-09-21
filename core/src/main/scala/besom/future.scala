@@ -8,7 +8,7 @@ trait FutureMonadModule extends BesomModule:
   given ExecutionContext      = scala.concurrent.ExecutionContext.global
   protected lazy val rt: Runtime[Future] = FutureRuntime()
 
-  given Result.ToFuture[Eff] = new Result.ToFuture[Future]:
+  implicit val toFutureFuture: Result.ToFuture[Eff] = new Result.ToFuture[Future]:
     def eval[A](fa: => Future[A]): () => Future[A] = () => fa
 
 object Pulumi extends FutureMonadModule

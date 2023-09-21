@@ -34,7 +34,7 @@ class ZIORuntime(val debugEnabled: Boolean = false)(using rt: zio.Runtime[Any]) 
 
   private[besom] override def unsafeRunSync[A](fa: Task[A]): Either[Throwable, A] =
     Unsafe.unsafe { implicit unsafe =>
-      rt.unsafe.run(fa).toEither
+      rt.unsafe.run(fa.uninterruptible).toEither
     }
 
 trait ZIOModule extends BesomModule:
@@ -43,10 +43,10 @@ trait ZIOModule extends BesomModule:
 
   protected lazy val rt: Runtime[Eff] = ZIORuntime()(using zio.Runtime.default)
 
-  given Result.ToFuture[Eff] = new Result.ToFuture[Task]:
+  implicit val toFutureZIOTask: Result.ToFuture[Eff] = new Result.ToFuture[Task]:
     def eval[A](fa: => Task[A]): () => Future[A] = () =>
       Unsafe.unsafe { implicit unsafe =>
-        zio.Runtime.default.unsafe.runToFuture(fa)
+        zio.Runtime.default.unsafe.runToFuture(fa.uninterruptible)
       }
 
   // override def run(program: Context ?=> Output[Exports]): Future[Unit] = ???
