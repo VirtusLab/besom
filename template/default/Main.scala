@@ -1,8 +1,8 @@
 import besom.*
-import besom.api.random.{randomPet}
+import besom.api.random.{RandomPet}
 @main def main = Pulumi.run {
   for 
-    randomPet <- randomPet("randomPetServer")
+    randomPet <- RandomPet("randomPetServer")
     name <- randomPet.id
   yield Pulumi.exports(
     name = name

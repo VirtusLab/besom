@@ -291,7 +291,6 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     val argsClassCoordinates = typeCoordinates.asResourceClass(asArgsType = true)
     val baseClassName = Type.Name(baseClassCoordinates.className).syntax
     val argsClassName = Type.Name(argsClassCoordinates.className).syntax
-    val factoryMethodName = Term.Name(decapitalize(baseClassCoordinates.className)).syntax
 
     val baseFileImports = {
       val conditionalIdentifiers =
@@ -396,32 +395,32 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
           |${baseClassParams.map(param => s"  ${param}").mkString(",\n")}
           |) extends ${resourceBaseClass} derives ResourceDecoder""".stripMargin
 
+    val hasDefaultArgsConstructor = resourceDefinition.requiredInputs.forall { propertyName =>
+      val propertyDefinition = resourceDefinition.inputProperties(propertyName)
+      propertyDefinition.default.nonEmpty || propertyDefinition.const.nonEmpty
+    }
+
+    val argsDefault = if (hasDefaultArgsConstructor) s""" = ${argsClassName}()""" else ""
+
+    // the type has to match pulumi's resource type schema, ie kubernetes:core/v1:Pod
+    val typ = Lit.String(typeToken)
+
     val baseCompanion =
       if (hasOutputExtensions) {
         s"""|object $baseClassName:
+            |  def apply(using ctx: Context)(
+            |    name: NonEmptyString,
+            |    args: ${argsClassName}${argsDefault},
+            |    opts: CustomResourceOptions = CustomResourceOptions()
+            |  ): Output[$baseClassName] = 
+            |    ctx.registerResource[$baseClassName, $argsClassName](${typ}, name, args, opts)
+            |
             |  given outputOps: {} with
             |    extension(output: Output[$baseClassName])
             |${baseOutputExtensionMethods.map(meth => s"      ${meth}").mkString("\n")}""".stripMargin
       } else {
         s"""object $baseClassName"""
       }
-
-    // the type has to match pulumi's resource type schema, ie kubernetes:core/v1:Pod
-    val typ = Lit.String(typeToken)
-
-    val hasDefaultArgsConstructor = resourceDefinition.requiredInputs.forall { propertyName =>
-      val propertyDefinition = resourceDefinition.inputProperties(propertyName)
-      propertyDefinition.default.nonEmpty || propertyDefinition.const.nonEmpty
-    }
-    val argsDefault = if (hasDefaultArgsConstructor) s""" = ${argsClassName}()""" else ""
-    val factoryMethod =
-      s"""|def $factoryMethodName(using ctx: Context)(
-          |  name: NonEmptyString,
-          |  args: ${argsClassName}${argsDefault},
-          |  opts: CustomResourceOptions = CustomResourceOptions()
-          |): Output[$baseClassName] = 
-          |  ctx.registerResource[$baseClassName, $argsClassName](${typ}, name, args, opts)
-          |""".stripMargin
 
     val argsClass = makeArgsClass(argsClassName = argsClassName, inputProperties = inputProperties, isResource = true, isProvider = isProvider)
 
@@ -436,8 +435,6 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
           |${baseClass}
           |
           |${baseCompanion}
-          |
-          |${factoryMethod}
           |""".stripMargin
 
     val argsClassFileContent =

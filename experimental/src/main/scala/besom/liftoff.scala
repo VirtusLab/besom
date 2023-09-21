@@ -1,5 +1,5 @@
 //> using dep "org.virtuslab::besom-kubernetes:0.0.1-SNAPSHOT"
-//> using dep "io.github.iltotore::iron:2.1.0"
+//> using dep "io.github.iltotore::iron:2.2.1"
 
 import besom.*
 import besom.api.{kubernetes => k8s}
@@ -7,14 +7,13 @@ import besom.api.{kubernetes => k8s}
 import k8s.core.v1.inputs.*
 import k8s.apps.v1.inputs.*
 import k8s.meta.v1.inputs.*
-import k8s.apps.v1.{deployment, DeploymentArgs, statefulSet, StatefulSetArgs}
+import k8s.apps.v1.{Deployment, DeploymentArgs, StatefulSet, StatefulSetArgs}
 import k8s.core.v1.{
-  configMap,
+  ConfigMap,
   ConfigMapArgs,
-  namespace,
-  service,
+  Namespace,
+  Service,
   ServiceArgs,
-  persistentVolume,
   PersistentVolume,
   PersistentVolumeArgs
 }
@@ -27,12 +26,12 @@ case class Redis(connectionString: Output[String])(using ComponentBase) extends 
 
 def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): Output[Redis] =
   component(name, "besom:liftoff:Redis") {
-    val redisNamespace = namespace(s"redis-cluster-namespace-$name")
+    val redisNamespace = Namespace(s"redis-cluster-namespace-$name")
 
     val labels = Map("app" -> name)
 
     def createHostPathVolume(num: Int): Output[PersistentVolume] =
-      persistentVolume(
+      PersistentVolume(
         s"redis-cluster-pv-$num-$name",
         PersistentVolumeArgs(
           metadata = ObjectMetaArgs(
@@ -49,7 +48,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
         )
       )
 
-    val redisConfigMap = configMap(
+    val redisConfigMap = ConfigMap(
       s"redis-cluster-configmap-$name",
       ConfigMapArgs(
         metadata = ObjectMetaArgs(
@@ -69,7 +68,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
       )
     )
 
-    val redisStatefulSet = statefulSet(
+    val redisStatefulSet = StatefulSet(
       s"redis-cluster-statefulset-$name",
       StatefulSetArgs(
         metadata = ObjectMetaArgs(
@@ -156,7 +155,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
       )
     )
 
-    val redisService = service(
+    val redisService = Service(
       s"redis-cluster-service-$name",
       ServiceArgs(
         metadata = ObjectMetaArgs(
@@ -188,12 +187,12 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
 
 @main def main = Pulumi.run {
   val labels                                      = Map("app" -> "nginx")
-  val appNamespace: Output[k8s.core.v1.Namespace] = namespace("liftoff")
+  val appNamespace: Output[k8s.core.v1.Namespace] = Namespace("liftoff")
 
   val html =
     "<h1>Welcome to Besom: Functional Infrastructure in Scala 3</h1>"
 
-  val indexHtmlConfigMap: Output[k8s.core.v1.ConfigMap] = configMap(
+  val indexHtmlConfigMap: Output[k8s.core.v1.ConfigMap] = ConfigMap(
     "index-html-configmap",
     ConfigMapArgs(
       metadata = ObjectMetaArgs(
@@ -207,7 +206,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
     )
   )
 
-  val nginxDeployment = deployment(
+  val nginxDeployment = Deployment(
     "nginx",
     DeploymentArgs(
       spec = DeploymentSpecArgs(
@@ -251,7 +250,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
     )
   )
 
-  val nginxService = service(
+  val nginxService = Service(
     "nginx",
     ServiceArgs(
       spec = ServiceSpecArgs(
