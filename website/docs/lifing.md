@@ -9,7 +9,7 @@ import besom.*
 import besom.api.aws
 ​
 @main def main = Pulumi.run {
-  val s3Bucket: Output[aws.s3.Bucket] = aws.s3.bucket("my-bucket")
+  val s3Bucket: Output[aws.s3.Bucket] = aws.s3.Bucket("my-bucket")
 ​
   Output(Pulumi.exports(s3Url = s3Bucket.map(_.url)))
 }
