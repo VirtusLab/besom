@@ -464,7 +464,11 @@ trait DecoderHelpers:
                       }
                   }
                   .map(_.map(p.fromProduct(_)))
-              else errorInvalid(s"$label: Expected a struct to deserialize Product!", label = label)
+              else
+                errorInvalid(
+                  s"$label: Expected a struct to deserialize Product[$p], got: '${innerValue.kind}'",
+                  label = label
+                )
             }
             .map(_.flatten)
         }
