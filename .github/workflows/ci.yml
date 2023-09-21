@@ -2,9 +2,9 @@ name: Besom
 
 on:
   push:
-    branches: [ 'main', 'develop', 'beta-release' ]
+    branches: [ 'main', 'develop' ]
   pull_request:
-    branches: [ 'main', 'develop', 'beta-release' ]
+    branches: [ 'main', 'develop' ]
     types: [ 'opened', 'reopened', 'synchronize', 'labeled' ]
 
 env:

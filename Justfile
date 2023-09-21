@@ -72,17 +72,17 @@ compile-compiler-plugin:
 # Runs tests for core besom SDK
 test-core:
 	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-core}}; fi
-	scala-cli --power test core {{ scala-cli-options-core }}
+	scala-cli --power test core {{ scala-cli-test-options-core }}
 
 # Runs tests for besom cats-effect extension
 test-cats:
 	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-cats}}; fi
-	scala-cli --power test besom-cats {{ scala-cli-options-cats }}
+	scala-cli --power test besom-cats {{ scala-cli-test-options-cats }}
 
 # Runs tests for besom zio extension
 test-zio:
 	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-zio}}; fi
-	scala-cli --power test besom-zio {{ scala-cli-options-zio }}
+	scala-cli --power test besom-zio {{ scala-cli-test-options-zio }}
 
 # Runs all tests
 test-sdk: compile-sdk test-core test-cats test-zio

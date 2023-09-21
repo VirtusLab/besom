@@ -20,7 +20,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
       sourceFilesForNonResourceTypes(pulumiPackage) ++
       sourceFilesForCustomResources(pulumiPackage)
     )
-    
+
     scalaSources ++ Seq(
       projectConfigFile(
         pulumiPackageName = pulumiPackage.name,
@@ -30,7 +30,8 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
       ),
       resourcePluginMetadataFile(
         pluginName = pulumiPackage.name,
-        pluginVersion = schemaVersion
+        pluginVersion = schemaVersion,
+        pluginDownloadUrl = pulumiPackage.pluginDownloadURL
       ),
     )
   }
