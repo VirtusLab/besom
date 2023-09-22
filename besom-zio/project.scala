@@ -3,7 +3,7 @@
 //> using lib "org.virtuslab::besom-core:0.0.1-SNAPSHOT"
 //> using dep "dev.zio::zio:2.0.17"
 
-//> using options "-java-output-version:11"
+//> using options "-java-output-version:11", "-Ykind-projector:underscores"
 
 //> using publish.name "besom-zio"
 //> using publish.organization "org.virtuslab"
