@@ -5,6 +5,7 @@
 .metals
 .vscode
 *.jar
+*.semanticdb
 *.iml
 target/
 .DS_Store

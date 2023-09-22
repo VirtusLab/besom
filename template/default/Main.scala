@@ -1,5 +1,6 @@
 import besom.*
 import besom.api.random.{RandomPet}
+
 @main def main = Pulumi.run {
   for 
     randomPet <- RandomPet("randomPetServer")
