@@ -14,7 +14,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     "besom.types.Context"
   )
 
-  def sourcesFromPulumiPackage(pulumiPackage: PulumiPackage, schemaVersion: String, besomVersion: String, besomVersionSuffix: String): Seq[SourceFile] = {
+  def sourcesFromPulumiPackage(pulumiPackage: PulumiPackage, schemaVersion: String, besomVersion: String): Seq[SourceFile] = {
     val scalaSources = (
       sourceFilesForProviderResource(pulumiPackage) ++
       sourceFilesForNonResourceTypes(pulumiPackage) ++
@@ -25,8 +25,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
       projectConfigFile(
         pulumiPackageName = pulumiPackage.name,
         schemaVersion = schemaVersion,
-        besomVersion = besomVersion,
-        besomVersionSuffix = besomVersionSuffix
+        besomVersion = besomVersion
       ),
       resourcePluginMetadataFile(
         pluginName = pulumiPackage.name,
@@ -36,12 +35,13 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     )
   }
 
-  def projectConfigFile(pulumiPackageName: String, schemaVersion: String, besomVersion: String, besomVersionSuffix: String): SourceFile = {
+  def projectConfigFile(pulumiPackageName: String, schemaVersion: String, besomVersion: String): SourceFile = {
     // TODO use original package version from the schema as publish.version?
 
     val fileContent =
       s"""|//> using scala "3.3.0"
           |//> using options "-java-output-version:11"
+          |//> using options "-skip-by-regex:.*"
           |
           |//> using dep "org.virtuslab::besom-core:${besomVersion}"
           |
@@ -49,7 +49,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
           |
           |//> using publish.name "besom-${pulumiPackageName}"
           |//> using publish.organization "org.virtuslab"
-          |//> using publish.version "${schemaVersion}${besomVersionSuffix}"
+          |//> using publish.version "${schemaVersion}-core.${besomVersion}"
           |//> using publish.url "https://github.com/VirtusLab/besom"
           |//> using publish.vcs "github:VirtusLab/besom"
           |//> using publish.license "Apache-2.0"

@@ -1,7 +1,7 @@
 //> using scala "3.3.0"
 //> using lib "dev.zio::zio:2.0.17"
-//> using lib "org.virtuslab::besom-zio:0.0.1-SNAPSHOT"
-//> using lib "org.virtuslab::besom-tls:4.10.0-SNAPSHOT.0.0.1"
+//> using lib "org.virtuslab::besom-zio:0.0.2-SNAPSHOT"
+//> using lib "org.virtuslab::besom-tls:4.10.0-core.0.0.2-SNAPSHOT"
 
 import zio.*
 import besom.zio.*

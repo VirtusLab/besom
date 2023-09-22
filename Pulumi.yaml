@@ -1,8 +1,0 @@
-name: scala-experiment
-description: A Pulumi Scala PoC using a JAR. Just a temp for experiments with java binding to pulumi to actually get it to run.
-runtime:
-  name: java
-  options:
-    logtostderr: true
-    v: 5
-    binary: "./app.jar"
