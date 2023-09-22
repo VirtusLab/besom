@@ -1,6 +1,5 @@
 //> using scala "3.3.0"
 
-//> using lib "org.virtuslab::besom-core:0.0.1-SNAPSHOT"
 //> using dep "org.typelevel::cats-effect:3.3.14"
 
 //> using options "-java-output-version:11", "-Ykind-projector:underscores"

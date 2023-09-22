@@ -1,7 +1,7 @@
 //> using scala "3.3.0"
 //> using lib "org.typelevel::cats-effect:3.5.1"
-//> using lib "org.virtuslab::besom-cats:0.0.1-SNAPSHOT"
-//> using lib "org.virtuslab::besom-purrl:0.4.1-SNAPSHOT.0.0.1"
+//> using lib "org.virtuslab::besom-cats:0.0.2-SNAPSHOT"
+//> using lib "org.virtuslab::besom-purrl:0.4.1-core.0.0.2-SNAPSHOT"
 
 import cats.effect.*
 import cats.effect.kernel.Outcome.*

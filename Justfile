@@ -1,7 +1,6 @@
 # Big idea behind using a Justfile is so that we can have modules like in sbt.
 
-besom-version := "0.0.1-SNAPSHOT"
-besom-version-suffix := "-SNAPSHOT.0.0.1"
+besom-version := `cat version.txt`
 
 language-plugin-output-dir := justfile_directory() + "/.out/language-plugin"
 codegen-output-dir := justfile_directory() + "/.out/codegen"
@@ -31,7 +30,7 @@ publish-maven-auth-options := "--user env:OSSRH_USERNAME --password env:OSSRH_PA
 
 # This list of available targets
 default:
-    @just --list
+	@just --list
 
 ####################
 # Aggregate tasks
@@ -55,11 +54,11 @@ compile-core:
 	scala-cli --power compile core
 
 # Compiles besom cats-effect extension
-compile-cats:
+compile-cats: publish-local-core
 	scala-cli --power compile besom-cats {{scala-cli-main-options-cats}}
 
 # Compiles besom zio extension
-compile-zio:
+compile-zio: publish-local-core
 	scala-cli --power compile besom-zio {{scala-cli-main-options-zio}}
 
 # Compiles all SDK modules
@@ -75,12 +74,12 @@ test-core:
 	scala-cli --power test core {{ scala-cli-test-options-core }}
 
 # Runs tests for besom cats-effect extension
-test-cats:
+test-cats: publish-local-core
 	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-cats}}; fi
 	scala-cli --power test besom-cats {{ scala-cli-test-options-cats }}
 
 # Runs tests for besom zio extension
-test-zio:
+test-zio: publish-local-core
 	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-zio}}; fi
 	scala-cli --power test besom-zio {{ scala-cli-test-options-zio }}
 
@@ -89,30 +88,29 @@ test-sdk: compile-sdk test-core test-cats test-zio
 
 # Publishes locally core besom SDK
 publish-local-core:
-  scala-cli --power publish local core --project-version {{besom-version}} --doc=false
+	scala-cli --power publish local core --project-version {{besom-version}}
 
 # Publishes locally besom cats-effect extension
-publish-local-cats:
-	scala-cli --power publish local besom-cats --project-version {{besom-version}} --doc=false
+publish-local-cats: publish-local-core
+	scala-cli --power publish local besom-cats --project-version {{besom-version}} {{scala-cli-main-options-cats}}
 
 # Publishes locally besom zio extension
-publish-local-zio:
-	scala-cli --power publish local besom-zio --project-version {{besom-version}} --doc=false
+publish-local-zio: publish-local-core
+	scala-cli --power publish local besom-zio --project-version {{besom-version}} {{scala-cli-main-options-zio}}
 
 # Publishes locally all SDK modules: core, cats-effect extension, zio extension
 publish-local-sdk: publish-local-core publish-local-cats publish-local-zio
 
 # Publishes locally besom compiler plugin
 publish-local-compiler-plugin:
-	scala-cli --power publish local compiler-plugin --project-version {{besom-version}} --doc=false
+	scala-cli --power publish local compiler-plugin --project-version {{besom-version}}
 
 # Publishes core besom SDK
 publish-maven-core:
-  scala-cli publish core --project-version {{besom-version}} {{publish-maven-auth-options}}
+	scala-cli publish core --project-version {{besom-version}} {{publish-maven-auth-options}}
 
 # Publishes besom cats-effect extension
 publish-maven-cats:
-	#!/usr/bin/env sh
 	scala-cli publish besom-cats {{ scala-cli-main-options-cats }} --project-version {{besom-version}} {{publish-maven-auth-options}}
 
 # Publishes besom zio extension
@@ -140,7 +138,7 @@ clean-zio:
 	scala-cli clean besom-zio 
 
 # Cleans all SDK builds, sets up all modules for IDE again
-clean-sdk: clean-core clean-cats clean-zio
+clean-sdk: clean-core clean-cats clean-zio clean-compiler-plugin
 
 clean-codegen:
 	scala-cli clean codegen
@@ -237,7 +235,7 @@ get-schema schema-name schema-version:
 
 # Generate scala API code for the given provider, e.g. `just generate-provider-sdk kubernetes`
 generate-provider-sdk schema-name schema-version:
-	scala-cli run codegen -- {{schemas-output-dir}} {{codegen-output-dir}} {{schema-name}} {{schema-version}} {{besom-version}} {{besom-version-suffix}}
+	scala-cli run codegen -- {{schemas-output-dir}} {{codegen-output-dir}} {{schema-name}} {{schema-version}} {{besom-version}}
 
 # Compiles the previously generated scala API code for the given provider, e.g. `just compile-provider-sdk kubernetes`
 compile-provider-sdk schema-name:
@@ -245,39 +243,53 @@ compile-provider-sdk schema-name:
 
 # Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes`
 publish-local-provider-sdk schema-name schema-version:
-	scala-cli --power publish local {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --doc=false
+	scala-cli --power publish local {{codegen-output-dir}}/{{schema-name}}/{{schema-version}}
 
 ####################
 # Integration testing
 ####################
 
 # Runs integration tests for besom
-test-compiler-plugin:
-  scala-cli test integration-tests
+test-compiler-plugin: publish-local-sdk publish-local-compiler-plugin
+	scala-cli test integration-tests
 
 ####################
 # Demo
 ####################
 
 # Run the sample kubernetes Pulumi app that resides in ./experimental directory
-liftoff: 
-        cd experimental && \
-        pulumi up --stack liftoff
+liftoff:
+	#!/usr/bin/env sh
+	export PULUMI_CONFIG_PASSPHRASE=""
+	cd experimental
+	pulumi up --stack liftoff -y
 
 # Reverts the deployment of experimental sample kubernetes Pulumi app from ./experimental directory
-destroy-liftoff: 
-        cd experimental && \
-        pulumi destroy --stack liftoff -y
+destroy-liftoff:
+	#!/usr/bin/env sh
+	cd experimental
+	if (pulumi stack ls | grep liftoff > /dev/null); then
+		export PULUMI_CONFIG_PASSPHRASE=""
+		pulumi destroy --stack liftoff -y
+	fi
 
 # Cleans the deployment of experimental sample kubernetes Pulumi app from ./experimental directory to the ground
 clean-liftoff: destroy-liftoff
-	cd experimental && \
-	pulumi stack rm liftoff -y
+	#!/usr/bin/env sh
+	cd experimental
+	if (pulumi stack ls | grep liftoff > /dev/null); then
+		pulumi stack rm liftoff -y
+	fi
+	export PULUMI_CONFIG_PASSPHRASE=""
+	pulumi stack init liftoff
 
 # Cleans the deployment of ./experimental app completely, rebuilds core and kubernetes provider SDKs, deploys the app again
-clean-slate-liftoff: clean-sdk clean-liftoff
-	just generate-provider-sdk kubernetes 3.30.2 
+clean-slate-liftoff: clean-sdk
+	#!/usr/bin/env sh
+	just generate-provider-sdk kubernetes 4.2.0 
 	just publish-local-core
-	just publish-local-provider-sdk kubernetes 3.30.2
+	just publish-local-compiler-plugin
+	just publish-local-provider-sdk kubernetes 4.2.0
+	just clean-liftoff
 	just liftoff
 

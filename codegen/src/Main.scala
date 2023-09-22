@@ -5,22 +5,21 @@ import java.util.Arrays
 object Main {
   def main(args: Array[String]): Unit = {
     args.toList match {
-      case schemasDirPath :: outputDirBasePath :: providerName :: schemaVersion :: besomVersion :: besomVersionSuffix :: Nil =>
+      case schemasDirPath :: outputDirBasePath :: providerName :: schemaVersion :: besomVersion :: Nil =>
         generatePackageSources(
           schemasDirPath = os.Path(schemasDirPath),
           outputDirBasePath = os.Path(outputDirBasePath),
           providerName = providerName,
           schemaVersion = schemaVersion,
-          besomVersion = besomVersion,
-          besomVersionSuffix = besomVersionSuffix
+          besomVersion = besomVersion
         )
       case _ =>
-        System.err.println("Codegen's expected arguments: <schemasDirPath> <outputDirBasePath> <providerName> <schemaVersion> <besomVersion> <besomVersionSuffix>")
+        System.err.println("Codegen's expected arguments: <schemasDirPath> <outputDirBasePath> <providerName> <schemaVersion> <besomVersion>")
         sys.exit(1)
     }
   }
 
-  def generatePackageSources(schemasDirPath: os.Path, outputDirBasePath: os.Path, providerName: String, schemaVersion: String, besomVersion: String , besomVersionSuffix: String): Unit = {
+  def generatePackageSources(schemasDirPath: os.Path, outputDirBasePath: os.Path, providerName: String, schemaVersion: String, besomVersion: String): Unit = {
     println(s"Generating provider SDK for $providerName")
     
     val schemaProvider = new SchemaProvider(schemaCacheDirPath = schemasDirPath)
@@ -47,8 +46,7 @@ object Main {
       codeGen.sourcesFromPulumiPackage(
         pulumiPackage,
         schemaVersion = schemaVersion,
-        besomVersion = besomVersion,
-        besomVersionSuffix = besomVersionSuffix
+        besomVersion = besomVersion
       ).foreach { sourceFile =>
         val filePath = destinationDir / sourceFile.filePath.osSubPath
         os.makeDir.all(filePath / os.up)
