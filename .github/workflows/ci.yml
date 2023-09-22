@@ -3,9 +3,15 @@ name: Besom
 on:
   push:
     branches: [ 'main', 'develop' ]
+    paths-ignore: 
+    - '**.md'
+    - 'LICENSE'
   pull_request:
     branches: [ 'main', 'develop' ]
     types: [ 'opened', 'reopened', 'synchronize', 'labeled' ]
+    paths-ignore: 
+    - '**.md'
+    - 'LICENSE'
 
 env:
   TOKEN: ${{ secrets.GITHUB_TOKEN }}
