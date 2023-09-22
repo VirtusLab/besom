@@ -666,6 +666,9 @@ object Encoder:
               aggregatedResources -> secretStruct.asValue
             else aggregatedResources -> serializedValue
           }
+        
+        case OutputData.Broken(errors) =>
+          Result.fail(Exception(errors.mkString("\n"))) // should it fail here?
     }
 
   private def assetWrapper(key: String, value: Value): Value = Map(
