@@ -1,4 +1,4 @@
-name: Besom
+name: Besom build and test
 
 on:
   push:
@@ -6,12 +6,18 @@ on:
     paths-ignore: 
     - '**.md'
     - 'LICENSE'
+    - 'template'
+    - 'proto'
+    - 'expermental'
   pull_request:
     branches: [ 'main', 'develop' ]
-    types: [ 'opened', 'reopened', 'synchronize', 'labeled' ]
+    types: [ 'opened', 'reopened', 'synchronize' ]
     paths-ignore: 
     - '**.md'
     - 'LICENSE'
+    - 'template'
+    - 'proto'
+    - 'expermental'
 
 env:
   TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -39,6 +45,7 @@ jobs:
   # we need: scala-cli, protoc, go, just, pulumi, java
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
     - uses: actions/checkout@v3
       with:
