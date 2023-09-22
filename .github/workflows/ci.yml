@@ -73,7 +73,7 @@ jobs:
     - name: Compile everything
       run: just compile-all
 
-    - name: Test SDK
+    - name: Test core SDK
       run: just test-sdk
     
     - name: Publish compiler plugin

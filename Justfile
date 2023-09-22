@@ -54,11 +54,11 @@ compile-core:
 	scala-cli --power compile core
 
 # Compiles besom cats-effect extension
-compile-cats:
+compile-cats: publish-local-core
 	scala-cli --power compile besom-cats {{scala-cli-main-options-cats}}
 
 # Compiles besom zio extension
-compile-zio:
+compile-zio: publish-local-core
 	scala-cli --power compile besom-zio {{scala-cli-main-options-zio}}
 
 # Compiles all SDK modules
@@ -74,12 +74,12 @@ test-core:
 	scala-cli --power test core {{ scala-cli-test-options-core }}
 
 # Runs tests for besom cats-effect extension
-test-cats:
+test-cats: publish-local-core
 	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-cats}}; fi
 	scala-cli --power test besom-cats {{ scala-cli-test-options-cats }}
 
 # Runs tests for besom zio extension
-test-zio:
+test-zio: publish-local-core
 	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-zio}}; fi
 	scala-cli --power test besom-zio {{ scala-cli-test-options-zio }}
 
@@ -91,12 +91,12 @@ publish-local-core:
 	scala-cli --power publish local core --project-version {{besom-version}}
 
 # Publishes locally besom cats-effect extension
-publish-local-cats:
-	scala-cli --power publish local besom-cats --project-version {{besom-version}}
+publish-local-cats: publish-local-core
+	scala-cli --power publish local besom-cats --project-version {{besom-version}} {{scala-cli-main-options-cats}}
 
 # Publishes locally besom zio extension
-publish-local-zio:
-	scala-cli --power publish local besom-zio --project-version {{besom-version}}
+publish-local-zio: publish-local-core
+	scala-cli --power publish local besom-zio --project-version {{besom-version}} {{scala-cli-main-options-zio}}
 
 # Publishes locally all SDK modules: core, cats-effect extension, zio extension
 publish-local-sdk: publish-local-core publish-local-cats publish-local-zio
@@ -138,7 +138,7 @@ clean-zio:
 	scala-cli clean besom-zio 
 
 # Cleans all SDK builds, sets up all modules for IDE again
-clean-sdk: clean-core clean-cats clean-zio
+clean-sdk: clean-core clean-cats clean-zio clean-compiler-plugin
 
 clean-codegen:
 	scala-cli clean codegen
@@ -250,7 +250,7 @@ publish-local-provider-sdk schema-name schema-version:
 ####################
 
 # Runs integration tests for besom
-test-compiler-plugin:
+test-compiler-plugin: publish-local-sdk publish-local-compiler-plugin
 	scala-cli test integration-tests
 
 ####################

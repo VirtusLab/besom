@@ -11,8 +11,6 @@ class CompilerPluginTest extends munit.FunSuite {
       println(line)
       output += line + "\n"
     }
-    "just publish-local-sdk".!(logger)
-    "just publish-local-compiler-plugin".!(logger)
     val compilePluginTestStr =
       """|scala-cli compile
          |integration-tests/src/test/resources/compilerplugintest.scala
