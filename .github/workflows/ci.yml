@@ -8,7 +8,7 @@ on:
     - 'LICENSE'
     - 'template'
     - 'proto'
-    - 'expermental'
+    - 'experimental'
   pull_request:
     branches: [ 'main', 'develop' ]
     types: [ 'opened', 'reopened', 'synchronize' ]
