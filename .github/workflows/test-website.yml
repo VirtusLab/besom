@@ -8,6 +8,7 @@ on:
       - "website"
 jobs:
   test-deploy:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     name: Test deployment
     runs-on: ubuntu-latest
     defaults:
