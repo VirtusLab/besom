@@ -17,7 +17,7 @@ on:
     - 'LICENSE'
     - 'template'
     - 'proto'
-    - 'expermental'
+    - 'experimental'
 
 env:
   TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -48,6 +48,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+    - name: Record start time
+      run: echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
@@ -111,6 +113,15 @@ jobs:
         work-dir: integration-tests/src/test/resources/random-example
         stack-name: test
         upsert: true
+      env: 
+        PULUMI_ENABLE_TRACE_LOGGING_TO_FILE: true
+
+    - name: Upload logs if failed or cancelled
+      if: failure() || cancelled()
+      uses: actions/upload-artifact@v2
+      with:
+        name: random-tests-debug-logs-${{ github.sha }}-${{ github.run_number }}
+        path: integration-tests/src/test/resources/random-example/logs/
 
     - name: Generate purrl provider
       run: just generate-provider-sdk purrl 0.4.1
