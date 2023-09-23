@@ -29,6 +29,8 @@ object Env:
 
   private[internal] final val EnvEnableTraceLoggingToFile = "PULUMI_ENABLE_TRACE_LOGGING_TO_FILE"
 
+  private[internal] final val EnvSimpleLogFileName = "PULUMI_SIMPLE_LOG_FILE_NAME"
+
   private[internal] final val EnvLogLevel = "PULUMI_BESOM_LOG_LEVEL"
 
   private[internal] def getOrFail(key: String): NonEmptyString =
@@ -59,6 +61,7 @@ object Env:
 
   lazy val logLevel        = getMaybe(EnvLogLevel).flatMap(scribe.Level.get(_)).getOrElse(scribe.Level.Warn)
   lazy val traceRunToFile  = getMaybe(EnvEnableTraceLoggingToFile).map(isTruthy).getOrElse(false)
+  lazy val simpleFileName  = getMaybe(EnvSimpleLogFileName).map(isTruthy).getOrElse(false)
   lazy val project         = getOrFail(EnvProject)
   lazy val stack           = getOrFail(EnvStack)
   lazy val acceptResources = getMaybe(EnvDisableResourceReferences).map(isNotTruthy(_)).getOrElse(true)

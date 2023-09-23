@@ -113,6 +113,7 @@ jobs:
         upsert: true
       env: 
         PULUMI_ENABLE_TRACE_LOGGING_TO_FILE: true
+        PULUMI_SIMPLE_LOG_FILE_NAME: true
 
     - name: Upload logs if failed or cancelled
       if: failure() || cancelled()
