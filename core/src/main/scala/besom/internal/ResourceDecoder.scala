@@ -4,7 +4,7 @@ import com.google.protobuf.struct.{Struct, Value}
 import scala.quoted.*
 import scala.deriving.Mirror
 import besom.internal.logging.*
-import besom.types.{ Label, URN, ResourceId }
+import besom.types.{Label, URN, ResourceId}
 import org.checkerframework.checker.units.qual.C
 
 trait ResourceDecoder[A <: Resource]: // TODO rename to something more sensible
@@ -21,7 +21,7 @@ object ResourceDecoder:
     )(using
       ctx: Context,
       mdc: MDC[Label]
-    ): OutputData[A] =
+    ): Either[DecodingError, OutputData[A]] =
       val resourceLabel = mdc.get(Key.LabelKey)
 
       val fieldDependencies = dependencies.get(propertyName).getOrElse(Set.empty)
@@ -35,16 +35,16 @@ object ResourceDecoder:
             decoder.decode(value, propertyLabel).map(_.withDependency(resource)) match
               case Left(err) =>
                 log.trace(s"failed to extract custom property $propertyName from $value: $err")
-                throw err
+                Left(err)
               case Right(value) =>
                 log.trace(s"extracted custom property $propertyName from $value")
-                value
+                Right(value)
           }
           .getOrElse {
-            if ctx.isDryRun then OutputData.unknown().withDependency(resource)
-            else OutputData.empty(Set(resource))
+            if ctx.isDryRun then Right(OutputData.unknown().withDependency(resource))
+            else Right(OutputData.empty(Set(resource)))
           }
-          .withDependencies(fieldDependencies)
+          .map(_.withDependencies(fieldDependencies))
 
       outputData
 
@@ -94,29 +94,24 @@ object ResourceDecoder:
                 val fields       = rawResourceResult.data.fields
                 val dependencies = rawResourceResult.dependencies
 
-                // TODO think about making this pure
-                try
-                  val propertiesFulfilmentResults =
-                    customPopertiesPromises.zip(customPropertyExtractors).map { (promise, extractor) =>
-                      promise.fulfillAny(extractor.extract(fields, dependencies, resource))
-                    }
+                val propertiesFulfilmentResults =
+                  customPopertiesPromises.zip(customPropertyExtractors).map { (promise, extractor) =>
+                    extractor.extract(fields, dependencies, resource) match
+                      case Left(err)    => promise.fail(err)
+                      case Right(value) => promise.fulfillAny(value)
+                  }
 
-                  val fulfilmentResults = Vector(
-                    urnPromise.fulfill(urnOutputData),
-                    idPromise.fulfill(idOutputData)
-                  ) ++ propertiesFulfilmentResults
+                val fulfilmentResults = Vector(
+                  urnPromise.fulfill(urnOutputData),
+                  idPromise.fulfill(idOutputData)
+                ) ++ propertiesFulfilmentResults
 
-                  for
-                    _ <- ctx.logger
-                      .trace(s"Resolve resource: fulfilling ${fulfilmentResults.size} promises")
-                    _ <- Result.sequence(fulfilmentResults).void
-                    _ <- ctx.logger.debug(s"Resolve resource: resolved successfully")
-                  yield ()
-                catch
-                  case err: DecodingError =>
-                    val message =
-                      s"Resolve resource: failed to decode resource: ${err.getMessage()}, failing resolution"
-                    ctx.logger.error(message) *> failAllPromises(err)
+                for
+                  _ <- ctx.logger
+                    .trace(s"Resolve resource: fulfilling ${fulfilmentResults.size} promises")
+                  _ <- Result.sequence(fulfilmentResults).void
+                  _ <- ctx.logger.debug(s"Resolve resource: resolved successfully")
+                yield ()
 
         (resource, resolver)
     }
