@@ -42,7 +42,8 @@ object ResourceDecoder:
           }
           .getOrElse {
             if ctx.isDryRun then Right(OutputData.unknown().withDependency(resource))
-            else Right(OutputData.empty(Set(resource)))
+            // TODO: formatted DecodingError
+            else Left(DecodingError(s"Missing property $propertyName in resource $resourceLabel"))
           }
           .map(_.withDependencies(fieldDependencies))
 
