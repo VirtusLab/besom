@@ -1,4 +1,4 @@
-name: Test website deployment
+name: Test website deployment to GitHub Pages
 
 on:
   pull_request:
@@ -6,7 +6,6 @@ on:
       - develop
     paths: 
       - "website"
-      
 jobs:
   test-deploy:
     if: github.event.pull_request.head.repo.full_name == github.repository

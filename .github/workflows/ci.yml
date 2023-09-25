@@ -9,6 +9,7 @@ on:
     - 'template'
     - 'proto'
     - 'experimental'
+    - 'website'
   pull_request:
     branches: [ 'main', 'develop' ]
     types: [ 'opened', 'reopened', 'synchronize' ]
@@ -18,6 +19,7 @@ on:
     - 'template'
     - 'proto'
     - 'experimental'
+    - 'website'
 
 env:
   TOKEN: ${{ secrets.GITHUB_TOKEN }}
