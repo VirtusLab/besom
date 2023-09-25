@@ -1,3 +1,7 @@
 name: random-besom-test
 description: Besom random test
-runtime: scala
+runtime:
+  name: scala
+  options: # language host debugging options
+    logtostderr: false
+    v: 0
