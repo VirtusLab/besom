@@ -8,6 +8,7 @@ import scala.concurrent.duration.Duration
 
 import logging.{LocalBesomLogger => logger}
 import scala.annotation.implicitNotFound
+import besom.util.Zippable
 
 trait Fiber[+A]:
   def join: Result[A]

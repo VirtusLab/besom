@@ -1,6 +1,7 @@
 package besom.internal
 
 import scala.collection.BuildFrom
+import besom.util.*
 
 enum OutputData[+A]:
   case Unknown(resources: Set[Resource], isSecret: Boolean) extends OutputData[Nothing]
@@ -31,7 +32,7 @@ enum OutputData[+A]:
 
   def flatten[B](using A <:< OutputData[B]): OutputData[B] = flatMap(identity)
 
-  def optional: OutputData[Option[A]] =
+  def some: OutputData[Option[A]] =
     this match
       case u @ Unknown(_, _)                 => u.asInstanceOf[OutputData[Option[A]]]
       case Known(resources, isSecret, value) => Known(resources, isSecret, Some(value))
@@ -78,6 +79,12 @@ enum OutputData[+A]:
     this match
       case u @ Unknown(_, _)                       => Result.pure(u)
       case k @ Known(resources, isSecret, None)    => Result.pure(k.asInstanceOf[OutputData[B]])
+      case Known(resources, isSecret, Some(value)) => f(value).map(b => Known(resources, isSecret, Some(b)))
+
+  def traverseValidated[E, B](f: A => Validated[E, B]): Validated[E, OutputData[B]] =
+    this match
+      case u @ Unknown(_, _)                       => Validated.valid(u)
+      case k @ Known(resources, isSecret, None)    => Validated.valid(k.asInstanceOf[OutputData[B]])
       case Known(resources, isSecret, Some(value)) => f(value).map(b => Known(resources, isSecret, Some(b)))
 
   def isEmpty: Boolean =

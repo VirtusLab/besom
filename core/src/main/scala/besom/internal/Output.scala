@@ -1,7 +1,7 @@
 package besom.internal
 
 import scala.util.{NotGiven => Not}
-import besom.util.NotProvided
+import besom.util.Zippable
 import scala.collection.BuildFrom
 
 /** Output is a wrapper for a monadic effect used to model async execution that allows Pulumi to track information about

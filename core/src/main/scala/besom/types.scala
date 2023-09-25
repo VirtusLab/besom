@@ -168,7 +168,9 @@ object types:
 
     given Encoder[E] = Encoder.stringEncoder.contramap(instance => instance.name)
     given Decoder[E] = Decoder.stringDecoder.emap { (name, label) =>
-      namesToInstances.get(name).toRight(DecodingError(s"$label: `${name}` is not a valid name of `${enumName}`"))
+      namesToInstances
+        .get(name)
+        .toRight(DecodingError(s"$label: `${name}` is not a valid name of `${enumName}`", label = label))
     }
 
   export besom.aliases.{*, given}
