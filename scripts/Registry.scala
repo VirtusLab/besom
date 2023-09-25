@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.immutable.Stream.Cons
 import java.net.URLEncoder
 import org.virtuslab.yaml.*
+import scala.util.*
 
 case class PulumiPackage(
   category: String,
@@ -40,8 +41,8 @@ def fetchPluginDownloadURLFromSchema(packageName: String, version: String): Stri
   val schema = ujson.read(os.read(os.pwd / ".out" / "schemas" / packageName / version / "schema.json"))
   schema("pluginDownloadURL").str
 
-def fetchSchemaAndExtractPluginDownloadURL(pulumiPackage: PulumiPackage): Option[String] =
-  if pulumiPackage.schema_file_path.endsWith(".yaml") then return None
+def fetchSchemaAndExtractPluginDownloadURL(pulumiPackage: PulumiPackage): Try[String] =
+  if pulumiPackage.schema_file_path.endsWith(".yaml") then return Failure(Exception("YAML schemas are not supported"))
 
   val Array(owner, repo) = pulumiPackage.repo_url.stripPrefix("https://github.com/").split("/", 2)
   val version            = pulumiPackage.version
@@ -53,16 +54,14 @@ def fetchSchemaAndExtractPluginDownloadURL(pulumiPackage: PulumiPackage): Option
 
   val response = quickRequest.get(uri"$schemaUrl").headers(headers).send()
   val schema   = ujson.read(response.body)
-  val pluginDownloadURL =
-    try Some(schema("pluginDownloadURL").str)
-    catch
-      case t: Throwable =>
-        val tmpFile = os.root / "tmp" / URLEncoder.encode(schemaUrl.replace(" ", "_"))
-        os.write.over(tmpFile, response.body)
-        println(s"Wrote schema to $tmpFile")
-        None
 
-  pluginDownloadURL
+  Try(schema("pluginDownloadURL").str) match
+    case Failure(t) =>
+      val tmpFile = os.root / "tmp" / URLEncoder.encode(schemaUrl.replace(" ", "_"))
+      os.write.over(tmpFile, response.body)
+      print(s" Wrote schema to $tmpFile")
+      Failure(t)
+    case success => success
 
 def installPlugin(
   packageName: String,
@@ -94,7 +93,7 @@ def publishProviderToMaven(packageName: String, version: String, silent: Boolean
 def noPluginsInstalled: Boolean =
   os.proc("pulumi", "plugin", "ls").call().out.lines().map(_.trim).contains("TOTAL plugin cache size: 0 B")
 
-def fetchPackageInfo(): Map[String, String] =
+def fetchPackageInfo(): Map[String, PulumiPackage] =
   val response  = quickRequest.get(uri"$packagesRepoApi").headers(headers).send()
   val files     = ujson.read(response.body).arr
   val yamlFiles = files.filter(file => file("name").str.endsWith(".yaml"))
@@ -108,7 +107,9 @@ def fetchPackageInfo(): Map[String, String] =
 
         reportProgress
 
-        packageName -> yamlResponse.body
+        packageName -> yamlResponse.body.as[PulumiPackage].getOrElse {
+          throw Exception(s"Failed to parse package details for $packageName:\n${yamlResponse.body}")
+        }
       }
       .toMap
   }
@@ -126,19 +127,20 @@ extension (srv: Server)
 def tryToFindServer(
   packageName: String,
   pulumiPackage: PulumiPackage
-): Option[Server] =
+): Try[Server] =
   val main = installPlugin(packageName, pulumiPackage.version, None)
 
-  if main.exitCode == 0 then Some(Server.Registry)
+  if main.exitCode == 0 then Success(Server.Registry)
   else
-    val pluginDownloadUrl = fetchSchemaAndExtractPluginDownloadURL(pulumiPackage)
-    val communityPlugin   = installPlugin(packageName, pulumiPackage.version, pluginDownloadUrl)
+    fetchSchemaAndExtractPluginDownloadURL(pulumiPackage).flatMap { pluginDownloadUrl =>
+      val communityPlugin = installPlugin(packageName, pulumiPackage.version, Some(pluginDownloadUrl))
 
-    if communityPlugin.exitCode == 0
-    then pluginDownloadUrl.map(Server.Community(_))
-    else
-      None
-      // throw Exception(s"Failed to find plugin download URL for $packageName ${pulumiPackage.version}")
+      if communityPlugin.exitCode == 0
+      then Success(Server.Community(pluginDownloadUrl))
+      else Failure(Exception(s"Failed to install plugin for $packageName ${pulumiPackage.version}"))
+    }
+
+    // throw Exception(s"Failed to find plugin download URL for $packageName ${pulumiPackage.version}")
 
 @main def registry(command: String): Unit =
   command match
@@ -156,13 +158,7 @@ def tryToFindServer(
 
       withProgress("Finding servers", packageInfos.size) {
         packageInfos
-          .parMap(10) { case (packageName, packageDetails) =>
-            val pulumiPackage = packageDetails
-              .as[PulumiPackage]
-              .getOrElse {
-                throw Exception(s"Failed to parse package details for $packageName:\n$packageDetails")
-              }
-
+          .parMap(10) { case (packageName, pulumiPackage) =>
             val maybeServer = tryToFindServer(packageName, pulumiPackage)
 
             val current = index.incrementAndGet()
@@ -172,9 +168,10 @@ def tryToFindServer(
             (packageName, pulumiPackage.version, maybeServer)
           }
       }
-        .sortBy(_._3.isDefined)
+        .sortBy(_._3.isSuccess)
         .foreach {
-          case (packageName, version, None) => println(s"Failed to find server for: $packageName $version")
-          case (packageName, version, Some(serverUrl)) =>
+          case (packageName, version, Failure(t)) =>
+            println(s"Failed to find server for: $packageName $version: ${t.getMessage}")
+          case (packageName, version, Success(serverUrl)) =>
             println(s"package: $packageName, version: $version, server: ${serverUrl.show}")
         }
