@@ -5,7 +5,6 @@ import scala.quoted.*
 import scala.deriving.Mirror
 import besom.internal.logging.*
 import besom.types.{Label, URN, ResourceId}
-import org.checkerframework.checker.units.qual.C
 
 trait ResourceDecoder[A <: Resource]: // TODO rename to something more sensible
   def makeResolver(using Context, MDC[Label]): Result[(A, ResourceResolver[A])]
