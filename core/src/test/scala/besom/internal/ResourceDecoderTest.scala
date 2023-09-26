@@ -38,6 +38,7 @@ class ResourceDecoderTest extends munit.FunSuite:
       fail("Expected failed output")
     catch
       case de: besom.internal.DecodingError =>
+      case ade: besom.internal.AggregatedDecodingError =>
       case t: Throwable                     => fail(s"Expected DecodingError", clues(t))
 
   test("resource resolver - happy path") {

@@ -3,6 +3,8 @@ package besom.internal
 import com.google.protobuf.struct.{Struct, Value}
 import scala.quoted.*
 import scala.deriving.Mirror
+import scala.util.chaining.*
+import besom.util.*
 import besom.internal.logging.*
 import besom.types.{Label, URN, ResourceId}
 
@@ -20,7 +22,7 @@ object ResourceDecoder:
     )(using
       ctx: Context,
       mdc: MDC[Label]
-    ): Either[DecodingError, OutputData[A]] =
+    ): Validated[DecodingError, OutputData[A]] =
       val resourceLabel = mdc.get(Key.LabelKey)
 
       val fieldDependencies = dependencies.get(propertyName).getOrElse(Set.empty)
@@ -32,18 +34,18 @@ object ResourceDecoder:
           .map { value =>
             log.trace(s"extracting custom property $propertyName from $value using decoder $decoder")
             decoder.decode(value, propertyLabel).map(_.withDependency(resource)) match
-              case Left(err) =>
+              case Validated.Invalid(err) =>
                 log.trace(s"failed to extract custom property $propertyName from $value: $err")
-                Left(err)
-              case Right(value) =>
+                Validated.Invalid(err)
+              case Validated.Valid(value) =>
                 log.trace(s"extracted custom property $propertyName from $value")
-                Right(value)
+                Validated.Valid(value)
           }
           .getOrElse {
-            if ctx.isDryRun then Right(OutputData.unknown().withDependency(resource))
+            if ctx.isDryRun then Validated.valid(OutputData.unknown().withDependency(resource))
             // TODO: formatted DecodingError
             else
-              Left(DecodingError(s"Missing property $propertyName in resource $resourceLabel", label = propertyLabel))
+              Validated.invalid(DecodingError(s"Missing property $propertyName in resource $resourceLabel", label = propertyLabel))
           }
           .map(_.withDependencies(fieldDependencies))
 
@@ -98,8 +100,8 @@ object ResourceDecoder:
                 val propertiesFulfilmentResults =
                   customPopertiesPromises.zip(customPropertyExtractors).map { (promise, extractor) =>
                     extractor.extract(fields, dependencies, resource) match
-                      case Left(err)    => promise.fail(err)
-                      case Right(value) => promise.fulfillAny(value)
+                      case Validated.Valid(outputData) => promise.fulfillAny(outputData)
+                      case Validated.Invalid(errs)     => promise.fail(AggregatedDecodingError(errs))
                   }
 
                 val fulfilmentResults = Vector(

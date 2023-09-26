@@ -92,6 +92,8 @@ enum OutputData[+A]:
       case Unknown(_, _)         => true
       case Known(_, _, optValue) => optValue.isEmpty
 
+  def nonEmpty: Boolean = !isEmpty
+
   private[internal] def getValue: Option[A] =
     this match
       case Unknown(_, _)         => None
