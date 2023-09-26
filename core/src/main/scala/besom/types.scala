@@ -117,7 +117,10 @@ object types:
         URN.UrnRegex.findFirstMatchIn(urn).map(_.group("resourceType")).flatMap(Option(_))
       def resourceName: String = URN.UrnRegex.findFirstMatchIn(urn).get.group("resourceName")
 
-  opaque type ResourceId = String
+  // TODO This should not be a subtype of string, user's access to underlying string has no meaning
+  // TODO User should never modify Resource Ids, they should be opaque but they should also be
+  // TODO parameterized with their resource type, ie.: ResourceId[aws.s3.Bucket]
+  opaque type ResourceId <: String = String
   object ResourceId:
     val empty: ResourceId = ""
 
@@ -136,12 +139,13 @@ object types:
     // case InvalidAsset // TODO - should we use this?
 
   enum Archive extends AssetOrArchive:
-    case FileArchive(path: String) // TODO: java.nio.file.Path? validate it's a correct extension or MIME at compile time?
+    case FileArchive(
+      path: String
+    ) // TODO: java.nio.file.Path? validate it's a correct extension or MIME at compile time?
     // TODO: a proper URI type? validate it's a proper URI? allows file://, http(s)://, custom schemes
     case RemoteArchive(uri: String)
     case AssetArchive(assets: Map[String, AssetOrArchive])
     // case InvalidArchive // TODO - should we use this?
-
 
   sealed trait PulumiEnum:
     def name: String
@@ -167,5 +171,4 @@ object types:
       namesToInstances.get(name).toRight(DecodingError(s"$label: `${name}` is not a valid name of `${enumName}`"))
     }
 
-
-  export besom.aliases.{ *, given }
+  export besom.aliases.{*, given}
