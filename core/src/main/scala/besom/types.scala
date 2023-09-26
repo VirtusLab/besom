@@ -5,6 +5,7 @@ import scala.compiletime.ops.string.*
 import scala.language.implicitConversions
 import scala.util.Try
 import besom.util.NonEmptyString
+import besom.util.toValidatedOrError
 import besom.internal.{Decoder, Encoder, DecodingError}
 import besom.internal.ResourceDecoder
 import besom.internal.CustomResourceOptions
@@ -170,7 +171,7 @@ object types:
     given Decoder[E] = Decoder.stringDecoder.emap { (name, label) =>
       namesToInstances
         .get(name)
-        .toRight(DecodingError(s"$label: `${name}` is not a valid name of `${enumName}`", label = label))
+        .toValidatedOrError(DecodingError(s"$label: `${name}` is not a valid name of `${enumName}`", label = label))
     }
 
   export besom.aliases.{*, given}

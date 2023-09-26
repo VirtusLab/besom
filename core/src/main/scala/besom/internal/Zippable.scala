@@ -1,4 +1,4 @@
-package besom.util
+package besom.internal
 
 import scala.util.Try
 import scala.concurrent.Future
