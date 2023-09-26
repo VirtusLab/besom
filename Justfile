@@ -260,17 +260,17 @@ test-compiler-plugin: publish-local-sdk publish-local-compiler-plugin
 # Runs a template test
 test-template template-name:
 	echo "Testing template {{template-name}}"
-	pulumi --color=never --emoji=false new -y --force --dir template/test/{{template-name}} -n template-test-{{template-name}} --stack template-test-{{template-name}} ../../../template/{{template-name}}/
-	pulumi --color=never --emoji=false preview --cwd template/test/{{template-name}} --stack template-test-{{template-name}}
+	pulumi --color=never --emoji=false new -y --force --dir templates/test/{{template-name}} -n templates-test-{{template-name}} --stack templates-test-{{template-name}} ../../../templates/{{template-name}}/
+	pulumi --color=never --emoji=false preview --cwd templates/test/{{template-name}} --stack templates-test-{{template-name}}
 	echo "----------------------------------------"
 
-# Cleans the ./template/test/{{template-name}} directory
+# Cleans the ./templates/test/{{template-name}} directory
 clean-test-template template-name:
 	echo "Cleaning template test for {{template-name}}"
-	pulumi --color=never --emoji=false destroy --cwd template/test/{{template-name}} -y || echo "No stack to destroy"
-	pulumi --color=never --emoji=false stack rm --cwd template/test/{{template-name}} -y || echo "No stack to remove"
-	rm -rf ./template/test/{{template-name}} || echo "No directory to remove"
-	rm -rf $HOME/.pulumi/stacks/template-test-{{template-name}} || echo "No directory to remove"
+	pulumi --color=never --emoji=false destroy --cwd templates/test/{{template-name}} -y || echo "No stack to destroy"
+	pulumi --color=never --emoji=false stack rm --cwd templates/test/{{template-name}} -y || echo "No stack to remove"
+	rm -rf ./templates/test/{{template-name}} || echo "No directory to remove"
+	rm -rf $HOME/.pulumi/stacks/templates-test-{{template-name}} || echo "No directory to remove"
 	echo "----------------------------------------"
 
 # Runs all template tests
@@ -278,7 +278,7 @@ test-templates:
 	just test-template default
 	just test-template kubernetes
 
-# Cleans the ./template/test directory
+# Cleans the ./templates/test directory
 clean-test-templates:
 	just clean-test-template default
 	just clean-test-template kubernetes

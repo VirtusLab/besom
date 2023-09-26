@@ -41,7 +41,7 @@ just publish-local-provider-sdk kubernetes 4.2.0
 ### Initialize your code with a template
 You can start writing your code at this point but to help you set up 
 Besom comes with Pulumi templates. 
-More information about templates in [./template/README](./template/README)
+More information about templates in [./templates/README](./templates/README)
 
 To initialize your project with chosen template run this in an empty folder:
 ```shell
@@ -52,7 +52,7 @@ e.g.:
 cd ..
 mkdir infra
 cd infra
-pulumi new ../besom/template/kubernetes
+pulumi new ../besom/templates/kubernetes
 ```
 
 ## Explaining the file structure
