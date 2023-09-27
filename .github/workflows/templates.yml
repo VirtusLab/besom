@@ -2,11 +2,11 @@ on:
   push:
     branches: [ 'main', 'develop' ]
     paths:
-      - 'templates'
+      - 'templates/**'
   pull_request:
     branches: [ 'main', 'develop' ]
     paths:
-      - 'templates'
+      - 'templates/**'
 
 env:
   PULUMI_CONFIG_PASSPHRASE: 'passphrase'
