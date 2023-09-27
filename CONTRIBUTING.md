@@ -35,7 +35,7 @@ to make sure your issue is unique, to lighten the triage burden on our maintaine
 You will want to install the following on your machine:
 
 - [Pulumi CLI](https://www.pulumi.com/docs/install/) 3.30.0 or higher
-- [scala-cli](https://scala-cli.virtuslab.org/install/) 1.0.4 or higher
+- [Scala-CLI](https://scala-cli.virtuslab.org/install/) 1.0.4 or higher
 - JDK 11 or higher
 - Scala 3.3.1 or higher
 - Go 1.20 or higher
