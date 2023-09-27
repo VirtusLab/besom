@@ -4,22 +4,22 @@ on:
   push:
     branches: [ 'main', 'develop' ]
     paths-ignore: 
-    - '**.md'
-    - 'LICENSE'
-    - 'templates'
-    - 'proto'
-    - 'experimental'
-    - 'website'
+      - '**.md'
+      - 'LICENSE'
+      - 'templates/**'
+      - 'proto/**'
+      - 'experimental/**'
+      - 'website/**'
   pull_request:
     branches: [ 'main', 'develop' ]
     types: [ 'opened', 'reopened', 'synchronize' ]
     paths-ignore: 
-    - '**.md'
-    - 'LICENSE'
-    - 'templates'
-    - 'proto'
-    - 'experimental'
-    - 'website'
+      - '**.md'
+      - 'LICENSE'
+      - 'templates/**'
+      - 'proto/**'
+      - 'experimental/**'
+      - 'website/**'
 
 env:
   PULUMI_CONFIG_PASSPHRASE: 'passphrase'

@@ -3,6 +3,7 @@
 
 const lightCodeTheme = require('prism-react-renderer/themes/github');
 const darkCodeTheme = require('prism-react-renderer/themes/dracula');
+const codeblockVersion = require('./src/remark/codeblockVersion');
 
 const organizationName = 'virtuslab';
 const projectName = 'besom';
@@ -35,6 +36,10 @@ const config = {
     locales: ['en'],
   },
 
+  customFields: {
+    besomVersion: process.env.BESOM_VERSION
+  },
+
   presets: [
     [
       'classic',
@@ -42,6 +47,7 @@ const config = {
       ({
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
+          remarkPlugins: [codeblockVersion]
         },
         blog: {
           showReadingTime: true,
@@ -66,9 +72,9 @@ const config = {
         items: [
           {
             type: 'docSidebar',
-            sidebarId: 'tutorialSidebar',
+            sidebarId: 'docsSidebar',
             position: 'left',
-            label: 'Tutorial',
+            label: 'Documentation',
           },
           {
             href: 'https://github.com/virtuslab/besom',
@@ -79,18 +85,7 @@ const config = {
       },
       footer: {
         style: 'dark',
-        links: [
-          {
-            title: 'Docs',
-            items: [
-              {
-                label: 'Tutorial',
-                to: '/docs/intro',
-              },
-            ],
-          },
-        ],
-        copyright: `Copyright © ${new Date().getFullYear()} VirtusLab, Inc. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} VirtusLab Sp. z o.o.  Built with Docusaurus.`,
       },
       prism: {
         theme: lightCodeTheme,
