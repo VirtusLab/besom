@@ -55,7 +55,7 @@ using the Scala programming language. Scala support is currently in **Public Bet
 
     ```bash
     mkdir besom-demo && cd besom-demo
-    pulumi new https://github.com/VirtusLab/besom/tree/develop/template/aws
+    pulumi new https://github.com/VirtusLab/besom/tree/develop/templates/aws
     ```
 
 5. **Deploy to the Cloud**:
