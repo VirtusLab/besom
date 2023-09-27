@@ -6,20 +6,20 @@ on:
     paths-ignore: 
       - '**.md'
       - 'LICENSE'
-      - 'template'
-      - 'proto'
-      - 'experimental'
-      - 'website'
+      - 'template/**'
+      - 'proto/**'
+      - 'experimental/**'
+      - 'website/**'
   pull_request:
     branches: [ 'main', 'develop' ]
     types: [ 'opened', 'reopened', 'synchronize' ]
     paths-ignore: 
       - '**.md'
       - 'LICENSE'
-      - 'template'
-      - 'proto'
-      - 'experimental'
-      - 'website'
+      - 'template/**'
+      - 'proto/**'
+      - 'experimental/**'
+      - 'website/**'
 
 env:
   TOKEN: ${{ secrets.GITHUB_TOKEN }}
