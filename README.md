@@ -99,11 +99,11 @@ and [architecture and programming model concepts](https://virtuslab.github.io/be
 ## Explaining the file structure
 `Pulumi.yaml` is your main Pulumi file, explained [here](https://www.pulumi.com/docs/concepts/projects/project-file/). 
 
-`project.scala` is the file containing your dependencies for [scala-cli](https://scala-cli.virtuslab.org).
+`project.scala` is the file containing your dependencies for [Scala-CLI](https://scala-cli.virtuslab.org).
 
 `Main.scala` is the entry point for your Infrastructure as Code. 
 
-Resources created in `Pulumi.run{ ... }` block will be created by Pulumi.
+Resources created in `Pulumi.run { ... }` block will be created by Pulumi.
 
 ## Tips
 - Pass `Context` everywhere you are using Pulumi, for example when you are creating a resource.
@@ -137,6 +137,26 @@ runtime:
   options:
     binary: target/myproject-1.0-SNAPSHOT-jar-with-dependencies.jar
 ```
+
+## Choice of build tool and IDE
+
+Besom uses [Scala-CLI](https://scala-cli.virtuslab.org/) for project compilation and execution.
+To set up IDE support for an infrastructural project using Besom execute this command:
+```bash
+scala-cli setup-ide .
+```
+inside of the directory in which Besom project files exist. If you are using
+[Intellij IDEA](https://www.jetbrains.com/idea/) you need to import the project using BSP format.
+[Metals](https://scalameta.org/metals/) recognizes Scala-CLI projects automatically.
+
+[sbt](https://www.scala-sbt.org/) is also supported out-of-the-box but is not recommended due to
+slower iteration speed. Use of sbt support is suggested for situations where managed infrastructure
+is being added to an already existing project that uses sbt as the main build tool.
+
+IDE setup works automatically with both Intellij IDEA and Metals.
+
+[Mill](https://mill-build.com/) is not yet supported.
+
 
 ## Contributing
 

@@ -75,3 +75,25 @@ To start your adventure with infrastructure-as-code with Scala follow these step
     ```bash
     pulumi destroy -y
     ```
+
+### Choice of build tool and IDE
+---
+
+Besom uses [Scala-CLI](https://scala-cli.virtuslab.org/) for project compilation and execution. 
+To set up IDE support for an infrastructural project using Besom execute this command inside of the 
+directory in which Besom project files exist:
+```bash
+scala-cli setup-ide .
+```
+
+If you are using  [Intellij IDEA](https://www.jetbrains.com/idea/) you need to import the project using 
+BSP format. [Metals](https://scalameta.org/metals/) recognizes Scala-CLI projects automatically.
+
+[sbt](https://www.scala-sbt.org/) is also supported out-of-the-box but is not recommended due to 
+slower iteration speed. Use of sbt support is suggested for situations where managed infrastructure 
+is being added to an already existing project that uses sbt as the main build tool.
+
+IDE setup works automatically with both Intellij IDEA and Metals.
+
+[Mill](https://mill-build.com/) is not yet supported.
+
