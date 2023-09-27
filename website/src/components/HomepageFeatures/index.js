@@ -4,30 +4,35 @@ import styles from './styles.module.css';
 
 const FeatureList = [
   {
-    title: 'Write infrastructure in Scala 3',
+    title: 'Define infrastructure using Scala 3',
     Svg: require('@site/static/img/scala-logo.svg').default,
+    link: 'https://www.scala-lang.org/',
     description: (
       <>
-        No need to learn a new language. Use Scala 3 to write your infrastructure.
+        No need to learn a new language.<br />Let Scala's type system protect your deployments too.
       </>
     ),
   },
   {
     title: 'Leverage the Pulumi ecosystem',
     Svg: require('@site/static/img/pulumi_logo_black_font.svg').default,
+    link: 'https://www.pulumi.com/',
     description: (
       <>
-        Seemlessly convert your existing Puluimi infrastructure to Scala 3.
+        Use the <a href="https://www.pulumi.com/registry/">Pulumi packages</a> to deploy your apps to any cloud.<br />
+        Integrate with any SaaS or platform of your choice.
       </>
     ),
   },
 ];
 
-function Feature({Svg, title, description}) {
+function Feature({ Svg, link, title, description }) {
   return (
     <div className={clsx('col col--6')}>
       <div className="text--center">
-        <Svg className={styles.featureSvg} role="img" />
+        <a href={link}>
+          <Svg className={styles.featureSvg} role="img" height="100" />
+        </a>
       </div>
       <div className="text--center padding-horiz--md">
         <h3>{title}</h3>
