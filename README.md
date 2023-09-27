@@ -103,7 +103,7 @@ and [architecture and programming model concepts](https://virtuslab.github.io/be
 
 `Main.scala` is the entry point for your Infrastructure as Code. 
 
-Resources created in `Pulumi.run{ ... }` block will be created by Pulumi.
+Resources created in `Pulumi.run { ... }` block will be created by Pulumi.
 
 ## Tips
 - Pass `Context` everywhere you are using Pulumi, for example when you are creating a resource.
