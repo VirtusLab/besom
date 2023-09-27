@@ -38,23 +38,25 @@ using the Scala programming language. Scala support is currently in **Public Bet
     curl -sSLf https://virtuslab.github.io/scala-cli-packages/scala-setup.sh | sh
     ```
 
-3. **Install Language Plugin in Pulumi**:
+3. **Install Scala Language Plugin in Pulumi**:
 
     To install the latest Scala Language Plugin release, run the following:
 
     ```bash
-    pulumi plugin install --server github://api.github.com/VirtusLab/besom language scala 0.1.0
+    pulumi plugin install language scala 0.1.0 --server github://api.github.com/VirtusLab/besom 
     ```
 
 4. **Create a new project**:
 
    You can start writing your Besom code at this point, but to help you set up
-   Besom comes with Pulumi [templates](templates).
+   Besom comes with [Pulumi templates](./templates).
    
    You can get started with the `pulumi new` command:
 
     ```bash
     mkdir besom-demo && cd besom-demo
+    ```
+    ```bash
     pulumi new https://github.com/VirtusLab/besom/tree/develop/templates/aws
     ```
 
@@ -90,9 +92,9 @@ using the Scala programming language. Scala support is currently in **Public Bet
 
 To learn more, head over to 
 [virtuslab.github.io/besom](https://virtuslab.github.io/besom/) for much more information, including
-[tutorials](https://virtuslab.github.io/besom/tutorials/), 
+[tutorial](https://virtuslab.github.io/besom/docs/tutorial), 
 [examples](examples), 
-and [programming model concepts](https://virtuslab.github.io/besom/concepts/).
+and [architecture and programming model concepts](https://virtuslab.github.io/besom/docs/architecture).
 
 ## Explaining the file structure
 `Pulumi.yaml` is your main Pulumi file, explained [here](https://www.pulumi.com/docs/concepts/projects/project-file/). 
