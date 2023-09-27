@@ -51,7 +51,7 @@ using the Scala programming language. Scala support is currently in **Public Bet
 
     ```bash
     mkdir besom-demo && cd besom-demo
-    pulumi new https://github.com/VirtusLab/besom/tree/develop/template/default
+    pulumi new https://github.com/VirtusLab/besom/tree/develop/template/aws
     ```
 
 5. **Deploy to the Cloud**:
@@ -76,6 +76,14 @@ using the Scala programming language. Scala support is currently in **Public Bet
     pulumi stack output bucketName
     ```
 
+7. **Destroy your Resources**:
+
+   After you're done, you can remove all resources created by your program:
+
+    ```bash
+    pulumi destroy -y
+    ```
+
 To learn more, head over to 
 [virtuslab.github.io/besom](https://virtuslab.github.io/besom/) for much more information, including
 [tutorials](https://virtuslab.github.io/besom/tutorials/), 
@@ -98,6 +106,30 @@ their evaluation is triggered directly or transitively from the main for-compreh
 - Use whatever scala concepts you are familiar with, infrastructure as code in Besom is still a scala program, 
 so you have the full potential of the language to work with.
 - Pay attention to the types. You will be instantiating case classes to pass parameters, note their package of origin.
+
+## Requirements
+
+JDK 11 or higher is required.
+
+Scala CLI is the recommended build tool, other tools are also
+supported. Besom will recognize Scala CLI and SBT programs 
+and automatically recompile them without any further configuration. 
+The supported versions are:
+
+- Scala CLI 1.0.4 or higher
+- SBT 1.5.5 or higher
+
+Other build tools are supported via the `runtime.options.binary`
+configuration option that can point to a pre-built jar in
+`Pulumi.yaml`, e.g.:
+
+```
+name: myproject
+runtime:
+  name: scala
+  options:
+    binary: target/myproject-1.0-SNAPSHOT-jar-with-dependencies.jar
+```
 
 ## Contributing
 
