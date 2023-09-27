@@ -2,7 +2,7 @@ on:
   push:
     branches: [ 'main', 'develop' ]
     paths:
-      - 'template'
+      - 'templates'
   pull_request:
     branches: [ 'main', 'develop' ]
     paths:
