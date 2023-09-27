@@ -195,8 +195,8 @@ for **sbt** create a corresponding module:
    ```scala
 lazy val infra = project.in(file("infrastructure")).settings(
    libraryDependencies ++= Seq(
-   "org.virtuslab" %% "besom-kubernetes" % "0.0.1-beta", // or any other sdk you are using
-   "org.virtuslab" %% "besom-core" % "0.0.1-beta"
+   "org.virtuslab" %% "besom-kubernetes" % "0.1.0", // or any other sdk you are using
+   "org.virtuslab" %% "besom-core" % "0.1.0"
    ))
    ```
 This just informs your IDE about the existence of the infrastructure module,

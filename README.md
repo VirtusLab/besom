@@ -43,7 +43,7 @@ using the Scala programming language. Scala support is currently in **Public Bet
     To install the latest Scala Language Plugin release, run the following:
 
     ```bash
-    pulumi plugin install --server github://api.github.com/VirtusLab/besom language scala 0.0.1-beta
+    pulumi plugin install --server github://api.github.com/VirtusLab/besom language scala 0.1.0
     ```
 
 4. **Create a new project**:
