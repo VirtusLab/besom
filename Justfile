@@ -277,11 +277,13 @@ clean-test-template template-name:
 test-templates:
 	just test-template default
 	just test-template kubernetes
+	just test-template aws
 
 # Cleans the ./templates/test directory
 clean-test-templates:
 	just clean-test-template default
 	just clean-test-template kubernetes
+	just clean-test-template aws
 
 ####################
 # Demo
