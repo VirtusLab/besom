@@ -31,8 +31,12 @@ using the Scala programming language. Scala support is currently in **Public Bet
 
 2. **Install Scala CLI**:
 
-    To install the latest Scala CLI release, see 
-    [installation instructions](https://scala-cli.virtuslab.org/install) for installation options.
+   To install the latest Scala CLI release, run the following (see 
+   [installation instructions](https://scala-cli.virtuslab.org/install) for additional installation options):
+
+    ```bash
+    curl -sSLf https://virtuslab.github.io/scala-cli-packages/scala-setup.sh | sh
+    ```
 
 3. **Install Language Plugin in Pulumi**:
 
