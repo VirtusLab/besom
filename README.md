@@ -32,7 +32,15 @@ using the Scala programming language. Scala support is currently in **Public Bet
     To install the latest Scala CLI release, see 
     [installation instructions](https://scala-cli.virtuslab.org/install) for installation options.
 
-3. **Create a new project**:
+3. **Install Language Plugin in Pulumi**:
+
+    To install the latest Scala Language Plugin release, run the following:
+
+    ```bash
+    $ pulumi plugin install --server github://api.github.com/VirtusLab/besom language scala 0.0.1-beta
+    ```
+
+4. **Create a new project**:
 
    You can start writing your Besom code at this point, but to help you set up
    Besom comes with Pulumi [templates](templates).
@@ -44,7 +52,7 @@ using the Scala programming language. Scala support is currently in **Public Bet
     pulumi new https://github.com/VirtusLab/besom/tree/develop/template/default
     ```
 
-4 **Deploy to the Cloud**:
+5. **Deploy to the Cloud**:
 
    Run `pulumi up` to get your code to the cloud:
 
@@ -56,7 +64,7 @@ using the Scala programming language. Scala support is currently in **Public Bet
    edits to your project, and subsequent `pulumi up`s will compute
    the minimal diff to deploy your changes.
 
-5 **Use Your Program**:
+6. **Use Your Program**:
 
    Now that your code is deployed, you can interact with it. In the
    above example, we can find the name of the newly provisioned S3
