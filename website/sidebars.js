@@ -51,17 +51,17 @@ const sidebars = {
     },
     {
       type: 'doc',
-      id: 'intro', // TODO url to scaladoc of core
+      id: 'api_reference', // TODO url to scaladoc of core
       label: 'API Reference',
     },
     {
       type: 'doc',
-      id: 'intro',
+      id: 'packages',
       label: 'Packages',
     },
     {
       type: 'doc',
-      id: 'intro',
+      id: 'examples',
       label: 'Examples',
     },
     {
