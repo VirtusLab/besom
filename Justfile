@@ -107,19 +107,19 @@ publish-local-compiler-plugin:
 
 # Publishes core besom SDK
 publish-maven-core:
-	scala-cli publish core --project-version {{besom-version}} {{publish-maven-auth-options}}
+	scala-cli --power publish core --project-version {{besom-version}} {{publish-maven-auth-options}}
 
 # Publishes besom cats-effect extension
 publish-maven-cats:
-	scala-cli publish besom-cats {{ scala-cli-main-options-cats }} --project-version {{besom-version}} {{publish-maven-auth-options}}
+	scala-cli --power publish besom-cats {{ scala-cli-main-options-cats }} --project-version {{besom-version}} {{publish-maven-auth-options}}
 
 # Publishes besom zio extension
 publish-maven-zio:
-	scala-cli publish besom-zio {{ scala-cli-main-options-zio }} --project-version {{besom-version}} {{publish-maven-auth-options}}
+	scala-cli --power publish besom-zio {{ scala-cli-main-options-zio }} --project-version {{besom-version}} {{publish-maven-auth-options}}
 
 # Publishes besom compiler plugin
 publish-maven-compiler-plugin:
-	scala-cli publish compiler-plugin --project-version {{besom-version}} {{publish-maven-auth-options}}
+	scala-cli --power publish compiler-plugin --project-version {{besom-version}} {{publish-maven-auth-options}}
 
 # Compiles and publishes the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes`
 publish-maven-provider-sdk schema-name schema-version:
@@ -292,4 +292,3 @@ clean-slate-liftoff: clean-sdk
 	just publish-local-provider-sdk kubernetes 4.2.0
 	just clean-liftoff
 	just liftoff
-
