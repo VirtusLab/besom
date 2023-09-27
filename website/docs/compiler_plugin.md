@@ -13,14 +13,14 @@ Currently the plugin provides the following features:
 To use the compiler plugin in `scala-cli`, add the following directive to your build configuration file:
 
 ```scala
-//> using plugin "org.virtuslab::besom-compiler-plugin:0.0.1-beta"
+//> using plugin "org.virtuslab::besom-compiler-plugin:$version"
 ```
 
 
 To use the compiler plugin in `sbt`, add the following line to your `build.sbt` file:
 
 ```scala
-addCompilerPlugin("org.virtuslab" %% "besom-compiler-plugin" % "0.0.1-beta")
+addCompilerPlugin("org.virtuslab" %% "besom-compiler-plugin" % "$version")
 ```
 
 :::

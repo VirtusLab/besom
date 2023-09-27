@@ -45,12 +45,13 @@ const sidebars = {
         'lifting',
         'interpolator',
         'components',
+        'compiler_plugin',
         'missing'
       ],
     },
     {
       type: 'doc',
-      id: 'intro', // TODO url to scaladoc of Core
+      id: 'intro', // TODO url to scaladoc of core
       label: 'API Reference',
     },
     {
@@ -62,6 +63,11 @@ const sidebars = {
       type: 'doc',
       id: 'intro',
       label: 'Examples',
+    },
+    {
+      type: 'doc',
+      id: 'templates',
+      label: 'Pulumi templates',
     },
     // {
     //   type: 'doc',

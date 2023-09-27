@@ -37,7 +37,7 @@ const config = {
   },
 
   customFields: {
-    besomVersion: '0.1.0' // TODO read from env via: process.env.BESOM_VERSION
+    besomVersion: process.env.BESOM_VERSION
   },
 
   presets: [

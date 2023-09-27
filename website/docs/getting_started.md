@@ -26,7 +26,7 @@ To start your adventure with infrastructure-as-code with Scala follow these step
     ```
 4. **Create a new project**:
    You can start writing your Besom code at this point, but to help you set up
-   Besom comes with Pulumi [templates](templates). TODO
+   Besom comes with [Pulumi templates](./templates).
    
    You can get started with the `pulumi new` command:
     ```bash
