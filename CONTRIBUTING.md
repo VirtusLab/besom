@@ -38,7 +38,7 @@ You will want to install the following on your machine:
 - [scala-cli](https://scala-cli.virtuslab.org/install/) 1.0.4 or higher
 - JDK 11 or higher
 - Scala 3.3.1 or higher
-- Go 1.18 or higher
+- Go 1.20 or higher
 - [protoc](https://grpc.io/docs/protoc-installation/) 24.3 or higher
 - [just](https://github.com/casey/just#installation) 1.14.0 or higher
 - git

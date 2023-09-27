@@ -113,7 +113,8 @@ so you have the full potential of the language to work with.
 
 ## Requirements
 
-JDK 11 or higher is required.
+- JDK 11 or higher is required
+- Scala 3.3.1 or higher is required
 
 Scala CLI is the recommended build tool, other tools are also
 supported. Besom will recognize Scala CLI and SBT programs 
