@@ -1,5 +1,4 @@
 ---
-sidebar_position: 11
 title: Components
 ---
 
@@ -24,16 +23,16 @@ case class ZooVisit(
   extends ComponentResource 
   derives RegistersOutputs
 ​
-def zooVisit(date: OffsetDateTime)(using Context): Output[ZooVisit] = 
+def ZooVisit(date: OffsetDateTime)(using Context): Output[ZooVisit] = 
   component(s"zoo-visit-at-$date", "user:component:ZooVisit") { 
     for 
-      catsUrl    <- aws.s3.Bucket(s"cats-$date").url
-      parrotsUrl <- aws.s3.Bucket(s"parrot-$date").url
+      catsUrl    <- aws.s3.Bucket(s"cats-$date").websiteEndpoint
+      parrotsUrl <- aws.s3.Bucket(s"parrot-$date").websiteEndpoint
     yield ZooVisit(catsUrl, parrotsUrl)
   }
 ​
 @main def main = Pulumi.run {
-	zooVisit(OffsetDateTime.now()).map { visit =>
+	ZooVisit(OffsetDateTime.now()).map { visit =>
 		Pulumi.exports(
 		  cats    = visit.catPicsUrl,
 		  parrots = visit.parrotPicsUrl
