@@ -1,5 +1,5 @@
 import besom.*
-import besom.api.random.{RandomPet}
+import besom.api.random.*
 
 @main def main = Pulumi.run {
   for 
