@@ -14,6 +14,8 @@ using the Scala programming language. Scala support is currently in **Public Bet
 
 * **[Get Started with Besom](#getting-started)**: Deploy a simple application in AWS, Azure, Google Cloud or Kubernetes using Besom to describe the desired infrastructure using Scala.
 
+* **[Besom Docs](https://virtuslab.github.io/besom/)**: Learn about Besom concepts, follow user-guides, and consult the reference documentation.
+
 * **[Examples](examples)**: Browse Scala examples across many clouds and scenarios including containers, serverless, and infrastructure.
 
 ## <a name="getting-started"></a>Getting Started
@@ -24,7 +26,7 @@ using the Scala programming language. Scala support is currently in **Public Bet
    [installation instructions](https://www.pulumi.com/docs/reference/install/) for additional installation options):
 
     ```bash
-    $ curl -fsSL https://get.pulumi.com/ | sh
+    curl -fsSL https://get.pulumi.com/ | sh
     ```
 
 2. **Install Scala CLI**:
@@ -37,7 +39,7 @@ using the Scala programming language. Scala support is currently in **Public Bet
     To install the latest Scala Language Plugin release, run the following:
 
     ```bash
-    $ pulumi plugin install --server github://api.github.com/VirtusLab/besom language scala 0.0.1-beta
+    pulumi plugin install --server github://api.github.com/VirtusLab/besom language scala 0.0.1-beta
     ```
 
 4. **Create a new project**:
@@ -57,7 +59,7 @@ using the Scala programming language. Scala support is currently in **Public Bet
    Run `pulumi up` to get your code to the cloud:
 
     ```bash
-    $ pulumi up
+    pulumi up
     ```
 
    This makes all cloud resources declared in your code. Simply make
@@ -71,8 +73,14 @@ using the Scala programming language. Scala support is currently in **Public Bet
    bucket:
 
     ```bash
-    $ pulumi stack output bucketName
+    pulumi stack output bucketName
     ```
+
+To learn more, head over to 
+[virtuslab.github.io/besom](https://virtuslab.github.io/besom/) for much more information, including
+[tutorials](https://virtuslab.github.io/besom/tutorials/), 
+[examples](examples), 
+and [programming model concepts](https://virtuslab.github.io/besom/concepts/).
 
 ## Explaining the file structure
 `Pulumi.yaml` is your main Pulumi file, explained [here](https://www.pulumi.com/docs/concepts/projects/project-file/). 
