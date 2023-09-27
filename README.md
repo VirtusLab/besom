@@ -117,7 +117,7 @@ and automatically recompile them without any further configuration.
 The supported versions are:
 
 - Scala CLI 1.0.4 or higher
-- SBT 1.5.5 or higher
+- SBT 1.9.6 or higher
 
 Other build tools are supported via the `runtime.options.binary`
 configuration option that can point to a pre-built jar in
