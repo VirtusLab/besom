@@ -38,5 +38,5 @@ jobs:
       - name: Install language plugin
         run: |- 
           pulumi plugin install language scala --server github://api.github.com/VirtusLab/besom
-      - name: Test templates
+      - name: Test examples
         run: just test-examples
