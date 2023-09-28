@@ -38,5 +38,16 @@ jobs:
       - name: Install language plugin
         run: |- 
           pulumi plugin install language scala --server github://api.github.com/VirtusLab/besom
+      - name: Force AWS provider into offline mode
+        run: |-
+          pulumi config set aws:skipCredentialsValidation true
+          pulumi config set aws:skipMetadataApiCheck      true
+          pulumi config set aws:skipRequestingAccountId   true
+          # These two may be any non-empty string:
+          pulumi config set --secret aws:accessKey "fake" 
+          pulumi config set --secret aws:accessKey "fake"
       - name: Test examples
-        run: just test-examples
+        env:
+          AWS_EC2_METADATA_DISABLED: true
+        run: |-
+          just test-examples
