@@ -16,7 +16,7 @@ import besom.api.aws
 As you can see here we're accessing the property `websiteEndpoint` on `aws.s3.Bucket` class by first `map`ping over the Output. This syntax can be replaced in Besom thanks to first class support of _lifting_ (via Scala 3 extension methods generated in packages for Besom):
 ```scala
 extension (o: Output[aws.s3.Bucket])
-  def url: Output[String] = o.map(_.websiteEndpoint) 
+  def websiteEndpoint: Output[String] = o.map(_.websiteEndpoint) 
 ```
 This allows for this syntax:
 
