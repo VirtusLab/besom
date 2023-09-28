@@ -37,8 +37,6 @@ jobs:
         run: pulumi login --local
       - name: Install language plugin
         run: |- 
-          pulumi -v5 --logtostderr plugin install language scala --server github://api.github.com/VirtusLab/besom
-          ls -la /home/runner/.pulumi/plugins/language-scala-v0.1.0/pulumi-language-scala
-          xxd -l 64 /home/runner/.pulumi/plugins/language-scala-v0.1.0/pulumi-language-scala
+          pulumi plugin install language scala --server github://api.github.com/VirtusLab/besom
       - name: Test templates
         run: just test-examples
