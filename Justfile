@@ -196,7 +196,7 @@ install-language-plugin:
 	pulumi plugin install language scala {{besom-version}} --file {{language-plugin-output-dir}}/local
 
 # Package the scala language plugin for a given architecture
-package-language-plugin GOOS GOARCH:
+package-language-plugin $GOOS $GOARCH:
 	#!/usr/bin/env sh
 	subdir={{ "dist/" + GOOS + "-" + GOARCH }}
 	output_dir={{language-plugin-output-dir}}/$subdir
