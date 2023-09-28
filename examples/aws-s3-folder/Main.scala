@@ -61,21 +61,21 @@ val siteDir = "www"
   )
 
   // For each file in the directory, create an S3 object stored in `siteBucket`
-  val uploads: Array[Output[s3.BucketObject]] = File(siteDir).listFiles().map {
-    case file if file.getName.nonEmpty =>
-      s3.BucketObject(
-        NonEmptyString(file.getName).get,
-        s3.BucketObjectArgs(
-          bucket = siteBucket.id, // reference the s3.Bucket object
-          source = FileAsset(file.getAbsolutePath), // use FileAsset to point to a file
-          contentType = Files.probeContentType(file.toPath) // set the MIME type of the file
-        ),
-        CustomResourceOptions(
-          dependsOn = siteBucket.map(List(_))
-        )
+  val uploads: Array[Output[s3.BucketObject]] = File(siteDir).listFiles().map { file =>
+    val name = NonEmptyString(file.getName) match
+      case Some(name) => name
+      case None => throw new RuntimeException("Unexpected empty file name")
+    s3.BucketObject(
+      name,
+      s3.BucketObjectArgs(
+        bucket = siteBucket.id, // reference the s3.Bucket object
+        source = FileAsset(file.getAbsolutePath), // use FileAsset to point to a file
+        contentType = Files.probeContentType(file.toPath) // set the MIME type of the file
+      ),
+      CustomResourceOptions(
+        dependsOn = siteBucket.map(List(_))
       )
-    case _ =>
-      throw new RuntimeException("Unexpected empty file name")
+    )
   }
 
   for
