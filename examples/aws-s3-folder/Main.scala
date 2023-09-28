@@ -1,6 +1,5 @@
 import besom.*
-import besom.api.aws.*
-import besom.api.aws.s3.BucketObject
+import besom.api.aws.s3
 import besom.api.aws.s3.inputs.BucketWebsiteArgs
 import besom.types.Asset.FileAsset
 import besom.types.Output
@@ -62,18 +61,21 @@ val siteDir = "www"
   )
 
   // For each file in the directory, create an S3 object stored in `siteBucket`
-  val uploads: Array[Output[BucketObject]] = File(siteDir).listFiles().map { file =>
-    s3.BucketObject(
-      NonEmptyString(file.getName).get, // FIXME: https://github.com/VirtusLab/besom/issues/138
-      s3.BucketObjectArgs(
-        bucket = siteBucket.id, // reference the s3.Bucket object
-        source = FileAsset(file.getAbsolutePath), // use FileAsset to point to a file
-        contentType = Files.probeContentType(file.toPath) // set the MIME type of the file
-      ),
-      CustomResourceOptions(
-        dependsOn = siteBucket.map(List(_))
+  val uploads: Array[Output[s3.BucketObject]] = File(siteDir).listFiles().map {
+    case file if file.getName.nonEmpty =>
+      s3.BucketObject(
+        NonEmptyString(file.getName).get,
+        s3.BucketObjectArgs(
+          bucket = siteBucket.id, // reference the s3.Bucket object
+          source = FileAsset(file.getAbsolutePath), // use FileAsset to point to a file
+          contentType = Files.probeContentType(file.toPath) // set the MIME type of the file
+        ),
+        CustomResourceOptions(
+          dependsOn = siteBucket.map(List(_))
+        )
       )
-    )
+    case _ =>
+      throw new RuntimeException("Unexpected empty file name")
   }
 
   for
