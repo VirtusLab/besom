@@ -249,9 +249,9 @@ publish-local-provider-sdk schema-name schema-version:
 # Integration testing
 ####################
 
-# Runs integration tests for besom
-test-compiler-plugin: publish-local-sdk publish-local-compiler-plugin
-	scala-cli test integration-tests
+# Runs all integration tests
+test-integration: publish-local-sdk publish-local-compiler-plugin
+    scala-cli --power test integration-tests
 
 ####################
 # Templates and examples
