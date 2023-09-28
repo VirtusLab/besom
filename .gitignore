@@ -20,7 +20,6 @@ scoverage-reports/
 # generated sources, run `scala-cli run ./scripts -M proto -- all`
 src/main/scala/besom/rpc 
 
-templates/test/
 .out/
 
 *.asc

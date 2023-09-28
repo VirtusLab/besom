@@ -1,0 +1,9 @@
+name: logger-test
+description: Besom logger test
+runtime:
+  name: scala
+  options: # language host debugging options
+    logtostderr: true
+    alsologtostderr: true
+    log_dir: .
+    v: 5
