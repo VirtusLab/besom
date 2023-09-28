@@ -1,3 +1,5 @@
+name: Examples smoke tests
+
 on:
   push:
     branches: [ 'main', 'develop' ]

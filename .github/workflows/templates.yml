@@ -1,3 +1,5 @@
+name: Templates smoke tests
+
 on:
   push:
     branches: [ 'main', 'develop' ]
