@@ -33,5 +33,7 @@ jobs:
           power: true
       - name: Login in to pulumi
         run: pulumi login --local
+      - name: Install language host
+        run: pulumi plugin install language scala --server github://api.github.com/VirtusLab/besom
       - name: Test templates
         run: just test-templates
