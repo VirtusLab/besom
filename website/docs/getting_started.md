@@ -29,7 +29,7 @@ To start your adventure with infrastructure-as-code with Scala follow these step
     To install the latest Scala Language Plugin release, run the following:
 
     ```bash
-    pulumi plugin install language scala $version --server github://api.github.com/VirtusLab/besom 
+    pulumi plugin install language scala --server github://api.github.com/VirtusLab/besom
     ```
 
 4. **Create a new project**:
@@ -79,21 +79,24 @@ To start your adventure with infrastructure-as-code with Scala follow these step
 ### Choice of build tool and IDE
 ---
 
-Besom uses [Scala-CLI](https://scala-cli.virtuslab.org/) for project compilation and execution. 
-To set up IDE support for an infrastructural project using Besom execute this command inside of the 
-directory in which Besom project files exist:
+Besom uses [Scala-CLI](https://scala-cli.virtuslab.org/) for project compilation and execution.
+
+To set up IDE support for an infrastructural project using Besom execute this command 
+inside the directory in which Besom project files exist:
 ```bash
 scala-cli setup-ide .
 ```
+As a result of this command, a `.bsp` directory will be created inside the project directory.
 
-If you are using  [Intellij IDEA](https://www.jetbrains.com/idea/) you need to import the project using 
-BSP format. [Metals](https://scalameta.org/metals/) recognizes Scala-CLI projects automatically.
+When opened, both [Intellij IDEA](https://www.jetbrains.com/idea/) 
+and [Metals](https://scalameta.org/metals/) should automatically recognize 
+the project and set up the IDE accordingly.
 
-[sbt](https://www.scala-sbt.org/) is also supported out-of-the-box but is not recommended due to 
-slower iteration speed. Use of sbt support is suggested for situations where managed infrastructure 
+[sbt](https://www.scala-sbt.org/) is also supported out-of-the-box but is not recommended due to
+slower iteration speed. Use of sbt support is suggested for situations where managed infrastructure
 is being added to an already existing project that uses sbt as the main build tool.
 
-IDE setup works automatically with both Intellij IDEA and Metals.
+IDE setup for `sbt` works automatically with both Intellij IDEA and Metals.
 
 [Mill](https://mill-build.com/) is not yet supported.
 
