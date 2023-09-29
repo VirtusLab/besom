@@ -2,9 +2,10 @@
 title: Compiler plugin
 ---
 
-Besom compiler plugin is a tool that helps to avoid common mistakes when writing Pulumi programs in Scala. It is recommended to use it in all Pulumi programs written in Scala.
+Besom compiler plugin is a tool that helps to avoid common mistakes when writing Pulumi programs in Scala. 
+It is recommended to use it in all Pulumi programs written in Scala.
 
-Currently the plugin provides the following features:
+Currently, the plugin provides the following features:
 - It makes it a compile error to try to interpolate Output values in standard Scala string interpolators.
 
 :::info
