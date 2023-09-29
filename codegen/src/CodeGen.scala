@@ -477,7 +477,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     val argType = propertyDefinition.typeReference.asScalaType(asArgsType = true)
     val inputArgType = propertyDefinition.typeReference match {
       case ArrayType(innerType) =>
-        t"""List[Input[${innerType.asScalaType(asArgsType = true)}]]"""
+        t"""scala.List[Input[${innerType.asScalaType(asArgsType = true)}]]"""
       case MapType(innerType) =>
         t"""scala.Predef.Map[String, Input[${innerType.asScalaType(asArgsType = true)}]]"""
       case tp =>
