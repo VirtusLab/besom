@@ -9,12 +9,12 @@ title: Tutorial
 Besom, the Pulumi SDK for Scala allows you to create, deploy and manage cloud resources such as databases, serverless
 functions and services quickly and safely. In this tutorial your will do exactly that - you will deploy a very basic 
 yet functional serverless application built in Scala 3. The target environment will be 
-[Amazon Web Services](https://aws.amazon.com/). Everything covered in this tutorial fits into the free tier so the only requirement is to actually have an AWS account. You can [create one here](https://portal.aws.amazon.com/billing/signup) 
-if you don't have one.
+[Amazon Web Services](https://aws.amazon.com/). Everything covered in this tutorial fits into the free tier so the only requirement is to 
+actually have an AWS account. You can [create one here](https://portal.aws.amazon.com/billing/signup) if you don't have one.
 
 To start first install all the necessary tools mentioned in [Getting started](./getting_started) section.
 
-You will also need to obtain **AWS Access Key ID** and **AWS Secret Access Key** from IAM Console. Once you you have them,
+You will also need to obtain **AWS Access Key ID** and **AWS Secret Access Key** from IAM Console. Once you have them,
 install [the AWS CLI](https://aws.amazon.com/cli/) for your platform and perform 
 ```bash
 aws configure
@@ -23,7 +23,8 @@ aws configure
 This will set up your AWS access for use with Pulumi.
 
 :::caution
-It's **strongly** recommended that you use an IAM account with **AdministratorAccess** permissions as it guarantees that you won't encounter issues related to missing permissions. Additionally, it's also recommended to set your 
+It's **strongly** recommended that you use an IAM account with **AdministratorAccess** permissions as it guarantees that 
+you won't encounter issues related to missing permissions. Additionally, it's also recommended to set your 
 [default region](https://docs.aws.amazon.com/awsconsolehelpdocs/latest/gsg/select-region.html) in AWS Console.
 :::
 
@@ -52,14 +53,15 @@ Sources of the app reside in the `./lambda` directory.
 
 You can build the application yourself using the provided `./build.sh` script **if you're running on Linux with AMD64 
 processor architecture**. Unfortunately GraalVM does not support compilation of native images for architectures different 
-than the one that you are using. For all users on Macs and Windows (and Linux users on ARM platforms) we have provided pre-built artifacts, already packaged into zip files.
+than the one that you are using. For all users on Macs and Windows (and Linux users on ARM platforms) we have provided pre-built artifacts, 
+already packaged into zip files.
 
 These artifacts can be found in `./pre-built/` directory of the repository.
 
 ### Architecture
 ---
 
-The application you are going to deploy to AWS is called CatPost. It's a simple app from simpler times - it's only 
+The application you are going to deploy to AWS is called CatPost. It's a simple app from simpler times - its only 
 functionality is for the cat lovers to post pictures of their cats along with their names and comments regarding 
 the picture.
 
@@ -75,7 +77,7 @@ Ok, let's deploy!
 ### Infrastructure-as-Scala-code
 ---
 
-Your infrastructure will live inside of the `./besom` directory. Once you open the directory in your IDE (remember: 
+Your infrastructure will live inside the `./besom` directory. Once you open the directory in your IDE (remember: 
 `scala-cli setup-ide .`) you will notice that there are 3 files there:
 
 * `project.scala` - [Scala-CLI project definition](https://scala-cli.virtuslab.org/docs/guides/using-directives/)
@@ -100,7 +102,7 @@ AWS components!
 ---
 
 The first step that you are going to do is to set up data storage for our app. The most important part of application
-for cat lovers is a place to store pictures of cats so we'll start with an AWS S3 bucket. AWS S3 is a data storage 
+for cat lovers is a place to store pictures of cats, so we'll start with an AWS S3 bucket. AWS S3 is a data storage 
 service that allows users to perform all operations using HTTP interface. This is great for this app because you can 
 just use the bucket as a file server that will serve pictures of cats to whomever requires them. Let's start with 
 the definition of a bucket:
@@ -145,19 +147,19 @@ val feedBucket = s3.Bucket(
 )
 ```
 
-but bucket names in AWS are globally unique and therefore it would be very easy to have a name clash with another
-user. When you omit the explicit name of a resource via it's resource arguments Pulumi uses the name of Pulumi 
+Unfortunately bucket names in AWS are globally unique, and therefore it would be very easy to have a name clash with 
+another user. When you omit the explicit name of a resource via it's resource arguments Pulumi uses the name of Pulumi 
 resource and suffixes it with a random string to generate a unique name. This distinction is quite important 
-because Pulumi resource name is a part of [Pulumi URN](https://www.pulumi.com/docs/concepts/resources/names/) but
-the actual bucket name is a part of it's resource ID in AWS infrastructure. For now let's just remember that first
+because Pulumi resource name is a part of [Pulumi URN](https://www.pulumi.com/docs/concepts/resources/names/), but
+the actual bucket name is a part of its resource ID in AWS infrastructure. For now let's just remember that first
 argument of Besom resource constructor function is always the Pulumi resource name and resource names for cloud 
 provider to use are always provided via resource arguments.
 
 You can try and create your bucket now. To do this execute `pulumi up` in `./besom` directory. Pulumi will ask you 
 to create a [stack](https://www.pulumi.com/docs/concepts/stack/). Name it however you want, we named it `dev` because
-stacks commonly match application environments. You will be also asked to provide a password for this stack. This is 
+stacks commonly match application environments. You might be also asked to provide a password for this stack. This is 
 actually quite important because Pulumi uses that password to encrypt sensitive data related to your deployment. As 
-you are just playing you can use an empty password but it's *very important* to use a proper password for actual work.
+you are just playing you can use an empty password, but it's *very important* to use a proper password for actual work.
 Pulumi will subsequently print a preview of changes between current state of affairs and the changes your code will 
 introduce to the cloud environment. Select `yes` when asked whether you want to deploy this set of changes to cloud.
 
@@ -239,8 +241,16 @@ has to be created before a public policy is actually applied to the bucket. Shou
 everything in parallel AWS API would return a `403 Forbidden` error. More about this topic can be found in
 [Resource constructors, outputs and asynchronicity](./constructors.md) section of the docs.
 
-If you run your program now (don't forget to add both resources to the final `for/yield`!) you will have an 
-empty but publicly accessible S3 bucket!
+Please don't forget to add both resources to the final `for/yield`:
+```scala
+  for
+    _ <- feedBucket
+    _ <- feedBucketPublicAccessBlock
+    _ <- feedBucketPolicy
+  yield Pulumi.exports()
+```
+
+If you run your program now you will have an empty but publicly accessible S3 bucket!
 
 ### DynamoDB Table
 ---

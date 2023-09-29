@@ -18,6 +18,6 @@ val https: Output[String] = p"https://$o2:$o1/api/$version/"
 
 To avoid using standard Scala string interpolators with Outputs by mistake, it is recommended to use the besom compiler plugin. It will make the compiler fail on any attempt to interpolate an `Output` with a standard string interpolator.
 
-For more infornation see [Compiler plugin](compiler_plugin.md).
+For more information see [Compiler plugin](compiler_plugin.md).
 :::
 
