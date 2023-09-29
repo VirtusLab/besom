@@ -9,3 +9,4 @@ Some Pulumi features are not yet implemented. The most notable ones are:
 * [Resource transformations](https://www.pulumi.com/docs/concepts/options/transformations/) are not yet available.
 * [Component-based packages](https://www.pulumi.com/docs/using-pulumi/pulumi-packages/how-to-author/) a.k.a. "remote components" are not yet supported.
 * [Automation API](https://www.pulumi.com/docs/guides/automation-api/) is not yet supported.
+* [Function serialization](https://www.pulumi.com/docs/concepts/inputs-outputs/function-serialization/) is supported only in Node.js.
