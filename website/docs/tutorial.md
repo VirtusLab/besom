@@ -230,10 +230,10 @@ val feedBucketPolicy = bucketName.flatMap(name =>
 )
 ```
 
-First of all, the dynamically generated unique bucket name is used again to name this resource too and then 
-it's id is used once more to inform `BucketPolicy` about the bucket it should be applied to. The policy itself
-is expressed here using JSON AST of [spray-json](https://github.com/spray/spray-json) library and rendered to 
-string. It could be just an interpolated string literal, it could also be loaded from a file and interpolated 
+First of all, the dynamically generated unique bucket name is used again to name this resource too, and then 
+its ID is used once more to inform `BucketPolicy` about the bucket it should be applied to. The policy itself
+is expressed here using JSON AST of [spray-json](https://github.com/spray/spray-json) library and rendered to string. 
+Alternatively, it could be just an interpolated string literal, it could also be loaded from a file and interpolated 
 using regular expression. The last new step is the use of `dependsOn` property of 
 [resource options](https://www.pulumi.com/docs/concepts/options/). We use it here to inform Pulumi about the
 necessity of ordered creation of resources - the `BucketPublicAccessBlock` with `blockPublicPolicy = false` 
@@ -267,10 +267,11 @@ case class CatPost(
 )
 ```
 
-DynamoDB is a NoSQL database so there's no column schema so to speak to create. CatPost is however in need of
-a way to sort the entries to display them in correct order - from oldest to newest. This means that DynamoDB
-table will have to have both a hash key and range key that will use the `timestamp` attribute. Here's how you 
-can define such table using Besom:
+[DynamoDB](https://aws.amazon.com/dynamodb/) is a NoSQL database so there's no column schema so to speak to create. 
+CatPost is however in need of a way to sort the entries to display them in correct order - from oldest to newest. 
+This means that DynamoDB table will have to have both a hash key and range key that will use the `timestamp` attribute. 
+
+Here's how you can define such table using Besom:
 
 ```scala
 import besom.api.aws.dynamodb.inputs.* // place this on top of the file
@@ -300,9 +301,9 @@ That's all! DynamoDB is that easy to set up. Add the resource to the final `for/
 
 ### AWS Lambdas
 
-Ok, now you're getting to the point. You will now deploy both AWS Lambdas. For lambdas to run they have to have 
-a correct set of permissions aggregated as an AWS IAM Role. Let's start with creation of a Role that will allow
-lambdas to manipulate DynamoDB, S3 and run in Lambda runtime:
+Ok, now you're getting to the point. You will now deploy both [AWS Lambdas](https://aws.amazon.com/lambda/). 
+For lambdas to run they have to have a correct set of permissions aggregated as an AWS IAM Role. 
+Let's start with creation of a Role that will allow lambdas to manipulate DynamoDB, S3 and run in Lambda runtime:
 
 ```scala
 val lambdaRole = iam.Role("lambda-role", iam.RoleArgs(
@@ -370,19 +371,24 @@ val addLambda = lambda.Function(
 )
 ```
 
-First thing is the stage name. This parameter is actually required later by the AWS API Gateway but it's defined
-here so that self-URLs can be properly resolved in Lambdas. We pass the stage name via environment variables. Lambda 
-definitions take a reference to the Role created above, a parameter defining which Lambda runtime should be used - the 
-native one, a set of environment vars to configure the app and a `FileArchive` pointing to where the prepared
-zip package with a native binary of Lambda exists. The path is relative and points to pre-built packages by default.
+Let's talk about what've just happened. First thing is the stage name. This parameter is actually required later by the 
+AWS API Gateway, but it's defined here so that self-URLs can be properly resolved in Lambdas. 
+We pass the stage name to the lambda via environment variables. 
+Lambda definitions take few arguments: 
+- a reference to the Role created above (`lambdaRole`), 
+- a parameter defining which Lambda runtime should be used - we're using [the new custom runtime](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-custom.html#runtimes-custom-use) 
+for our GraalVM native binary, a set of environment variables to configure the app
+- and a `FileArchive` pointing to where the prepared Zip package with the native binary of Lambda exists. 
+The path is relative and points to pre-built packages by default.
+
 If you chose to rebuild the lambdas on your own you have to adjust the path so that it points to the relevant packages.
 
 Add this to your program, add both lambdas to the final `for/yield`, run `pulumi up` and that's it, AWS Lambdas deployed.
 
 ### AWS API Gateway
 
-Last thing to do - you have to make your app accessible from the Internet. To do this you have to deploy API Gateway 
-with a correct configuration. 
+Last thing to do - you have to make your app accessible from the Internet. To do this you have to deploy 
+[API Gateway](https://aws.amazon.com/api-gateway/) with a correct configuration. 
 
 Let's start with the API itself:
 ```scala
@@ -539,7 +545,7 @@ Two things that need attention here is that API deployment has to be sequenced w
 [`deleteBeforeReplace` resource option](https://www.pulumi.com/docs/concepts/options/deletebeforereplace/) makes 
 an appearance. These are necessary for AWS to correctly handle the deployment of these resources.
 
-Ok, that's it. Add *all* of these resources to the final `for/yield` block and then modify the `exports` block
+Ok, that's it. Add *all* of these resources to the final `for/yield` block and then modify the [`exports`](./exports)) block
 so that it matches this:
 ```scala
 Pulumi.exports(
@@ -549,6 +555,14 @@ Pulumi.exports(
 ```
 This allows you to see both the dynamic, partially random name of the S3 bucket that has been created and also 
 the public URL under which your CatPost instance is available. 
+
+You can access your stack outputs at any time using `pulumi stack output` command, e.g.:
+```
+Current stack outputs (2):
+    OUTPUT       VALUE
+    endpointURL  https://***.execute-api.eu-central-1.amazonaws.com/default
+    feedBucket   pulumi-catpost-cat-pics-***
+```
 
 **Visit it now and post some cats!**
 
