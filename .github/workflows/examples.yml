@@ -1,14 +1,14 @@
-name: Templates smoke tests
+name: Examples smoke tests
 
 on:
   push:
     branches: [ 'main', 'develop' ]
     paths:
-      - 'templates/**'
+      - 'examples/**'
   pull_request:
     branches: [ 'main', 'develop' ]
     paths:
-      - 'templates/**'
+      - 'examples/**'
 
 env:
   PULUMI_CONFIG_PASSPHRASE: 'passphrase'
@@ -36,6 +36,10 @@ jobs:
       - name: Login in to pulumi
         run: pulumi login --local
       - name: Install language plugin
-        run: pulumi plugin install language scala --server github://api.github.com/VirtusLab/besom
-      - name: Test templates
-        run: just test-templates
+        run: |- 
+          pulumi plugin install language scala --server github://api.github.com/VirtusLab/besom
+      - name: Test examples
+        env:
+          AWS_EC2_METADATA_DISABLED: true
+        run: |-
+          just test-examples
