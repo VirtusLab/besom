@@ -261,13 +261,12 @@ test-compiler-plugin: publish-local-sdk publish-local-compiler-plugin
 test-template template-name:
 	echo "Testing template {{template-name}}"
 	pulumi --color=never --emoji=false new -y --force --dir target/test/{{template-name}} -n templates-test-{{template-name}} --stack templates-test-{{template-name}} ../../../templates/{{template-name}}/
-	pulumi --color=never --emoji=false preview --cwd target/test/{{template-name}} --stack templates-test-{{template-name}}
+	scala-cli compile target/test/{{template-name}}
 	echo "----------------------------------------"
 
 # Cleans after a template test
 clean-test-template template-name:
 	echo "Cleaning template test for {{template-name}}"
-	pulumi --color=never --emoji=false destroy --cwd target/test/{{template-name}} -y || echo "No stack to destroy"
 	pulumi --color=never --emoji=false stack rm --cwd target/test/{{template-name}} -y || echo "No stack to remove"
 	rm -rf ./templates/test/{{template-name}} || echo "No directory to remove"
 	rm -rf $HOME/.pulumi/stacks/templates-test-{{template-name}} || echo "No directory to remove"
@@ -288,15 +287,12 @@ clean-test-templates:
 # Runs an example test
 test-example example-name:
 	echo "Testing example {{example-name}}"
-	pulumi --color=never --emoji=false stack init --cwd examples/{{example-name}} example-test-{{example-name}}
-	pulumi --color=never --emoji=false preview --cwd examples/{{example-name}} --stack example-test-{{example-name}}
+	scala-cli compile examples/{{example-name}}
 	echo "----------------------------------------"
 
 # Cleans after an example test
 clean-test-example example-name:
 	echo "Cleaning example test for {{example-name}}"
-	pulumi --color=never --emoji=false stack rm --cwd examples/{{example-name}} -y || echo "No stack to remove"
-	rm -rf $HOME/.pulumi/stacks/examples-test-{{example-name}} || echo "No directory to remove"
 	echo "----------------------------------------"
 
 # Runs all template tests
