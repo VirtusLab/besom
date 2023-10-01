@@ -1,0 +1,10 @@
+name: random-besom-test
+description: Besom random test
+runtime:
+  name: scala
+  options:
+    # language host debugging options, for full list of options:
+    #   ~/.pulumi/plugins/language-scala-v0.1.0/pulumi-language-scala -h
+    v: 5
+    log_dir: logs
+    alsologtostderr: true

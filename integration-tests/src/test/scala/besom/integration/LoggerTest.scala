@@ -12,7 +12,7 @@ class LoggerTest extends munit.FunSuite {
       output += line + "\n"
     }
     val loggerTestCmd =
-      """|pulumi preview --cwd integration-tests/src/test/resources/logger-test --stack integration-tests-logger-test
+      """|pulumi preview --cwd integration-tests/src/test/resources/logger-example --stack integration-tests-logger-example
          |""".stripMargin
     val result = loggerTestCmd.run(logger)
     assert(output.contains("Nothing here yet. It's waiting for you!"), s"Output:\n$output\n")
