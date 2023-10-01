@@ -1,6 +1,6 @@
-name: aws-s3-folder
+name: aws-java-webserver
 runtime: scala
-description: A static website hosted on AWS S3
+description: Basic example of an AWS web server accessible over HTTP
 template:
   config:
     aws:region:

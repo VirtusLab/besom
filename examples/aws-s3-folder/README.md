@@ -17,7 +17,6 @@ These values are indicated with `***`.
     Or with the stack config
     ```bash
     pulumi config set aws:region us-west-2
-    pulumi config set aws-native:region us-west-2
     ```
 
 2. Run `pulumi up` to preview and deploy changes. After the preview is shown 
@@ -93,8 +92,13 @@ you will be prompted if you want to continue or not.
     open http://$(pulumi stack output websiteUrl)
     ```
 
-6. To clean up resources, run `pulumi destroy` and answer the confirmation question at the prompt.
+6. From there, feel free to experiment. Simply making edits and running pulumi up will incrementally update your infrastructure.
+
+7. To clean up resources, destroy your stack and remove it:
 
     ```bash
     pulumi destroy
+    ```
+    ```bash
+    pulumi stack rm
     ```
