@@ -4,12 +4,14 @@ import besom.api.aws.ec2.inputs.*
 import besom.api.tls
 
 @main def main = Pulumi.run {
+  val myIp = getExternalIp
   val port = 80
 
   // Create a new security group for port 80.
   val securityGroup = ec2.SecurityGroup(
     "web-secgrp",
     ec2.SecurityGroupArgs(
+      tags = Map("Name" -> "web-secgrp"), // workaround for a provider bug
       ingress = List(
         SecurityGroupIngressArgs(
           protocol = "tcp",
@@ -21,7 +23,15 @@ import besom.api.tls
           protocol = "tcp",
           fromPort = 22,
           toPort = 22,
-          cidrBlocks = List(p"${myExternalIp}/32")
+          cidrBlocks = List(p"${myIp}/32")
+        )
+      ),
+      egress = List(
+        SecurityGroupEgressArgs(
+          protocol = "-1",
+          fromPort = 0,
+          toPort = 0,
+          cidrBlocks = List("0.0.0.0/0")
         )
       )
     )
@@ -55,11 +65,13 @@ import besom.api.tls
   // (optional) create a simple web server using the startup script for the instance
   val userData =
     s"""|#!/usr/bin/env bash
-        |curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux.gz" | gzip -d > /usr/local/bin/cs
-        |chmod +x /usr/local/bin/cs
-        |eval "$$(cs java --jvm zulu-jre:21.0.0 --env)"
-        |echo "Hello, World!" > index.html
-        |nohup jwebserver -p $port &
+        |set -ex
+        |yum update -y
+        |curl -L -o /etc/yum.repos.d/corretto.repo https://yum.corretto.aws/corretto.repo
+        |rpm --import https://yum.corretto.aws/corretto.key
+        |yum install -y java-21-amazon-corretto-devel
+        |echo "Hello, World!" > /srv/index.html
+        |nohup jwebserver -d /srv -b 0.0.0.0 -p $port &
         |""".stripMargin
 
   // Create a server instance
@@ -75,25 +87,25 @@ import besom.api.tls
     )
   )
 
-  log.info("Connect to SSH with: pulumi stack output sshCommand | tee /dev/tty | bash")
-
   for {
     server: ec2.Instance <- server
     _                    <- sshKey
     _                    <- keyPair
+    _                    <- p"Connect to SSH the first time: pulumi stack output privateKey --show-secrets > key_rsa && chmod 400 key_rsa && ssh -i key_rsa ${userName}@${server.publicIp}".map(log.info(_))
+    _                    <- log.info("Connect to SSH: ssh -i key_rsa ec2-user@$(pulumi stack output publicIp)")
+    _                    <- log.info("Connect to HTTP: open http://$(pulumi stack output publicHostName)")
   } yield Pulumi.exports(
     publicKey = publicKey,
     privateKey = privateKey,
     publicIp = server.publicIp,
     publicHostName = server.publicDns,
-    sshCommand = p"pulumi stack output privateKey --show-secrets > key_rsa && chmod 400 key_rsa && ssh -i key_rsa ${userName}@${server.publicIp}"
   )
 }
 
 import scala.io.Source
 import scala.util.Using
 
-def myExternalIp(using Context): Output[String] = {
+def getExternalIp(using Context): Output[String] = {
   val source = Source.fromURL("https://checkip.amazonaws.com")
   Using(source) { response => response.mkString.trim } match
     case scala.util.Success(ip) => Output(ip)
