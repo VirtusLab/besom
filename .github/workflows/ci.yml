@@ -112,7 +112,7 @@ jobs:
         work-dir: integration-tests/src/test/resources/random-example
         stack-name: test
         upsert: true
-      env: 
+      env:
         PULUMI_ENABLE_TRACE_LOGGING_TO_FILE: true
 
     - name: Upload logs if failed or cancelled
@@ -135,6 +135,15 @@ jobs:
         work-dir: integration-tests/src/test/resources/purrl-example
         stack-name: test
         upsert: true
+      env:
+        PULUMI_ENABLE_TRACE_LOGGING_TO_FILE: true
+
+    - name: Upload logs if failed or cancelled
+      if: failure() || cancelled()
+      uses: actions/upload-artifact@v2
+      with:
+        name: purrl-tests-debug-logs-${{ github.sha }}-${{ github.run_number }}
+        path: integration-tests/src/test/resources/purrl-example/logs/
 
     - name: Generate tls provider
       run: just generate-provider-sdk tls 4.10.0
@@ -149,3 +158,12 @@ jobs:
         work-dir: integration-tests/src/test/resources/tls-example
         stack-name: test
         upsert: true
+      env:
+        PULUMI_ENABLE_TRACE_LOGGING_TO_FILE: true
+
+    - name: Upload logs if failed or cancelled
+      if: failure() || cancelled()
+      uses: actions/upload-artifact@v2
+      with:
+        name: tls-tests-debug-logs-${{ github.sha }}-${{ github.run_number }}
+        path: integration-tests/src/test/resources/tls-example/logs/
