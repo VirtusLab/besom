@@ -244,10 +244,7 @@ object logging:
   }
 
   def enableTraceLevelFileLogging(): Result[Unit] = Result.defer {
-    val format      = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
-    val now         = LocalDateTime.now()
-    val fileName    = "besom-run-" + format.format(now) + ".log"
-    val pathBuilder = PathBuilder.static(Paths.get("logs")) / fileName
+    val pathBuilder = PathBuilder.static(Paths.get("logs")) / traceFileName(LocalDateTime.now())
     scribe.Logger.root
       .clearHandlers()
       .clearModifiers()
@@ -257,4 +254,9 @@ object logging:
         formatter = formatter
       )
       .replace()
+  }
+
+  def traceFileName(t: LocalDateTime): String = {
+    val format = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH-mm-ss")
+    "besom-run-" + format.format(t) + ".log"
   }

@@ -1,8 +1,11 @@
 package besom.internal
 
-import RunResult.{given, *}
+import RunResult.{*, given}
+
 import scala.collection.mutable
 import besom.types.*
+
+import java.time.LocalDateTime
 
 case class TestResource(urn: Output[URN], id: Output[ResourceId], url: Output[String]) extends CustomResource
 
@@ -59,3 +62,8 @@ class LoggingTest extends munit.FunSuite:
   }
 
   // TODO test("logging via RPC works") {}
+
+  test("trace file name is correct") {
+    val name = traceFileName(LocalDateTime.parse("2007-12-03T10:15:30"))
+    assertEquals(name, "besom-run-2007-12-03T10-15-30.log")
+  }
