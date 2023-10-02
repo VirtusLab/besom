@@ -1,6 +1,6 @@
 package besom.internal
 
-import besom.internal.logging.BesomLogger
+import besom.internal.logging.{LocalBesomLogger => logger, BesomLogger}
 
 trait TaskTracker:
   private[besom] def registerTask[A](fa: => Result[A]): Result[A]
@@ -12,6 +12,14 @@ object TaskTracker:
     for
       promise   <- Promise[Throwable]()
       workgroup <- WorkGroup()
+      _ <- workgroup.runInWorkGroup( {
+        Result.sleep(10000) *>
+        Result.forever {
+          Result.sleep(5000) *> {
+            logger.debug(workgroup.promises.map(_.toString).mkString("\n") ++ "\n")
+          }
+        }
+      }.fork)
     yield new TaskTracker:
       override private[besom] def registerTask[A](fa: => Result[A]): Result[A] =
         promise.isCompleted.flatMap { globalFailure =>

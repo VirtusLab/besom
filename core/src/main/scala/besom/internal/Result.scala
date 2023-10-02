@@ -5,6 +5,7 @@ import scala.concurrent.*
 import scala.util.Failure
 import scala.util.Success
 import scala.concurrent.duration.Duration
+import scala.jdk.CollectionConverters.*
 
 import logging.{LocalBesomLogger => logger}
 import scala.annotation.implicitNotFound
@@ -39,16 +40,20 @@ trait WorkGroup:
   def runInWorkGroup[A](eff: => Result[A]): Result[A]
   def waitForAll: Result[Unit]
   def reset: Result[Unit]
+  def promises: Map[Long, String]
 
 object WorkGroup:
   def apply(): Result[WorkGroup] = Result.defer {
     new WorkGroup:
       val semaphore = java.util.concurrent.Semaphore(Int.MaxValue, false)
+      val hashMap = java.util.concurrent.ConcurrentHashMap[Long, String]()
+      override def promises: Map[Long, String] = hashMap.asScala.toMap
 
       override def runInWorkGroup[A](result: => Result[A]): Result[A] =
         Result
           .defer {
             semaphore.acquire()
+            hashMap.put(result.ordinal, result.toString())
           }
           .flatMap { _ =>
             result.transform { res =>
@@ -312,6 +317,8 @@ object Result:
   def fail[A](err: Throwable)(using Debug): Result[A] = Result.Fail(err, Debug())
 
   def unit(using Debug): Result[Unit] = Result.Pure((), Debug())
+
+  def forever(fa: => Result[Unit])(using Debug): Result[Nothing] = fa *> forever(fa)
 
   def sequence[A, CC[X] <: IterableOnce[X], To](
     coll: CC[Result[A]]
