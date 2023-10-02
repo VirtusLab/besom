@@ -244,7 +244,7 @@ object logging:
   }
 
   def enableTraceLevelFileLogging(): Result[Unit] = Result.defer {
-    val format      = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+    val format      = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH-mm-ss")
     val now         = LocalDateTime.now()
     val fileName    = "besom-run-" + format.format(now) + ".log"
     val pathBuilder = PathBuilder.static(Paths.get("logs")) / fileName
