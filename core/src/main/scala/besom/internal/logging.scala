@@ -14,34 +14,57 @@ import besom.types.URN
 
 object logging:
 
-  enum Key[A](val value: String):
-    case LabelKey extends Key[Label]("resource")
+  class Key[A](val value: String)
+  object Key:
+    val LabelKey = Key[Label]("resource")
+    
+  class BesomMDC[A](private[logging] val inner: ScribeMDC) extends ScribeMDC:
+    private[besom] def get[B](key: Key[B])(using ev: A <:< B): B = 
+      val opt = inner.get(key.value)
 
-  class MDC[A](private val inner: ScribeMDC) extends ScribeMDC:
-    def get[B](key: Key[B])(using ev: A <:< B): B = key match
-      case Key.LabelKey =>
-        val opt = inner.get(key.value)
+      opt
+        .map(_.apply())
+        .getOrElse { throw Exception(s"Expected key '${key.value}' was not found in MDC!") }
+        .asInstanceOf[B]
 
-        opt
-          .map(_.apply())
-          .getOrElse { throw Exception(s"Expected key '${key.value}' was not found in MDC!") }
-          .asInstanceOf[B]
-
-    def put[B](key: Key[A], value: A)(using Not[A <:< B]): MDC[A & B] =
+    private[besom] def put[B](key: Key[A], value: A)(using Not[A <:< B]): BesomMDC[A & B] =
       inner.update(key.value, value)
-      this.asInstanceOf[MDC[A & B]]
+      this.asInstanceOf[BesomMDC[A & B]]
 
-    def +[B](key: Key[A], value: A)(using Not[A <:< B]): MDC[A & B] = put(key, value)
+    private[besom] def +[B](key: Key[A], value: A)(using Not[A <:< B]): BesomMDC[A & B] = put(key, value)
 
-    def apply[R](block: MDC[A] ?=> R): R = block(using this)
+    def apply[R](block: BesomMDC[A] ?=> R): R = block(using this)
 
     export inner.*
+  end BesomMDC
+
+  object BesomMDC:
+    private[besom] def apply[A](key: Key[A], value: A): BesomMDC[A] = ScribeMDC { scribeMdc =>
+      scribeMdc.update(key.value, value)
+      new BesomMDC(scribeMdc)
+    }
+    def empty: BesomMDC[_] = ScribeMDC { scribeMdc =>
+      new BesomMDC(scribeMdc)
+    }
+
+  class MDC(private[logging] val inner: BesomMDC[_])
 
   object MDC:
-    def apply[A](key: Key[A], value: A): MDC[A] = ScribeMDC { scribeMdc =>
-      scribeMdc.update(key.value, value)
-      new MDC(scribeMdc)
-    }
+    def empty: MDC = new MDC(BesomMDC.empty)
+    def apply[R](values: Map[String, String])(block: MDC ?=> R)(using outer: MDC = MDC.empty): R =
+      val outerValues = outer.inner.inner.map.map { case (k, v) => k -> v.apply() }
+      val mdcWithOuterValues = outerValues.foldLeft(BesomMDC.empty) { case (mdc, (k, v)) =>
+        mdc.update(k, v)
+        mdc
+      }
+      val mdcWithValues = values.foldLeft(mdcWithOuterValues) { case (mdc, (k, v)) =>
+        mdc.update(k, v)
+        mdc
+      }
+
+      val mdc = new MDC(mdcWithValues)
+
+      block(using mdc)
 
   def log(using Context): BesomLogger = summon[Context].logger
 
@@ -61,44 +84,30 @@ object logging:
         case Level.Warn  => LogSeverity.WARNING
         case Level.Error => LogSeverity.ERROR
 
-    def toLogString: String   = record.logOutput.plainText
-    def toPlainString: String = record.toLogString.replaceAll("\u001B\\[[;\\d]*m", "") // drops ANSI color codes
+    def toLogString: String =
+      val logOutput = pulumiFormatter.format(record)
+      val sb        = new StringBuilder
+      scribe.output.format.ANSIOutputFormat(logOutput, str => sb.append(str))
+      sb.toString.replace("<empty>.", "")
+
+    def toPlainString: String = record.toLogString.replaceAll("\u001B\\[[;\\d]*m", "").trim // drops ANSI color codes
 
   def makeLogRequest(record: LogRecord, urn: URN, streamId: Int, ephemeral: Boolean): LogRequest =
     LogRequest(
       severity = record.toSeverity,
-      message = record.toLogString, // I really hope pulumi can deal with ANSI colored strings
+      message = record.toLogString,
       urn = urn.asString,
       streamId = streamId,
       ephemeral = ephemeral
     )
 
-  trait BesomLogger extends LoggerSupport[Result[Unit]]:
-    def close(): Result[Unit]
+  trait BesomLogger:
+    private[besom] def close(): Result[Unit]
+    def log(record: LogRecord): Result[Unit]
+    def log(record: LogRecord, urn: URN, streamId: Int, ephemeral: Boolean): Result[Unit]
 
-  object LocalBesomLogger extends BesomLogger:
-    def log(record: LogRecord): Result[Unit] = Result(Logger(record.className).log(record))
-    def close(): Result[Unit]                = Result.unit
-
-  class UserLoggerFactory(using ctx: Context) extends LoggerSupport[Output[Unit]]:
-    override def log(record: LogRecord): Output[Unit] = Output[Unit](ctx.logger.log(record))
-
-  class DualBesomLogger private[logging] (
-    private val queue: Queue[LogRequest | Queue.Stop],
-    private val fib: Fiber[Unit]
-  ) extends BesomLogger:
-
-    def close(): Result[Unit] = queue.offer(Queue.Stop) *> fib.join
-
-    def log(record: LogRecord): Result[Unit] = Result(Logger(record.className).log(record))
-
-    def log(record: LogRecord, urn: URN, streamId: Int, ephemeral: Boolean): Result[Unit] =
-      for
-        _ <- log(record) // direct logging
-        _ <- queue.offer(makeLogRequest(record, urn, streamId, ephemeral)) // logging via RPC (async via queue)
-      yield ()
-
-    def log(level: Level, mdc: MDC[_], urn: URN, streamId: Int, ephemeral: Boolean, messages: LoggableMessage*)(using
+    def log(level: Level, mdc: BesomMDC[_], urn: URN, streamId: Int, ephemeral: Boolean, messages: LoggableMessage*)(
+      using
       pkg: Pkg,
       fileName: FileName,
       name: Name,
@@ -112,7 +121,7 @@ object logging:
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
       line: sourcecode.Line,
-      mdc: MDC[_]
+      mdc: BesomMDC[_] = BesomMDC.empty
     ): Result[Unit] =
       res match
         case Some(r) =>
@@ -125,7 +134,7 @@ object logging:
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
       line: sourcecode.Line,
-      mdc: MDC[_]
+      mdc: BesomMDC[_] = BesomMDC.empty
     ): Result[Unit] =
       res match
         case Some(r) =>
@@ -138,7 +147,7 @@ object logging:
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
       line: sourcecode.Line,
-      mdc: MDC[_]
+      mdc: BesomMDC[_] = BesomMDC.empty
     ): Result[Unit] =
       res match
         case Some(r) =>
@@ -151,7 +160,7 @@ object logging:
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
       line: sourcecode.Line,
-      mdc: MDC[_]
+      mdc: BesomMDC[_] = BesomMDC.empty
     ): Result[Unit] =
       res match
         case Some(r) =>
@@ -164,12 +173,114 @@ object logging:
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
       line: sourcecode.Line,
-      mdc: MDC[_]
+      mdc: BesomMDC[_] = BesomMDC.empty
     ): Result[Unit] =
       res match
         case Some(r) =>
           r.urn.getValueOrElse(URN.empty).flatMap(urn => log(Level.Error, mdc, urn, streamId, ephemeral, message))
         case None => log(Level.Error, mdc, URN.empty, streamId, ephemeral, message)
+
+  object LocalBesomLogger extends BesomLogger with LoggerSupport[Result[Unit]]:
+    override def close(): Result[Unit]                = Result.unit
+    override def log(record: LogRecord): Result[Unit] = Result(Logger(record.className).log(record))
+    override def log(record: LogRecord, urn: URN, streamId: Int, ephemeral: Boolean): Result[Unit] =
+      log(record)
+
+  class UserLoggerFactory(using ctx: Context):
+    def trace(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
+      using
+      pkg: sourcecode.Pkg,
+      fileName: sourcecode.FileName,
+      name: sourcecode.Name,
+      line: sourcecode.Line,
+      mdc: MDC = MDC.empty
+    ): Output[Unit] = Output {
+      res match
+        case Some(r) =>
+          r.urn
+            .getValueOrElse(URN.empty)
+            .flatMap(urn => ctx.logger.log(Level.Trace, mdc.inner, urn, streamId, ephemeral, message))
+        case None => ctx.logger.log(Level.Trace, mdc.inner, URN.empty, streamId, ephemeral, message)
+    }
+
+    def debug(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
+      using
+      pkg: sourcecode.Pkg,
+      fileName: sourcecode.FileName,
+      name: sourcecode.Name,
+      line: sourcecode.Line,
+      mdc: MDC = MDC.empty
+    ): Output[Unit] = Output {
+      res match
+        case Some(r) =>
+          r.urn
+            .getValueOrElse(URN.empty)
+            .flatMap(urn => ctx.logger.log(Level.Debug, mdc.inner, urn, streamId, ephemeral, message))
+        case None => ctx.logger.log(Level.Debug, mdc.inner, URN.empty, streamId, ephemeral, message)
+    }
+
+    def info(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
+      using
+      pkg: sourcecode.Pkg,
+      fileName: sourcecode.FileName,
+      name: sourcecode.Name,
+      line: sourcecode.Line,
+      mdc: MDC = MDC.empty
+    ): Output[Unit] = Output {
+      res match
+        case Some(r) =>
+          r.urn
+            .getValueOrElse(URN.empty)
+            .flatMap(urn => ctx.logger.log(Level.Info, mdc.inner, urn, streamId, ephemeral, message))
+        case None => ctx.logger.log(Level.Info, mdc.inner, URN.empty, streamId, ephemeral, message)
+    }
+
+    def warn(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
+      using
+      pkg: sourcecode.Pkg,
+      fileName: sourcecode.FileName,
+      name: sourcecode.Name,
+      line: sourcecode.Line,
+      mdc: MDC = MDC.empty
+    ): Output[Unit] = Output {
+      res match
+        case Some(r) =>
+          r.urn
+            .getValueOrElse(URN.empty)
+            .flatMap(urn => ctx.logger.log(Level.Warn, mdc.inner, urn, streamId, ephemeral, message))
+        case None => ctx.logger.log(Level.Warn, mdc.inner, URN.empty, streamId, ephemeral, message)
+    }
+
+    def error(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
+      using
+      pkg: sourcecode.Pkg,
+      fileName: sourcecode.FileName,
+      name: sourcecode.Name,
+      line: sourcecode.Line,
+      mdc: MDC = MDC.empty
+    ): Output[Unit] = Output {
+      res match
+        case Some(r) =>
+          r.urn
+            .getValueOrElse(URN.empty)
+            .flatMap(urn => ctx.logger.log(Level.Error, mdc.inner, urn, streamId, ephemeral, message))
+        case None => ctx.logger.log(Level.Error, mdc.inner, URN.empty, streamId, ephemeral, message)
+    }
+
+  class DualBesomLogger private[logging] (
+    private val queue: Queue[LogRequest | Queue.Stop],
+    private val fib: Fiber[Unit]
+  ) extends BesomLogger:
+
+    def close(): Result[Unit] = queue.offer(Queue.Stop) *> fib.join
+
+    override def log(record: LogRecord): Result[Unit] = Result(Logger(record.className).log(record))
+
+    override def log(record: LogRecord, urn: URN, streamId: Int, ephemeral: Boolean): Result[Unit] =
+      for
+        _ <- log(record) // direct logging
+        _ <- queue.offer(makeLogRequest(record, urn, streamId, ephemeral)) // logging via RPC (async via queue)
+      yield ()
 
   object BesomLogger:
     def apply(engine: Engine, taskTracker: TaskTracker): Result[BesomLogger] =
@@ -216,7 +327,15 @@ object logging:
         new CompositeOutput(entries)
       else EmptyOutput
 
-  private[logging] val formatter = Formatter.fromBlocks(
+  private[logging] val pulumiFormatter = Formatter.fromBlocks(
+    green(position),
+    space,
+    mdcBlock,
+    space,
+    messages
+  )
+
+  private[logging] val logFileFormatter = Formatter.fromBlocks(
     groupBySecond(
       cyan(bold(dateFull)),
       space,
@@ -238,7 +357,7 @@ object logging:
       .clearModifiers()
       .withHandler(
         minimumLevel = Some(level),
-        formatter = formatter
+        formatter = logFileFormatter
       )
       .replace()
   }
@@ -254,7 +373,7 @@ object logging:
       .withHandler(
         minimumLevel = Some(Level.Trace),
         writer = FileWriter(pathBuilder = pathBuilder),
-        formatter = formatter
+        formatter = logFileFormatter
       )
       .replace()
   }

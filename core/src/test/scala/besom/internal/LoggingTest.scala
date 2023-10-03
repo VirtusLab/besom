@@ -47,15 +47,15 @@ class LoggingTest extends munit.FunSuite:
 
     assert(messages.size == 5)
     assert(messages(0).level == Level.Info)
-    assert(messages(0).toPlainString == "hello")
+    assert(messages(0).toPlainString.endsWith("hello"))
     assert(messages(1).level == Level.Warn)
-    assert(messages(1).toPlainString == "world")
+    assert(messages(1).toPlainString.endsWith("world"))
     assert(messages(2).level == Level.Debug)
-    assert(messages(2).toPlainString == "StructuralLog(a = 23, b = \"foo\", c = true)")
+    assert(messages(2).toPlainString.endsWith("StructuralLog(a = 23, b = \"foo\", c = true)"))
     assert(messages(3).level == Level.Error)
-    assert(messages(3).toPlainString == "oh no")
+    assert(messages(3).toPlainString.endsWith("oh no"))
     assert(messages(4).level == Level.Trace)
-    assert(messages(4).toPlainString == "traced")
+    assert(messages(4).toPlainString.endsWith("traced"))
   }
 
   // TODO test("logging via RPC works") {}
