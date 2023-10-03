@@ -30,6 +30,11 @@ const sidebars = {
       label: 'Tutorial',
     },
     {
+      type: 'doc',
+      id: 'basics',
+      label: 'Basics',
+    },
+    {
       type: 'category',
       label: 'Architecture',
       collapsible: true,
