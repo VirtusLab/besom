@@ -142,7 +142,7 @@ method to combine them into a single output:
 ```scala
 val port: Output[Int] = pod.port
 val host: Output[String] = node.hostname
-val hello = host.zip(port).map((a, b) => s"https://$hostname:$port/")
+val hello = host.zip(port).map { case (a, b) => s"https://$hostname:$port/" }
 ```
 
 To access String outputs directly, use the [interpolator](interpolator):
