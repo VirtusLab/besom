@@ -140,9 +140,17 @@ If you have multiple outputs and need to use them together you can use the stand
 method to combine them into a single output:
 
 ```scala
-val hello = Output("hello").zip(Output("world")).map { 
-  case (a, b) => s"$a $b" 
-}
+val port: Output[Int] = pod.port
+val host: Output[String] = node.hostname
+val hello = host.zip(port).map((a, b) => s"https://$hostname:$port/")
+```
+
+To access String outputs directly, use the [interpolator](interpolator):
+
+```scala
+val port: Output[Int] = pod.port
+val host: Output[String] = node.hostname
+val https: Output[String] = p"https://$host:$port/api/"
 ```
 
 We encourage you to learn more about relationship between [resources](#resources) and [outputs](#inputs-and-outputs) 
