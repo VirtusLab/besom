@@ -54,10 +54,12 @@ object WorkGroup:
           .defer {
             semaphore.acquire()
             hashMap.put(result.ordinal, result.toString())
+            result.ordinal
           }
-          .flatMap { _ =>
+          .flatMap { ord =>
             result.transform { res =>
               semaphore.release()
+              hashMap.remove(ord)
               res
             }
           }

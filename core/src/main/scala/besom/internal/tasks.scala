@@ -12,14 +12,14 @@ object TaskTracker:
     for
       promise   <- Promise[Throwable]()
       workgroup <- WorkGroup()
-      _ <- workgroup.runInWorkGroup( {
+      _ <- {
         Result.sleep(10000) *>
         Result.forever {
           Result.sleep(5000) *> {
             logger.debug(workgroup.promises.map(_.toString).mkString("\n") ++ "\n")
           }
         }
-      }.fork)
+      }.fork
     yield new TaskTracker:
       override private[besom] def registerTask[A](fa: => Result[A]): Result[A] =
         promise.isCompleted.flatMap { globalFailure =>
