@@ -5,7 +5,7 @@ import besom.api.random.*
   for 
     randomPet <- RandomPet("randomPetServer")
     name <- randomPet.id
-  yield Pulumi.exports(
+  yield exports(
     name = name
   )
 }
