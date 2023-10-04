@@ -6,7 +6,7 @@ import besom.types.{ Output => _, * }
 
 sealed abstract class TestEnum(val name: String, val value: String) extends StringEnum
 
-object TestEnum extends EnumCompanion[TestEnum]("TestEnum"):
+object TestEnum extends EnumCompanion[String, TestEnum]("TestEnum"):
   object Test1 extends TestEnum("Test1", "Test1 value")
   object AnotherTest extends TestEnum("AnotherTest", "AnotherTest value")
   object `weird-test` extends TestEnum("weird-test", "weird-test value")
@@ -82,5 +82,5 @@ class ContextTest extends munit.FunSuite:
 
     assert(res.isEmpty)
     assert(value.kind.isStringValue)
-    assert(value.getStringValue == "weird-test")
+    assertEquals(value.getStringValue, "weird-test value")
   }
