@@ -135,9 +135,18 @@ To create an output from a plain value, use the `Output` constructor, e.g.:
 val hello = Output("hello")
 ```
 
-If you have multiple outputs and need to use them together as a tuple you can use the standard 
+If you have multiple outputs of the same type and need to use them together **as a list** you can use 
+Output.sequence method to combine them into a single output:
+
+```scala
+val port: Output[Int] = pod.port
+val host: Output[String] = node.hostname
+val hello = List(host, port).sequence
+```
+
+If you have multiple outputs of different types and need to use them together **as a tuple** you can use the standard 
 [`zip`](https://scala-lang.org/api/3.x/scala/collection/View.html#zip-1dd) 
-method to combine them into a single output:
+method to combine them into a single output (equivalent to [TypeScript `pulumi.all`](https://www.pulumi.com/docs/concepts/inputs-outputs#all)):
 
 ```scala
 val port: Output[Int] = pod.port
