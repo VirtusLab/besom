@@ -70,6 +70,29 @@ trait Decoder[A]:
       }
     override def mapping(value: Value, label: Label): B = ???
 
+object NameUnmangler:
+  private val mangledAnyRefMethodNames = Set(
+    "eq",
+    "ne",
+    "notify",
+    "notifyAll",
+    "synchronized",
+    "wait",
+    "asInstanceOf",
+    "clone",
+    "equals",
+    "getClass",
+    "hashCode",
+    "isInstanceOf",
+    "toString",
+  ).map(_ + "_")
+
+  /** Keep in sync with `manglePropertyName` in CodeGen.scala */
+  def unmanglePropertyName(name: String): String =
+    if (mangledAnyRefMethodNames.contains(name)) {
+      name.dropRight(1)
+    } else name
+
 object Decoder extends DecoderInstancesLowPrio1:
   import spray.json.*
 
@@ -364,7 +387,7 @@ trait DecoderHelpers:
   inline def derived[A](using m: Mirror.Of[A]): Decoder[A] =
     lazy val labels           = CodecMacros.summonLabels[m.MirroredElemLabels]
     lazy val instances        = CodecMacros.summonDecoders[m.MirroredElemTypes]
-    lazy val nameDecoderPairs = labels.zip(instances)
+    lazy val nameDecoderPairs = labels.map(NameUnmangler.unmanglePropertyName).zip(instances)
 
     inline m match
       case s: Mirror.SumOf[A] => decoderSum(s, nameDecoderPairs)
@@ -514,7 +537,7 @@ object Encoder:
   inline def derived[A](using m: Mirror.Of[A]): Encoder[A] =
     lazy val labels           = CodecMacros.summonLabels[m.MirroredElemLabels]
     lazy val instances        = CodecMacros.summonEncoders[m.MirroredElemTypes]
-    lazy val nameEncoderPairs = labels.zip(instances)
+    lazy val nameEncoderPairs = labels.map(NameUnmangler.unmanglePropertyName).zip(instances)
     inline m match
       case s: Mirror.SumOf[A]     => encoderSum(s, nameEncoderPairs)
       case _: Mirror.ProductOf[A] => encoderProduct(nameEncoderPairs)

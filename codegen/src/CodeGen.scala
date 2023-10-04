@@ -147,7 +147,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
           |
           |sealed abstract class ${enumClassName}(val name: String, val value: ${valueType}) extends ${superclass}
           |
-          |object ${enumClassName} extends besom.types.EnumCompanion[${enumClassName}](${enumClassStringName}):
+          |object ${enumClassName} extends besom.types.EnumCompanion[${valueType}, ${enumClassName}](${enumClassStringName}):
           |${instances.map(instance => s"  ${instance._1}").mkString("\n")}
           |
           |  override val allInstances: Seq[${enumClassName}] = Seq(
