@@ -83,6 +83,10 @@ A minimal Besom program consists of:
       yield exports()
     }
     ```
+  
+:::tip
+Pass [`Context`](context) everywhere you are using Besom outside of `Pulumi.run` block with `(using besom.Context)`.
+:::
 
 #### Stacks
 
