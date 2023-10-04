@@ -15,12 +15,13 @@ Pulumi is a registered trademark of [Pulumi Corporation](https://pulumi.com).
 
 ### What is Besom?
 
-Besom is a Pulumi SDK for Scala 3. It allows you to use Scala to define your infrastructure
+Besom is a **Pulumi SDK for Scala 3**. It allows you to use Scala to define your infrastructure
 in a type-safe and functional way.
+
+Besom **does NOT depend on Pulumi Java SDK**, it is a completely separate implementation.
 
 :::tip
 Please pay attention to your dependencies, **only use `org.virtuslab::besom-*`** and not `com.pulumi:*`.<br/>
-Besom **does NOT depend on Pulumi Java SDK**, it is a completely separate implementation.
 :::
 
 ### Concepts
@@ -49,15 +50,40 @@ Project source code is typically stored in a version control system such as Git.
 In addition to the project source code, Pulumi also stores a snapshot of the project state in the [backend](#state).
 
 Besom projects are no different. You can use the same project structure and workflow as you would with other Pulumi SDKs.
-The only difference is that you use `runtime: scala` in your [`Pulumi.<stackname>.yaml`](https://www.pulumi.com/docs/concepts/projects/project-file/)
+The only difference is that you use `runtime: scala` in your [`Pulumi.yaml`](https://www.pulumi.com/docs/concepts/projects/project-file/)
 with [runtime options](https://www.pulumi.com/docs/concepts/projects/project-file/#runtime-options) being:
 - `binary` - a path to pre-built executable JAR
 - `use-executor` - force a specific executor path instead of probing the project directory and `PATH`
+
+A minimal Besom project file:
+```yaml
+name: Example Besom project file with only required attributes
+runtime: scala
+```
 
 #### Programs
 
 A Pulumi program, written in a general-purpose programming language, is a collection of [resources](#resources) 
 that are deployed to a [stack](#stacks).
+
+A minimal Besom program consists of:
+* `project.scala` - the program dependencies (here we use [Scala-CLI directives](https://scala-cli.virtuslab.org/docs/guides/using-directives/))
+    ```
+    //> using scala "3.3.1"
+    //> using plugin "org.virtuslab::besom-compiler-plugin:0.1.0"
+    //> using dep "org.virtuslab::besom-core:0.1.0"
+    //> using dep "org.virtuslab::besom-aws:6.2.1-core.0.1.0"
+    ```
+* `Main.scala` - the actual program written in Scala
+    ```scala
+    import besom.*
+    
+    @main def main = Pulumi.run {
+      for 
+        _ <- log.warn("Nothing's here yet, it's waiting for you to write some code!")
+      yield exports()
+    }
+    ```
 
 #### Stacks
 
@@ -73,8 +99,10 @@ By default, Pulumi creates a stack for you when you start a new project using th
 Each stack that is created in a project will have a file named [`Pulumi.<stackname>.yaml`](https://www.pulumi.com/docs/concepts/projects/#stack-settings-file)
 in the root of the [project](#projects) directory that contains the [configuration](#configuration) specific to this stack.
 
-The recommended practice is to check stack files into source control as a means of collaboration.
+:::tip
+The recommended practice is to **check stack files into source control** as a means of collaboration.<br/>
 Since secret values are encrypted, it is safe to check in these stack settings.
+:::
 
 ##### Stack Outputs
 
@@ -110,7 +138,7 @@ Each resource also can have:
 - a set of [arguments](https://www.pulumi.com/docs/concepts/resources/properties/) that define the behavior of the resulting infrastructure
 - and a set of [options](https://www.pulumi.com/docs/concepts/options/) that control how the resource is created and managed by the Pulumi engine.
 
-Every is managed by a [provider](https://www.pulumi.com/docs/concepts/resources/providers/) which is a plugin that
+Every is managed by a [provider](#providers) which is a plugin that
 provides the implementation details. If not specified explicitly, the default provider is used.
 Providers can be configured using [provider configuration](https://www.pulumi.com/docs/concepts/resources/providers/#explicit-provider-configuration).
 

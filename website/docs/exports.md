@@ -17,8 +17,8 @@ import besom.api.aws
 
 @main def run = Pulumi.run {
   for
-    bucket <- aws.s3.Bucket("my-bucket", ...) 
-  yield Pulumi.exports(
+    bucket <- aws.s3.Bucket("my-bucket") 
+  yield exports(
     bucketUrl = bucket.websiteEndpoint
   )
 }
