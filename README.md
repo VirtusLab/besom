@@ -96,7 +96,7 @@ To learn more, head over to
 [examples](examples), 
 and [architecture and programming model concepts](https://virtuslab.github.io/besom/docs/architecture).
 
-## Explaining the file structure
+## Explaining the project structure
 `Pulumi.yaml` is your main Pulumi file, explained [here](https://www.pulumi.com/docs/concepts/projects/project-file/). 
 
 `project.scala` is the file containing your dependencies for [Scala-CLI](https://scala-cli.virtuslab.org).
@@ -105,11 +105,34 @@ and [architecture and programming model concepts](https://virtuslab.github.io/be
 
 Resources created in `Pulumi.run { ... }` block will be created by Pulumi.
 
+A simple example using Scala CLI:
+```scala
+//> using scala "3.3.1"
+//> using plugin "org.virtuslab::besom-compiler-plugin:0.1.0"
+//> using dep "org.virtuslab::besom-core:0.1.0"
+//> using dep "org.virtuslab::besom-aws:6.2.1-core.0.1.0"
+
+import besom.*
+import besom.api.aws
+
+@main def run = Pulumi.run {
+   for
+      bucket <- aws.s3.Bucket("my-bucket")
+   yield exports(
+      bucketUrl = bucket.websiteEndpoint
+   )
+}
+```
+
+> [!NOTE]
+> Please pay attention to your dependencies, **only use `org.virtuslab::besom-*`** and not `com.pulumi:*`.
+> Besom **does NOT depend on Pulumi Java SDK**, it is a completely separate implementation.
+
 ## Tips
-- Pass `Context` everywhere you are using Pulumi, for example when you are creating a resource.
+- Pass [`Context`](https://virtuslab.github.io/besom/docs/context) everywhere you are using Besom outside of `Pulumi.run` block with `(using besom.Context)`
 - Resources are initialized lazily. To make them appear in your physical infrastructure make sure 
 their evaluation is triggered directly or transitively from the main for-comprehension block of your Pulumi program.
-- Use whatever scala concepts you are familiar with, infrastructure as code in Besom is still a scala program, 
+- Use whatever Scala concepts you are familiar with, infrastructure as code in Besom is still a Scala program, 
 so you have the full potential of the language to work with.
 - Pay attention to the types. You will be instantiating case classes to pass parameters, note their package of origin.
 
