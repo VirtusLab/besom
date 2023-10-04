@@ -45,4 +45,5 @@ written in functional style, to name two:
 #### Next steps:
 - [Getting started](getting_started) section helps you **get your hands dirty** and figure out the details as you go
 - [Basics](basics) offers an **executive summary** of Pulumi's key concepts and how they are implemented in Besom
+- [Tutorial](tutorial) is a **crash course in cloud engineering** using Scala, Pulumi and AWS
 - [Architecture Overview](architecture) helps you learn more about the **details and differences** between Besom and other Pulumi SDKs
