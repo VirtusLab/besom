@@ -37,5 +37,6 @@ written in functional style, e.g.: Stack exports are the return value of the mai
 smaller chunks of the program have to be composed into the main flow of the program to be executed. 
 
 Next steps:
-- [Getting started](./getting_started.md) section helps you **get your hands dirty** and figure out the details as you go 
-- [Architecture Overview](architecture) - learn more about the semantics and key differences between Besom and other Pulumi SDKs
+- [Getting started](getting_started) section helps you **get your hands dirty** and figure out the details as you go
+- [Basics](basics) offers an **executive summary** of Pulumi's key concepts and how they are implemented in Besom
+- [Architecture Overview](architecture) helps you learn more about the details and differences between Besom and other Pulumi SDKs
