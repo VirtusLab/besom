@@ -61,7 +61,7 @@ val siteDir = "www"
   )
 
   // For each file in the directory, create an S3 object stored in `siteBucket`
-  val uploads: Array[Output[s3.BucketObject]] = File(siteDir).listFiles().map { file =>
+  val uploads: Output[List[s3.BucketObject]] = File(siteDir).listFiles().map { file =>
     val name = NonEmptyString(file.getName) match
       case Some(name) => name
       case None => throw new RuntimeException("Unexpected empty file name")
@@ -76,14 +76,14 @@ val siteDir = "www"
         dependsOn = siteBucket.map(List(_))
       )
     )
-  }
+  }.toList.sequence
 
   for
     bucket <- siteBucket
     _      <- siteBucketPublicAccessBlock
     _      <- siteBucketPolicy
-    _      <- Output.sequence(uploads)
-  yield Pulumi.exports(
+    _      <- uploads
+  yield exports(
     bucketName = bucket.bucket,
     websiteUrl = bucket.websiteEndpoint
   )
