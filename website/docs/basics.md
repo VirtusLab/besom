@@ -135,7 +135,7 @@ To create an output from a plain value, use the `Output` constructor, e.g.:
 val hello = Output("hello")
 ```
 
-If you have multiple outputs and need to use them together you can use the standard 
+If you have multiple outputs and need to use them together as a tuple you can use the standard 
 [`zip`](https://scala-lang.org/api/3.x/scala/collection/View.html#zip-1dd) 
 method to combine them into a single output:
 
@@ -194,7 +194,7 @@ Providers can be configured using [provider configuration](https://www.pulumi.co
 
 :::tip
 It is recommended to [disable default providers](https://www.pulumi.com/blog/disable-default-providers/) 
-if not for [all providers, at least for Kubernetes]((https://www.pulumi.com/docs/concepts/config/#pulumi-configuration-options)).
+if not for [all providers, at least for Kubernetes](https://www.pulumi.com/docs/concepts/config#pulumi-configuration-options).
 :::
 
 #### State

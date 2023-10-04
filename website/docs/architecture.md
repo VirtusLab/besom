@@ -37,6 +37,6 @@ Following sections explain and showcase said differences:
 - [Apply method](apply_methods) - use `map` and `flatMap` to compose Outputs, not `apply`
 - [Logging](logging) - all logging statements need to be composed into the main flow
 - [Lifting](lifting) - first class support of lifting via Scala 3 extension methods
-- [String interpolation](interpolation) - use `p` type-safe string interpolator
+- [String interpolation](interpolator) - use `p` type-safe string interpolator
 - [Components](components) - use `case class` to define components
 - [Compiler plugin](compiler_plugin) - use the compiler plugin to catch mistakes early and avoid common pitfalls
