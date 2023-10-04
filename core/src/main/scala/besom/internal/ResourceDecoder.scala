@@ -30,7 +30,7 @@ object ResourceDecoder:
 
       val outputData =
         fields
-          .get(propertyName)
+          .get(NameUnmangler.unmanglePropertyName(propertyName))
           .map { value =>
             log.trace(s"extracting custom property $propertyName from $value using decoder $decoder")
             decoder.decode(value, propertyLabel).map(_.withDependency(resource)) match
