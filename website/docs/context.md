@@ -9,6 +9,10 @@ the `Pulumi.run` block should have the following `using` clause: `(using Context
 Each Besom program file should have an `import besom.*` clause to bring all the user-facing types and functions into scope. 
 If using a Cats-Effect or ZIO variant this import is respectively `import besom.cats.*` or `import besom.zio.*`.
 
+:::tip
+Please pay attention to your dependencies, **only use `org.virtuslab::besom-*`** and not `com.pulumi:*`.<br/>
+Besom **does NOT depend on Pulumi Java SDK**, it is a completely separate implementation.
+:::
 
 Here's a sample:
 

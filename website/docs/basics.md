@@ -18,6 +18,11 @@ Pulumi is a registered trademark of [Pulumi Corporation](https://pulumi.com).
 Besom is a Pulumi SDK for Scala 3. It allows you to use Scala to define your infrastructure
 in a type-safe and functional way.
 
+:::tip
+Please pay attention to your dependencies, **only use `org.virtuslab::besom-*`** and not `com.pulumi:*`.<br/>
+Besom **does NOT depend on Pulumi Java SDK**, it is a completely separate implementation.
+:::
+
 ### Concepts
 
 It is important to understand the basic concepts of Pulumi before we dive into the details of Besom.
