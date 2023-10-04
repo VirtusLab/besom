@@ -133,20 +133,20 @@ Output transformations available in Besom:
 To create an output from a plain value, use the `Output` constructor, e.g.:
 ```scala
 val hello = Output("hello")
+val world = Output.secret("world")
 ```
 
 If you have multiple outputs of the same type and need to use them together **as a list** you can use 
-Output.sequence method to combine them into a single output:
+`Output.sequence` method to combine them into a single output:
 
 ```scala
-val port: Output[Int] = pod.port
+val port: Output[String] = pod.name
 val host: Output[String] = node.hostname
-val hello = List(host, port).sequence
+val hello = List(host, port).sequence // we use the extension method here
 ```
 
 If you have multiple outputs of different types and need to use them together **as a tuple** you can use the standard 
-[`zip`](https://scala-lang.org/api/3.x/scala/collection/View.html#zip-1dd) 
-method to combine them into a single output (equivalent to [TypeScript `pulumi.all`](https://www.pulumi.com/docs/concepts/inputs-outputs#all)):
+[`zip`](https://scala-lang.org/api/3.x/scala/collection/View.html#zip-1dd) method and pattern matching (`case`) to combine them into a single output:
 
 ```scala
 val port: Output[Int] = pod.port
@@ -154,7 +154,15 @@ val host: Output[String] = node.hostname
 val hello = host.zip(port).map { case (a, b) => s"https://$hostname:$port/" }
 ```
 
-To access String outputs directly, use the [interpolator](interpolator):
+If you have a map of outputs and need to use them together **as a map** you can use
+`Output.traverse` method to combine them into a single output:
+
+```scala
+val m: Map[String, Output[String]] = Map(pod.name -> pod.port)
+val o: Output[Map[String, String]] = m.traverse // we use the extension method here
+```
+
+To access `String` outputs directly, use the [interpolator](interpolator):
 
 ```scala
 val port: Output[Int] = pod.port
