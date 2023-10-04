@@ -9,7 +9,7 @@ import besom.types.*
 import besom.internal.logging.*
 import fansi.Str
 
-class ResourceOps(using ctx: Context, mdc: MDC[Label]):
+class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
 
   private[besom] def registerResourceOutputsInternal(
     urnResult: Result[URN],

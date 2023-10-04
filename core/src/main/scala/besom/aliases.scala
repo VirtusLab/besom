@@ -9,6 +9,7 @@ object aliases:
   object Input:
     export besom.internal.Input.*
   type Context = besom.internal.Context
+  export besom.internal.logging.MDC
   type Config = besom.internal.Config
   object Config extends besom.internal.ConfigFactory
   type Logger = besom.internal.logging.UserLoggerFactory

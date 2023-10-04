@@ -7,19 +7,18 @@ import besom.internal.logging.*
 import besom.types.{Label, URN, ResourceId}
 
 trait ResourceDecoder[A <: Resource]: // TODO rename to something more sensible
-  def makeResolver(using Context, MDC[Label]): Result[(A, ResourceResolver[A])]
+  def makeResolver(using Context, BesomMDC[Label]): Result[(A, ResourceResolver[A])]
 
 object ResourceDecoder:
   class CustomPropertyExtractor[A](propertyName: String, decoder: Decoder[A]):
 
-    // TODO think if this could be pure (ie.: return Result)
     def extract(
       fields: Map[String, Value],
       dependencies: Map[String, Set[Resource]],
       resource: Resource
     )(using
       ctx: Context,
-      mdc: MDC[Label]
+      mdc: BesomMDC[Label]
     ): Either[DecodingError, OutputData[A]] =
       val resourceLabel = mdc.get(Key.LabelKey)
 
@@ -53,7 +52,7 @@ object ResourceDecoder:
   def makeResolver[A <: Resource](
     fromProduct: Product => A,
     customPropertyExtractors: Vector[CustomPropertyExtractor[?]]
-  )(using Context, MDC[Label]): Result[(A, ResourceResolver[A])] =
+  )(using Context, BesomMDC[Label]): Result[(A, ResourceResolver[A])] =
     val customPropertiesCount = customPropertyExtractors.length
     val customPropertiesResults = Result.sequence(
       Vector.fill(customPropertiesCount)(Promise[OutputData[Option[Any]]]())
@@ -146,7 +145,7 @@ object ResourceDecoder:
 
         '{
           new ResourceDecoder[A]:
-            def makeResolver(using Context, MDC[Label]): Result[(A, ResourceResolver[A])] =
+            def makeResolver(using Context, BesomMDC[Label]): Result[(A, ResourceResolver[A])] =
               ResourceDecoder.makeResolver(
                 fromProduct = ${ m }.fromProduct,
                 customPropertyExtractors = ${ customPropertyExtractorsExpr }.toVector

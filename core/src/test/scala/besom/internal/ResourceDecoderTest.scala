@@ -19,8 +19,8 @@ class ResourceDecoderTest extends munit.FunSuite:
   ) extends CustomResource
       derives ResourceDecoder
 
-  val label        = Label.fromNameAndType("test", "test:pkg:TestResource")
-  given MDC[Label] = logging.MDC(Key.LabelKey, label)
+  val label             = Label.fromNameAndType("test", "test:pkg:TestResource")
+  given BesomMDC[Label] = logging.BesomMDC(Key.LabelKey, label)
 
   def checkOutput[A](
     output: Output[A]

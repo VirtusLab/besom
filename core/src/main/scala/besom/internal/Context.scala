@@ -2,7 +2,7 @@ package besom.internal
 
 import com.google.protobuf.struct.*
 import besom.util.*
-import besom.types.{ ResourceType, URN, Label, ProviderType }
+import besom.types.{ResourceType, URN, Label, ProviderType}
 import besom.internal.logging.*
 import scala.annotation.implicitNotFound
 import besom.internal.ComponentResource
@@ -102,7 +102,7 @@ class ContextImpl(
   )(using Context): Result[ComponentBase] =
     val label = Label.fromNameAndType(name, typ)
 
-    MDC(Key.LabelKey, label) {
+    BesomMDC(Key.LabelKey, label) {
       ResourceOps().registerResourceInternal[ComponentBase, EmptyArgs](
         typ,
         name,
@@ -117,7 +117,7 @@ class ContextImpl(
     args: A,
     options: CustomResourceOptions
   )(using Context): Output[R] =
-    MDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
+    BesomMDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
       Output.ofData(ResourceOps().registerResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
     }
 
@@ -127,7 +127,7 @@ class ContextImpl(
     args: A,
     options: ResourceOptions
   )(using Context): Output[R] =
-    MDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
+    BesomMDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
       Output.ofData(ResourceOps().registerResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
     }
 
@@ -144,7 +144,7 @@ class ContextImpl(
     urnResult: Result[URN],
     outputs: Result[Struct]
   )(using Context): Result[Unit] =
-    MDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
+    BesomMDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
       ResourceOps().registerResourceOutputsInternal(urnResult, outputs)
     }
 
