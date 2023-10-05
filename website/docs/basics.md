@@ -165,11 +165,21 @@ Output transformations available in Besom:
 - [`map` and `flatMap`](apply_methods) methods take a callback that receives the plain value, and computes a new output
 - [lifting](lifting) directly read properties off an output value
 - [interpolation](interpolator) concatenate string outputs with other strings directly
+- `sequence` method combines multiple outputs into a single output of a list
+- `zip` method combines multiple outputs into a single output of a tuple
+- `traverse` method transforms a map of outputs into a single output of a map
 
 To create an output from a plain value, use the `Output` constructor, e.g.:
 ```scala
 val hello = Output("hello")
 val world = Output.secret("world")
+```
+
+To transform an output value, use the `map` and `flatMap` methods, e.g.:
+```scala
+val hello = Output("hello").map(_.toUpperCase)
+val world = Output.secret("world")
+val helloWorld: Output[String] = hello.flatMap(h => h + "_" + world.map(_.toUpperCase))
 ```
 
 If you have multiple outputs of the same type and need to use them together **as a list** you can use 
@@ -178,7 +188,7 @@ If you have multiple outputs of the same type and need to use them together **as
 ```scala
 val port: Output[String] = pod.name
 val host: Output[String] = node.hostname
-val hello = List(host, port).sequence // we use the extension method here
+val hello: Output[List[String]] = List(host, port).sequence // we use the extension method here
 ```
 
 If you have multiple outputs of different types and need to use them together **as a tuple** you can use the standard 
@@ -187,7 +197,8 @@ If you have multiple outputs of different types and need to use them together **
 ```scala
 val port: Output[Int] = pod.port
 val host: Output[String] = node.hostname
-val hello = host.zip(port).map { case (a, b) => s"https://$hostname:$port/" }
+val hello: Output[(String, Int)] = host.zip(port)
+val url: Output[String] = hello.map { case (a, b) => s"https://$hostname:$port/" }
 ```
 
 If you have a map of outputs and need to use them together **as a map** you can use
