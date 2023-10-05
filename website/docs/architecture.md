@@ -18,7 +18,7 @@ overall focus on concurrency and asynchronicity Scala now has 3 main asynchronou
 - cats-effect `IO` used extensively by the cats ecosystem 
 - and `ZIO` that also has its own ecosystem. 
 
-The last two of these data types are [lazy evaluated](https://en.wikipedia.org/wiki/Lazy_evaluation). 
+The last two of these data types are [lazily evaluated](https://en.wikipedia.org/wiki/Lazy_evaluation). 
 
 To support and integrate them with Besom a decision was made to encode the SDK using the same **lazy and pure semantics** 
 of execution that leverage the preferred datatype of the user. While this architectural choice has little impact on what 

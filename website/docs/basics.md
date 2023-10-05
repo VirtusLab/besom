@@ -20,7 +20,7 @@ in a type-safe and functional way.
 
 Besom **does NOT depend on Pulumi Java SDK**, it is a completely separate implementation.
 
-:::tip
+:::caution
 Please pay attention to your dependencies, **only use `org.virtuslab::besom-*`** and not `com.pulumi:*`.<br/>
 :::
 
@@ -55,7 +55,7 @@ with [runtime options](https://www.pulumi.com/docs/concepts/projects/project-fil
 - `binary` - a path to pre-built executable JAR
 - `use-executor` - force a specific executor path instead of probing the project directory and `PATH`
 
-A minimal Besom project file:
+A minimal Besom `Pulumi.yaml` project file:
 ```yaml
 name: Example Besom project file with only required attributes
 runtime: scala
@@ -68,7 +68,7 @@ that are deployed to a [stack](#stacks).
 
 A minimal Besom program consists of:
 * `project.scala` - the program dependencies (here we use [Scala-CLI directives](https://scala-cli.virtuslab.org/docs/guides/using-directives/))
-    ```
+    ```scala
     //> using scala "3.3.1"
     //> using plugin "org.virtuslab::besom-compiler-plugin:0.1.0"
     //> using dep "org.virtuslab::besom-core:0.1.0"
@@ -137,11 +137,11 @@ Resources are defined using a [**resource constructor**](constructors). Each res
 - a [resource type](https://www.pulumi.com/docs/concepts/resources/names/#types), which identifies the provider and the kind of resource being created
 - [URN](https://www.pulumi.com/docs/concepts/resources/names/#types), which is an automatically constructed globally unique identifier for the resource.
 
-Each resource also can have:
+Each resource can also have:
 - a set of [arguments](https://www.pulumi.com/docs/concepts/resources/properties/) that define the behavior of the resulting infrastructure
 - and a set of [options](https://www.pulumi.com/docs/concepts/options/) that control how the resource is created and managed by the Pulumi engine.
 
-Every is managed by a [provider](#providers) which is a plugin that
+Every [resource](#resources) is managed by a [provider](#providers) which is a plugin that
 provides the implementation details. If not specified explicitly, the default provider is used.
 Providers can be configured using [provider configuration](https://www.pulumi.com/docs/concepts/resources/providers/#explicit-provider-configuration).
 
@@ -262,6 +262,6 @@ State is used to:
 - and store [configuration](#configuration) and secret values
 - and store [stack outputs](#stack-outputs)
 
-:::tip
+:::note
 Fore extra curious [here's the internal state schema](https://pulumi-developer-docs.readthedocs.io/en/latest/architecture/deployment-schema.html)
 :::
