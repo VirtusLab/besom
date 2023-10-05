@@ -45,7 +45,7 @@ Versioning is done using [Semantic Versioning](https://semver.org/), with follow
 - `x.y.z` for core version, where:
   - `x` no guarantees are made about compatibility,
   - `y` should not break source compatibility, 
-  - `z` should not binary compatibility
+  - `z` should not break binary compatibility
 - `a.b.c-core.x.y` for provider version, where `a.b.c` is the schema version
 - `*-SNAPSHOT` versions are used for development versions
 
