@@ -1,10 +1,10 @@
 import besom.*
-import besom.api.aws.*
+import besom.api.aws
 
 @main def main = Pulumi.run {
   for
-    bucket <- s3.Bucket("my-bucket")
-  yield Pulumi.exports(
+    bucket <- aws.s3.Bucket("my-bucket")
+  yield exports(
     bucketName = bucket.bucket
   )
 }

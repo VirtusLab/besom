@@ -1,0 +1,9 @@
+name: ${PROJECT}
+description: ${DESCRIPTION}
+runtime: scala
+template:
+  description: A minimal Google Cloud Scala Pulumi program
+  important: true
+  config:
+    gcp:project:
+      description: The Google Cloud project to deploy into
