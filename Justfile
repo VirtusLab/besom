@@ -286,22 +286,23 @@ clean-test-templates:
 
 # Runs an example test
 test-example example-name:
-	echo "Testing example {{example-name}}"
+	@echo "Testing example {{example-name}}"
 	scala-cli compile examples/{{example-name}}
-	echo "----------------------------------------"
+	@echo "----------------------------------------"
 
 # Cleans after an example test
 clean-test-example example-name:
-	echo "Cleaning example test for {{example-name}}"
-	echo "----------------------------------------"
+	@echo "Cleaning example test for {{example-name}}"
+	scala-cli clean examples/{{example-name}}
+	@echo "----------------------------------------"
 
 # Runs all template tests
 test-examples:
-	just test-example aws-s3-folder
+	for file in `ls -d examples/*/ | cut -f2 -d'/'`; do just test-example $file; done
 
 # Cleans after template tests
 clean-test-examples:
-	just clean-test-example aws-s3-folder
+	for file in `ls -d examples/*/ | cut -f2 -d'/'`; do just clean-test-example $file; done
 
 ####################
 # Demo
