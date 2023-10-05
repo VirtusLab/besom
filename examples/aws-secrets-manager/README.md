@@ -2,30 +2,35 @@
 
 A simple program that creates an AWS secret and a version under AWS Secrets Manager
 
+## Prerequisites
+
+[Follow the instructions](https://www.pulumi.com/docs/clouds/aws/get-started/begin/)
+to get started with Pulumi & AWS.
+
 ## Deploying and running the program
 
 Note: some values in this example will be different from run to run.
 These values are indicated with `***`.
 
-1.  Set the AWS region:
+1. Create a new stack, which is an isolated deployment target for this example:
 
-    Either using an environment variable
     ```bash
-    export AWS_REGION=us-west-2
+    pulumi stack init aws-secrets-manager-dev
     ```
 
-    Or with the stack config
+2.  Set the AWS region:
+
     ```bash
     pulumi config set aws:region us-west-2
     ```
 
-2. Create a Pulumi secret that will be saved in the secret manager:
+3. Create a Pulumi secret that will be saved in the secret manager:
 
     ```bash
     pulumi config set --secret mySecret
     ```
 
-3. Run `pulumi up` to preview and deploy changes. After the preview is shown
+4. Run `pulumi up` to preview and deploy changes. After the preview is shown
    you will be prompted if you want to continue or not.
 
     ```bash
@@ -34,15 +39,15 @@ These values are indicated with `***`.
 
     After a couple of minutes, your VM will be ready. Your web server will start on port `80`.
 
-4. To see the resources that were created, run `pulumi stack output`:
+5. To see the resources that were created, run `pulumi stack output`:
 
     ```bash
     pulumi stack output
     ```
 
-5. From there, feel free to experiment. Simply making edits and running pulumi up will incrementally update your infrastructure.
+6. From there, feel free to experiment. Simply making edits and running pulumi up will incrementally update your infrastructure.
 
-6. To clean up resources, destroy your stack and remove it:
+7. To clean up resources, destroy your stack and remove it:
 
     ```bash
     pulumi destroy
