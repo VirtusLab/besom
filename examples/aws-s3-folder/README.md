@@ -105,5 +105,5 @@ you will be prompted if you want to continue or not.
     pulumi destroy
     ```
     ```bash
-    pulumi stack rm
+    pulumi stack rm aws-s3-folder-dev
     ```

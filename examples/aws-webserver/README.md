@@ -56,5 +56,5 @@ These values are indicated with `***`.
     pulumi destroy
     ```
     ```bash
-    pulumi stack rm
+    pulumi stack rm aws-webserver-dev
     ```
