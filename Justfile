@@ -259,49 +259,47 @@ test-compiler-plugin: publish-local-sdk publish-local-compiler-plugin
 
 # Runs a template test
 test-template template-name:
-	echo "Testing template {{template-name}}"
+	@echo "Testing template {{template-name}}"
 	pulumi --color=never --emoji=false new -y --force --dir target/test/{{template-name}} -n templates-test-{{template-name}} --stack templates-test-{{template-name}} ../../../templates/{{template-name}}/
 	scala-cli compile target/test/{{template-name}}
-	echo "----------------------------------------"
+	@echo "----------------------------------------"
 
 # Cleans after a template test
 clean-test-template template-name:
-	echo "Cleaning template test for {{template-name}}"
+	@echo "Cleaning template test for {{template-name}}"
+	scala-cli clean target/test/{{template-name}} || echo "Could not clean"
 	pulumi --color=never --emoji=false stack rm --cwd target/test/{{template-name}} -y || echo "No stack to remove"
-	rm -rf ./templates/test/{{template-name}} || echo "No directory to remove"
+	rm -rf ./target/test/{{template-name}} || echo "No directory to remove"
 	rm -rf $HOME/.pulumi/stacks/templates-test-{{template-name}} || echo "No directory to remove"
-	echo "----------------------------------------"
+	@echo "----------------------------------------"
 
 # Runs all template tests
 test-templates:
-	just test-template default
-	just test-template kubernetes
-	just test-template aws
+	for file in `ls -d templates/*/ | cut -f2 -d'/'`; do just test-template $file; done
 
 # Cleans after template tests
 clean-test-templates:
-	just clean-test-template default
-	just clean-test-template kubernetes
-	just clean-test-template aws
+	for file in `ls -d templates/*/ | cut -f2 -d'/'`; do just clean-test-template $file; done
 
 # Runs an example test
 test-example example-name:
-	echo "Testing example {{example-name}}"
+	@echo "Testing example {{example-name}}"
 	scala-cli compile examples/{{example-name}}
-	echo "----------------------------------------"
+	@echo "----------------------------------------"
 
 # Cleans after an example test
 clean-test-example example-name:
-	echo "Cleaning example test for {{example-name}}"
-	echo "----------------------------------------"
+	@echo "Cleaning example test for {{example-name}}"
+	scala-cli clean examples/{{example-name}}
+	@echo "----------------------------------------"
 
 # Runs all template tests
 test-examples:
-	just test-example aws-s3-folder
+	for file in `ls -d examples/*/ | cut -f2 -d'/'`; do just test-example $file; done
 
 # Cleans after template tests
 clean-test-examples:
-	just clean-test-example aws-s3-folder
+	for file in `ls -d examples/*/ | cut -f2 -d'/'`; do just clean-test-example $file; done
 
 ####################
 # Demo
