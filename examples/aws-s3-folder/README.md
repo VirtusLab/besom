@@ -2,24 +2,29 @@
 
 A static website that uses [S3's website support](https://docs.aws.amazon.com/AmazonS3/latest/dev/WebsiteHosting.html).
 
+## Prerequisites
+
+[Follow the instructions](https://www.pulumi.com/docs/clouds/aws/get-started/begin/)
+to get started with Pulumi & AWS.
+
 ## Deploying and running the program
 
 Note: some values in this example will be different from run to run. 
 These values are indicated with `***`.
 
-1.  Set the AWS region:
+1. Create a new stack, which is an isolated deployment target for this example:
 
-    Either using an environment variable
     ```bash
-    export AWS_REGION=us-west-2
+    pulumi stack init aws-s3-folder-dev
     ```
 
-    Or with the stack config
+2. Set the AWS region:
+
     ```bash
     pulumi config set aws:region us-west-2
     ```
 
-2. Run `pulumi up` to preview and deploy changes. After the preview is shown 
+3. Run `pulumi up` to preview and deploy changes. After the preview is shown 
 you will be prompted if you want to continue or not.
 
     ```bash
@@ -64,7 +69,7 @@ you will be prompted if you want to continue or not.
     Duration: 7s
     ```
 
-3. To see the resources that were created, run `pulumi stack output`:
+4. To see the resources that were created, run `pulumi stack output`:
 
     ```bash
     pulumi stack output
@@ -76,7 +81,7 @@ you will be prompted if you want to continue or not.
         websiteUrl  s3-website-bucket-***.s3-website.us-west-2.amazonaws.com
     ```
 
-4. To see that the S3 objects exist, you can either use the AWS Console or the AWS CLI:
+5. To see that the S3 objects exist, you can either use the AWS Console or the AWS CLI:
 
     ```bash
     aws s3 ls $(pulumi stack output bucketName)
@@ -86,19 +91,19 @@ you will be prompted if you want to continue or not.
     2023-09-28 11:44:12        223 index.html
     ```
 
-5. Open the site URL in a browser to see both the rendered HTML and the favicon:
+6. Open the site URL in a browser to see both the rendered HTML and the favicon:
 
     ```bash
     open http://$(pulumi stack output websiteUrl)
     ```
 
-6. From there, feel free to experiment. Simply making edits and running pulumi up will incrementally update your infrastructure.
+7. From there, feel free to experiment. Simply making edits and running pulumi up will incrementally update your infrastructure.
 
-7. To clean up resources, destroy your stack and remove it:
+8. To clean up resources, destroy your stack and remove it:
 
     ```bash
     pulumi destroy
     ```
     ```bash
-    pulumi stack rm
+    pulumi stack rm aws-s3-folder-dev
     ```
