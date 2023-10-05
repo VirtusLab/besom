@@ -44,7 +44,7 @@ We mostly follow the Pulumi strategy:
 Versioning is done using [Semantic Versioning](https://semver.org/), with following additions:
 - `x.y.z` for core version, where:
   - `x` no guarantees are made about compatibility,
-  - `y` should not breaks source compatibility, 
+  - `y` should not break source compatibility, 
   - `z` should not binary compatibility
 - `a.b.c-core.x.y` for provider version, where `a.b.c` is the schema version
 - `*-SNAPSHOT` versions are used for development versions
