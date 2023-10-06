@@ -18,6 +18,8 @@ Feel free to pick up any existing issue that looks interesting to you
 or fix a bug you stumble across while using Besom. 
 No matter the size, we welcome all improvements.
 
+Before investing a lot of time, please let us know, so we can discuss the issue together.
+
 ### Feature Work
 
 For larger features, we'd appreciate it if you open a
@@ -27,6 +29,25 @@ before investing a lot of time, so we can discuss the feature together.
 Please also be sure to browse
 [current issues](https://github.com/VirtusLab/besom/issues)
 to make sure your issue is unique, to lighten the triage burden on our maintainers.
+
+## Branching and versioning strategy
+
+We mostly follow the Pulumi strategy:
+- `main` branch contains current `*-SNAPSHOT` version
+- `vX.Y.Z` tag marks the `X.Y.Z` release
+- `release/vX.Y.Z` branch contains the `X.Y.Z` release
+- PRs must have a prefix with the **name of the author and issue number** e.g. `pprazak/123-fix-bug`
+
+> [!NOTE]
+> Please make sure to **tag first** before creating a release branch. 
+
+Versioning is done using [Semantic Versioning](https://semver.org/), with following additions:
+- `x.y.z` for core version, where:
+  - `x` no guarantees are made about compatibility,
+  - `y` should not break source compatibility, 
+  - `z` should not break binary compatibility
+- `a.b.c-core.x.y` for provider version, where `a.b.c` is the schema version
+- `*-SNAPSHOT` versions are used for development versions
 
 ## Developing
 
@@ -111,7 +132,7 @@ Every example is a valid Pulumi program that can be tested by manually
 doing `pulumi up` in the right folder.
 
 ```
-cd exmaples/aws-scala-webserver
+cd exmaples/<example-name>
 pulumi up
 ```
 
