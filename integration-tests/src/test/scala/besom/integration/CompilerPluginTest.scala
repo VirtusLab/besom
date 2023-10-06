@@ -1,4 +1,4 @@
-package besom.integration
+package besom.integration.compilerplugin
 
 import scala.sys.process.*
 
@@ -16,7 +16,7 @@ class CompilerPluginTest extends munit.FunSuite {
          |""".stripMargin
     val result = compilePluginTestStr.!(logger)
     assert(output.contains("is used in a default string interpolator."))
-    assert(result == 0)
+    assertEquals(result, 1)
   }
 
 }

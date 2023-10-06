@@ -1,4 +1,4 @@
-package besom.integration
+package besom.integration.core
 
 import os.*
 
