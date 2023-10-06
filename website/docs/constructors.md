@@ -1,8 +1,16 @@
 ---
-title: Resource constructors, outputs and asynchronicity
+title: Resource constructors and asynchronicity
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+
+### Resources
+
+Resources are the [primary construct of Pulumi](basics#resources) programs.
+
+### Outputs
+
+Outputs are the [primary asynchronous data structure of Pulumi](basics#inputs-and-outputs) programs.
 
 ### Resource constructor syntax
 
@@ -13,14 +21,13 @@ for example in TypeScript:
 const s3Bucket: aws.s3.Bucket = new aws.s3.Bucket("my-bucket")
 ```
 
-This operation returns a resource object of type `aws.s3.Bucket` that has several fields, each of an `Output[A]` type. 
-[Outputs](https://www.pulumi.com/docs/concepts/inputs-outputs/) are the primary asynchronous data structure in Pulumi, 
-and they signify values that will be provided by the engine later, when the resource is created 
-and its properties can be fetched. 
+This operation returns a resource object of type `aws.s3.Bucket` that has several fields, 
+each of an [`Output[A]`](#outputs) type. The values will be provided by the engine later, when the resource is created
+and its properties can be fetched.
 
-For all of that to happen this synchronous constructor call has to hide the complex, asynchronous machinery that 
+For all of that to happen this synchronous constructor call has to **hide the complex, asynchronous machinery** that 
 triggers the communication with Pulumi engine and resolves underlying `Promise`-like datatype wrapped by each Output. 
-This cannot be done in a pure way and due to that resource constructors in Besom also return Outputs lifting them 
+This cannot be done in a pure way and due to that **resource constructors in Besom also return Outputs** lifting them 
 to become primary construct in terms of which user declares his program. 
 
 This is very similar to the known pattern involving Scala's Future's, cats `IO` or `ZIO` where once you start 

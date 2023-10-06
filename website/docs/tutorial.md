@@ -39,7 +39,7 @@ If it is you should see a JSON containing your user id, AWS account number and
 your user's ARN.
 :::
 
-After all of that is done the last step is to clone the tutorial repository:
+After all of that is done the last step is to clone the [tutorial repository](https://github.com/VirtusLab/besom-tutorial):
 
 ```bash
 git clone git@github.com:VirtusLab/besom-tutorial.git && cd besom-tutorial

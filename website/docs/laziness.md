@@ -3,8 +3,9 @@ title: Laziness
 ---
 
 
-Due to Besom's lazy semantics it's possible to declare resources in code and never actually execute that code. 
-Let's expand on the `s3Bucket` example above:
+Due to Besom's **lazy semantics** it's possible to declare resources in code and never actually execute that code.
+
+Let's expand on the `s3Bucket` example used in the [Exports](exports) section:
 ​
 ```scala
 import besom.*
@@ -17,7 +18,8 @@ import besom.api.aws
 }
 ```
 In this case the `s3Bucket` is only declared, but it's not composed into the main flow of the program 
-(it's never _mapped_/_flatMapped_) so if you were to run `pulumi up` you'd see no resources in the deployment plan. 
+(it's never _mapped_ or _flatMapped_) so if you were to run `pulumi up` you'd see no resources in the deployment plan. 
+
 There are two ways to avoid this:
 
 **1.** if your infrastructure just depends on the resource being present, and you never use any of the properties that
@@ -52,11 +54,15 @@ This will also work if you pass any of the Outputs of any resource as inputs to 
 ​
 
 To help you avoid mistakes with dangling resources that never get evaluated we are working on a feature that will warn 
-you during dry run phase that there were resource constructor calls encountered during the evaluation of your program that were never composed back into the main flow of the Besom program.
+you during dry run phase that there were resource constructor calls encountered during the evaluation of your program 
+that were never composed back into the main flow of the Besom program. 
+Meanwhile, you can use the `-Wunused:all` compiler flag.
 ​
 
 There's also one more property of Besom's resource constructors that needs a mention here. Pure, functional programs are 
-expected to execute side effects as many times as they are executed. Let's see this on an example:
+expected to **execute side effects** as many times as they are executed. 
+
+Let's see this on an example:
 ```scala
 import besom.*
 import besom.api.aws
@@ -75,7 +81,11 @@ import besom.api.aws
 ```
 If we were to apply that understanding here we would expect that this program would create the S3 bucket twice 
 and launch the missiles twice. This isn't true because resource **constructors are [memoized](https://en.wikipedia.org/wiki/Memoization)**. 
-Pulumi enforces a strict invariant according to which any given resource can be declared only once. 
+
+Pulumi enforces a strict invariant according to which any given **resource can be declared only once**. 
 To deal with it all the calls to a resource constructor with the same arguments are cached and return the same resource 
-after the first call. Plain Outputs on the other hand have no such property so this program would create the S3 bucket 
+after the first call. Plain **Outputs on the other hand have no such property** so this program would create the S3 bucket 
 once but launch the missiles twice!
+
+To summarise, if you want to avoid surprises with dangling resources you should always compose 
+resource constructors into the main flow of your program and avoid using plain Outputs for side effects.
