@@ -340,3 +340,8 @@ clean-slate-liftoff: clean-sdk
 	just publish-local-provider-sdk kubernetes 4.2.0
 	just clean-liftoff
 	just liftoff
+
+# Runs 'scala-cli setup-ide' for all modules
+mass-setup-ide:
+	for file in `ls */project.scala | cut -f1 -d'/'`; do scala-cli setup-ide $file; done
+	for file in `ls */*/project.scala | cut -f1,2 -d'/'`; do scala-cli setup-ide $file; done
