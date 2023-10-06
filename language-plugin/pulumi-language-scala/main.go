@@ -13,9 +13,9 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
+	"path/filepath"
 
 	"github.com/virtuslab/besom/language-host/executors"
 	"github.com/virtuslab/besom/language-host/fsys"
@@ -260,7 +260,7 @@ func (host *scalaLanguageHost) runHostCommand(
 ) (hostCommandOutput, error) {
 	commandStr := strings.Join(args, " ")
 	if logging.V(5) {
-		logging.V(5).Infoln("Language host launching process: ", name, " ", commandStr)
+		logging.V(5).Infoln("Language host launching process: ", name, commandStr)
 	}
 
 	stdoutBuffer := &bytes.Buffer{}
@@ -321,7 +321,7 @@ func (host *scalaLanguageHost) Run(ctx context.Context, req *pulumirpc.RunReques
 
 	if logging.V(5) {
 		commandStr := strings.Join(args, " ")
-		logging.V(5).Infoln("Language host launching process: ", executable, " ", commandStr)
+		logging.V(5).Infoln("Language host launching process: ", executable, commandStr)
 	}
 
 	// Now simply spawn a process to execute the requested program, wiring up stdout/stderr directly.
