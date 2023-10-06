@@ -209,6 +209,12 @@ val m: Map[String, Output[String]] = Map(pod.name -> pod.port)
 val o: Output[Map[String, String]] = m.traverse // we use the extension method here
 ```
 
+You can also use `Output.traverse` like that:
+```scala
+val names: List[String] = List("John", "Paul")
+val outputNames: Output[List[String]] = names.traverse(name => Output(name))
+```
+
 To access `String` outputs directly, use the [interpolator](interpolator):
 
 ```scala
