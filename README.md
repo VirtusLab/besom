@@ -35,7 +35,7 @@ using the Scala programming language. Scala support is currently in **Public Bet
    [installation instructions](https://scala-cli.virtuslab.org/install) for additional installation options):
 
     ```bash
-    curl -sSLf https://virtuslab.github.io/scala-cli-packages/scala-setup.sh | sh
+    curl -sSLf https://scala-cli.virtuslab.org/get | sh
     ```
 
 3. **Install Scala Language Plugin in Pulumi**:
