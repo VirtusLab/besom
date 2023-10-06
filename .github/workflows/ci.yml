@@ -95,11 +95,11 @@ jobs:
     - name: Login in to pulumi
       run: pulumi login --local
 
-    - name: Test compiler plugin
-      run: just test-compiler-plugin
+    - name: Integration test for core SDK
+      run: just test-integration-core
 
-    - name: Login in to pulumi
-      run: pulumi login --local
+    - name: Integration test for compiler plugin
+      run: just test-compiler-plugin
 
     - name: Generate random provider
       run: just generate-provider-sdk random 4.13.2
