@@ -5,9 +5,10 @@ import io.grpc.netty.NettyChannelBuilder
 import io.netty.channel.epoll.{Epoll, EpollDomainSocketChannel, EpollEventLoopGroup}
 import io.netty.channel.kqueue.{KQueue, KQueueDomainSocketChannel, KQueueEventLoopGroup}
 import io.netty.channel.unix.DomainSocketAddress
-import scala.util.Try
 
 import java.io.IOException
+import java.util.concurrent.TimeUnit
+import scala.util.Try
 
 object netty {
   object channel {
@@ -45,5 +46,8 @@ object netty {
           .build()
       }
 
+    def awaitTermination(channel: ManagedChannel): () => Result[Unit] = { () =>
+      Result.defer(channel.shutdown.awaitTermination(5, TimeUnit.SECONDS)).void
+    }
   }
 }
