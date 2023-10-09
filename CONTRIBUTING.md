@@ -159,7 +159,8 @@ just test-template default
 
 Both IDEs support rely on BSP and is experimental.
 
-### BSP setup
+### BSP setup with `scala-compose`
+
 Build experimental `scala-compose` and place on `$PATH`:
 ```
 git clone git@github.com:VirtusLab/scala-compose.git
@@ -198,7 +199,12 @@ IntelliJ support is experimental.
 2. Install Scala plugin and set update chanel to "Nightly Builds"
 3. Use BSP ([documentation](https://www.jetbrains.com/help/idea/bsp-support.html))
 
-Make sure you have `.bsp` directory before you open the project in IntelliJ.
+To make sure you have `.bsp` directories, by running:
+```bash
+just setup-intellij
+```
+
+Now open the project in IntelliJ and add modules manually using "Project Structure > Import Module" dialog.
 
 Additionally, please set `scalafmt` as the formatter.
 
