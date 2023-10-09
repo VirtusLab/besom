@@ -25,6 +25,6 @@ class EngineImpl(private val stub: EngineStub, private val closeFn: () => Result
 object Engine:
   def apply(monitorAddr: NonEmptyString): Result[Engine] = Result.evalTry {
     netty.channel.build(monitorAddr).map { channel =>
-      new EngineImpl(EngineStub(channel), () => Result.defer(channel.shutdown()).void)
+      new EngineImpl(EngineStub(channel), netty.channel.awaitTermination(channel))
     }
   }

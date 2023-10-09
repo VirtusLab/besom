@@ -40,6 +40,6 @@ class MonitorImpl(private val stub: ResourceMonitorStub, private val closeFn: ()
 object Monitor:
   def apply(monitorAddr: NonEmptyString): Result[Monitor] = Result.evalTry {
     netty.channel.build(monitorAddr).map { channel =>
-      new MonitorImpl(ResourceMonitorStub(channel), () => Result.defer(channel.shutdown()).void)
+      new MonitorImpl(ResourceMonitorStub(channel), netty.channel.awaitTermination(channel))
     }
   }
