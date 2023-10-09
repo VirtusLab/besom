@@ -8,7 +8,7 @@ on:
       - 'website/**'
 jobs:
   test-deploy:
-    if: ! github.event.pull_request.head.repo.fork
+    if: "! github.event.pull_request.head.repo.fork"
     name: Test deployment
     runs-on: ubuntu-latest
     defaults:
