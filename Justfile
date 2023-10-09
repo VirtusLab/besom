@@ -343,5 +343,5 @@ clean-slate-liftoff: clean-sdk
 
 # Runs 'scala-cli setup-ide' for all modules
 setup-intellij:
-	for file in `ls */project.scala | cut -f1 -d'/'`; do scala-cli setup-ide $file; done
-	for file in `ls */*/project.scala | cut -f1,2 -d'/'`; do scala-cli setup-ide $file; done
+	for file in `ls */project.scala | cut -f1 -d'/'`; do scala-cli setup-ide $file --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning; done
+	for file in `ls */*/project.scala | cut -f1,2 -d'/'`; do scala-cli setup-ide $file --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning; done
