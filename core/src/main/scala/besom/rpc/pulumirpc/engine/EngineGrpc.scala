@@ -71,24 +71,21 @@ object EngineGrpc {
       _root_.io.grpc.ServerServiceDefinition.builder(SERVICE)
       .addMethod(
         METHOD_LOG,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.engine.LogRequest, com.google.protobuf.empty.Empty] {
-          override def invoke(request: pulumirpc.engine.LogRequest, observer: _root_.io.grpc.stub.StreamObserver[com.google.protobuf.empty.Empty]): _root_.scala.Unit =
-            serviceImpl.log(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.engine.LogRequest, observer: _root_.io.grpc.stub.StreamObserver[com.google.protobuf.empty.Empty]) => {
+          serviceImpl.log(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_GET_ROOT_RESOURCE,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.engine.GetRootResourceRequest, pulumirpc.engine.GetRootResourceResponse] {
-          override def invoke(request: pulumirpc.engine.GetRootResourceRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.engine.GetRootResourceResponse]): _root_.scala.Unit =
-            serviceImpl.getRootResource(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.engine.GetRootResourceRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.engine.GetRootResourceResponse]) => {
+          serviceImpl.getRootResource(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_SET_ROOT_RESOURCE,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.engine.SetRootResourceRequest, pulumirpc.engine.SetRootResourceResponse] {
-          override def invoke(request: pulumirpc.engine.SetRootResourceRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.engine.SetRootResourceResponse]): _root_.scala.Unit =
-            serviceImpl.setRootResource(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.engine.SetRootResourceRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.engine.SetRootResourceResponse]) => {
+          serviceImpl.setRootResource(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .build()
   }

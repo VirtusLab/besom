@@ -17,6 +17,8 @@ package pulumirpc.provider
   *   the version of the provider to use when servicing this request.
   * @param pluginDownloadURL
   *   the pluginDownloadURL of the provider to use when servicing this request.
+  * @param pluginChecksums
+  *   a map of checksums of the provider to use when servicing this request.
   * @param project
   *   the project name.
   * @param stack
@@ -31,6 +33,10 @@ package pulumirpc.provider
   *   the degree of parallelism for resource operations (&lt;=1 for serial).
   * @param monitorEndpoint
   *   the address for communicating back to the resource monitor.
+  * @param organization
+  *   the organization of the stack being deployed into.
+  * @param sourcePosition
+  *   the optional source position of the user code that initiated the call.
   */
 @SerialVersionUID(0L)
 final case class CallRequest(
@@ -40,6 +46,7 @@ final case class CallRequest(
     provider: _root_.scala.Predef.String = "",
     version: _root_.scala.Predef.String = "",
     pluginDownloadURL: _root_.scala.Predef.String = "",
+    pluginChecksums: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString] = _root_.scala.collection.immutable.Map.empty,
     project: _root_.scala.Predef.String = "",
     stack: _root_.scala.Predef.String = "",
     config: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.scala.Predef.String] = _root_.scala.collection.immutable.Map.empty,
@@ -47,6 +54,8 @@ final case class CallRequest(
     dryRun: _root_.scala.Boolean = false,
     parallel: _root_.scala.Int = 0,
     monitorEndpoint: _root_.scala.Predef.String = "",
+    organization: _root_.scala.Predef.String = "",
+    sourcePosition: _root_.scala.Option[pulumirpc.source.SourcePosition] = _root_.scala.None,
     unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
     ) extends scalapb.GeneratedMessage with scalapb.lenses.Updatable[CallRequest] {
     @transient
@@ -89,6 +98,10 @@ final case class CallRequest(
           __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(13, __value)
         }
       };
+      pluginChecksums.foreach { __item =>
+        val __value = pulumirpc.provider.CallRequest._typemapper_pluginChecksums.toBase(__item)
+        __size += 2 + _root_.com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag(__value.serializedSize) + __value.serializedSize
+      }
       
       {
         val __value = project
@@ -131,6 +144,17 @@ final case class CallRequest(
         if (!__value.isEmpty) {
           __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(12, __value)
         }
+      };
+      
+      {
+        val __value = organization
+        if (!__value.isEmpty) {
+          __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(14, __value)
+        }
+      };
+      if (sourcePosition.isDefined) {
+        val __value = sourcePosition.get
+        __size += 1 + _root_.com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag(__value.serializedSize) + __value.serializedSize
       };
       __size += unknownFields.serializedSize
       __size
@@ -221,6 +245,24 @@ final case class CallRequest(
           _output__.writeString(13, __v)
         }
       };
+      {
+        val __v = organization
+        if (!__v.isEmpty) {
+          _output__.writeString(14, __v)
+        }
+      };
+      sourcePosition.foreach { __v =>
+        val __m = __v
+        _output__.writeTag(15, 2)
+        _output__.writeUInt32NoTag(__m.serializedSize)
+        __m.writeTo(_output__)
+      };
+      pluginChecksums.foreach { __v =>
+        val __m = pulumirpc.provider.CallRequest._typemapper_pluginChecksums.toBase(__v)
+        _output__.writeTag(16, 2)
+        _output__.writeUInt32NoTag(__m.serializedSize)
+        __m.writeTo(_output__)
+      };
       unknownFields.writeTo(_output__)
     }
     def withTok(__v: _root_.scala.Predef.String): CallRequest = copy(tok = __v)
@@ -234,6 +276,10 @@ final case class CallRequest(
     def withProvider(__v: _root_.scala.Predef.String): CallRequest = copy(provider = __v)
     def withVersion(__v: _root_.scala.Predef.String): CallRequest = copy(version = __v)
     def withPluginDownloadURL(__v: _root_.scala.Predef.String): CallRequest = copy(pluginDownloadURL = __v)
+    def clearPluginChecksums = copy(pluginChecksums = _root_.scala.collection.immutable.Map.empty)
+    def addPluginChecksums(__vs: (_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString) *): CallRequest = addAllPluginChecksums(__vs)
+    def addAllPluginChecksums(__vs: Iterable[(_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString)]): CallRequest = copy(pluginChecksums = pluginChecksums ++ __vs)
+    def withPluginChecksums(__v: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString]): CallRequest = copy(pluginChecksums = __v)
     def withProject(__v: _root_.scala.Predef.String): CallRequest = copy(project = __v)
     def withStack(__v: _root_.scala.Predef.String): CallRequest = copy(stack = __v)
     def clearConfig = copy(config = _root_.scala.collection.immutable.Map.empty)
@@ -247,6 +293,10 @@ final case class CallRequest(
     def withDryRun(__v: _root_.scala.Boolean): CallRequest = copy(dryRun = __v)
     def withParallel(__v: _root_.scala.Int): CallRequest = copy(parallel = __v)
     def withMonitorEndpoint(__v: _root_.scala.Predef.String): CallRequest = copy(monitorEndpoint = __v)
+    def withOrganization(__v: _root_.scala.Predef.String): CallRequest = copy(organization = __v)
+    def getSourcePosition: pulumirpc.source.SourcePosition = sourcePosition.getOrElse(pulumirpc.source.SourcePosition.defaultInstance)
+    def clearSourcePosition: CallRequest = copy(sourcePosition = _root_.scala.None)
+    def withSourcePosition(__v: pulumirpc.source.SourcePosition): CallRequest = copy(sourcePosition = Option(__v))
     def withUnknownFields(__v: _root_.scalapb.UnknownFieldSet) = copy(unknownFields = __v)
     def discardUnknownFields = copy(unknownFields = _root_.scalapb.UnknownFieldSet.empty)
     def getFieldByNumber(__fieldNumber: _root_.scala.Int): _root_.scala.Any = {
@@ -269,6 +319,7 @@ final case class CallRequest(
           val __t = pluginDownloadURL
           if (__t != "") __t else null
         }
+        case 16 => pluginChecksums.iterator.map(pulumirpc.provider.CallRequest._typemapper_pluginChecksums.toBase(_)).toSeq
         case 6 => {
           val __t = project
           if (__t != "") __t else null
@@ -291,6 +342,11 @@ final case class CallRequest(
           val __t = monitorEndpoint
           if (__t != "") __t else null
         }
+        case 14 => {
+          val __t = organization
+          if (__t != "") __t else null
+        }
+        case 15 => sourcePosition.orNull
       }
     }
     def getField(__field: _root_.scalapb.descriptors.FieldDescriptor): _root_.scalapb.descriptors.PValue = {
@@ -302,6 +358,7 @@ final case class CallRequest(
         case 4 => _root_.scalapb.descriptors.PString(provider)
         case 5 => _root_.scalapb.descriptors.PString(version)
         case 13 => _root_.scalapb.descriptors.PString(pluginDownloadURL)
+        case 16 => _root_.scalapb.descriptors.PRepeated(pluginChecksums.iterator.map(pulumirpc.provider.CallRequest._typemapper_pluginChecksums.toBase(_).toPMessage).toVector)
         case 6 => _root_.scalapb.descriptors.PString(project)
         case 7 => _root_.scalapb.descriptors.PString(stack)
         case 8 => _root_.scalapb.descriptors.PRepeated(config.iterator.map(pulumirpc.provider.CallRequest._typemapper_config.toBase(_).toPMessage).toVector)
@@ -309,6 +366,8 @@ final case class CallRequest(
         case 10 => _root_.scalapb.descriptors.PBoolean(dryRun)
         case 11 => _root_.scalapb.descriptors.PInt(parallel)
         case 12 => _root_.scalapb.descriptors.PString(monitorEndpoint)
+        case 14 => _root_.scalapb.descriptors.PString(organization)
+        case 15 => sourcePosition.map(_.toPMessage).getOrElse(_root_.scalapb.descriptors.PEmpty)
       }
     }
     def toProtoString: _root_.scala.Predef.String = _root_.scalapb.TextFormat.printToUnicodeString(this)
@@ -325,6 +384,7 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
     var __provider: _root_.scala.Predef.String = ""
     var __version: _root_.scala.Predef.String = ""
     var __pluginDownloadURL: _root_.scala.Predef.String = ""
+    val __pluginChecksums: _root_.scala.collection.mutable.Builder[(_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString), _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString]] = _root_.scala.collection.immutable.Map.newBuilder[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString]
     var __project: _root_.scala.Predef.String = ""
     var __stack: _root_.scala.Predef.String = ""
     val __config: _root_.scala.collection.mutable.Builder[(_root_.scala.Predef.String, _root_.scala.Predef.String), _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.scala.Predef.String]] = _root_.scala.collection.immutable.Map.newBuilder[_root_.scala.Predef.String, _root_.scala.Predef.String]
@@ -332,6 +392,8 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
     var __dryRun: _root_.scala.Boolean = false
     var __parallel: _root_.scala.Int = 0
     var __monitorEndpoint: _root_.scala.Predef.String = ""
+    var __organization: _root_.scala.Predef.String = ""
+    var __sourcePosition: _root_.scala.Option[pulumirpc.source.SourcePosition] = _root_.scala.None
     var `_unknownFields__`: _root_.scalapb.UnknownFieldSet.Builder = null
     var _done__ = false
     while (!_done__) {
@@ -350,6 +412,8 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
           __version = _input__.readStringRequireUtf8()
         case 106 =>
           __pluginDownloadURL = _input__.readStringRequireUtf8()
+        case 130 =>
+          __pluginChecksums += pulumirpc.provider.CallRequest._typemapper_pluginChecksums.toCustom(_root_.scalapb.LiteParser.readMessage[pulumirpc.provider.CallRequest.PluginChecksumsEntry](_input__))
         case 50 =>
           __project = _input__.readStringRequireUtf8()
         case 58 =>
@@ -364,6 +428,10 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
           __parallel = _input__.readInt32()
         case 98 =>
           __monitorEndpoint = _input__.readStringRequireUtf8()
+        case 114 =>
+          __organization = _input__.readStringRequireUtf8()
+        case 122 =>
+          __sourcePosition = Option(__sourcePosition.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.source.SourcePosition](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -378,6 +446,7 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
         provider = __provider,
         version = __version,
         pluginDownloadURL = __pluginDownloadURL,
+        pluginChecksums = __pluginChecksums.result(),
         project = __project,
         stack = __stack,
         config = __config.result(),
@@ -385,6 +454,8 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
         dryRun = __dryRun,
         parallel = __parallel,
         monitorEndpoint = __monitorEndpoint,
+        organization = __organization,
+        sourcePosition = __sourcePosition,
         unknownFields = if (_unknownFields__ == null) _root_.scalapb.UnknownFieldSet.empty else _unknownFields__.result()
     )
   }
@@ -398,13 +469,16 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
         provider = __fieldsMap.get(scalaDescriptor.findFieldByNumber(4).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
         version = __fieldsMap.get(scalaDescriptor.findFieldByNumber(5).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
         pluginDownloadURL = __fieldsMap.get(scalaDescriptor.findFieldByNumber(13).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
+        pluginChecksums = __fieldsMap.get(scalaDescriptor.findFieldByNumber(16).get).map(_.as[_root_.scala.Seq[pulumirpc.provider.CallRequest.PluginChecksumsEntry]]).getOrElse(_root_.scala.Seq.empty).iterator.map(pulumirpc.provider.CallRequest._typemapper_pluginChecksums.toCustom(_)).toMap,
         project = __fieldsMap.get(scalaDescriptor.findFieldByNumber(6).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
         stack = __fieldsMap.get(scalaDescriptor.findFieldByNumber(7).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
         config = __fieldsMap.get(scalaDescriptor.findFieldByNumber(8).get).map(_.as[_root_.scala.Seq[pulumirpc.provider.CallRequest.ConfigEntry]]).getOrElse(_root_.scala.Seq.empty).iterator.map(pulumirpc.provider.CallRequest._typemapper_config.toCustom(_)).toMap,
         configSecretKeys = __fieldsMap.get(scalaDescriptor.findFieldByNumber(9).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
         dryRun = __fieldsMap.get(scalaDescriptor.findFieldByNumber(10).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
         parallel = __fieldsMap.get(scalaDescriptor.findFieldByNumber(11).get).map(_.as[_root_.scala.Int]).getOrElse(0),
-        monitorEndpoint = __fieldsMap.get(scalaDescriptor.findFieldByNumber(12).get).map(_.as[_root_.scala.Predef.String]).getOrElse("")
+        monitorEndpoint = __fieldsMap.get(scalaDescriptor.findFieldByNumber(12).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
+        organization = __fieldsMap.get(scalaDescriptor.findFieldByNumber(14).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
+        sourcePosition = __fieldsMap.get(scalaDescriptor.findFieldByNumber(15).get).flatMap(_.as[_root_.scala.Option[pulumirpc.source.SourcePosition]])
       )
     case _ => throw new RuntimeException("Expected PMessage")
   }
@@ -415,7 +489,9 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
     (__number: @_root_.scala.unchecked) match {
       case 2 => __out = com.google.protobuf.struct.Struct
       case 3 => __out = pulumirpc.provider.CallRequest.ArgDependenciesEntry
+      case 16 => __out = pulumirpc.provider.CallRequest.PluginChecksumsEntry
       case 8 => __out = pulumirpc.provider.CallRequest.ConfigEntry
+      case 15 => __out = pulumirpc.source.SourcePosition
     }
     __out
   }
@@ -423,6 +499,7 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
     Seq[_root_.scalapb.GeneratedMessageCompanion[_ <: _root_.scalapb.GeneratedMessage]](
       _root_.pulumirpc.provider.CallRequest.ArgumentDependencies,
       _root_.pulumirpc.provider.CallRequest.ArgDependenciesEntry,
+      _root_.pulumirpc.provider.CallRequest.PluginChecksumsEntry,
       _root_.pulumirpc.provider.CallRequest.ConfigEntry
     )
   def enumCompanionForFieldNumber(__fieldNumber: _root_.scala.Int): _root_.scalapb.GeneratedEnumCompanion[_] = throw new MatchError(__fieldNumber)
@@ -433,13 +510,16 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
     provider = "",
     version = "",
     pluginDownloadURL = "",
+    pluginChecksums = _root_.scala.collection.immutable.Map.empty,
     project = "",
     stack = "",
     config = _root_.scala.collection.immutable.Map.empty,
     configSecretKeys = _root_.scala.Seq.empty,
     dryRun = false,
     parallel = 0,
-    monitorEndpoint = ""
+    monitorEndpoint = "",
+    organization = "",
+    sourcePosition = _root_.scala.None
   )
   /** ArgumentDependencies describes the resources that a particular argument depends on.
     *
@@ -700,6 +780,150 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
   }
   
   @SerialVersionUID(0L)
+  final case class PluginChecksumsEntry(
+      key: _root_.scala.Predef.String = "",
+      value: _root_.com.google.protobuf.ByteString = _root_.com.google.protobuf.ByteString.EMPTY,
+      unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
+      ) extends scalapb.GeneratedMessage with scalapb.lenses.Updatable[PluginChecksumsEntry] {
+      @transient
+      private[this] var __serializedSizeMemoized: _root_.scala.Int = 0
+      private[this] def __computeSerializedSize(): _root_.scala.Int = {
+        var __size = 0
+        
+        {
+          val __value = key
+          if (!__value.isEmpty) {
+            __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(1, __value)
+          }
+        };
+        
+        {
+          val __value = value
+          if (!__value.isEmpty) {
+            __size += _root_.com.google.protobuf.CodedOutputStream.computeBytesSize(2, __value)
+          }
+        };
+        __size += unknownFields.serializedSize
+        __size
+      }
+      override def serializedSize: _root_.scala.Int = {
+        var __size = __serializedSizeMemoized
+        if (__size == 0) {
+          __size = __computeSerializedSize() + 1
+          __serializedSizeMemoized = __size
+        }
+        __size - 1
+        
+      }
+      def writeTo(`_output__`: _root_.com.google.protobuf.CodedOutputStream): _root_.scala.Unit = {
+        {
+          val __v = key
+          if (!__v.isEmpty) {
+            _output__.writeString(1, __v)
+          }
+        };
+        {
+          val __v = value
+          if (!__v.isEmpty) {
+            _output__.writeBytes(2, __v)
+          }
+        };
+        unknownFields.writeTo(_output__)
+      }
+      def withKey(__v: _root_.scala.Predef.String): PluginChecksumsEntry = copy(key = __v)
+      def withValue(__v: _root_.com.google.protobuf.ByteString): PluginChecksumsEntry = copy(value = __v)
+      def withUnknownFields(__v: _root_.scalapb.UnknownFieldSet) = copy(unknownFields = __v)
+      def discardUnknownFields = copy(unknownFields = _root_.scalapb.UnknownFieldSet.empty)
+      def getFieldByNumber(__fieldNumber: _root_.scala.Int): _root_.scala.Any = {
+        (__fieldNumber: @_root_.scala.unchecked) match {
+          case 1 => {
+            val __t = key
+            if (__t != "") __t else null
+          }
+          case 2 => {
+            val __t = value
+            if (__t != _root_.com.google.protobuf.ByteString.EMPTY) __t else null
+          }
+        }
+      }
+      def getField(__field: _root_.scalapb.descriptors.FieldDescriptor): _root_.scalapb.descriptors.PValue = {
+        _root_.scala.Predef.require(__field.containingMessage eq companion.scalaDescriptor)
+        (__field.number: @_root_.scala.unchecked) match {
+          case 1 => _root_.scalapb.descriptors.PString(key)
+          case 2 => _root_.scalapb.descriptors.PByteString(value)
+        }
+      }
+      def toProtoString: _root_.scala.Predef.String = _root_.scalapb.TextFormat.printToUnicodeString(this)
+      def companion: pulumirpc.provider.CallRequest.PluginChecksumsEntry.type = pulumirpc.provider.CallRequest.PluginChecksumsEntry
+      // @@protoc_insertion_point(GeneratedMessage[pulumirpc.CallRequest.PluginChecksumsEntry])
+  }
+  
+  object PluginChecksumsEntry extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.CallRequest.PluginChecksumsEntry] {
+    implicit def messageCompanion: scalapb.GeneratedMessageCompanion[pulumirpc.provider.CallRequest.PluginChecksumsEntry] = this
+    def parseFrom(`_input__`: _root_.com.google.protobuf.CodedInputStream): pulumirpc.provider.CallRequest.PluginChecksumsEntry = {
+      var __key: _root_.scala.Predef.String = ""
+      var __value: _root_.com.google.protobuf.ByteString = _root_.com.google.protobuf.ByteString.EMPTY
+      var `_unknownFields__`: _root_.scalapb.UnknownFieldSet.Builder = null
+      var _done__ = false
+      while (!_done__) {
+        val _tag__ = _input__.readTag()
+        _tag__ match {
+          case 0 => _done__ = true
+          case 10 =>
+            __key = _input__.readStringRequireUtf8()
+          case 18 =>
+            __value = _input__.readBytes()
+          case tag =>
+            if (_unknownFields__ == null) {
+              _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
+            }
+            _unknownFields__.parseField(tag, _input__)
+        }
+      }
+      pulumirpc.provider.CallRequest.PluginChecksumsEntry(
+          key = __key,
+          value = __value,
+          unknownFields = if (_unknownFields__ == null) _root_.scalapb.UnknownFieldSet.empty else _unknownFields__.result()
+      )
+    }
+    implicit def messageReads: _root_.scalapb.descriptors.Reads[pulumirpc.provider.CallRequest.PluginChecksumsEntry] = _root_.scalapb.descriptors.Reads{
+      case _root_.scalapb.descriptors.PMessage(__fieldsMap) =>
+        _root_.scala.Predef.require(__fieldsMap.keys.forall(_.containingMessage eq scalaDescriptor), "FieldDescriptor does not match message type.")
+        pulumirpc.provider.CallRequest.PluginChecksumsEntry(
+          key = __fieldsMap.get(scalaDescriptor.findFieldByNumber(1).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
+          value = __fieldsMap.get(scalaDescriptor.findFieldByNumber(2).get).map(_.as[_root_.com.google.protobuf.ByteString]).getOrElse(_root_.com.google.protobuf.ByteString.EMPTY)
+        )
+      case _ => throw new RuntimeException("Expected PMessage")
+    }
+    def javaDescriptor: _root_.com.google.protobuf.Descriptors.Descriptor = pulumirpc.provider.CallRequest.javaDescriptor.getNestedTypes().get(2)
+    def scalaDescriptor: _root_.scalapb.descriptors.Descriptor = pulumirpc.provider.CallRequest.scalaDescriptor.nestedMessages(2)
+    def messageCompanionForFieldNumber(__number: _root_.scala.Int): _root_.scalapb.GeneratedMessageCompanion[_] = throw new MatchError(__number)
+    lazy val nestedMessagesCompanions: Seq[_root_.scalapb.GeneratedMessageCompanion[_ <: _root_.scalapb.GeneratedMessage]] = Seq.empty
+    def enumCompanionForFieldNumber(__fieldNumber: _root_.scala.Int): _root_.scalapb.GeneratedEnumCompanion[_] = throw new MatchError(__fieldNumber)
+    lazy val defaultInstance = pulumirpc.provider.CallRequest.PluginChecksumsEntry(
+      key = "",
+      value = _root_.com.google.protobuf.ByteString.EMPTY
+    )
+    implicit class PluginChecksumsEntryLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.CallRequest.PluginChecksumsEntry]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.provider.CallRequest.PluginChecksumsEntry](_l) {
+      def key: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.key)((c_, f_) => c_.copy(key = f_))
+      def value: _root_.scalapb.lenses.Lens[UpperPB, _root_.com.google.protobuf.ByteString] = field(_.value)((c_, f_) => c_.copy(value = f_))
+    }
+    final val KEY_FIELD_NUMBER = 1
+    final val VALUE_FIELD_NUMBER = 2
+    @transient
+    implicit val keyValueMapper: _root_.scalapb.TypeMapper[pulumirpc.provider.CallRequest.PluginChecksumsEntry, (_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString)] =
+      _root_.scalapb.TypeMapper[pulumirpc.provider.CallRequest.PluginChecksumsEntry, (_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString)](__m => (__m.key, __m.value))(__p => pulumirpc.provider.CallRequest.PluginChecksumsEntry(__p._1, __p._2))
+    def of(
+      key: _root_.scala.Predef.String,
+      value: _root_.com.google.protobuf.ByteString
+    ): _root_.pulumirpc.provider.CallRequest.PluginChecksumsEntry = _root_.pulumirpc.provider.CallRequest.PluginChecksumsEntry(
+      key,
+      value
+    )
+    // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.CallRequest.PluginChecksumsEntry])
+  }
+  
+  @SerialVersionUID(0L)
   final case class ConfigEntry(
       key: _root_.scala.Predef.String = "",
       value: _root_.scala.Predef.String = "",
@@ -815,8 +1039,8 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
         )
       case _ => throw new RuntimeException("Expected PMessage")
     }
-    def javaDescriptor: _root_.com.google.protobuf.Descriptors.Descriptor = pulumirpc.provider.CallRequest.javaDescriptor.getNestedTypes().get(2)
-    def scalaDescriptor: _root_.scalapb.descriptors.Descriptor = pulumirpc.provider.CallRequest.scalaDescriptor.nestedMessages(2)
+    def javaDescriptor: _root_.com.google.protobuf.Descriptors.Descriptor = pulumirpc.provider.CallRequest.javaDescriptor.getNestedTypes().get(3)
+    def scalaDescriptor: _root_.scalapb.descriptors.Descriptor = pulumirpc.provider.CallRequest.scalaDescriptor.nestedMessages(3)
     def messageCompanionForFieldNumber(__number: _root_.scala.Int): _root_.scalapb.GeneratedMessageCompanion[_] = throw new MatchError(__number)
     lazy val nestedMessagesCompanions: Seq[_root_.scalapb.GeneratedMessageCompanion[_ <: _root_.scalapb.GeneratedMessage]] = Seq.empty
     def enumCompanionForFieldNumber(__fieldNumber: _root_.scala.Int): _root_.scalapb.GeneratedEnumCompanion[_] = throw new MatchError(__fieldNumber)
@@ -851,6 +1075,7 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
     def provider: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.provider)((c_, f_) => c_.copy(provider = f_))
     def version: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.version)((c_, f_) => c_.copy(version = f_))
     def pluginDownloadURL: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.pluginDownloadURL)((c_, f_) => c_.copy(pluginDownloadURL = f_))
+    def pluginChecksums: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString]] = field(_.pluginChecksums)((c_, f_) => c_.copy(pluginChecksums = f_))
     def project: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.project)((c_, f_) => c_.copy(project = f_))
     def stack: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.stack)((c_, f_) => c_.copy(stack = f_))
     def config: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.scala.Predef.String]] = field(_.config)((c_, f_) => c_.copy(config = f_))
@@ -858,6 +1083,9 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
     def dryRun: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.dryRun)((c_, f_) => c_.copy(dryRun = f_))
     def parallel: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Int] = field(_.parallel)((c_, f_) => c_.copy(parallel = f_))
     def monitorEndpoint: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.monitorEndpoint)((c_, f_) => c_.copy(monitorEndpoint = f_))
+    def organization: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.organization)((c_, f_) => c_.copy(organization = f_))
+    def sourcePosition: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.source.SourcePosition] = field(_.getSourcePosition)((c_, f_) => c_.copy(sourcePosition = Option(f_)))
+    def optionalSourcePosition: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[pulumirpc.source.SourcePosition]] = field(_.sourcePosition)((c_, f_) => c_.copy(sourcePosition = f_))
   }
   final val TOK_FIELD_NUMBER = 1
   final val ARGS_FIELD_NUMBER = 2
@@ -865,6 +1093,7 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
   final val PROVIDER_FIELD_NUMBER = 4
   final val VERSION_FIELD_NUMBER = 5
   final val PLUGINDOWNLOADURL_FIELD_NUMBER = 13
+  final val PLUGINCHECKSUMS_FIELD_NUMBER = 16
   final val PROJECT_FIELD_NUMBER = 6
   final val STACK_FIELD_NUMBER = 7
   final val CONFIG_FIELD_NUMBER = 8
@@ -872,8 +1101,12 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
   final val DRYRUN_FIELD_NUMBER = 10
   final val PARALLEL_FIELD_NUMBER = 11
   final val MONITORENDPOINT_FIELD_NUMBER = 12
+  final val ORGANIZATION_FIELD_NUMBER = 14
+  final val SOURCEPOSITION_FIELD_NUMBER = 15
   @transient
   private[provider] val _typemapper_argDependencies: _root_.scalapb.TypeMapper[pulumirpc.provider.CallRequest.ArgDependenciesEntry, (_root_.scala.Predef.String, pulumirpc.provider.CallRequest.ArgumentDependencies)] = implicitly[_root_.scalapb.TypeMapper[pulumirpc.provider.CallRequest.ArgDependenciesEntry, (_root_.scala.Predef.String, pulumirpc.provider.CallRequest.ArgumentDependencies)]]
+  @transient
+  private[provider] val _typemapper_pluginChecksums: _root_.scalapb.TypeMapper[pulumirpc.provider.CallRequest.PluginChecksumsEntry, (_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString)] = implicitly[_root_.scalapb.TypeMapper[pulumirpc.provider.CallRequest.PluginChecksumsEntry, (_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString)]]
   @transient
   private[provider] val _typemapper_config: _root_.scalapb.TypeMapper[pulumirpc.provider.CallRequest.ConfigEntry, (_root_.scala.Predef.String, _root_.scala.Predef.String)] = implicitly[_root_.scalapb.TypeMapper[pulumirpc.provider.CallRequest.ConfigEntry, (_root_.scala.Predef.String, _root_.scala.Predef.String)]]
   def of(
@@ -883,13 +1116,16 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
     provider: _root_.scala.Predef.String,
     version: _root_.scala.Predef.String,
     pluginDownloadURL: _root_.scala.Predef.String,
+    pluginChecksums: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString],
     project: _root_.scala.Predef.String,
     stack: _root_.scala.Predef.String,
     config: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.scala.Predef.String],
     configSecretKeys: _root_.scala.Seq[_root_.scala.Predef.String],
     dryRun: _root_.scala.Boolean,
     parallel: _root_.scala.Int,
-    monitorEndpoint: _root_.scala.Predef.String
+    monitorEndpoint: _root_.scala.Predef.String,
+    organization: _root_.scala.Predef.String,
+    sourcePosition: _root_.scala.Option[pulumirpc.source.SourcePosition]
   ): _root_.pulumirpc.provider.CallRequest = _root_.pulumirpc.provider.CallRequest(
     tok,
     args,
@@ -897,13 +1133,16 @@ object CallRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
     provider,
     version,
     pluginDownloadURL,
+    pluginChecksums,
     project,
     stack,
     config,
     configSecretKeys,
     dryRun,
     parallel,
-    monitorEndpoint
+    monitorEndpoint,
+    organization,
+    sourcePosition
   )
   // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.CallRequest])
 }

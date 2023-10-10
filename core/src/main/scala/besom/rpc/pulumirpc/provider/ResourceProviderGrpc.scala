@@ -177,6 +177,26 @@ object ResourceProviderGrpc {
       .setSchemaDescriptor(_root_.scalapb.grpc.ConcreteProtoMethodDescriptorSupplier.fromMethodDescriptor(pulumirpc.provider.ProviderProto.javaDescriptor.getServices().get(0).getMethods().get(16)))
       .build()
   
+  val METHOD_GET_MAPPING: _root_.io.grpc.MethodDescriptor[pulumirpc.provider.GetMappingRequest, pulumirpc.provider.GetMappingResponse] =
+    _root_.io.grpc.MethodDescriptor.newBuilder()
+      .setType(_root_.io.grpc.MethodDescriptor.MethodType.UNARY)
+      .setFullMethodName(_root_.io.grpc.MethodDescriptor.generateFullMethodName("pulumirpc.ResourceProvider", "GetMapping"))
+      .setSampledToLocalTracing(true)
+      .setRequestMarshaller(_root_.scalapb.grpc.Marshaller.forMessage[pulumirpc.provider.GetMappingRequest])
+      .setResponseMarshaller(_root_.scalapb.grpc.Marshaller.forMessage[pulumirpc.provider.GetMappingResponse])
+      .setSchemaDescriptor(_root_.scalapb.grpc.ConcreteProtoMethodDescriptorSupplier.fromMethodDescriptor(pulumirpc.provider.ProviderProto.javaDescriptor.getServices().get(0).getMethods().get(17)))
+      .build()
+  
+  val METHOD_GET_MAPPINGS: _root_.io.grpc.MethodDescriptor[pulumirpc.provider.GetMappingsRequest, pulumirpc.provider.GetMappingsResponse] =
+    _root_.io.grpc.MethodDescriptor.newBuilder()
+      .setType(_root_.io.grpc.MethodDescriptor.MethodType.UNARY)
+      .setFullMethodName(_root_.io.grpc.MethodDescriptor.generateFullMethodName("pulumirpc.ResourceProvider", "GetMappings"))
+      .setSampledToLocalTracing(true)
+      .setRequestMarshaller(_root_.scalapb.grpc.Marshaller.forMessage[pulumirpc.provider.GetMappingsRequest])
+      .setResponseMarshaller(_root_.scalapb.grpc.Marshaller.forMessage[pulumirpc.provider.GetMappingsResponse])
+      .setSchemaDescriptor(_root_.scalapb.grpc.ConcreteProtoMethodDescriptorSupplier.fromMethodDescriptor(pulumirpc.provider.ProviderProto.javaDescriptor.getServices().get(0).getMethods().get(18)))
+      .build()
+  
   val SERVICE: _root_.io.grpc.ServiceDescriptor =
     _root_.io.grpc.ServiceDescriptor.newBuilder("pulumirpc.ResourceProvider")
       .setSchemaDescriptor(new _root_.scalapb.grpc.ConcreteProtoFileDescriptorSupplier(pulumirpc.provider.ProviderProto.javaDescriptor))
@@ -197,6 +217,8 @@ object ResourceProviderGrpc {
       .addMethod(METHOD_CANCEL)
       .addMethod(METHOD_GET_PLUGIN_INFO)
       .addMethod(METHOD_ATTACH)
+      .addMethod(METHOD_GET_MAPPING)
+      .addMethod(METHOD_GET_MAPPINGS)
       .build()
   
   /** ResourceProvider is a service that understands how to create, read, update, or delete resources for types defined
@@ -266,6 +288,15 @@ object ResourceProviderGrpc {
     /** Attach sends the engine address to an already running plugin.
       */
     def attach(request: pulumirpc.plugin.PluginAttach): scala.concurrent.Future[com.google.protobuf.empty.Empty]
+    /** GetMapping fetches the mapping for this resource provider, if any. A provider should return an empty
+      * response (not an error) if it doesn't have a mapping for the given key.
+      */
+    def getMapping(request: pulumirpc.provider.GetMappingRequest): scala.concurrent.Future[pulumirpc.provider.GetMappingResponse]
+    /** GetMappings is an optional method that returns what mappings (if any) a provider supports. If a provider does not
+      * implement this method the engine falls back to the old behaviour of just calling GetMapping without a name.
+      * If this method is implemented than the engine will then call GetMapping only with the names returned from this method.
+      */
+    def getMappings(request: pulumirpc.provider.GetMappingsRequest): scala.concurrent.Future[pulumirpc.provider.GetMappingsResponse]
   }
   
   object ResourceProvider extends _root_.scalapb.grpc.ServiceCompanion[ResourceProvider] {
@@ -276,121 +307,116 @@ object ResourceProviderGrpc {
       _root_.io.grpc.ServerServiceDefinition.builder(SERVICE)
       .addMethod(
         METHOD_GET_SCHEMA,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.provider.GetSchemaRequest, pulumirpc.provider.GetSchemaResponse] {
-          override def invoke(request: pulumirpc.provider.GetSchemaRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.GetSchemaResponse]): _root_.scala.Unit =
-            serviceImpl.getSchema(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.GetSchemaRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.GetSchemaResponse]) => {
+          serviceImpl.getSchema(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_CHECK_CONFIG,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.provider.CheckRequest, pulumirpc.provider.CheckResponse] {
-          override def invoke(request: pulumirpc.provider.CheckRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.CheckResponse]): _root_.scala.Unit =
-            serviceImpl.checkConfig(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.CheckRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.CheckResponse]) => {
+          serviceImpl.checkConfig(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_DIFF_CONFIG,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.provider.DiffRequest, pulumirpc.provider.DiffResponse] {
-          override def invoke(request: pulumirpc.provider.DiffRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.DiffResponse]): _root_.scala.Unit =
-            serviceImpl.diffConfig(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.DiffRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.DiffResponse]) => {
+          serviceImpl.diffConfig(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_CONFIGURE,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.provider.ConfigureRequest, pulumirpc.provider.ConfigureResponse] {
-          override def invoke(request: pulumirpc.provider.ConfigureRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.ConfigureResponse]): _root_.scala.Unit =
-            serviceImpl.configure(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.ConfigureRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.ConfigureResponse]) => {
+          serviceImpl.configure(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_INVOKE,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.provider.InvokeRequest, pulumirpc.provider.InvokeResponse] {
-          override def invoke(request: pulumirpc.provider.InvokeRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.InvokeResponse]): _root_.scala.Unit =
-            serviceImpl.invoke(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.InvokeRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.InvokeResponse]) => {
+          serviceImpl.invoke(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_STREAM_INVOKE,
-        _root_.io.grpc.stub.ServerCalls.asyncServerStreamingCall(new _root_.io.grpc.stub.ServerCalls.ServerStreamingMethod[pulumirpc.provider.InvokeRequest, pulumirpc.provider.InvokeResponse] {
-          override def invoke(request: pulumirpc.provider.InvokeRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.InvokeResponse]): _root_.scala.Unit =
-            serviceImpl.streamInvoke(request, observer)
+        _root_.io.grpc.stub.ServerCalls.asyncServerStreamingCall((request: pulumirpc.provider.InvokeRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.InvokeResponse]) => {
+          serviceImpl.streamInvoke(request, observer)
         }))
       .addMethod(
         METHOD_CALL,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.provider.CallRequest, pulumirpc.provider.CallResponse] {
-          override def invoke(request: pulumirpc.provider.CallRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.CallResponse]): _root_.scala.Unit =
-            serviceImpl.call(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.CallRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.CallResponse]) => {
+          serviceImpl.call(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_CHECK,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.provider.CheckRequest, pulumirpc.provider.CheckResponse] {
-          override def invoke(request: pulumirpc.provider.CheckRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.CheckResponse]): _root_.scala.Unit =
-            serviceImpl.check(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.CheckRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.CheckResponse]) => {
+          serviceImpl.check(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_DIFF,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.provider.DiffRequest, pulumirpc.provider.DiffResponse] {
-          override def invoke(request: pulumirpc.provider.DiffRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.DiffResponse]): _root_.scala.Unit =
-            serviceImpl.diff(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.DiffRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.DiffResponse]) => {
+          serviceImpl.diff(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_CREATE,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.provider.CreateRequest, pulumirpc.provider.CreateResponse] {
-          override def invoke(request: pulumirpc.provider.CreateRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.CreateResponse]): _root_.scala.Unit =
-            serviceImpl.create(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.CreateRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.CreateResponse]) => {
+          serviceImpl.create(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_READ,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.provider.ReadRequest, pulumirpc.provider.ReadResponse] {
-          override def invoke(request: pulumirpc.provider.ReadRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.ReadResponse]): _root_.scala.Unit =
-            serviceImpl.read(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.ReadRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.ReadResponse]) => {
+          serviceImpl.read(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_UPDATE,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.provider.UpdateRequest, pulumirpc.provider.UpdateResponse] {
-          override def invoke(request: pulumirpc.provider.UpdateRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.UpdateResponse]): _root_.scala.Unit =
-            serviceImpl.update(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.UpdateRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.UpdateResponse]) => {
+          serviceImpl.update(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_DELETE,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.provider.DeleteRequest, com.google.protobuf.empty.Empty] {
-          override def invoke(request: pulumirpc.provider.DeleteRequest, observer: _root_.io.grpc.stub.StreamObserver[com.google.protobuf.empty.Empty]): _root_.scala.Unit =
-            serviceImpl.delete(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.DeleteRequest, observer: _root_.io.grpc.stub.StreamObserver[com.google.protobuf.empty.Empty]) => {
+          serviceImpl.delete(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_CONSTRUCT,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.provider.ConstructRequest, pulumirpc.provider.ConstructResponse] {
-          override def invoke(request: pulumirpc.provider.ConstructRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.ConstructResponse]): _root_.scala.Unit =
-            serviceImpl.construct(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.ConstructRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.ConstructResponse]) => {
+          serviceImpl.construct(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_CANCEL,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[com.google.protobuf.empty.Empty, com.google.protobuf.empty.Empty] {
-          override def invoke(request: com.google.protobuf.empty.Empty, observer: _root_.io.grpc.stub.StreamObserver[com.google.protobuf.empty.Empty]): _root_.scala.Unit =
-            serviceImpl.cancel(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: com.google.protobuf.empty.Empty, observer: _root_.io.grpc.stub.StreamObserver[com.google.protobuf.empty.Empty]) => {
+          serviceImpl.cancel(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_GET_PLUGIN_INFO,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[com.google.protobuf.empty.Empty, pulumirpc.plugin.PluginInfo] {
-          override def invoke(request: com.google.protobuf.empty.Empty, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.plugin.PluginInfo]): _root_.scala.Unit =
-            serviceImpl.getPluginInfo(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: com.google.protobuf.empty.Empty, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.plugin.PluginInfo]) => {
+          serviceImpl.getPluginInfo(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_ATTACH,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.plugin.PluginAttach, com.google.protobuf.empty.Empty] {
-          override def invoke(request: pulumirpc.plugin.PluginAttach, observer: _root_.io.grpc.stub.StreamObserver[com.google.protobuf.empty.Empty]): _root_.scala.Unit =
-            serviceImpl.attach(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.plugin.PluginAttach, observer: _root_.io.grpc.stub.StreamObserver[com.google.protobuf.empty.Empty]) => {
+          serviceImpl.attach(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
+        }))
+      .addMethod(
+        METHOD_GET_MAPPING,
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.GetMappingRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.GetMappingResponse]) => {
+          serviceImpl.getMapping(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
+        }))
+      .addMethod(
+        METHOD_GET_MAPPINGS,
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.GetMappingsRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.GetMappingsResponse]) => {
+          serviceImpl.getMappings(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .build()
   }
@@ -462,6 +488,15 @@ object ResourceProviderGrpc {
     /** Attach sends the engine address to an already running plugin.
       */
     def attach(request: pulumirpc.plugin.PluginAttach): com.google.protobuf.empty.Empty
+    /** GetMapping fetches the mapping for this resource provider, if any. A provider should return an empty
+      * response (not an error) if it doesn't have a mapping for the given key.
+      */
+    def getMapping(request: pulumirpc.provider.GetMappingRequest): pulumirpc.provider.GetMappingResponse
+    /** GetMappings is an optional method that returns what mappings (if any) a provider supports. If a provider does not
+      * implement this method the engine falls back to the old behaviour of just calling GetMapping without a name.
+      * If this method is implemented than the engine will then call GetMapping only with the names returned from this method.
+      */
+    def getMappings(request: pulumirpc.provider.GetMappingsRequest): pulumirpc.provider.GetMappingsResponse
   }
   
   class ResourceProviderBlockingStub(channel: _root_.io.grpc.Channel, options: _root_.io.grpc.CallOptions = _root_.io.grpc.CallOptions.DEFAULT) extends _root_.io.grpc.stub.AbstractStub[ResourceProviderBlockingStub](channel, options) with ResourceProviderBlockingClient {
@@ -576,6 +611,21 @@ object ResourceProviderGrpc {
       */
     override def attach(request: pulumirpc.plugin.PluginAttach): com.google.protobuf.empty.Empty = {
       _root_.scalapb.grpc.ClientCalls.blockingUnaryCall(channel, METHOD_ATTACH, options, request)
+    }
+    
+    /** GetMapping fetches the mapping for this resource provider, if any. A provider should return an empty
+      * response (not an error) if it doesn't have a mapping for the given key.
+      */
+    override def getMapping(request: pulumirpc.provider.GetMappingRequest): pulumirpc.provider.GetMappingResponse = {
+      _root_.scalapb.grpc.ClientCalls.blockingUnaryCall(channel, METHOD_GET_MAPPING, options, request)
+    }
+    
+    /** GetMappings is an optional method that returns what mappings (if any) a provider supports. If a provider does not
+      * implement this method the engine falls back to the old behaviour of just calling GetMapping without a name.
+      * If this method is implemented than the engine will then call GetMapping only with the names returned from this method.
+      */
+    override def getMappings(request: pulumirpc.provider.GetMappingsRequest): pulumirpc.provider.GetMappingsResponse = {
+      _root_.scalapb.grpc.ClientCalls.blockingUnaryCall(channel, METHOD_GET_MAPPINGS, options, request)
     }
     
     override def build(channel: _root_.io.grpc.Channel, options: _root_.io.grpc.CallOptions): ResourceProviderBlockingStub = new ResourceProviderBlockingStub(channel, options)
@@ -693,6 +743,21 @@ object ResourceProviderGrpc {
       */
     override def attach(request: pulumirpc.plugin.PluginAttach): scala.concurrent.Future[com.google.protobuf.empty.Empty] = {
       _root_.scalapb.grpc.ClientCalls.asyncUnaryCall(channel, METHOD_ATTACH, options, request)
+    }
+    
+    /** GetMapping fetches the mapping for this resource provider, if any. A provider should return an empty
+      * response (not an error) if it doesn't have a mapping for the given key.
+      */
+    override def getMapping(request: pulumirpc.provider.GetMappingRequest): scala.concurrent.Future[pulumirpc.provider.GetMappingResponse] = {
+      _root_.scalapb.grpc.ClientCalls.asyncUnaryCall(channel, METHOD_GET_MAPPING, options, request)
+    }
+    
+    /** GetMappings is an optional method that returns what mappings (if any) a provider supports. If a provider does not
+      * implement this method the engine falls back to the old behaviour of just calling GetMapping without a name.
+      * If this method is implemented than the engine will then call GetMapping only with the names returned from this method.
+      */
+    override def getMappings(request: pulumirpc.provider.GetMappingsRequest): scala.concurrent.Future[pulumirpc.provider.GetMappingsResponse] = {
+      _root_.scalapb.grpc.ClientCalls.asyncUnaryCall(channel, METHOD_GET_MAPPINGS, options, request)
     }
     
     override def build(channel: _root_.io.grpc.Channel, options: _root_.io.grpc.CallOptions): ResourceProviderStub = new ResourceProviderStub(channel, options)

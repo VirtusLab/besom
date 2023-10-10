@@ -1,4 +1,4 @@
-// Copyright 2016-2018, Pulumi Corporation.
+// Copyright 2016-2022, Pulumi Corporation.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,10 +16,11 @@ syntax = "proto3";
 
 package pulumirpc;
 
-option go_package = "github.com/pulumi/pulumi/v3/proto/go/pulumirpc";
+option go_package = "github.com/pulumi/pulumi/sdk/v3/proto/go;pulumirpc";
 
-message ErrorCause {
-    string message = 1;
-    string stackTrace = 2;
+// A SourcePosition represents a position in a source file.
+message SourcePosition {
+    string uri = 1; // The URI of the file. Currently only the file scheme with an absolute path is supported.
+    int32 line = 2; // The line in the file
+    int32 column = 3; // The column in the line
 }
-

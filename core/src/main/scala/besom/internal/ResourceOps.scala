@@ -209,7 +209,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
                 case _                                           => ""
               ,
               aliases = inputs.aliases.map { alias =>
-                pulumirpc.resource.Alias(pulumirpc.resource.Alias.Alias.Urn(alias))
+                pulumirpc.alias.Alias(pulumirpc.alias.Alias.Alias.Urn(alias))
               }.toList,
               remote = false, // TODO remote components
               customTimeouts = None, // TODO custom timeouts

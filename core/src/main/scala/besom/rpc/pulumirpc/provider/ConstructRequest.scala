@@ -27,16 +27,34 @@ package pulumirpc.provider
   *   the inputs to the resource constructor.
   * @param inputDependencies
   *   a map from property keys to the dependencies of the property.
-  * @param protect
-  *   true if the resource should be marked protected.
   * @param providers
   *   the map of providers to use for this resource's children.
-  * @param aliases
-  *   a list of additional URNs that shoud be considered the same.
   * @param dependencies
   *   a list of URNs that this resource depends on, as observed by the language host.
   * @param configSecretKeys
   *   the configuration keys that have secret values.
+  * @param organization
+  *   the organization of the stack being deployed into.
+  * @param protect
+  *   Resource options:
+  *   Do not change field IDs. Add new fields at the end.
+  *   true if the resource should be marked protected.
+  * @param aliases
+  *   a list of additional URNs that shoud be considered the same.
+  * @param additionalSecretOutputs
+  *   additional output properties that should be treated as secrets.
+  * @param customTimeouts
+  *   default timeouts for CRUD operations on this resource.
+  * @param deletedWith
+  *   URN of a resource that, if deleted, also deletes this resource.
+  * @param deleteBeforeReplace
+  *   whether to delete the resource before replacing it.
+  * @param ignoreChanges
+  *   properties that should be ignored during a diff
+  * @param replaceOnChanges
+  *   properties that, when changed, trigger a replacement
+  * @param retainOnDelete
+  *   whether to retain the resource in the cloud provider when it is deleted
   */
 @SerialVersionUID(0L)
 final case class ConstructRequest(
@@ -51,11 +69,19 @@ final case class ConstructRequest(
     parent: _root_.scala.Predef.String = "",
     inputs: _root_.scala.Option[com.google.protobuf.struct.Struct] = _root_.scala.None,
     inputDependencies: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, pulumirpc.provider.ConstructRequest.PropertyDependencies] = _root_.scala.collection.immutable.Map.empty,
-    protect: _root_.scala.Boolean = false,
     providers: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.scala.Predef.String] = _root_.scala.collection.immutable.Map.empty,
-    aliases: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
     dependencies: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
     configSecretKeys: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
+    organization: _root_.scala.Predef.String = "",
+    protect: _root_.scala.Boolean = false,
+    aliases: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
+    additionalSecretOutputs: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
+    customTimeouts: _root_.scala.Option[pulumirpc.provider.ConstructRequest.CustomTimeouts] = _root_.scala.None,
+    deletedWith: _root_.scala.Predef.String = "",
+    deleteBeforeReplace: _root_.scala.Boolean = false,
+    ignoreChanges: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
+    replaceOnChanges: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
+    retainOnDelete: _root_.scala.Boolean = false,
     unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
     ) extends scalapb.GeneratedMessage with scalapb.lenses.Updatable[ConstructRequest] {
     @transient
@@ -130,20 +156,9 @@ final case class ConstructRequest(
         val __value = pulumirpc.provider.ConstructRequest._typemapper_inputDependencies.toBase(__item)
         __size += 1 + _root_.com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag(__value.serializedSize) + __value.serializedSize
       }
-      
-      {
-        val __value = protect
-        if (__value != false) {
-          __size += _root_.com.google.protobuf.CodedOutputStream.computeBoolSize(12, __value)
-        }
-      };
       providers.foreach { __item =>
         val __value = pulumirpc.provider.ConstructRequest._typemapper_providers.toBase(__item)
         __size += 1 + _root_.com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag(__value.serializedSize) + __value.serializedSize
-      }
-      aliases.foreach { __item =>
-        val __value = __item
-        __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(14, __value)
       }
       dependencies.foreach { __item =>
         val __value = __item
@@ -153,6 +168,61 @@ final case class ConstructRequest(
         val __value = __item
         __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(16, __value)
       }
+      
+      {
+        val __value = organization
+        if (!__value.isEmpty) {
+          __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(17, __value)
+        }
+      };
+      
+      {
+        val __value = protect
+        if (__value != false) {
+          __size += _root_.com.google.protobuf.CodedOutputStream.computeBoolSize(12, __value)
+        }
+      };
+      aliases.foreach { __item =>
+        val __value = __item
+        __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(14, __value)
+      }
+      additionalSecretOutputs.foreach { __item =>
+        val __value = __item
+        __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(18, __value)
+      }
+      if (customTimeouts.isDefined) {
+        val __value = customTimeouts.get
+        __size += 2 + _root_.com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag(__value.serializedSize) + __value.serializedSize
+      };
+      
+      {
+        val __value = deletedWith
+        if (!__value.isEmpty) {
+          __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(20, __value)
+        }
+      };
+      
+      {
+        val __value = deleteBeforeReplace
+        if (__value != false) {
+          __size += _root_.com.google.protobuf.CodedOutputStream.computeBoolSize(21, __value)
+        }
+      };
+      ignoreChanges.foreach { __item =>
+        val __value = __item
+        __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(22, __value)
+      }
+      replaceOnChanges.foreach { __item =>
+        val __value = __item
+        __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(23, __value)
+      }
+      
+      {
+        val __value = retainOnDelete
+        if (__value != false) {
+          __size += _root_.com.google.protobuf.CodedOutputStream.computeBoolSize(24, __value)
+        }
+      };
       __size += unknownFields.serializedSize
       __size
     }
@@ -256,6 +326,48 @@ final case class ConstructRequest(
         val __m = __v
         _output__.writeString(16, __m)
       };
+      {
+        val __v = organization
+        if (!__v.isEmpty) {
+          _output__.writeString(17, __v)
+        }
+      };
+      additionalSecretOutputs.foreach { __v =>
+        val __m = __v
+        _output__.writeString(18, __m)
+      };
+      customTimeouts.foreach { __v =>
+        val __m = __v
+        _output__.writeTag(19, 2)
+        _output__.writeUInt32NoTag(__m.serializedSize)
+        __m.writeTo(_output__)
+      };
+      {
+        val __v = deletedWith
+        if (!__v.isEmpty) {
+          _output__.writeString(20, __v)
+        }
+      };
+      {
+        val __v = deleteBeforeReplace
+        if (__v != false) {
+          _output__.writeBool(21, __v)
+        }
+      };
+      ignoreChanges.foreach { __v =>
+        val __m = __v
+        _output__.writeString(22, __m)
+      };
+      replaceOnChanges.foreach { __v =>
+        val __m = __v
+        _output__.writeString(23, __m)
+      };
+      {
+        val __v = retainOnDelete
+        if (__v != false) {
+          _output__.writeBool(24, __v)
+        }
+      };
       unknownFields.writeTo(_output__)
     }
     def withProject(__v: _root_.scala.Predef.String): ConstructRequest = copy(project = __v)
@@ -277,15 +389,10 @@ final case class ConstructRequest(
     def addInputDependencies(__vs: (_root_.scala.Predef.String, pulumirpc.provider.ConstructRequest.PropertyDependencies) *): ConstructRequest = addAllInputDependencies(__vs)
     def addAllInputDependencies(__vs: Iterable[(_root_.scala.Predef.String, pulumirpc.provider.ConstructRequest.PropertyDependencies)]): ConstructRequest = copy(inputDependencies = inputDependencies ++ __vs)
     def withInputDependencies(__v: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, pulumirpc.provider.ConstructRequest.PropertyDependencies]): ConstructRequest = copy(inputDependencies = __v)
-    def withProtect(__v: _root_.scala.Boolean): ConstructRequest = copy(protect = __v)
     def clearProviders = copy(providers = _root_.scala.collection.immutable.Map.empty)
     def addProviders(__vs: (_root_.scala.Predef.String, _root_.scala.Predef.String) *): ConstructRequest = addAllProviders(__vs)
     def addAllProviders(__vs: Iterable[(_root_.scala.Predef.String, _root_.scala.Predef.String)]): ConstructRequest = copy(providers = providers ++ __vs)
     def withProviders(__v: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.scala.Predef.String]): ConstructRequest = copy(providers = __v)
-    def clearAliases = copy(aliases = _root_.scala.Seq.empty)
-    def addAliases(__vs: _root_.scala.Predef.String *): ConstructRequest = addAllAliases(__vs)
-    def addAllAliases(__vs: Iterable[_root_.scala.Predef.String]): ConstructRequest = copy(aliases = aliases ++ __vs)
-    def withAliases(__v: _root_.scala.Seq[_root_.scala.Predef.String]): ConstructRequest = copy(aliases = __v)
     def clearDependencies = copy(dependencies = _root_.scala.Seq.empty)
     def addDependencies(__vs: _root_.scala.Predef.String *): ConstructRequest = addAllDependencies(__vs)
     def addAllDependencies(__vs: Iterable[_root_.scala.Predef.String]): ConstructRequest = copy(dependencies = dependencies ++ __vs)
@@ -294,6 +401,30 @@ final case class ConstructRequest(
     def addConfigSecretKeys(__vs: _root_.scala.Predef.String *): ConstructRequest = addAllConfigSecretKeys(__vs)
     def addAllConfigSecretKeys(__vs: Iterable[_root_.scala.Predef.String]): ConstructRequest = copy(configSecretKeys = configSecretKeys ++ __vs)
     def withConfigSecretKeys(__v: _root_.scala.Seq[_root_.scala.Predef.String]): ConstructRequest = copy(configSecretKeys = __v)
+    def withOrganization(__v: _root_.scala.Predef.String): ConstructRequest = copy(organization = __v)
+    def withProtect(__v: _root_.scala.Boolean): ConstructRequest = copy(protect = __v)
+    def clearAliases = copy(aliases = _root_.scala.Seq.empty)
+    def addAliases(__vs: _root_.scala.Predef.String *): ConstructRequest = addAllAliases(__vs)
+    def addAllAliases(__vs: Iterable[_root_.scala.Predef.String]): ConstructRequest = copy(aliases = aliases ++ __vs)
+    def withAliases(__v: _root_.scala.Seq[_root_.scala.Predef.String]): ConstructRequest = copy(aliases = __v)
+    def clearAdditionalSecretOutputs = copy(additionalSecretOutputs = _root_.scala.Seq.empty)
+    def addAdditionalSecretOutputs(__vs: _root_.scala.Predef.String *): ConstructRequest = addAllAdditionalSecretOutputs(__vs)
+    def addAllAdditionalSecretOutputs(__vs: Iterable[_root_.scala.Predef.String]): ConstructRequest = copy(additionalSecretOutputs = additionalSecretOutputs ++ __vs)
+    def withAdditionalSecretOutputs(__v: _root_.scala.Seq[_root_.scala.Predef.String]): ConstructRequest = copy(additionalSecretOutputs = __v)
+    def getCustomTimeouts: pulumirpc.provider.ConstructRequest.CustomTimeouts = customTimeouts.getOrElse(pulumirpc.provider.ConstructRequest.CustomTimeouts.defaultInstance)
+    def clearCustomTimeouts: ConstructRequest = copy(customTimeouts = _root_.scala.None)
+    def withCustomTimeouts(__v: pulumirpc.provider.ConstructRequest.CustomTimeouts): ConstructRequest = copy(customTimeouts = Option(__v))
+    def withDeletedWith(__v: _root_.scala.Predef.String): ConstructRequest = copy(deletedWith = __v)
+    def withDeleteBeforeReplace(__v: _root_.scala.Boolean): ConstructRequest = copy(deleteBeforeReplace = __v)
+    def clearIgnoreChanges = copy(ignoreChanges = _root_.scala.Seq.empty)
+    def addIgnoreChanges(__vs: _root_.scala.Predef.String *): ConstructRequest = addAllIgnoreChanges(__vs)
+    def addAllIgnoreChanges(__vs: Iterable[_root_.scala.Predef.String]): ConstructRequest = copy(ignoreChanges = ignoreChanges ++ __vs)
+    def withIgnoreChanges(__v: _root_.scala.Seq[_root_.scala.Predef.String]): ConstructRequest = copy(ignoreChanges = __v)
+    def clearReplaceOnChanges = copy(replaceOnChanges = _root_.scala.Seq.empty)
+    def addReplaceOnChanges(__vs: _root_.scala.Predef.String *): ConstructRequest = addAllReplaceOnChanges(__vs)
+    def addAllReplaceOnChanges(__vs: Iterable[_root_.scala.Predef.String]): ConstructRequest = copy(replaceOnChanges = replaceOnChanges ++ __vs)
+    def withReplaceOnChanges(__v: _root_.scala.Seq[_root_.scala.Predef.String]): ConstructRequest = copy(replaceOnChanges = __v)
+    def withRetainOnDelete(__v: _root_.scala.Boolean): ConstructRequest = copy(retainOnDelete = __v)
     def withUnknownFields(__v: _root_.scalapb.UnknownFieldSet) = copy(unknownFields = __v)
     def discardUnknownFields = copy(unknownFields = _root_.scalapb.UnknownFieldSet.empty)
     def getFieldByNumber(__fieldNumber: _root_.scala.Int): _root_.scala.Any = {
@@ -333,14 +464,34 @@ final case class ConstructRequest(
         }
         case 10 => inputs.orNull
         case 11 => inputDependencies.iterator.map(pulumirpc.provider.ConstructRequest._typemapper_inputDependencies.toBase(_)).toSeq
+        case 13 => providers.iterator.map(pulumirpc.provider.ConstructRequest._typemapper_providers.toBase(_)).toSeq
+        case 15 => dependencies
+        case 16 => configSecretKeys
+        case 17 => {
+          val __t = organization
+          if (__t != "") __t else null
+        }
         case 12 => {
           val __t = protect
           if (__t != false) __t else null
         }
-        case 13 => providers.iterator.map(pulumirpc.provider.ConstructRequest._typemapper_providers.toBase(_)).toSeq
         case 14 => aliases
-        case 15 => dependencies
-        case 16 => configSecretKeys
+        case 18 => additionalSecretOutputs
+        case 19 => customTimeouts.orNull
+        case 20 => {
+          val __t = deletedWith
+          if (__t != "") __t else null
+        }
+        case 21 => {
+          val __t = deleteBeforeReplace
+          if (__t != false) __t else null
+        }
+        case 22 => ignoreChanges
+        case 23 => replaceOnChanges
+        case 24 => {
+          val __t = retainOnDelete
+          if (__t != false) __t else null
+        }
       }
     }
     def getField(__field: _root_.scalapb.descriptors.FieldDescriptor): _root_.scalapb.descriptors.PValue = {
@@ -357,11 +508,19 @@ final case class ConstructRequest(
         case 9 => _root_.scalapb.descriptors.PString(parent)
         case 10 => inputs.map(_.toPMessage).getOrElse(_root_.scalapb.descriptors.PEmpty)
         case 11 => _root_.scalapb.descriptors.PRepeated(inputDependencies.iterator.map(pulumirpc.provider.ConstructRequest._typemapper_inputDependencies.toBase(_).toPMessage).toVector)
-        case 12 => _root_.scalapb.descriptors.PBoolean(protect)
         case 13 => _root_.scalapb.descriptors.PRepeated(providers.iterator.map(pulumirpc.provider.ConstructRequest._typemapper_providers.toBase(_).toPMessage).toVector)
-        case 14 => _root_.scalapb.descriptors.PRepeated(aliases.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
         case 15 => _root_.scalapb.descriptors.PRepeated(dependencies.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
         case 16 => _root_.scalapb.descriptors.PRepeated(configSecretKeys.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
+        case 17 => _root_.scalapb.descriptors.PString(organization)
+        case 12 => _root_.scalapb.descriptors.PBoolean(protect)
+        case 14 => _root_.scalapb.descriptors.PRepeated(aliases.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
+        case 18 => _root_.scalapb.descriptors.PRepeated(additionalSecretOutputs.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
+        case 19 => customTimeouts.map(_.toPMessage).getOrElse(_root_.scalapb.descriptors.PEmpty)
+        case 20 => _root_.scalapb.descriptors.PString(deletedWith)
+        case 21 => _root_.scalapb.descriptors.PBoolean(deleteBeforeReplace)
+        case 22 => _root_.scalapb.descriptors.PRepeated(ignoreChanges.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
+        case 23 => _root_.scalapb.descriptors.PRepeated(replaceOnChanges.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
+        case 24 => _root_.scalapb.descriptors.PBoolean(retainOnDelete)
       }
     }
     def toProtoString: _root_.scala.Predef.String = _root_.scalapb.TextFormat.printToUnicodeString(this)
@@ -383,11 +542,19 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
     var __parent: _root_.scala.Predef.String = ""
     var __inputs: _root_.scala.Option[com.google.protobuf.struct.Struct] = _root_.scala.None
     val __inputDependencies: _root_.scala.collection.mutable.Builder[(_root_.scala.Predef.String, pulumirpc.provider.ConstructRequest.PropertyDependencies), _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, pulumirpc.provider.ConstructRequest.PropertyDependencies]] = _root_.scala.collection.immutable.Map.newBuilder[_root_.scala.Predef.String, pulumirpc.provider.ConstructRequest.PropertyDependencies]
-    var __protect: _root_.scala.Boolean = false
     val __providers: _root_.scala.collection.mutable.Builder[(_root_.scala.Predef.String, _root_.scala.Predef.String), _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.scala.Predef.String]] = _root_.scala.collection.immutable.Map.newBuilder[_root_.scala.Predef.String, _root_.scala.Predef.String]
-    val __aliases: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
     val __dependencies: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
     val __configSecretKeys: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
+    var __organization: _root_.scala.Predef.String = ""
+    var __protect: _root_.scala.Boolean = false
+    val __aliases: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
+    val __additionalSecretOutputs: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
+    var __customTimeouts: _root_.scala.Option[pulumirpc.provider.ConstructRequest.CustomTimeouts] = _root_.scala.None
+    var __deletedWith: _root_.scala.Predef.String = ""
+    var __deleteBeforeReplace: _root_.scala.Boolean = false
+    val __ignoreChanges: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
+    val __replaceOnChanges: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
+    var __retainOnDelete: _root_.scala.Boolean = false
     var `_unknownFields__`: _root_.scalapb.UnknownFieldSet.Builder = null
     var _done__ = false
     while (!_done__) {
@@ -416,16 +583,32 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
           __inputs = Option(__inputs.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 90 =>
           __inputDependencies += pulumirpc.provider.ConstructRequest._typemapper_inputDependencies.toCustom(_root_.scalapb.LiteParser.readMessage[pulumirpc.provider.ConstructRequest.InputDependenciesEntry](_input__))
-        case 96 =>
-          __protect = _input__.readBool()
         case 106 =>
           __providers += pulumirpc.provider.ConstructRequest._typemapper_providers.toCustom(_root_.scalapb.LiteParser.readMessage[pulumirpc.provider.ConstructRequest.ProvidersEntry](_input__))
-        case 114 =>
-          __aliases += _input__.readStringRequireUtf8()
         case 122 =>
           __dependencies += _input__.readStringRequireUtf8()
         case 130 =>
           __configSecretKeys += _input__.readStringRequireUtf8()
+        case 138 =>
+          __organization = _input__.readStringRequireUtf8()
+        case 96 =>
+          __protect = _input__.readBool()
+        case 114 =>
+          __aliases += _input__.readStringRequireUtf8()
+        case 146 =>
+          __additionalSecretOutputs += _input__.readStringRequireUtf8()
+        case 154 =>
+          __customTimeouts = Option(__customTimeouts.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.provider.ConstructRequest.CustomTimeouts](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+        case 162 =>
+          __deletedWith = _input__.readStringRequireUtf8()
+        case 168 =>
+          __deleteBeforeReplace = _input__.readBool()
+        case 178 =>
+          __ignoreChanges += _input__.readStringRequireUtf8()
+        case 186 =>
+          __replaceOnChanges += _input__.readStringRequireUtf8()
+        case 192 =>
+          __retainOnDelete = _input__.readBool()
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -445,11 +628,19 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
         parent = __parent,
         inputs = __inputs,
         inputDependencies = __inputDependencies.result(),
-        protect = __protect,
         providers = __providers.result(),
-        aliases = __aliases.result(),
         dependencies = __dependencies.result(),
         configSecretKeys = __configSecretKeys.result(),
+        organization = __organization,
+        protect = __protect,
+        aliases = __aliases.result(),
+        additionalSecretOutputs = __additionalSecretOutputs.result(),
+        customTimeouts = __customTimeouts,
+        deletedWith = __deletedWith,
+        deleteBeforeReplace = __deleteBeforeReplace,
+        ignoreChanges = __ignoreChanges.result(),
+        replaceOnChanges = __replaceOnChanges.result(),
+        retainOnDelete = __retainOnDelete,
         unknownFields = if (_unknownFields__ == null) _root_.scalapb.UnknownFieldSet.empty else _unknownFields__.result()
     )
   }
@@ -468,11 +659,19 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
         parent = __fieldsMap.get(scalaDescriptor.findFieldByNumber(9).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
         inputs = __fieldsMap.get(scalaDescriptor.findFieldByNumber(10).get).flatMap(_.as[_root_.scala.Option[com.google.protobuf.struct.Struct]]),
         inputDependencies = __fieldsMap.get(scalaDescriptor.findFieldByNumber(11).get).map(_.as[_root_.scala.Seq[pulumirpc.provider.ConstructRequest.InputDependenciesEntry]]).getOrElse(_root_.scala.Seq.empty).iterator.map(pulumirpc.provider.ConstructRequest._typemapper_inputDependencies.toCustom(_)).toMap,
-        protect = __fieldsMap.get(scalaDescriptor.findFieldByNumber(12).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
         providers = __fieldsMap.get(scalaDescriptor.findFieldByNumber(13).get).map(_.as[_root_.scala.Seq[pulumirpc.provider.ConstructRequest.ProvidersEntry]]).getOrElse(_root_.scala.Seq.empty).iterator.map(pulumirpc.provider.ConstructRequest._typemapper_providers.toCustom(_)).toMap,
-        aliases = __fieldsMap.get(scalaDescriptor.findFieldByNumber(14).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
         dependencies = __fieldsMap.get(scalaDescriptor.findFieldByNumber(15).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
-        configSecretKeys = __fieldsMap.get(scalaDescriptor.findFieldByNumber(16).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty)
+        configSecretKeys = __fieldsMap.get(scalaDescriptor.findFieldByNumber(16).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
+        organization = __fieldsMap.get(scalaDescriptor.findFieldByNumber(17).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
+        protect = __fieldsMap.get(scalaDescriptor.findFieldByNumber(12).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
+        aliases = __fieldsMap.get(scalaDescriptor.findFieldByNumber(14).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
+        additionalSecretOutputs = __fieldsMap.get(scalaDescriptor.findFieldByNumber(18).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
+        customTimeouts = __fieldsMap.get(scalaDescriptor.findFieldByNumber(19).get).flatMap(_.as[_root_.scala.Option[pulumirpc.provider.ConstructRequest.CustomTimeouts]]),
+        deletedWith = __fieldsMap.get(scalaDescriptor.findFieldByNumber(20).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
+        deleteBeforeReplace = __fieldsMap.get(scalaDescriptor.findFieldByNumber(21).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
+        ignoreChanges = __fieldsMap.get(scalaDescriptor.findFieldByNumber(22).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
+        replaceOnChanges = __fieldsMap.get(scalaDescriptor.findFieldByNumber(23).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
+        retainOnDelete = __fieldsMap.get(scalaDescriptor.findFieldByNumber(24).get).map(_.as[_root_.scala.Boolean]).getOrElse(false)
       )
     case _ => throw new RuntimeException("Expected PMessage")
   }
@@ -485,12 +684,14 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
       case 10 => __out = com.google.protobuf.struct.Struct
       case 11 => __out = pulumirpc.provider.ConstructRequest.InputDependenciesEntry
       case 13 => __out = pulumirpc.provider.ConstructRequest.ProvidersEntry
+      case 19 => __out = pulumirpc.provider.ConstructRequest.CustomTimeouts
     }
     __out
   }
   lazy val nestedMessagesCompanions: Seq[_root_.scalapb.GeneratedMessageCompanion[_ <: _root_.scalapb.GeneratedMessage]] =
     Seq[_root_.scalapb.GeneratedMessageCompanion[_ <: _root_.scalapb.GeneratedMessage]](
       _root_.pulumirpc.provider.ConstructRequest.PropertyDependencies,
+      _root_.pulumirpc.provider.ConstructRequest.CustomTimeouts,
       _root_.pulumirpc.provider.ConstructRequest.ConfigEntry,
       _root_.pulumirpc.provider.ConstructRequest.InputDependenciesEntry,
       _root_.pulumirpc.provider.ConstructRequest.ProvidersEntry
@@ -508,11 +709,19 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
     parent = "",
     inputs = _root_.scala.None,
     inputDependencies = _root_.scala.collection.immutable.Map.empty,
-    protect = false,
     providers = _root_.scala.collection.immutable.Map.empty,
-    aliases = _root_.scala.Seq.empty,
     dependencies = _root_.scala.Seq.empty,
-    configSecretKeys = _root_.scala.Seq.empty
+    configSecretKeys = _root_.scala.Seq.empty,
+    organization = "",
+    protect = false,
+    aliases = _root_.scala.Seq.empty,
+    additionalSecretOutputs = _root_.scala.Seq.empty,
+    customTimeouts = _root_.scala.None,
+    deletedWith = "",
+    deleteBeforeReplace = false,
+    ignoreChanges = _root_.scala.Seq.empty,
+    replaceOnChanges = _root_.scala.Seq.empty,
+    retainOnDelete = false
   )
   /** PropertyDependencies describes the resources that a particular property depends on.
     *
@@ -623,6 +832,195 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
       urns
     )
     // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.ConstructRequest.PropertyDependencies])
+  }
+  
+  /** CustomTimeouts specifies timeouts for resource provisioning operations.
+    * Use it with the [Timeouts] option when creating new resources
+    * to override default timeouts.
+    *
+    * Each timeout is specified as a duration string such as,
+    * "5ms" (5 milliseconds), "40s" (40 seconds),
+    * and "1m30s" (1 minute, 30 seconds).
+    *
+    * The following units are accepted.
+    *
+    *   - ns: nanoseconds
+    *   - us: microseconds
+    *   - µs: microseconds
+    *   - ms: milliseconds
+    *   - s: seconds
+    *   - m: minutes
+    *   - h: hours
+    */
+  @SerialVersionUID(0L)
+  final case class CustomTimeouts(
+      create: _root_.scala.Predef.String = "",
+      update: _root_.scala.Predef.String = "",
+      delete: _root_.scala.Predef.String = "",
+      unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
+      ) extends scalapb.GeneratedMessage with scalapb.lenses.Updatable[CustomTimeouts] {
+      @transient
+      private[this] var __serializedSizeMemoized: _root_.scala.Int = 0
+      private[this] def __computeSerializedSize(): _root_.scala.Int = {
+        var __size = 0
+        
+        {
+          val __value = create
+          if (!__value.isEmpty) {
+            __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(1, __value)
+          }
+        };
+        
+        {
+          val __value = update
+          if (!__value.isEmpty) {
+            __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(2, __value)
+          }
+        };
+        
+        {
+          val __value = delete
+          if (!__value.isEmpty) {
+            __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(3, __value)
+          }
+        };
+        __size += unknownFields.serializedSize
+        __size
+      }
+      override def serializedSize: _root_.scala.Int = {
+        var __size = __serializedSizeMemoized
+        if (__size == 0) {
+          __size = __computeSerializedSize() + 1
+          __serializedSizeMemoized = __size
+        }
+        __size - 1
+        
+      }
+      def writeTo(`_output__`: _root_.com.google.protobuf.CodedOutputStream): _root_.scala.Unit = {
+        {
+          val __v = create
+          if (!__v.isEmpty) {
+            _output__.writeString(1, __v)
+          }
+        };
+        {
+          val __v = update
+          if (!__v.isEmpty) {
+            _output__.writeString(2, __v)
+          }
+        };
+        {
+          val __v = delete
+          if (!__v.isEmpty) {
+            _output__.writeString(3, __v)
+          }
+        };
+        unknownFields.writeTo(_output__)
+      }
+      def withCreate(__v: _root_.scala.Predef.String): CustomTimeouts = copy(create = __v)
+      def withUpdate(__v: _root_.scala.Predef.String): CustomTimeouts = copy(update = __v)
+      def withDelete(__v: _root_.scala.Predef.String): CustomTimeouts = copy(delete = __v)
+      def withUnknownFields(__v: _root_.scalapb.UnknownFieldSet) = copy(unknownFields = __v)
+      def discardUnknownFields = copy(unknownFields = _root_.scalapb.UnknownFieldSet.empty)
+      def getFieldByNumber(__fieldNumber: _root_.scala.Int): _root_.scala.Any = {
+        (__fieldNumber: @_root_.scala.unchecked) match {
+          case 1 => {
+            val __t = create
+            if (__t != "") __t else null
+          }
+          case 2 => {
+            val __t = update
+            if (__t != "") __t else null
+          }
+          case 3 => {
+            val __t = delete
+            if (__t != "") __t else null
+          }
+        }
+      }
+      def getField(__field: _root_.scalapb.descriptors.FieldDescriptor): _root_.scalapb.descriptors.PValue = {
+        _root_.scala.Predef.require(__field.containingMessage eq companion.scalaDescriptor)
+        (__field.number: @_root_.scala.unchecked) match {
+          case 1 => _root_.scalapb.descriptors.PString(create)
+          case 2 => _root_.scalapb.descriptors.PString(update)
+          case 3 => _root_.scalapb.descriptors.PString(delete)
+        }
+      }
+      def toProtoString: _root_.scala.Predef.String = _root_.scalapb.TextFormat.printToUnicodeString(this)
+      def companion: pulumirpc.provider.ConstructRequest.CustomTimeouts.type = pulumirpc.provider.ConstructRequest.CustomTimeouts
+      // @@protoc_insertion_point(GeneratedMessage[pulumirpc.ConstructRequest.CustomTimeouts])
+  }
+  
+  object CustomTimeouts extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.ConstructRequest.CustomTimeouts] {
+    implicit def messageCompanion: scalapb.GeneratedMessageCompanion[pulumirpc.provider.ConstructRequest.CustomTimeouts] = this
+    def parseFrom(`_input__`: _root_.com.google.protobuf.CodedInputStream): pulumirpc.provider.ConstructRequest.CustomTimeouts = {
+      var __create: _root_.scala.Predef.String = ""
+      var __update: _root_.scala.Predef.String = ""
+      var __delete: _root_.scala.Predef.String = ""
+      var `_unknownFields__`: _root_.scalapb.UnknownFieldSet.Builder = null
+      var _done__ = false
+      while (!_done__) {
+        val _tag__ = _input__.readTag()
+        _tag__ match {
+          case 0 => _done__ = true
+          case 10 =>
+            __create = _input__.readStringRequireUtf8()
+          case 18 =>
+            __update = _input__.readStringRequireUtf8()
+          case 26 =>
+            __delete = _input__.readStringRequireUtf8()
+          case tag =>
+            if (_unknownFields__ == null) {
+              _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
+            }
+            _unknownFields__.parseField(tag, _input__)
+        }
+      }
+      pulumirpc.provider.ConstructRequest.CustomTimeouts(
+          create = __create,
+          update = __update,
+          delete = __delete,
+          unknownFields = if (_unknownFields__ == null) _root_.scalapb.UnknownFieldSet.empty else _unknownFields__.result()
+      )
+    }
+    implicit def messageReads: _root_.scalapb.descriptors.Reads[pulumirpc.provider.ConstructRequest.CustomTimeouts] = _root_.scalapb.descriptors.Reads{
+      case _root_.scalapb.descriptors.PMessage(__fieldsMap) =>
+        _root_.scala.Predef.require(__fieldsMap.keys.forall(_.containingMessage eq scalaDescriptor), "FieldDescriptor does not match message type.")
+        pulumirpc.provider.ConstructRequest.CustomTimeouts(
+          create = __fieldsMap.get(scalaDescriptor.findFieldByNumber(1).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
+          update = __fieldsMap.get(scalaDescriptor.findFieldByNumber(2).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
+          delete = __fieldsMap.get(scalaDescriptor.findFieldByNumber(3).get).map(_.as[_root_.scala.Predef.String]).getOrElse("")
+        )
+      case _ => throw new RuntimeException("Expected PMessage")
+    }
+    def javaDescriptor: _root_.com.google.protobuf.Descriptors.Descriptor = pulumirpc.provider.ConstructRequest.javaDescriptor.getNestedTypes().get(1)
+    def scalaDescriptor: _root_.scalapb.descriptors.Descriptor = pulumirpc.provider.ConstructRequest.scalaDescriptor.nestedMessages(1)
+    def messageCompanionForFieldNumber(__number: _root_.scala.Int): _root_.scalapb.GeneratedMessageCompanion[_] = throw new MatchError(__number)
+    lazy val nestedMessagesCompanions: Seq[_root_.scalapb.GeneratedMessageCompanion[_ <: _root_.scalapb.GeneratedMessage]] = Seq.empty
+    def enumCompanionForFieldNumber(__fieldNumber: _root_.scala.Int): _root_.scalapb.GeneratedEnumCompanion[_] = throw new MatchError(__fieldNumber)
+    lazy val defaultInstance = pulumirpc.provider.ConstructRequest.CustomTimeouts(
+      create = "",
+      update = "",
+      delete = ""
+    )
+    implicit class CustomTimeoutsLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.ConstructRequest.CustomTimeouts]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.provider.ConstructRequest.CustomTimeouts](_l) {
+      def create: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.create)((c_, f_) => c_.copy(create = f_))
+      def update: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.update)((c_, f_) => c_.copy(update = f_))
+      def delete: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.delete)((c_, f_) => c_.copy(delete = f_))
+    }
+    final val CREATE_FIELD_NUMBER = 1
+    final val UPDATE_FIELD_NUMBER = 2
+    final val DELETE_FIELD_NUMBER = 3
+    def of(
+      create: _root_.scala.Predef.String,
+      update: _root_.scala.Predef.String,
+      delete: _root_.scala.Predef.String
+    ): _root_.pulumirpc.provider.ConstructRequest.CustomTimeouts = _root_.pulumirpc.provider.ConstructRequest.CustomTimeouts(
+      create,
+      update,
+      delete
+    )
+    // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.ConstructRequest.CustomTimeouts])
   }
   
   @SerialVersionUID(0L)
@@ -741,8 +1139,8 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
         )
       case _ => throw new RuntimeException("Expected PMessage")
     }
-    def javaDescriptor: _root_.com.google.protobuf.Descriptors.Descriptor = pulumirpc.provider.ConstructRequest.javaDescriptor.getNestedTypes().get(1)
-    def scalaDescriptor: _root_.scalapb.descriptors.Descriptor = pulumirpc.provider.ConstructRequest.scalaDescriptor.nestedMessages(1)
+    def javaDescriptor: _root_.com.google.protobuf.Descriptors.Descriptor = pulumirpc.provider.ConstructRequest.javaDescriptor.getNestedTypes().get(2)
+    def scalaDescriptor: _root_.scalapb.descriptors.Descriptor = pulumirpc.provider.ConstructRequest.scalaDescriptor.nestedMessages(2)
     def messageCompanionForFieldNumber(__number: _root_.scala.Int): _root_.scalapb.GeneratedMessageCompanion[_] = throw new MatchError(__number)
     lazy val nestedMessagesCompanions: Seq[_root_.scalapb.GeneratedMessageCompanion[_ <: _root_.scalapb.GeneratedMessage]] = Seq.empty
     def enumCompanionForFieldNumber(__fieldNumber: _root_.scala.Int): _root_.scalapb.GeneratedEnumCompanion[_] = throw new MatchError(__fieldNumber)
@@ -881,8 +1279,8 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
         )
       case _ => throw new RuntimeException("Expected PMessage")
     }
-    def javaDescriptor: _root_.com.google.protobuf.Descriptors.Descriptor = pulumirpc.provider.ConstructRequest.javaDescriptor.getNestedTypes().get(2)
-    def scalaDescriptor: _root_.scalapb.descriptors.Descriptor = pulumirpc.provider.ConstructRequest.scalaDescriptor.nestedMessages(2)
+    def javaDescriptor: _root_.com.google.protobuf.Descriptors.Descriptor = pulumirpc.provider.ConstructRequest.javaDescriptor.getNestedTypes().get(3)
+    def scalaDescriptor: _root_.scalapb.descriptors.Descriptor = pulumirpc.provider.ConstructRequest.scalaDescriptor.nestedMessages(3)
     def messageCompanionForFieldNumber(__number: _root_.scala.Int): _root_.scalapb.GeneratedMessageCompanion[_] = {
       var __out: _root_.scalapb.GeneratedMessageCompanion[_] = null
       (__number: @_root_.scala.unchecked) match {
@@ -1032,8 +1430,8 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
         )
       case _ => throw new RuntimeException("Expected PMessage")
     }
-    def javaDescriptor: _root_.com.google.protobuf.Descriptors.Descriptor = pulumirpc.provider.ConstructRequest.javaDescriptor.getNestedTypes().get(3)
-    def scalaDescriptor: _root_.scalapb.descriptors.Descriptor = pulumirpc.provider.ConstructRequest.scalaDescriptor.nestedMessages(3)
+    def javaDescriptor: _root_.com.google.protobuf.Descriptors.Descriptor = pulumirpc.provider.ConstructRequest.javaDescriptor.getNestedTypes().get(4)
+    def scalaDescriptor: _root_.scalapb.descriptors.Descriptor = pulumirpc.provider.ConstructRequest.scalaDescriptor.nestedMessages(4)
     def messageCompanionForFieldNumber(__number: _root_.scala.Int): _root_.scalapb.GeneratedMessageCompanion[_] = throw new MatchError(__number)
     lazy val nestedMessagesCompanions: Seq[_root_.scalapb.GeneratedMessageCompanion[_ <: _root_.scalapb.GeneratedMessage]] = Seq.empty
     def enumCompanionForFieldNumber(__fieldNumber: _root_.scala.Int): _root_.scalapb.GeneratedEnumCompanion[_] = throw new MatchError(__fieldNumber)
@@ -1073,11 +1471,20 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
     def inputs: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getInputs)((c_, f_) => c_.copy(inputs = Option(f_)))
     def optionalInputs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.inputs)((c_, f_) => c_.copy(inputs = f_))
     def inputDependencies: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, pulumirpc.provider.ConstructRequest.PropertyDependencies]] = field(_.inputDependencies)((c_, f_) => c_.copy(inputDependencies = f_))
-    def protect: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.protect)((c_, f_) => c_.copy(protect = f_))
     def providers: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.scala.Predef.String]] = field(_.providers)((c_, f_) => c_.copy(providers = f_))
-    def aliases: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.aliases)((c_, f_) => c_.copy(aliases = f_))
     def dependencies: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.dependencies)((c_, f_) => c_.copy(dependencies = f_))
     def configSecretKeys: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.configSecretKeys)((c_, f_) => c_.copy(configSecretKeys = f_))
+    def organization: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.organization)((c_, f_) => c_.copy(organization = f_))
+    def protect: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.protect)((c_, f_) => c_.copy(protect = f_))
+    def aliases: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.aliases)((c_, f_) => c_.copy(aliases = f_))
+    def additionalSecretOutputs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.additionalSecretOutputs)((c_, f_) => c_.copy(additionalSecretOutputs = f_))
+    def customTimeouts: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.ConstructRequest.CustomTimeouts] = field(_.getCustomTimeouts)((c_, f_) => c_.copy(customTimeouts = Option(f_)))
+    def optionalCustomTimeouts: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[pulumirpc.provider.ConstructRequest.CustomTimeouts]] = field(_.customTimeouts)((c_, f_) => c_.copy(customTimeouts = f_))
+    def deletedWith: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.deletedWith)((c_, f_) => c_.copy(deletedWith = f_))
+    def deleteBeforeReplace: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.deleteBeforeReplace)((c_, f_) => c_.copy(deleteBeforeReplace = f_))
+    def ignoreChanges: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.ignoreChanges)((c_, f_) => c_.copy(ignoreChanges = f_))
+    def replaceOnChanges: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.replaceOnChanges)((c_, f_) => c_.copy(replaceOnChanges = f_))
+    def retainOnDelete: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.retainOnDelete)((c_, f_) => c_.copy(retainOnDelete = f_))
   }
   final val PROJECT_FIELD_NUMBER = 1
   final val STACK_FIELD_NUMBER = 2
@@ -1090,11 +1497,19 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
   final val PARENT_FIELD_NUMBER = 9
   final val INPUTS_FIELD_NUMBER = 10
   final val INPUTDEPENDENCIES_FIELD_NUMBER = 11
-  final val PROTECT_FIELD_NUMBER = 12
   final val PROVIDERS_FIELD_NUMBER = 13
-  final val ALIASES_FIELD_NUMBER = 14
   final val DEPENDENCIES_FIELD_NUMBER = 15
   final val CONFIGSECRETKEYS_FIELD_NUMBER = 16
+  final val ORGANIZATION_FIELD_NUMBER = 17
+  final val PROTECT_FIELD_NUMBER = 12
+  final val ALIASES_FIELD_NUMBER = 14
+  final val ADDITIONALSECRETOUTPUTS_FIELD_NUMBER = 18
+  final val CUSTOMTIMEOUTS_FIELD_NUMBER = 19
+  final val DELETEDWITH_FIELD_NUMBER = 20
+  final val DELETEBEFOREREPLACE_FIELD_NUMBER = 21
+  final val IGNORECHANGES_FIELD_NUMBER = 22
+  final val REPLACEONCHANGES_FIELD_NUMBER = 23
+  final val RETAINONDELETE_FIELD_NUMBER = 24
   @transient
   private[provider] val _typemapper_config: _root_.scalapb.TypeMapper[pulumirpc.provider.ConstructRequest.ConfigEntry, (_root_.scala.Predef.String, _root_.scala.Predef.String)] = implicitly[_root_.scalapb.TypeMapper[pulumirpc.provider.ConstructRequest.ConfigEntry, (_root_.scala.Predef.String, _root_.scala.Predef.String)]]
   @transient
@@ -1113,11 +1528,19 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
     parent: _root_.scala.Predef.String,
     inputs: _root_.scala.Option[com.google.protobuf.struct.Struct],
     inputDependencies: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, pulumirpc.provider.ConstructRequest.PropertyDependencies],
-    protect: _root_.scala.Boolean,
     providers: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.scala.Predef.String],
-    aliases: _root_.scala.Seq[_root_.scala.Predef.String],
     dependencies: _root_.scala.Seq[_root_.scala.Predef.String],
-    configSecretKeys: _root_.scala.Seq[_root_.scala.Predef.String]
+    configSecretKeys: _root_.scala.Seq[_root_.scala.Predef.String],
+    organization: _root_.scala.Predef.String,
+    protect: _root_.scala.Boolean,
+    aliases: _root_.scala.Seq[_root_.scala.Predef.String],
+    additionalSecretOutputs: _root_.scala.Seq[_root_.scala.Predef.String],
+    customTimeouts: _root_.scala.Option[pulumirpc.provider.ConstructRequest.CustomTimeouts],
+    deletedWith: _root_.scala.Predef.String,
+    deleteBeforeReplace: _root_.scala.Boolean,
+    ignoreChanges: _root_.scala.Seq[_root_.scala.Predef.String],
+    replaceOnChanges: _root_.scala.Seq[_root_.scala.Predef.String],
+    retainOnDelete: _root_.scala.Boolean
   ): _root_.pulumirpc.provider.ConstructRequest = _root_.pulumirpc.provider.ConstructRequest(
     project,
     stack,
@@ -1130,11 +1553,19 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
     parent,
     inputs,
     inputDependencies,
-    protect,
     providers,
-    aliases,
     dependencies,
-    configSecretKeys
+    configSecretKeys,
+    organization,
+    protect,
+    aliases,
+    additionalSecretOutputs,
+    customTimeouts,
+    deletedWith,
+    deleteBeforeReplace,
+    ignoreChanges,
+    replaceOnChanges,
+    retainOnDelete
   )
   // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.ConstructRequest])
 }

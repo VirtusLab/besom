@@ -1,13 +1,14 @@
-//> using scala "3.3.0"
+//> using scala "3.3.1"
 
 //> using lib "com.lihaoyi::os-lib:0.8.1"
-//> using lib "com.lihaoyi::requests:0.7.0"
-//> using lib "com.lihaoyi::upickle:2.0.0"
-//> using lib "org.apache.commons:commons-lang3:3.12.0"
+//> using lib "com.lihaoyi::requests:0.8.0"
+//> using lib "com.lihaoyi::upickle:3.1.3"
+//> using lib "org.apache.commons:commons-lang3:3.13.0"
 
 import org.apache.commons.lang3.SystemUtils
+import os.*
 
-def readLine = scala.io.StdIn.readLine
+import scala.annotation.tailrec
 
 @main def proto(command: String): Unit =
   val cwd = os.pwd
@@ -15,14 +16,13 @@ def readLine = scala.io.StdIn.readLine
     println("You have to run this command from besom project root directory!")
     sys.exit(1)
 
-  os.makeDir.all(cwd / "target")
-
+  val protoPath = cwd / "proto"
   command match
-    case "fetch"   => fetch(cwd)
-    case "compile" => compile(cwd)
+    case "fetch" => fetch(cwd, protoPath)
+    case "compile" => compile(cwd, protoPath)
     case "all" =>
-      fetch(cwd)
-      compile(cwd)
+      fetch(cwd, protoPath)
+      compile(cwd, protoPath)
       println("fetched & compiled")
 
     case "check" =>
@@ -40,6 +40,9 @@ def readLine = scala.io.StdIn.readLine
       println(s"unknown command: $other")
       sys.exit(1)
 
+// TODO: de-duplicate with Schemas.scala
+private def readLine: String = scala.io.StdIn.readLine
+
 def isProtocInstalled: Boolean =
   scala.util.Try(os.proc("protoc").call()).isSuccess
 
@@ -49,51 +52,106 @@ def isUnzipAvailable: Boolean =
 def isGitInstalled: Boolean =
   scala.util.Try(os.proc("git", "version").call()).isSuccess
 
-def fetch(cwd: os.Path): Unit =
-  val targetPath = cwd / "target" / "pulumi"
+private def fetch(cwd: os.Path, targetPath: os.Path): Unit =
+  val pulumiRepoPath = cwd / "target" / "pulumi-proto"
+  val pulumiRepo = sparseCheckout(
+    pulumiRepoPath,
+    "github.com/pulumi/pulumi.git",
+    List(os.rel / "proto")
+  )
 
+  os.remove.all(targetPath)
+  copy(pulumiRepo / "proto", targetPath)
+  println("fetched protobuf declaration files")
+
+// TODO: de-duplicate with Schemas.scala
+private def sparseCheckout(
+                            repoPath: os.Path,
+                            repoUrl: String,
+                            allowDirList: List[os.RelPath]
+                          ): os.Path =
   var doClone = true
-  if os.exists(targetPath) then
-    print("cloned already, delete and clone again? (y/n/q) ")
-    def loop: Unit =
+  if os.exists(repoPath) then
+    print(s"'${repoPath.last}' cloned already, delete and checkout again? (y/N/q) ")
+    @tailrec
+    def loop(): Unit =
       readLine match
-        case "y" => os.remove.all(targetPath)
-        case "n" => doClone = false
-        case "q" => sys.exit(0)
-        case _   => loop
-    loop
+        case "y" | "Y" => os.remove.all(repoPath)
+        case "n" | "N" | "" => doClone = false
+        case "q" | "Q" => sys.exit(0)
+        case _ =>
+          print("(y/N/q) ")
+          loop()
+    loop()
 
   if doClone then
     if !isGitInstalled then
       println("You need git installed for this to work!")
       sys.exit(1)
 
-    val isCI = sys.env.get("CI").contains("true")
+    val isCI  = sys.env.get("CI").contains("true")
     val token = sys.env.get("GITHUB_TOKEN")
 
-    val url = (isCI, token) match {
+    val url: String = (isCI, token) match {
       case (true, None) => sys.error("Expected GITHUB_TOKEN environment variable to be defined in CI")
-      case (_, Some(t)) => s"https://$t@github.com/pulumi/pulumi.git"
-      case (false, None) => s"https://github.com/pulumi/pulumi.git"
+      case (_, Some(t)) => s"https://$t@$repoUrl"
+      case (false, None) => s"https://$repoUrl"
     }
 
-    os.proc("git", "clone", "--depth=1", url, targetPath)
-      .call(
-        stdin = os.Inherit,
-        stdout = os.Inherit,
-        stderr = os.Inherit
-      )
-    println(s"cloned git repo of pulumi to $targetPath")
+    os.remove.all(repoPath)
+    git(
+      "clone",
+      "--filter=tree:0",
+      "--no-checkout",
+      "--single-branch",
+      "--depth=1",
+      "--no-tags",
+      "--shallow-submodules",
+      "--sparse",
+      "--",
+      url,
+      repoPath.last
+    )(
+      repoPath / os.up
+    )
+    git("sparse-checkout", "set", allowDirList)(repoPath)
+    git("checkout")(repoPath)
 
-  os.makeDir.all(cwd / "proto")
-  os.walk.stream.attrs(targetPath / "sdk" / "proto", skip = (_, attrs) => attrs.isDir).foreach { case (f, _) =>
-    os.copy.into(f, cwd / "proto", replaceExisting = true)
-    println(s"copied ${f.last} into ${cwd / "proto"}")
-  }
+    println(s"cloned git repo of pulumi to $repoPath")
 
-  println("fetched protobuf declaration files!")
+  repoPath
 
-def compile(cwd: os.Path): Unit =
+private def copy(sourcePath: os.Path, targetPath: os.Path): Unit =
+  println(s"copying from $sourcePath to $targetPath")
+
+  val allowDirList = List()
+
+  val allowFileList = List(
+    "alias.proto",
+    "engine.proto",
+    "plugin.proto",
+    "provider.proto",
+    "resource.proto",
+    "source.proto",
+    "status.proto"
+  )
+
+  os.makeDir.all(targetPath)
+  os.walk(sourcePath)
+    .filter(os.isFile(_))
+    .filter(_.ext == "proto")
+    .filter {
+      case _ / d / _ if allowDirList.contains(d) => true
+      case _ / f if allowFileList.contains(f)    => true
+      case _                                     => false
+    }
+    .foreach { source =>
+      val target = targetPath / source.relativeTo(sourcePath)
+      os.copy.over(source, target, replaceExisting = true, createFolders = true)
+      println(s"copied ${source.relativeTo(sourcePath)} into ${target.relativeTo(targetPath)}")
+    }
+
+private def compile(cwd: os.Path, protoPath: os.Path): Unit =
   if !isProtocInstalled then
     println("You need protoc protobuffer compiler installed for this to work!")
     sys.exit(1)
@@ -102,25 +160,33 @@ def compile(cwd: os.Path): Unit =
     println("You need unzip installed for this to work!")
     sys.exit(1)
 
-  if !os.exists(cwd / "proto") then println("run `scala-cli run ./scripts -M proto -- fetch` first!")
+  if !os.exists(protoPath) then println("run `scala-cli run ./scripts -M proto -- fetch` first!")
 
-  if !os.exists(cwd / "target" / "protoc-gen-scala") then fetchScalaProtocPlugin(cwd)
+  val pluginPath = cwd / "target" / "protoc-gen-scala"
+  if !os.exists(pluginPath) then fetchScalaProtocPlugin(cwd)
 
-  val outputPath = cwd / "src" / "main" / "scala" / "besom" / "rpc"
+  val files = os.walk(protoPath).filter(_.ext == "proto")
 
-  val files = os.list(cwd / "proto").map(_.last).filter(_.endsWith("proto"))
-
-  os.makeDir.all(outputPath)
+  val scalaOut = cwd / "core" / "src" / "main" / "scala" / "besom" / "rpc"
+  os.remove.all(scalaOut)
+  os.makeDir.all(scalaOut)
 
   // this generates GRPC netty-based impl for Scala in ./src/main/scala/besom/rpc, notice grpc: in --scala_out
-  os.proc(
+  val protoc = os.proc(
     "protoc",
-    files,
-    s"--plugin=${cwd / "target" / "protoc-gen-scala"}",
-    "--scala_out=grpc:../src/main/scala/besom/rpc"
-  ).call(cwd / "proto")
+    s"--plugin=$pluginPath",
+    s"--scala_out=grpc:$scalaOut",
+    files.map(_.relativeTo(protoPath))
+  )
+  println(s"running [$protoPath]: ${protoc.commandChunks.mkString(" ")}")
+  protoc.call(
+    protoPath,
+    stdin = os.Inherit,
+    stdout = os.Inherit,
+    stderr = os.Inherit
+  )
 
-  println(s"generated scala code from protobuf declaration files to $outputPath")
+  println(s"generated scala code from protobuf declaration files to $scalaOut")
 
 def fetchScalaProtocPlugin(cwd: os.Path): Unit =
   val releasesJsonBodyStr = requests.get("https://api.github.com/repos/scalapb/ScalaPB/releases")
@@ -145,8 +211,18 @@ def fetchScalaProtocPlugin(cwd: os.Path): Unit =
 
   println(s"fetching $downloadUrl")
 
+  // unzip the plugin
   os.write.over(cwd / "target" / "protoc-gen-scala.zip", requests.get.stream(downloadUrl))
-
   os.proc("unzip", "-o", cwd / "target" / "protoc-gen-scala.zip").call(cwd = cwd / "target")
-
   os.remove(cwd / "target" / "protoc-gen-scala.zip")
+
+// TODO: de-duplicate with Schemas.scala
+private def git(command: Shellable*)(wd: os.Path) =
+  val cmd = os.proc("git", command)
+  println(s"[${wd.last}] " + cmd.commandChunks.mkString(" "))
+  cmd.call(
+    cwd = wd,
+    stdin = os.Inherit,
+    stdout = os.Inherit,
+    stderr = os.Inherit
+  )

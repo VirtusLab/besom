@@ -21,6 +21,8 @@ package pulumirpc.provider
   *   a set of property paths that should be treated as unchanged.
   * @param preview
   *   true if this is a preview and the provider should not actually create the resource.
+  * @param oldInputs
+  *   the old input values of the resource to diff.
   */
 @SerialVersionUID(0L)
 final case class UpdateRequest(
@@ -31,6 +33,7 @@ final case class UpdateRequest(
     timeout: _root_.scala.Double = 0.0,
     ignoreChanges: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
     preview: _root_.scala.Boolean = false,
+    oldInputs: _root_.scala.Option[com.google.protobuf.struct.Struct] = _root_.scala.None,
     unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
     ) extends scalapb.GeneratedMessage with scalapb.lenses.Updatable[UpdateRequest] {
     @transient
@@ -76,6 +79,10 @@ final case class UpdateRequest(
         if (__value != false) {
           __size += _root_.com.google.protobuf.CodedOutputStream.computeBoolSize(7, __value)
         }
+      };
+      if (oldInputs.isDefined) {
+        val __value = oldInputs.get
+        __size += 1 + _root_.com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag(__value.serializedSize) + __value.serializedSize
       };
       __size += unknownFields.serializedSize
       __size
@@ -130,6 +137,12 @@ final case class UpdateRequest(
           _output__.writeBool(7, __v)
         }
       };
+      oldInputs.foreach { __v =>
+        val __m = __v
+        _output__.writeTag(8, 2)
+        _output__.writeUInt32NoTag(__m.serializedSize)
+        __m.writeTo(_output__)
+      };
       unknownFields.writeTo(_output__)
     }
     def withId(__v: _root_.scala.Predef.String): UpdateRequest = copy(id = __v)
@@ -146,6 +159,9 @@ final case class UpdateRequest(
     def addAllIgnoreChanges(__vs: Iterable[_root_.scala.Predef.String]): UpdateRequest = copy(ignoreChanges = ignoreChanges ++ __vs)
     def withIgnoreChanges(__v: _root_.scala.Seq[_root_.scala.Predef.String]): UpdateRequest = copy(ignoreChanges = __v)
     def withPreview(__v: _root_.scala.Boolean): UpdateRequest = copy(preview = __v)
+    def getOldInputs: com.google.protobuf.struct.Struct = oldInputs.getOrElse(com.google.protobuf.struct.Struct.defaultInstance)
+    def clearOldInputs: UpdateRequest = copy(oldInputs = _root_.scala.None)
+    def withOldInputs(__v: com.google.protobuf.struct.Struct): UpdateRequest = copy(oldInputs = Option(__v))
     def withUnknownFields(__v: _root_.scalapb.UnknownFieldSet) = copy(unknownFields = __v)
     def discardUnknownFields = copy(unknownFields = _root_.scalapb.UnknownFieldSet.empty)
     def getFieldByNumber(__fieldNumber: _root_.scala.Int): _root_.scala.Any = {
@@ -169,6 +185,7 @@ final case class UpdateRequest(
           val __t = preview
           if (__t != false) __t else null
         }
+        case 8 => oldInputs.orNull
       }
     }
     def getField(__field: _root_.scalapb.descriptors.FieldDescriptor): _root_.scalapb.descriptors.PValue = {
@@ -181,6 +198,7 @@ final case class UpdateRequest(
         case 5 => _root_.scalapb.descriptors.PDouble(timeout)
         case 6 => _root_.scalapb.descriptors.PRepeated(ignoreChanges.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
         case 7 => _root_.scalapb.descriptors.PBoolean(preview)
+        case 8 => oldInputs.map(_.toPMessage).getOrElse(_root_.scalapb.descriptors.PEmpty)
       }
     }
     def toProtoString: _root_.scala.Predef.String = _root_.scalapb.TextFormat.printToUnicodeString(this)
@@ -198,6 +216,7 @@ object UpdateRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
     var __timeout: _root_.scala.Double = 0.0
     val __ignoreChanges: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
     var __preview: _root_.scala.Boolean = false
+    var __oldInputs: _root_.scala.Option[com.google.protobuf.struct.Struct] = _root_.scala.None
     var `_unknownFields__`: _root_.scalapb.UnknownFieldSet.Builder = null
     var _done__ = false
     while (!_done__) {
@@ -218,6 +237,8 @@ object UpdateRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
           __ignoreChanges += _input__.readStringRequireUtf8()
         case 56 =>
           __preview = _input__.readBool()
+        case 66 =>
+          __oldInputs = Option(__oldInputs.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -233,6 +254,7 @@ object UpdateRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
         timeout = __timeout,
         ignoreChanges = __ignoreChanges.result(),
         preview = __preview,
+        oldInputs = __oldInputs,
         unknownFields = if (_unknownFields__ == null) _root_.scalapb.UnknownFieldSet.empty else _unknownFields__.result()
     )
   }
@@ -246,7 +268,8 @@ object UpdateRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
         news = __fieldsMap.get(scalaDescriptor.findFieldByNumber(4).get).flatMap(_.as[_root_.scala.Option[com.google.protobuf.struct.Struct]]),
         timeout = __fieldsMap.get(scalaDescriptor.findFieldByNumber(5).get).map(_.as[_root_.scala.Double]).getOrElse(0.0),
         ignoreChanges = __fieldsMap.get(scalaDescriptor.findFieldByNumber(6).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
-        preview = __fieldsMap.get(scalaDescriptor.findFieldByNumber(7).get).map(_.as[_root_.scala.Boolean]).getOrElse(false)
+        preview = __fieldsMap.get(scalaDescriptor.findFieldByNumber(7).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
+        oldInputs = __fieldsMap.get(scalaDescriptor.findFieldByNumber(8).get).flatMap(_.as[_root_.scala.Option[com.google.protobuf.struct.Struct]])
       )
     case _ => throw new RuntimeException("Expected PMessage")
   }
@@ -257,6 +280,7 @@ object UpdateRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
     (__number: @_root_.scala.unchecked) match {
       case 3 => __out = com.google.protobuf.struct.Struct
       case 4 => __out = com.google.protobuf.struct.Struct
+      case 8 => __out = com.google.protobuf.struct.Struct
     }
     __out
   }
@@ -269,7 +293,8 @@ object UpdateRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
     news = _root_.scala.None,
     timeout = 0.0,
     ignoreChanges = _root_.scala.Seq.empty,
-    preview = false
+    preview = false,
+    oldInputs = _root_.scala.None
   )
   implicit class UpdateRequestLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.UpdateRequest]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.provider.UpdateRequest](_l) {
     def id: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.id)((c_, f_) => c_.copy(id = f_))
@@ -281,6 +306,8 @@ object UpdateRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
     def timeout: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Double] = field(_.timeout)((c_, f_) => c_.copy(timeout = f_))
     def ignoreChanges: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.ignoreChanges)((c_, f_) => c_.copy(ignoreChanges = f_))
     def preview: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.preview)((c_, f_) => c_.copy(preview = f_))
+    def oldInputs: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getOldInputs)((c_, f_) => c_.copy(oldInputs = Option(f_)))
+    def optionalOldInputs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.oldInputs)((c_, f_) => c_.copy(oldInputs = f_))
   }
   final val ID_FIELD_NUMBER = 1
   final val URN_FIELD_NUMBER = 2
@@ -289,6 +316,7 @@ object UpdateRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
   final val TIMEOUT_FIELD_NUMBER = 5
   final val IGNORECHANGES_FIELD_NUMBER = 6
   final val PREVIEW_FIELD_NUMBER = 7
+  final val OLD_INPUTS_FIELD_NUMBER = 8
   def of(
     id: _root_.scala.Predef.String,
     urn: _root_.scala.Predef.String,
@@ -296,7 +324,8 @@ object UpdateRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
     news: _root_.scala.Option[com.google.protobuf.struct.Struct],
     timeout: _root_.scala.Double,
     ignoreChanges: _root_.scala.Seq[_root_.scala.Predef.String],
-    preview: _root_.scala.Boolean
+    preview: _root_.scala.Boolean,
+    oldInputs: _root_.scala.Option[com.google.protobuf.struct.Struct]
   ): _root_.pulumirpc.provider.UpdateRequest = _root_.pulumirpc.provider.UpdateRequest(
     id,
     urn,
@@ -304,7 +333,8 @@ object UpdateRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
     news,
     timeout,
     ignoreChanges,
-    preview
+    preview,
+    oldInputs
   )
   // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.UpdateRequest])
 }
