@@ -28,3 +28,4 @@ object aliases:
   type ComponentBase = besom.internal.ComponentBase
   type ComponentResource = besom.internal.ComponentResource
   type RegistersOutputs[A <: ComponentResource & Product] = besom.internal.RegistersOutputs[A]
+  export besom.util.IgnoredOutput
