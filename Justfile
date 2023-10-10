@@ -48,7 +48,7 @@ compile-all: compile-sdk compile-codegen build-language-plugin
 
 # Compiles the protobufs for the language SDK
 compile-pulumi-protobufs:
-	scala-cli run ./scripts -M proto -- all
+	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts/Proto.scala -- all
 
 # Compiles core besom SDK
 compile-core:
@@ -257,11 +257,11 @@ publish-local-provider-sdk schema-name schema-version:
 ####################
 
 # Runs all integration tests
-test-integration: test-integration-core test-integration-compiler-plugin test-language-plugin
+test-integration: test-integration-core test-integration-compiler-plugin test-integration-codegen test-language-plugin
 	scala-cli --power test integration-tests
 
 # Cleans after integration tests
-clean-test-integration:
+clean-test-integration: clean-test-integration-codegen
 	scala-cli --power clean integration-tests
 
 # Runs integration tests for core
@@ -274,6 +274,18 @@ test-integration-core: publish-local-core install-language-plugin publish-local-
 # Runs integration tests for compiler plugin
 test-integration-compiler-plugin: publish-local-core install-language-plugin publish-local-compiler-plugin
 	scala-cli --power test integration-tests --test-only 'besom.integration.compilerplugin*'
+
+# Runs integration tests for codegen
+test-integration-codegen: compile-codegen
+	scala-cli --power test integration-tests --test-only 'besom.integration.codegen*'
+
+# Cleans after the codegen integration tests
+clean-test-integration-codegen:
+	rm -rf integration-tests/resources/testdata/*/codegen
+
+# Copies test schemas from pulumi repo to the testdata directory
+copy-test-schemas:
+	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts/Schemas.scala -- all
 
 ####################
 # Templates and examples

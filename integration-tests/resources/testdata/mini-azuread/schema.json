@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "name": "azuread",
+  "config": {
+    "variables": {
+      "useMsi": {
+        "type": "boolean",
+        "description": "Allow Managed Identity to be used for Authentication\n",
+        "default": false,
+        "defaultInfo": {
+          "environment": [
+            "ARM_USE_MSI"
+          ]
+        }
+      }
+    }
+  }
+}

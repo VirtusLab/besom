@@ -1,0 +1,1022 @@
+{
+  "version": "0.0.1",
+  "name": "aws",
+  "functions": {
+    "aws:ec2/getAmi:getAmi": {
+      "inputs": {
+        "description": "A collection of arguments for invoking getAmi.\n",
+        "properties": {
+          "executableUsers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Limit search to users with *explicit* launch permission on\nthe image. Valid items are the numeric account ID or `self`.\n"
+          },
+          "owners": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of AMI owners to limit search. At least 1 value must be specified. Valid values: an AWS account ID, `self` (the current account), or an AWS owner alias (e.g., `amazon`, `aws-marketplace`, `microsoft`).\n"
+          }
+        },
+        "type": "object",
+        "required": [
+          "owners"
+        ]
+      },
+      "outputs": {
+        "description": "A collection of values returned by getAmi.\n",
+        "properties": {
+          "kernelId": {
+            "type": "string",
+            "description": "The kernel associated with the image, if any. Only applicable\nfor machine images.\n"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kernelId"
+        ]
+      }
+    }
+  },
+  "resources": {
+    "aws:iam/instanceProfile:InstanceProfile": {
+      "properties": {
+        "role": {
+          "type": "string",
+          "description": "Name of the role to add to the profile.\n"
+        }
+      },
+      "inputProperties": {
+        "role": {
+          "type": "string",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "$ref": "#/types/aws:iam/role:Role"
+            }
+          ],
+          "description": "Name of the role to add to the profile.\n"
+        }
+      },
+      "stateInputs": {
+        "description": "Input properties used for looking up and filtering InstanceProfile resources.\n",
+        "properties": {
+          "role": {
+            "type": "string",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string",
+                "$ref": "#/types/aws:iam/role:Role"
+              }
+            ],
+            "description": "Name of the role to add to the profile.\n"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "config": {
+    "variables": {
+      "endpoints": {
+        "type": "array",
+        "items": {
+          "$ref": "#/types/aws:config/endpoints:endpoints"
+        }
+      },
+      "region": {
+        "type": "string",
+        "$ref": "#/types/aws:index/region:Region",
+        "description": "The region where AWS operations will take place. Examples are us-east-1, us-west-2, etc.\n",
+        "defaultInfo": {
+          "environment": [
+            "AWS_REGION",
+            "AWS_DEFAULT_REGION"
+          ]
+        }
+      }
+    },
+    "defaults": [
+      "region"
+    ]
+  },
+  "types": {
+    "aws:config/endpoints:endpoints": {
+      "properties": {
+        "accessanalyzer": {
+          "type": "string"
+        },
+        "account": {
+          "type": "string"
+        },
+        "acm": {
+          "type": "string"
+        },
+        "acmpca": {
+          "type": "string"
+        },
+        "alexaforbusiness": {
+          "type": "string"
+        },
+        "amp": {
+          "type": "string"
+        },
+        "amplify": {
+          "type": "string"
+        },
+        "amplifybackend": {
+          "type": "string"
+        },
+        "apigateway": {
+          "type": "string"
+        },
+        "apigatewayv2": {
+          "type": "string"
+        },
+        "appautoscaling": {
+          "type": "string"
+        },
+        "appconfig": {
+          "type": "string"
+        },
+        "appflow": {
+          "type": "string"
+        },
+        "appintegrations": {
+          "type": "string"
+        },
+        "appintegrationsservice": {
+          "type": "string"
+        },
+        "applicationautoscaling": {
+          "type": "string"
+        },
+        "applicationcostprofiler": {
+          "type": "string"
+        },
+        "applicationdiscovery": {
+          "type": "string"
+        },
+        "applicationdiscoveryservice": {
+          "type": "string"
+        },
+        "applicationinsights": {
+          "type": "string"
+        },
+        "appmesh": {
+          "type": "string"
+        },
+        "appregistry": {
+          "type": "string"
+        },
+        "apprunner": {
+          "type": "string"
+        },
+        "appstream": {
+          "type": "string"
+        },
+        "appsync": {
+          "type": "string"
+        },
+        "athena": {
+          "type": "string"
+        },
+        "auditmanager": {
+          "type": "string"
+        },
+        "augmentedairuntime": {
+          "type": "string"
+        },
+        "autoscaling": {
+          "type": "string"
+        },
+        "autoscalingplans": {
+          "type": "string"
+        },
+        "backup": {
+          "type": "string"
+        },
+        "batch": {
+          "type": "string"
+        },
+        "braket": {
+          "type": "string"
+        },
+        "budgets": {
+          "type": "string"
+        },
+        "chime": {
+          "type": "string"
+        },
+        "cloud9": {
+          "type": "string"
+        },
+        "cloudcontrol": {
+          "type": "string"
+        },
+        "cloudcontrolapi": {
+          "type": "string"
+        },
+        "clouddirectory": {
+          "type": "string"
+        },
+        "cloudformation": {
+          "type": "string"
+        },
+        "cloudfront": {
+          "type": "string"
+        },
+        "cloudhsm": {
+          "type": "string"
+        },
+        "cloudhsmv2": {
+          "type": "string"
+        },
+        "cloudsearch": {
+          "type": "string"
+        },
+        "cloudsearchdomain": {
+          "type": "string"
+        },
+        "cloudtrail": {
+          "type": "string"
+        },
+        "cloudwatch": {
+          "type": "string"
+        },
+        "cloudwatchevents": {
+          "type": "string"
+        },
+        "cloudwatchlogs": {
+          "type": "string"
+        },
+        "codeartifact": {
+          "type": "string"
+        },
+        "codebuild": {
+          "type": "string"
+        },
+        "codecommit": {
+          "type": "string"
+        },
+        "codedeploy": {
+          "type": "string"
+        },
+        "codeguruprofiler": {
+          "type": "string"
+        },
+        "codegurureviewer": {
+          "type": "string"
+        },
+        "codepipeline": {
+          "type": "string"
+        },
+        "codestar": {
+          "type": "string"
+        },
+        "codestarconnections": {
+          "type": "string"
+        },
+        "codestarnotifications": {
+          "type": "string"
+        },
+        "cognitoidentity": {
+          "type": "string"
+        },
+        "cognitoidentityprovider": {
+          "type": "string"
+        },
+        "cognitoidp": {
+          "type": "string"
+        },
+        "cognitosync": {
+          "type": "string"
+        },
+        "comprehend": {
+          "type": "string"
+        },
+        "comprehendmedical": {
+          "type": "string"
+        },
+        "config": {
+          "type": "string"
+        },
+        "configservice": {
+          "type": "string"
+        },
+        "connect": {
+          "type": "string"
+        },
+        "connectcontactlens": {
+          "type": "string"
+        },
+        "connectparticipant": {
+          "type": "string"
+        },
+        "costandusagereportservice": {
+          "type": "string"
+        },
+        "costexplorer": {
+          "type": "string"
+        },
+        "cur": {
+          "type": "string"
+        },
+        "databasemigration": {
+          "type": "string"
+        },
+        "databasemigrationservice": {
+          "type": "string"
+        },
+        "dataexchange": {
+          "type": "string"
+        },
+        "datapipeline": {
+          "type": "string"
+        },
+        "datasync": {
+          "type": "string"
+        },
+        "dax": {
+          "type": "string"
+        },
+        "detective": {
+          "type": "string"
+        },
+        "devicefarm": {
+          "type": "string"
+        },
+        "devopsguru": {
+          "type": "string"
+        },
+        "directconnect": {
+          "type": "string"
+        },
+        "dlm": {
+          "type": "string"
+        },
+        "dms": {
+          "type": "string"
+        },
+        "docdb": {
+          "type": "string"
+        },
+        "ds": {
+          "type": "string"
+        },
+        "dynamodb": {
+          "type": "string"
+        },
+        "dynamodbstreams": {
+          "type": "string"
+        },
+        "ec2": {
+          "type": "string"
+        },
+        "ec2instanceconnect": {
+          "type": "string"
+        },
+        "ecr": {
+          "type": "string"
+        },
+        "ecrpublic": {
+          "type": "string"
+        },
+        "ecs": {
+          "type": "string"
+        },
+        "efs": {
+          "type": "string"
+        },
+        "eks": {
+          "type": "string"
+        },
+        "elasticache": {
+          "type": "string"
+        },
+        "elasticbeanstalk": {
+          "type": "string"
+        },
+        "elasticinference": {
+          "type": "string"
+        },
+        "elasticsearch": {
+          "type": "string"
+        },
+        "elasticsearchservice": {
+          "type": "string"
+        },
+        "elastictranscoder": {
+          "type": "string"
+        },
+        "elb": {
+          "type": "string"
+        },
+        "elbv2": {
+          "type": "string"
+        },
+        "emr": {
+          "type": "string"
+        },
+        "emrcontainers": {
+          "type": "string"
+        },
+        "es": {
+          "type": "string"
+        },
+        "eventbridge": {
+          "type": "string"
+        },
+        "events": {
+          "type": "string"
+        },
+        "finspace": {
+          "type": "string"
+        },
+        "finspacedata": {
+          "type": "string"
+        },
+        "firehose": {
+          "type": "string"
+        },
+        "fis": {
+          "type": "string"
+        },
+        "fms": {
+          "type": "string"
+        },
+        "forecast": {
+          "type": "string"
+        },
+        "forecastquery": {
+          "type": "string"
+        },
+        "forecastqueryservice": {
+          "type": "string"
+        },
+        "forecastservice": {
+          "type": "string"
+        },
+        "frauddetector": {
+          "type": "string"
+        },
+        "fsx": {
+          "type": "string"
+        },
+        "gamelift": {
+          "type": "string"
+        },
+        "glacier": {
+          "type": "string"
+        },
+        "globalaccelerator": {
+          "type": "string"
+        },
+        "glue": {
+          "type": "string"
+        },
+        "gluedatabrew": {
+          "type": "string"
+        },
+        "greengrass": {
+          "type": "string"
+        },
+        "greengrassv2": {
+          "type": "string"
+        },
+        "groundstation": {
+          "type": "string"
+        },
+        "guardduty": {
+          "type": "string"
+        },
+        "health": {
+          "type": "string"
+        },
+        "healthlake": {
+          "type": "string"
+        },
+        "honeycode": {
+          "type": "string"
+        },
+        "iam": {
+          "type": "string"
+        },
+        "identitystore": {
+          "type": "string"
+        },
+        "imagebuilder": {
+          "type": "string"
+        },
+        "inspector": {
+          "type": "string"
+        },
+        "iot": {
+          "type": "string"
+        },
+        "iot1clickdevices": {
+          "type": "string"
+        },
+        "iot1clickdevicesservice": {
+          "type": "string"
+        },
+        "iot1clickprojects": {
+          "type": "string"
+        },
+        "iotanalytics": {
+          "type": "string"
+        },
+        "iotdataplane": {
+          "type": "string"
+        },
+        "iotdeviceadvisor": {
+          "type": "string"
+        },
+        "iotevents": {
+          "type": "string"
+        },
+        "ioteventsdata": {
+          "type": "string"
+        },
+        "iotfleethub": {
+          "type": "string"
+        },
+        "iotjobsdataplane": {
+          "type": "string"
+        },
+        "iotsecuretunneling": {
+          "type": "string"
+        },
+        "iotsitewise": {
+          "type": "string"
+        },
+        "iotthingsgraph": {
+          "type": "string"
+        },
+        "iotwireless": {
+          "type": "string"
+        },
+        "kafka": {
+          "type": "string"
+        },
+        "kafkaconnect": {
+          "type": "string"
+        },
+        "kendra": {
+          "type": "string"
+        },
+        "kinesis": {
+          "type": "string"
+        },
+        "kinesisanalytics": {
+          "type": "string"
+        },
+        "kinesisanalyticsv2": {
+          "type": "string"
+        },
+        "kinesisvideo": {
+          "type": "string"
+        },
+        "kinesisvideoarchivedmedia": {
+          "type": "string"
+        },
+        "kinesisvideomedia": {
+          "type": "string"
+        },
+        "kinesisvideosignalingchannels": {
+          "type": "string"
+        },
+        "kms": {
+          "type": "string"
+        },
+        "lakeformation": {
+          "type": "string"
+        },
+        "lambda": {
+          "type": "string"
+        },
+        "lexmodelbuilding": {
+          "type": "string"
+        },
+        "lexmodelbuildingservice": {
+          "type": "string"
+        },
+        "lexmodels": {
+          "type": "string"
+        },
+        "lexmodelsv2": {
+          "type": "string"
+        },
+        "lexruntime": {
+          "type": "string"
+        },
+        "lexruntimeservice": {
+          "type": "string"
+        },
+        "lexruntimev2": {
+          "type": "string"
+        },
+        "licensemanager": {
+          "type": "string"
+        },
+        "lightsail": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "lookoutequipment": {
+          "type": "string"
+        },
+        "lookoutforvision": {
+          "type": "string"
+        },
+        "lookoutmetrics": {
+          "type": "string"
+        },
+        "machinelearning": {
+          "type": "string"
+        },
+        "macie": {
+          "type": "string"
+        },
+        "macie2": {
+          "type": "string"
+        },
+        "managedblockchain": {
+          "type": "string"
+        },
+        "marketplacecatalog": {
+          "type": "string"
+        },
+        "marketplacecommerceanalytics": {
+          "type": "string"
+        },
+        "marketplaceentitlement": {
+          "type": "string"
+        },
+        "marketplaceentitlementservice": {
+          "type": "string"
+        },
+        "marketplacemetering": {
+          "type": "string"
+        },
+        "mediaconnect": {
+          "type": "string"
+        },
+        "mediaconvert": {
+          "type": "string"
+        },
+        "medialive": {
+          "type": "string"
+        },
+        "mediapackage": {
+          "type": "string"
+        },
+        "mediapackagevod": {
+          "type": "string"
+        },
+        "mediastore": {
+          "type": "string"
+        },
+        "mediastoredata": {
+          "type": "string"
+        },
+        "mediatailor": {
+          "type": "string"
+        },
+        "memorydb": {
+          "type": "string"
+        },
+        "mgn": {
+          "type": "string"
+        },
+        "migrationhub": {
+          "type": "string"
+        },
+        "migrationhubconfig": {
+          "type": "string"
+        },
+        "mobile": {
+          "type": "string"
+        },
+        "mobileanalytics": {
+          "type": "string"
+        },
+        "mq": {
+          "type": "string"
+        },
+        "mturk": {
+          "type": "string"
+        },
+        "mwaa": {
+          "type": "string"
+        },
+        "neptune": {
+          "type": "string"
+        },
+        "networkfirewall": {
+          "type": "string"
+        },
+        "networkmanager": {
+          "type": "string"
+        },
+        "nimblestudio": {
+          "type": "string"
+        },
+        "opsworks": {
+          "type": "string"
+        },
+        "opsworkscm": {
+          "type": "string"
+        },
+        "organizations": {
+          "type": "string"
+        },
+        "outposts": {
+          "type": "string"
+        },
+        "personalize": {
+          "type": "string"
+        },
+        "personalizeevents": {
+          "type": "string"
+        },
+        "personalizeruntime": {
+          "type": "string"
+        },
+        "pi": {
+          "type": "string"
+        },
+        "pinpoint": {
+          "type": "string"
+        },
+        "pinpointemail": {
+          "type": "string"
+        },
+        "pinpointsmsvoice": {
+          "type": "string"
+        },
+        "polly": {
+          "type": "string"
+        },
+        "pricing": {
+          "type": "string"
+        },
+        "prometheus": {
+          "type": "string"
+        },
+        "prometheusservice": {
+          "type": "string"
+        },
+        "proton": {
+          "type": "string"
+        },
+        "qldb": {
+          "type": "string"
+        },
+        "qldbsession": {
+          "type": "string"
+        },
+        "quicksight": {
+          "type": "string"
+        },
+        "ram": {
+          "type": "string"
+        },
+        "rds": {
+          "type": "string"
+        },
+        "rdsdata": {
+          "type": "string"
+        },
+        "rdsdataservice": {
+          "type": "string"
+        },
+        "redshift": {
+          "type": "string"
+        },
+        "redshiftdata": {
+          "type": "string"
+        },
+        "rekognition": {
+          "type": "string"
+        },
+        "resourcegroups": {
+          "type": "string"
+        },
+        "resourcegroupstagging": {
+          "type": "string"
+        },
+        "resourcegroupstaggingapi": {
+          "type": "string"
+        },
+        "robomaker": {
+          "type": "string"
+        },
+        "route53": {
+          "type": "string"
+        },
+        "route53domains": {
+          "type": "string"
+        },
+        "route53recoverycontrolconfig": {
+          "type": "string"
+        },
+        "route53recoveryreadiness": {
+          "type": "string"
+        },
+        "route53resolver": {
+          "type": "string"
+        },
+        "s3": {
+          "type": "string"
+        },
+        "s3control": {
+          "type": "string"
+        },
+        "s3outposts": {
+          "type": "string"
+        },
+        "sagemaker": {
+          "type": "string"
+        },
+        "sagemakeredgemanager": {
+          "type": "string"
+        },
+        "sagemakerfeaturestoreruntime": {
+          "type": "string"
+        },
+        "sagemakerruntime": {
+          "type": "string"
+        },
+        "savingsplans": {
+          "type": "string"
+        },
+        "schemas": {
+          "type": "string"
+        },
+        "sdb": {
+          "type": "string"
+        },
+        "secretsmanager": {
+          "type": "string"
+        },
+        "securityhub": {
+          "type": "string"
+        },
+        "serverlessapplicationrepository": {
+          "type": "string"
+        },
+        "serverlessapprepo": {
+          "type": "string"
+        },
+        "serverlessrepo": {
+          "type": "string"
+        },
+        "servicecatalog": {
+          "type": "string"
+        },
+        "servicediscovery": {
+          "type": "string"
+        },
+        "servicequotas": {
+          "type": "string"
+        },
+        "ses": {
+          "type": "string"
+        },
+        "sesv2": {
+          "type": "string"
+        },
+        "sfn": {
+          "type": "string"
+        },
+        "shield": {
+          "type": "string"
+        },
+        "signer": {
+          "type": "string"
+        },
+        "simpledb": {
+          "type": "string"
+        },
+        "sms": {
+          "type": "string"
+        },
+        "snowball": {
+          "type": "string"
+        },
+        "sns": {
+          "type": "string"
+        },
+        "sqs": {
+          "type": "string"
+        },
+        "ssm": {
+          "type": "string"
+        },
+        "ssmcontacts": {
+          "type": "string"
+        },
+        "ssmincidents": {
+          "type": "string"
+        },
+        "sso": {
+          "type": "string"
+        },
+        "ssoadmin": {
+          "type": "string"
+        },
+        "ssooidc": {
+          "type": "string"
+        },
+        "stepfunctions": {
+          "type": "string"
+        },
+        "storagegateway": {
+          "type": "string"
+        },
+        "sts": {
+          "type": "string"
+        },
+        "support": {
+          "type": "string"
+        },
+        "swf": {
+          "type": "string"
+        },
+        "synthetics": {
+          "type": "string"
+        },
+        "textract": {
+          "type": "string"
+        },
+        "timestreamquery": {
+          "type": "string"
+        },
+        "timestreamwrite": {
+          "type": "string"
+        },
+        "transcribe": {
+          "type": "string"
+        },
+        "transcribeservice": {
+          "type": "string"
+        },
+        "transcribestreaming": {
+          "type": "string"
+        },
+        "transcribestreamingservice": {
+          "type": "string"
+        },
+        "transfer": {
+          "type": "string"
+        },
+        "translate": {
+          "type": "string"
+        },
+        "waf": {
+          "type": "string"
+        },
+        "wafregional": {
+          "type": "string"
+        },
+        "wafv2": {
+          "type": "string"
+        },
+        "wellarchitected": {
+          "type": "string"
+        },
+        "workdocs": {
+          "type": "string"
+        },
+        "worklink": {
+          "type": "string"
+        },
+        "workmail": {
+          "type": "string"
+        },
+        "workmailmessageflow": {
+          "type": "string"
+        },
+        "workspaces": {
+          "type": "string"
+        },
+        "xray": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  }
+}

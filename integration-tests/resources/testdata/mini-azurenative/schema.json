@@ -1,0 +1,632 @@
+{
+  "version": "0.0.1",
+  "name": "azure-native",
+  "resources": {
+    "azure-native:web:WebAppRelayServiceConnection": {
+      "properties": {
+        "resourceType": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "description": "Resource type."
+        }
+      },
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "inputProperties": {
+        "resourceType": {
+          "type": "string"
+        }
+      },
+      "requiredInputs": []
+    },
+    "azure-native:netapp:Volume": {
+      "properties": {
+        "usageThreshold": {
+          "type": "number",
+          "description": "Maximum storage quota allowed for a file system in bytes. This is a soft quota used for alerting only. Minimum size is 100 GiB. Upper limit is 100TiB. Specified in bytes.",
+          "default": 107374182400
+        },
+        "throughputMibps": {
+          "type": "number",
+          "default": 0
+        }
+      },
+      "type": "object",
+      "required": [
+        "usageThreshold"
+      ],
+      "inputProperties": {
+        "usageThreshold": {
+          "type": "number",
+          "description": "Maximum storage quota allowed for a file system in bytes. This is a soft quota used for alerting only. Minimum size is 100 GiB. Upper limit is 100TiB. Specified in bytes.",
+          "default": 107374182400
+        },
+        "throughputMibps": {
+          "type": "number",
+          "default": 0
+        }
+      },
+      "requiredInputs": [
+        "usageThreshold"
+      ]
+    },
+    "azure-native:machinelearningservices:BatchDeployment": {
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Metadata used by portal/tooling/etc to render different UX experiences for resources of the same type."
+        },
+        "location": {
+          "type": "string",
+          "description": "The geo-location where the resource lives"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the resource"
+        },
+        "tags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Resource tags."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of the resource. E.g. \"Microsoft.Compute/virtualMachines\" or \"Microsoft.Storage/storageAccounts\""
+        }
+      },
+      "type": "object",
+      "required": [
+        "location",
+        "name",
+        "type"
+      ],
+      "inputProperties": {
+        "deploymentName": {
+          "type": "string",
+          "description": "The identifier for the Batch inference deployment."
+        },
+        "endpointName": {
+          "type": "string",
+          "description": "Inference endpoint name"
+        },
+        "kind": {
+          "type": "string",
+          "description": "Metadata used by portal/tooling/etc to render different UX experiences for resources of the same type."
+        },
+        "location": {
+          "type": "string",
+          "description": "The geo-location where the resource lives"
+        },
+        "properties": {
+          "type": "object",
+          "$ref": "#/types/azure-native:machinelearningservices:BatchDeployment",
+          "description": "Additional attributes of the entity."
+        },
+        "resourceGroupName": {
+          "type": "string",
+          "description": "The name of the resource group. The name is case insensitive."
+        },
+        "tags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Resource tags."
+        },
+        "workspaceName": {
+          "type": "string",
+          "description": "Name of Azure Machine Learning workspace."
+        }
+      },
+      "requiredInputs": [
+        "endpointName",
+        "properties",
+        "resourceGroupName",
+        "workspaceName"
+      ],
+      "aliases": [
+        {
+          "type": "azure-native:machinelearningservices/v20210301preview:BatchDeployment"
+        }
+      ]
+    },
+    "azure-native:insights:WebTest": {
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Purpose/user defined descriptive test for this WebTest."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Is the test actively being monitored."
+        },
+        "frequency": {
+          "type": "integer",
+          "description": "Interval in seconds between test runs for this WebTest. Default value is 300.",
+          "default": 300
+        },
+        "kind": {
+          "type": "string",
+          "description": "The kind of web test that this web test watches. Choices are ping and multistep.",
+          "default": "ping"
+        },
+        "location": {
+          "type": "string",
+          "description": "Resource location"
+        },
+        "name": {
+          "type": "string",
+          "description": "Azure resource name"
+        },
+        "provisioningState": {
+          "type": "string",
+          "description": "Current state of this component, whether or not is has been provisioned within the resource group it is defined. Users cannot change this value but are able to read from it. Values will include Succeeded, Deploying, Canceled, and Failed."
+        },
+        "retryEnabled": {
+          "type": "boolean",
+          "description": "Allow for retries should this WebTest fail."
+        },
+        "syntheticMonitorId": {
+          "type": "string",
+          "description": "Unique ID of this WebTest. This is typically the same value as the Name field."
+        },
+        "tags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Resource tags"
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Seconds until this WebTest will timeout and fail. Default value is 30.",
+          "default": 30
+        },
+        "type": {
+          "type": "string",
+          "description": "Azure resource type"
+        },
+        "webTestKind": {
+          "type": "string",
+          "description": "The kind of web test this is, valid choices are ping and multistep.",
+          "default": "ping"
+        },
+        "webTestName": {
+          "type": "string",
+          "description": "User defined name if this WebTest."
+        }
+      },
+      "type": "object",
+      "required": [
+        "location",
+        "name",
+        "provisioningState",
+        "syntheticMonitorId",
+        "type",
+        "webTestKind",
+        "webTestName"
+      ],
+      "inputProperties": {
+        "description": {
+          "type": "string",
+          "description": "Purpose/user defined descriptive test for this WebTest."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Is the test actively being monitored."
+        },
+        "frequency": {
+          "type": "integer",
+          "description": "Interval in seconds between test runs for this WebTest. Default value is 300.",
+          "default": 300
+        },
+        "kind": {
+          "$ref": "#/types/azure-native:insights:WebTestKind",
+          "description": "The kind of web test that this web test watches. Choices are ping and multistep.",
+          "default": "ping"
+        },
+        "location": {
+          "type": "string",
+          "description": "Resource location"
+        },
+        "resourceGroupName": {
+          "type": "string",
+          "description": "The name of the resource group. The name is case insensitive."
+        },
+        "retryEnabled": {
+          "type": "boolean",
+          "description": "Allow for retries should this WebTest fail."
+        },
+        "syntheticMonitorId": {
+          "type": "string",
+          "description": "Unique ID of this WebTest. This is typically the same value as the Name field."
+        },
+        "tags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Resource tags"
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Seconds until this WebTest will timeout and fail. Default value is 30.",
+          "default": 30
+        },
+        "webTestKind": {
+          "$ref": "#/types/azure-native:insights:WebTestKind",
+          "description": "The kind of web test this is, valid choices are ping and multistep.",
+          "default": "ping"
+        },
+        "webTestName": {
+          "type": "string",
+          "description": "User defined name if this WebTest."
+        }
+      },
+      "requiredInputs": [
+        "resourceGroupName",
+        "syntheticMonitorId",
+        "webTestKind"
+      ],
+      "aliases": [
+        {
+          "type": "azure-native:insights/v20150501:WebTest"
+        },
+        {
+          "type": "azure-native:insights/v20180501preview:WebTest"
+        },
+        {
+          "type": "azure-native:insights/v20201005preview:WebTest"
+        }
+      ]
+    }
+  },
+  "types": {
+    "azure-native:web:SiteConfigResponse": {
+      "description": "Configuration of an App Service app.",
+      "properties": {
+        "netFrameworkVersion": {
+          "type": "string",
+          "description": ".NET Framework version.",
+          "default": "v4.6"
+        }
+      },
+      "type": "object"
+    },
+    "azure-native:machinelearningservices:BatchDeployment": {
+      "description": "Batch inference settings per deployment.",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Description of the endpoint deployment."
+        },
+        "environmentId": {
+          "type": "string",
+          "description": "ARM resource ID of the environment specification for the endpoint deployment."
+        },
+        "environmentVariables": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Environment variables configuration for the deployment."
+        },
+        "errorThreshold": {
+          "type": "integer",
+          "description": "Error threshold, if the error count for the entire input goes above this value,\r\nthe batch inference will be aborted. Range is [-1, int.MaxValue].\r\nFor FileDataset, this value is the count of file failures.\r\nFor TabularDataset, this value is the count of record failures.\r\nIf set to -1 (the lower bound), all failures during batch inference will be ignored."
+        },
+        "miniBatchSize": {
+          "type": "number",
+          "description": "Size of the mini-batch passed to each batch invocation.\r\nFor FileDataset, this is the number of files per mini-batch.\r\nFor TabularDataset, this is the size of the records in bytes, per mini-batch."
+        },
+        "partitionKeys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Partition keys list used for Named partitioning."
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Property dictionary. Properties can be added, but not removed or altered."
+        }
+      },
+      "type": "object"
+    },
+    "azure-native:alertsmanagement:SuppressionResponse": {
+      "type": "object"
+    },
+    "azure-native:alertsmanagement:DiagnosticsResponse": {
+      "type": "object"
+    },
+    "azure-native:alertsmanagement:ActionGroupResponse": {
+      "description": "Action rule with action group configuration",
+      "properties": {
+        "actionGroupId": {
+          "type": "string",
+          "description": "Action group to trigger if action rule matches"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation time of action rule. Date-Time in ISO-8601 format."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "Created by user name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of action rule"
+        },
+        "lastModifiedAt": {
+          "type": "string",
+          "description": "Last updated time of action rule. Date-Time in ISO-8601 format."
+        },
+        "lastModifiedBy": {
+          "type": "string",
+          "description": "Last modified by user name."
+        },
+        "status": {
+          "type": "string",
+          "description": "Indicates if the given action rule is enabled or disabled"
+        },
+        "type": {
+          "type": "string",
+          "description": "Indicates type of action rule\nExpected value is 'ActionGroup'.",
+          "const": "ActionGroup"
+        }
+      },
+      "type": "object",
+      "required": [
+        "actionGroupId",
+        "createdAt",
+        "createdBy",
+        "lastModifiedAt",
+        "lastModifiedBy",
+        "type"
+      ]
+    },
+    "azure-native:logic:KeyVaultReference": {
+      "description": "The key vault reference.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The resource id."
+        },
+        "name": {
+          "type": "string",
+          "description": "The key vault name."
+        }
+      },
+      "type": "object"
+    },
+    "azure-native:insights:WebTestKind": {
+      "description": "The kind of web test this is, valid choices are ping and multistep.",
+      "type": "string",
+      "enum": [
+        {
+          "value": "ping"
+        },
+        {
+          "value": "multistep"
+        }
+      ]
+    }
+  },
+  "functions": {
+    "azure-native:web:getWebAppSlot": {
+      "description": "A web app, a mobile app backend, or an API app.\nAPI Version: 2020-12-01.",
+      "inputs": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "description": "Name of the deployment slot. By default, this API returns the production slot."
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot"
+        ]
+      },
+      "outputs": {
+        "description": "A web app, a mobile app backend, or an API app.",
+        "properties": {
+          "siteConfig": {
+            "type": "object",
+            "$ref": "#/types/azure-native:web:SiteConfigResponse",
+            "description": "Configuration of the app."
+          }
+        },
+        "type": "object"
+      }
+    },
+    "azure-native:alertsmanagement:getActionRuleByName": {
+      "description": "Action rule object containing target scope, conditions and suppression logic\nAPI Version: 2019-05-05-preview.",
+      "inputs": {
+        "properties": {
+          "actionRuleName": {
+            "type": "string",
+            "description": "The name of action rule that needs to be fetched"
+          },
+          "resourceGroupName": {
+            "type": "string",
+            "description": "Resource group name where the resource is created."
+          }
+        },
+        "type": "object",
+        "required": [
+          "actionRuleName",
+          "resourceGroupName"
+        ]
+      },
+      "outputs": {
+        "description": "Action rule object containing target scope, conditions and suppression logic",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Azure resource Id"
+          },
+          "location": {
+            "type": "string",
+            "description": "Resource location"
+          },
+          "name": {
+            "type": "string",
+            "description": "Azure resource name"
+          },
+          "properties": {
+            "oneOf": [
+              {
+                "type": "object",
+                "$ref": "#/types/azure-native:alertsmanagement:ActionGroupResponse"
+              },
+              {
+                "type": "object",
+                "$ref": "#/types/azure-native:alertsmanagement:DiagnosticsResponse"
+              },
+              {
+                "type": "object",
+                "$ref": "#/types/azure-native:alertsmanagement:SuppressionResponse"
+              }
+            ],
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "ActionGroup": "#/types/azure-native:alertsmanagement:ActionGroupResponse",
+                "Diagnostics": "#/types/azure-native:alertsmanagement:DiagnosticsResponse",
+                "Suppression": "#/types/azure-native:alertsmanagement:SuppressionResponse"
+              }
+            },
+            "description": "action rule properties"
+          },
+          "tags": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Resource tags"
+          },
+          "type": {
+            "type": "string",
+            "description": "Azure resource type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "location",
+          "name",
+          "properties",
+          "type"
+        ]
+      }
+    },
+    "azure-native:logic:listIntegrationAccountKeyVaultKeys": {
+      "description": "Collection of key vault keys.\nAPI Version: 2019-05-01.",
+      "inputs": {
+        "properties": {
+          "integrationAccountName": {
+            "type": "string",
+            "description": "The integration account name."
+          },
+          "keyVault": {
+            "type": "object",
+            "$ref": "#/types/azure-native:logic:KeyVaultReference",
+            "description": "The key vault reference."
+          },
+          "resourceGroupName": {
+            "type": "string",
+            "description": "The resource group name."
+          },
+          "skipToken": {
+            "type": "string",
+            "description": "The skip token."
+          }
+        },
+        "type": "object",
+        "required": [
+          "integrationAccountName",
+          "keyVault",
+          "resourceGroupName"
+        ]
+      },
+      "outputs": {
+        "description": "Collection of key vault keys.",
+        "properties": {
+          "skipToken": {
+            "type": "string",
+            "description": "The skip token."
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "config": {
+    "variables": {
+      "auxiliaryTenantIds": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "clientCertificatePassword": {
+        "type": "string",
+        "description": "The password associated with the Client Certificate. For use when authenticating as a Service Principal using a Client Certificate",
+        "secret": true
+      },
+      "clientCertificatePath": {
+        "type": "string",
+        "description": "The path to the Client Certificate associated with the Service Principal for use when authenticating as a Service Principal using a Client Certificate."
+      },
+      "clientId": {
+        "type": "string",
+        "description": "The Client ID which should be used.",
+        "secret": true
+      },
+      "clientSecret": {
+        "type": "string",
+        "description": "The Client Secret which should be used. For use When authenticating as a Service Principal using a Client Secret.",
+        "secret": true
+      },
+      "disablePulumiPartnerId": {
+        "type": "boolean",
+        "description": "This will disable the Pulumi Partner ID which is used if a custom `partnerId` isn't specified."
+      },
+      "environment": {
+        "type": "string",
+        "description": "The Cloud Environment which should be used. Possible values are public, usgovernment, german, and china. Defaults to public."
+      },
+      "msiEndpoint": {
+        "type": "string",
+        "description": "The path to a custom endpoint for Managed Service Identity - in most circumstances this should be detected automatically. "
+      },
+      "partnerId": {
+        "type": "string",
+        "description": "A GUID/UUID that is registered with Microsoft to facilitate partner resource usage attribution."
+      },
+      "subscriptionId": {
+        "type": "string",
+        "description": "The Subscription ID which should be used."
+      },
+      "tenantId": {
+        "type": "string",
+        "description": "The Tenant ID which should be used."
+      },
+      "useMsi": {
+        "type": "boolean",
+        "description": "Allowed Managed Service Identity be used for Authentication.",
+        "default": false
+      }
+    }
+  }
+}
