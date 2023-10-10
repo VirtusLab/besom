@@ -1,0 +1,184 @@
+{
+  "version": "0.0.1",
+  "name": "aws-native",
+  "resources": {},
+  "types": {
+    "aws-native:config:IgnoreTags": {
+      "description": "The configuration with resource tag settings to ignore across all resources handled by this provider (except any individual service tag resources such as `ec2.Tag`) for situations where external systems are managing certain resource tags.",
+      "properties": {
+        "keyPrefixes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of exact resource tag keys to ignore across all resources handled by this provider. This configuration prevents Pulumi from returning the tag in any `tags` attributes and displaying any configuration difference for the tag value. If any resource configuration still has this tag key configured in the `tags` argument, it will display a perpetual difference until the tag is removed from the argument or `ignoreChanges` is also used.",
+          "language": {
+            "python": {
+              "mapCase": false
+            }
+          }
+        },
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of resource tag key prefixes to ignore across all resources handled by this provider. This configuration prevents Pulumi from returning any tag key matching the prefixes in any `tags` attributes and displaying any configuration difference for those tag values. If any resource configuration still has a tag matching one of the prefixes configured in the `tags` argument, it will display a perpetual difference until the tag is removed from the argument or `ignoreChanges` is also used.",
+          "language": {
+            "python": {
+              "mapCase": false
+            }
+          }
+        }
+      },
+      "type": "object"
+    },
+    "aws-native:index/Region:Region": {
+      "description": "A Region represents any valid Amazon region that may be targeted with deployments.",
+      "type": "string",
+      "enum": [
+        {
+          "name": "AFSouth1",
+          "description": "Africa (Cape Town)",
+          "value": "af-south-1"
+        },
+        {
+          "name": "APEast1",
+          "description": "Asia Pacific (Hong Kong)",
+          "value": "ap-east-1"
+        },
+        {
+          "name": "APNortheast1",
+          "description": "Asia Pacific (Tokyo)",
+          "value": "ap-northeast-1"
+        },
+        {
+          "name": "APNortheast2",
+          "description": "Asia Pacific (Seoul)",
+          "value": "ap-northeast-2"
+        },
+        {
+          "name": "APNortheast3",
+          "description": "Asia Pacific (Osaka)",
+          "value": "ap-northeast-3"
+        },
+        {
+          "name": "APSouth1",
+          "description": "Asia Pacific (Mumbai)",
+          "value": "ap-south-1"
+        },
+        {
+          "name": "APSoutheast1",
+          "description": "Asia Pacific (Singapore)",
+          "value": "ap-southeast-1"
+        },
+        {
+          "name": "APSoutheast2",
+          "description": "Asia Pacific (Sydney)",
+          "value": "ap-southeast-2"
+        },
+        {
+          "name": "CACentral",
+          "description": "Canada (Central)",
+          "value": "ca-central-1"
+        },
+        {
+          "name": "CNNorth1",
+          "description": "China (Beijing)",
+          "value": "cn-north-1"
+        },
+        {
+          "name": "CNNorthwest1",
+          "description": "China (Ningxia)",
+          "value": "cn-northwest-1"
+        },
+        {
+          "name": "EUCentral1",
+          "description": "Europe (Frankfurt)",
+          "value": "eu-central-1"
+        },
+        {
+          "name": "EUNorth1",
+          "description": "Europe (Stockholm)",
+          "value": "eu-north-1"
+        },
+        {
+          "name": "EUWest1",
+          "description": "Europe (Ireland)",
+          "value": "eu-west-1"
+        },
+        {
+          "name": "EUWest2",
+          "description": "Europe (London)",
+          "value": "eu-west-2"
+        },
+        {
+          "name": "EUWest3",
+          "description": "Europe (Paris)",
+          "value": "eu-west-3"
+        },
+        {
+          "name": "EUSouth1",
+          "description": "Europe (Milan)",
+          "value": "eu-south-1"
+        },
+        {
+          "name": "MESouth1",
+          "description": "Middle East (Bahrain)",
+          "value": "me-south-1"
+        },
+        {
+          "name": "SAEast1",
+          "description": "South America (São Paulo)",
+          "value": "sa-east-1"
+        },
+        {
+          "name": "USGovEast1",
+          "description": "AWS GovCloud (US-East)",
+          "value": "us-gov-east-1"
+        },
+        {
+          "name": "USGovWest1",
+          "description": "AWS GovCloud (US-West)",
+          "value": "us-gov-west-1"
+        },
+        {
+          "name": "USEast1",
+          "description": "US East (N. Virginia)",
+          "value": "us-east-1"
+        },
+        {
+          "name": "USEast2",
+          "description": "US East (Ohio)",
+          "value": "us-east-2"
+        },
+        {
+          "name": "USWest1",
+          "description": "US West (N. California)",
+          "value": "us-west-1"
+        },
+        {
+          "name": "USWest2",
+          "description": "US West (Oregon)",
+          "value": "us-west-2"
+        }
+      ]
+    }
+  },
+  "config": {
+    "variables": {
+      "region": {
+        "type": "string",
+        "$ref": "#/types/aws-native:index/region:Region",
+        "description": "The region where AWS operations will take place. Examples are `us-east-1`, `us-west-2`, etc."
+      },
+      "ignoreTags": {
+        "$ref": "#/types/aws-native:config:IgnoreTags",
+        "description": "Configuration block with resource tag settings to ignore across all resources handled by this provider (except any individual service tag resources such as `ec2.Tag`) for situations where external systems are managing certain resource tags."
+      }
+    },
+    "defaults": [
+      "region"
+    ]
+  }
+}

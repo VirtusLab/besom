@@ -1,6 +1,5 @@
 package besom.codegen.metaschema
 
-import java.io.File
 import upickle.implicits.{key => fieldKey}
 
 import besom.codegen.UpickleApi
@@ -13,7 +12,7 @@ case class PulumiPackage(
   meta: Meta = Meta(),
   pluginDownloadURL: Option[String] = None,
   types: Map[String, TypeDefinition] = Map.empty,
-  provider: ResourceDefinition,
+  provider: ResourceDefinition = ResourceDefinition(),
   resources: Map[String, ResourceDefinition] = Map.empty
 )
 object PulumiPackage {
@@ -21,7 +20,7 @@ object PulumiPackage {
 
   def fromFile(filePath: os.Path) = {
     val input = os.read(filePath)
-    val json = ujson.read(input)
+    val json  = ujson.read(input)
     read[PulumiPackage](json)
   }
 }
@@ -41,25 +40,36 @@ case class ResourceDefinition(
   // stateInputs: ,
 ) extends ObjectTypeDetails
 object ResourceDefinition {
-  implicit val reader: Reader[ResourceDefinition] = macroR 
+  implicit val reader: Reader[ResourceDefinition] = macroR
 }
 
 case class Language(java: Java = Java())
 object Language {
-  implicit val reader: Reader[Language] = macroR 
+  implicit val reader: Reader[Language] = macroR
 }
 
-case class Java(packages: Map[String, String] = Map.empty, basePackage: Option[String] = None, buildFiles: Option[String] = None, dependencies: Map[String, String] = Map.empty)
+case class Java(
+  packages: Map[String, String] = Map.empty,
+  basePackage: Option[String] = None,
+  buildFiles: Option[String] = None,
+  dependencies: Map[String, String] = Map.empty
+)
 object Java {
-  implicit val reader: Reader[Java] = macroR 
+  implicit val reader: Reader[Java] = macroR
 }
 
 case class Meta(moduleFormat: String = "(.*)")
 object Meta {
-  implicit val reader: Reader[Meta] = macroR 
+  implicit val reader: Reader[Meta] = macroR
 }
 
-case class TypeDefinitionProto(`type`: String, properties: Map[String, PropertyDefinition] = Map.empty, required: List[String] = Nil, `enum`: List[EnumValueDefinition] = Nil, isOverlay: Boolean = false)
+case class TypeDefinitionProto(
+  `type`: String,
+  properties: Map[String, PropertyDefinition] = Map.empty,
+  required: List[String] = Nil,
+  `enum`: List[EnumValueDefinition] = Nil,
+  isOverlay: Boolean = false
+)
 object TypeDefinitionProto {
   implicit val reader: Reader[TypeDefinitionProto] = macroR
 }
@@ -69,12 +79,12 @@ sealed trait ConstValue
 object ConstValue {
   // TODO: Handle other possible data types?
   implicit val reader: Reader[ConstValue] = new SimpleReader[ConstValue] {
-    override def expectedMsg = "expected string, boolean or integer"
+    override def expectedMsg                              = "expected string, boolean or integer"
     override def visitString(s: CharSequence, index: Int) = StringConstValue(s.toString)
-    override def visitTrue(index: Int) = BooleanConstValue(true)
-    override def visitFalse(index: Int) = BooleanConstValue(false)
+    override def visitTrue(index: Int)                    = BooleanConstValue(true)
+    override def visitFalse(index: Int)                   = BooleanConstValue(false)
     override def visitFloat64(d: Double, index: Int) =
-      if (d.isWhole) 
+      if (d.isWhole)
         IntConstValue(d.toInt)
       else
         DoubleConstValue(d)
@@ -116,18 +126,20 @@ trait TypeReferenceProtoLike {
           val primitiveType = `type`.map(PrimitiveType.fromString)
           NamedType(typeUri = typeUri, `type` = primitiveType)
         case None =>
-          `type`.map {
-            case "string" => StringType
-            case "integer" => IntegerType
-            case "number" => NumberType
-            case "boolean" => BooleanType
-            case "array" =>
-              ArrayType(items = items.getOrElse(throw new Exception(s"TypeReference ${this} lacks items")))
-            case "object" => 
-              MapType(additionalProperties = additionalProperties.getOrElse(StringType))
-          }.getOrElse(throw new Exception(s"TypeReference ${this} lacks type"))
+          `type`
+            .map {
+              case "string"  => StringType
+              case "integer" => IntegerType
+              case "number"  => NumberType
+              case "boolean" => BooleanType
+              case "array" =>
+                ArrayType(items = items.getOrElse(throw new Exception(s"TypeReference ${this} lacks items")))
+              case "object" =>
+                MapType(additionalProperties = additionalProperties.getOrElse(StringType))
+            }
+            .getOrElse(throw new Exception(s"TypeReference ${this} lacks type"))
       }
-    } 
+    }
   }
 }
 
@@ -154,9 +166,9 @@ object TypeReference {
 sealed trait PrimitiveType extends TypeReference
 object PrimitiveType {
   val fromString: String => PrimitiveType = {
-    case "string" => StringType
+    case "string"  => StringType
     case "integer" => IntegerType
-    case "number" => NumberType
+    case "number"  => NumberType
     case "boolean" => BooleanType
   }
   implicit val reader: Reader[PrimitiveType] = UpickleApi.reader[String].map(fromString)
@@ -224,9 +236,13 @@ object PropertyDefinition {
   }
 }
 
-
 // TODO Handle `value`s of other primitive types
-case class EnumValueDefinition(value: ConstValue, name: Option[String] = None, description: Option[String] = None, deprecationMessage: Option[String] = None)
+case class EnumValueDefinition(
+  value: ConstValue,
+  name: Option[String] = None,
+  description: Option[String] = None,
+  deprecationMessage: Option[String] = None
+)
 object EnumValueDefinition {
   implicit val reader: Reader[EnumValueDefinition] = macroR
 }
@@ -238,13 +254,23 @@ sealed trait TypeDefinition {
 object TypeDefinition {
   implicit val reader: Reader[TypeDefinition] = UpickleApi.reader[TypeDefinitionProto].map { proto =>
     if (proto.`enum`.nonEmpty) {
-      EnumTypeDefinition(`enum` = proto.`enum`, `type` = PrimitiveType.fromString(proto.`type`), isOverlay = proto.isOverlay)
+      EnumTypeDefinition(
+        `enum` = proto.`enum`,
+        `type` = PrimitiveType.fromString(proto.`type`),
+        isOverlay = proto.isOverlay
+      )
     } else {
       ObjectTypeDefinition(properties = proto.properties, required = proto.required, isOverlay = proto.isOverlay)
     }
   }
 }
 
-case class EnumTypeDefinition(`enum`: List[EnumValueDefinition], `type`: PrimitiveType, isOverlay: Boolean) extends TypeDefinition
+case class EnumTypeDefinition(`enum`: List[EnumValueDefinition], `type`: PrimitiveType, isOverlay: Boolean)
+    extends TypeDefinition
 
-case class ObjectTypeDefinition(properties: Map[String, PropertyDefinition], required: List[String] = Nil, isOverlay: Boolean) extends TypeDefinition with ObjectTypeDetails
+case class ObjectTypeDefinition(
+  properties: Map[String, PropertyDefinition],
+  required: List[String] = Nil,
+  isOverlay: Boolean
+) extends TypeDefinition
+    with ObjectTypeDetails

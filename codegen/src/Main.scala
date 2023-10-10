@@ -1,9 +1,23 @@
 package besom.codegen
 
-import java.util.Arrays
-
 object Main {
   def main(args: Array[String]): Unit = {
+    if (args(0) == "test")
+      args.drop(1).toList match {
+        case schemaPath :: outputPath :: providerName :: schemaVersion :: besomVersion :: Nil =>
+          generateTestPackageSources(
+            schemaPath = os.Path(schemaPath),
+            outputPath = os.Path(outputPath),
+            providerName = providerName,
+            schemaVersion = schemaVersion,
+            besomVersion = besomVersion
+          )
+          sys.exit(0)
+        case _ =>
+          System.err.println("Codegen's expected test arguments: <schemaPath> <outputPath> <providerName> <schemaVersion> <besomVersion>")
+          sys.exit(1)
+      }
+    
     args.toList match {
       case schemasDirPath :: outputDirBasePath :: providerName :: schemaVersion :: besomVersion :: Nil =>
         generatePackageSources(
@@ -20,17 +34,18 @@ object Main {
   }
 
   def generatePackageSources(schemasDirPath: os.Path, outputDirBasePath: os.Path, providerName: String, schemaVersion: String, besomVersion: String): Unit = {
-    println(s"Generating provider SDK for $providerName")
-    
-    val schemaProvider = new SchemaProvider(schemaCacheDirPath = schemasDirPath)
+    val schemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = schemasDirPath)
     val destinationDir = outputDirBasePath / providerName / schemaVersion
 
-    os.remove.all(destinationDir)
-    os.makeDir.all(destinationDir)
+    generatePackageSources(schemaProvider, destinationDir, providerName, schemaVersion, besomVersion)
+  }
 
+  def generatePackageSources(schemaProvider: SchemaProvider, destinationDir: os.Path, providerName: String, schemaVersion: String, besomVersion: String): Unit = {
+    println(s"Generating provider SDK for $providerName")
+ 
     val pulumiPackage = schemaProvider.pulumiPackage(providerName = providerName, schemaVersion = schemaVersion)
-    implicit val providerConfig = Config.providersConfigs(providerName)
 
+    implicit val providerConfig: Config.ProviderConfig = Config.providersConfigs(providerName)
     implicit val logger: Logger = new Logger
 
     implicit val typeMapper: TypeMapper = new TypeMapper(
@@ -40,8 +55,11 @@ object Main {
       moduleFormat = pulumiPackage.meta.moduleFormat.r
     )
 
-    val codeGen = new CodeGen
+    // make sure we don't have a dirty state
+    os.remove.all(destinationDir)
+    os.makeDir.all(destinationDir)
 
+    val codeGen = new CodeGen
     try {
       codeGen.sourcesFromPulumiPackage(
         pulumiPackage,
@@ -60,5 +78,10 @@ object Main {
         logger.writeToFile(logFile)
       }
     }
+  }
+
+  def generateTestPackageSources(schemaPath: os.Path, outputPath: os.Path, providerName: String, schemaVersion: String, besomVersion: String): Unit = {
+    val schemaProvider = new TestSchemaProvider(schemaPath)
+    generatePackageSources(schemaProvider, outputPath, providerName, schemaVersion, besomVersion)
   }
 }

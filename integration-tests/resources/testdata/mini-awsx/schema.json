@@ -1,0 +1,139 @@
+{
+  "version": "0.0.1",
+  "name": "awsx",
+  "functions": {},
+  "resources": {
+    "awsx:ecs:EC2TaskDefinition": {
+      "description": "Create a TaskDefinition resource with the given unique name, arguments, and options.\nCreates required log-group and task & execution roles.\nPresents required Service load balancers if target group included in port mappings.",
+      "properties": {},
+      "required": [
+      ],
+      "inputProperties": {
+        "cpu": {
+          "type": "string",
+          "description": "The number of cpu units used by the task. If not provided, a default will be computed based on the cumulative needs specified by [containerDefinitions]"
+        },
+        "executionRole": {
+          "$ref": "#/types/awsx:awsx:DefaultRoleWithPolicy",
+          "plain": true,
+          "description": "The execution role that the Amazon ECS container agent and the Docker daemon can assume.\nWill be created automatically if not defined."
+        },
+        "family": {
+          "type": "string",
+          "description": "An optional unique name for your task definition. If not specified, then a default will be created."
+        },
+        "ipcMode": {
+          "type": "string",
+          "description": "IPC resource namespace to be used for the containers in the task The valid values are `host`, `task`, and `none`.\n"
+        },
+        "memory": {
+          "type": "string",
+          "description": "The amount (in MiB) of memory used by the task.  If not provided, a default will be computed\nbased on the cumulative needs specified by [containerDefinitions]"
+        },
+        "networkMode": {
+          "type": "string",
+          "description": "Docker networking mode to use for the containers in the task. Valid values are `none`, `bridge`, `awsvpc`, and `host`.\n"
+        },
+        "pidMode": {
+          "type": "string",
+          "description": "Process namespace to use for the containers in the task. The valid values are `host` and `task`.\n"
+        },
+        "skipDestroy": {
+          "type": "boolean"
+        },
+        "tags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Key-value map of resource tags.\n"
+        },
+        "taskRole": {
+          "$ref": "#/types/awsx:awsx:DefaultRoleWithPolicy",
+          "plain": true,
+          "description": "IAM role that allows your Amazon ECS container task to make calls to other AWS services.\nWill be created automatically if not defined."
+        }
+      },
+      "isComponent": true
+    }
+  },
+  "types": {
+    "awsx:awsx:DefaultRoleWithPolicy": {
+      "description": "Role and policy attachments with default setup unless explicitly skipped or an existing role ARN provided.",
+      "properties": {
+        "args": {
+          "$ref": "#/types/awsx:awsx:RoleWithPolicy",
+          "plain": true,
+          "description": "Args to use when creating the role and policies. Can't be specified if `roleArn` is used."
+        },
+        "roleArn": {
+          "type": "string",
+          "description": "ARN of existing role to use instead of creating a new role. Cannot be used in combination with `args` or `opts`."
+        },
+        "skip": {
+          "type": "boolean",
+          "plain": true,
+          "description": "Skips creation of the role if set to `true`."
+        }
+      },
+      "type": "object"
+    },
+    "awsx:awsx:RoleWithPolicy": {
+      "description": "The set of arguments for constructing a Role resource and Policy attachments.",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Description of the role.\n"
+        },
+        "forceDetachPolicies": {
+          "type": "boolean",
+          "description": "Whether to force detaching any policies the role has before destroying it. Defaults to `false`.\n"
+        },
+        "managedPolicyArns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Set of exclusive IAM managed policy ARNs to attach to the IAM role. If this attribute is not configured, this provider will ignore policy attachments to this resource. When configured, the provider will align the role's managed policy attachments with this set by attaching or detaching managed policies. Configuring an empty set (i.e., `managed_policy_arns = []`) will cause the provider to remove _all_ managed policy attachments.\n"
+        },
+        "maxSessionDuration": {
+          "type": "integer",
+          "description": "Maximum session duration (in seconds) that you want to set for the specified role. If you do not specify a value for this setting, the default maximum of one hour is applied. This setting can have a value from 1 hour to 12 hours.\n"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the role policy.\n"
+        },
+        "namePrefix": {
+          "type": "string",
+          "description": "Creates a unique friendly name beginning with the specified prefix. Conflicts with `name`.\n"
+        },
+        "path": {
+          "type": "string",
+          "description": "Path to the role. See [IAM Identifiers](https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html) for more information.\n"
+        },
+        "permissionsBoundary": {
+          "type": "string",
+          "description": "ARN of the policy that is used to set the permissions boundary for the role.\n"
+        },
+        "policyArns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "plain": true
+          },
+          "plain": true,
+          "description": "ARNs of the policies to attach to the created role."
+        },
+        "tags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Key-value mapping of tags for the IAM role. .If configured with a provider `default_tags` configuration block present, tags with matching keys will overwrite those defined at the provider-level.\n"
+        }
+      },
+      "type": "object"
+    }
+  }
+}

@@ -1,0 +1,2335 @@
+{
+  "version": "1.2.3",
+  "name": "jumbo",
+  "pluginDownloadURL": "example.com",
+  "allowedPackageNames": ["foo", "bar"],
+  "types": {
+    "jumbo::ACustomType": {
+      "properties": {
+        "bar1": {
+          "type": "string"
+        },
+        "bar2": {
+          "type": "string"
+        },
+        "bar3": {
+          "type": "string"
+        },
+        "bar4": {
+          "type": "string"
+        },
+        "bar5": {
+          "type": "string"
+        },
+        "bar6": {
+          "type": "string"
+        },
+        "bar7": {
+          "type": "string"
+        },
+        "bar8": {
+          "type": "string"
+        },
+        "bar9": {
+          "type": "string"
+        },
+        "bar10": {
+          "type": "string"
+        },
+        "bar11": {
+          "type": "string"
+        },
+        "bar12": {
+          "type": "string"
+        },
+        "bar13": {
+          "type": "string"
+        },
+        "bar14": {
+          "type": "string"
+        },
+        "bar15": {
+          "type": "string"
+        },
+        "bar16": {
+          "type": "string"
+        },
+        "bar17": {
+          "type": "string"
+        },
+        "bar18": {
+          "type": "string"
+        },
+        "bar19": {
+          "type": "string"
+        },
+        "bar20": {
+          "type": "string"
+        },
+        "bar21": {
+          "type": "string"
+        },
+        "bar22": {
+          "type": "string"
+        },
+        "bar23": {
+          "type": "string"
+        },
+        "bar24": {
+          "type": "string"
+        },
+        "bar25": {
+          "type": "string"
+        },
+        "bar26": {
+          "type": "string"
+        },
+        "bar27": {
+          "type": "string"
+        },
+        "bar28": {
+          "type": "string"
+        },
+        "bar29": {
+          "type": "string"
+        },
+        "bar30": {
+          "type": "string"
+        },
+        "bar31": {
+          "type": "string"
+        },
+        "bar32": {
+          "type": "string"
+        },
+        "bar33": {
+          "type": "string"
+        },
+        "bar34": {
+          "type": "string"
+        },
+        "bar35": {
+          "type": "string"
+        },
+        "bar36": {
+          "type": "string"
+        },
+        "bar37": {
+          "type": "string"
+        },
+        "bar38": {
+          "type": "string"
+        },
+        "bar39": {
+          "type": "string"
+        },
+        "bar40": {
+          "type": "string"
+        },
+        "bar41": {
+          "type": "string"
+        },
+        "bar42": {
+          "type": "string"
+        },
+        "bar43": {
+          "type": "string"
+        },
+        "bar44": {
+          "type": "string"
+        },
+        "bar45": {
+          "type": "string"
+        },
+        "bar46": {
+          "type": "string"
+        },
+        "bar47": {
+          "type": "string"
+        },
+        "bar48": {
+          "type": "string"
+        },
+        "bar49": {
+          "type": "string"
+        },
+        "bar50": {
+          "type": "string"
+        },
+        "bar51": {
+          "type": "string"
+        },
+        "bar52": {
+          "type": "string"
+        },
+        "bar53": {
+          "type": "string"
+        },
+        "bar54": {
+          "type": "string"
+        },
+        "bar55": {
+          "type": "string"
+        },
+        "bar56": {
+          "type": "string"
+        },
+        "bar57": {
+          "type": "string"
+        },
+        "bar58": {
+          "type": "string"
+        },
+        "bar59": {
+          "type": "string"
+        },
+        "bar60": {
+          "type": "string"
+        },
+        "bar61": {
+          "type": "string"
+        },
+        "bar62": {
+          "type": "string"
+        },
+        "bar63": {
+          "type": "string"
+        },
+        "bar64": {
+          "type": "string"
+        },
+        "bar65": {
+          "type": "string"
+        },
+        "bar66": {
+          "type": "string"
+        },
+        "bar67": {
+          "type": "string"
+        },
+        "bar68": {
+          "type": "string"
+        },
+        "bar69": {
+          "type": "string"
+        },
+        "bar70": {
+          "type": "string"
+        },
+        "bar71": {
+          "type": "string"
+        },
+        "bar72": {
+          "type": "string"
+        },
+        "bar73": {
+          "type": "string"
+        },
+        "bar74": {
+          "type": "string"
+        },
+        "bar75": {
+          "type": "string"
+        },
+        "bar76": {
+          "type": "string"
+        },
+        "bar77": {
+          "type": "string"
+        },
+        "bar78": {
+          "type": "string"
+        },
+        "bar79": {
+          "type": "string"
+        },
+        "bar80": {
+          "type": "string"
+        },
+        "bar81": {
+          "type": "string"
+        },
+        "bar82": {
+          "type": "string"
+        },
+        "bar83": {
+          "type": "string"
+        },
+        "bar84": {
+          "type": "string"
+        },
+        "bar85": {
+          "type": "string"
+        },
+        "bar86": {
+          "type": "string"
+        },
+        "bar87": {
+          "type": "string"
+        },
+        "bar88": {
+          "type": "string"
+        },
+        "bar89": {
+          "type": "string"
+        },
+        "bar90": {
+          "type": "string"
+        },
+        "bar91": {
+          "type": "string"
+        },
+        "bar92": {
+          "type": "string"
+        },
+        "bar93": {
+          "type": "string"
+        },
+        "bar94": {
+          "type": "string"
+        },
+        "bar95": {
+          "type": "string"
+        },
+        "bar96": {
+          "type": "string"
+        },
+        "bar97": {
+          "type": "string"
+        },
+        "bar98": {
+          "type": "string"
+        },
+        "bar99": {
+          "type": "string"
+        },
+        "bar100": {
+          "type": "string"
+        },
+        "bar101": {
+          "type": "string"
+        },
+        "bar102": {
+          "type": "string"
+        },
+        "bar103": {
+          "type": "string"
+        },
+        "bar104": {
+          "type": "string"
+        },
+        "bar105": {
+          "type": "string"
+        },
+        "bar106": {
+          "type": "string"
+        },
+        "bar107": {
+          "type": "string"
+        },
+        "bar108": {
+          "type": "string"
+        },
+        "bar109": {
+          "type": "string"
+        },
+        "bar110": {
+          "type": "string"
+        },
+        "bar111": {
+          "type": "string"
+        },
+        "bar112": {
+          "type": "string"
+        },
+        "bar113": {
+          "type": "string"
+        },
+        "bar114": {
+          "type": "string"
+        },
+        "bar115": {
+          "type": "string"
+        },
+        "bar116": {
+          "type": "string"
+        },
+        "bar117": {
+          "type": "string"
+        },
+        "bar118": {
+          "type": "string"
+        },
+        "bar119": {
+          "type": "string"
+        },
+        "bar120": {
+          "type": "string"
+        },
+        "bar121": {
+          "type": "string"
+        },
+        "bar122": {
+          "type": "string"
+        },
+        "bar123": {
+          "type": "string"
+        },
+        "bar124": {
+          "type": "string"
+        },
+        "bar125": {
+          "type": "string"
+        },
+        "bar126": {
+          "type": "string"
+        },
+        "bar127": {
+          "type": "string"
+        },
+        "bar128": {
+          "type": "string"
+        },
+        "bar129": {
+          "type": "string"
+        },
+        "bar130": {
+          "type": "string"
+        },
+        "bar131": {
+          "type": "string"
+        },
+        "bar132": {
+          "type": "string"
+        },
+        "bar133": {
+          "type": "string"
+        },
+        "bar134": {
+          "type": "string"
+        },
+        "bar135": {
+          "type": "string"
+        },
+        "bar136": {
+          "type": "string"
+        },
+        "bar137": {
+          "type": "string"
+        },
+        "bar138": {
+          "type": "string"
+        },
+        "bar139": {
+          "type": "string"
+        },
+        "bar140": {
+          "type": "string"
+        },
+        "bar141": {
+          "type": "string"
+        },
+        "bar142": {
+          "type": "string"
+        },
+        "bar143": {
+          "type": "string"
+        },
+        "bar144": {
+          "type": "string"
+        },
+        "bar145": {
+          "type": "string"
+        },
+        "bar146": {
+          "type": "string"
+        },
+        "bar147": {
+          "type": "string"
+        },
+        "bar148": {
+          "type": "string"
+        },
+        "bar149": {
+          "type": "string"
+        },
+        "bar150": {
+          "type": "string"
+        },
+        "bar151": {
+          "type": "string"
+        },
+        "bar152": {
+          "type": "string"
+        },
+        "bar153": {
+          "type": "string"
+        },
+        "bar154": {
+          "type": "string"
+        },
+        "bar155": {
+          "type": "string"
+        },
+        "bar156": {
+          "type": "string"
+        },
+        "bar157": {
+          "type": "string"
+        },
+        "bar158": {
+          "type": "string"
+        },
+        "bar159": {
+          "type": "string"
+        },
+        "bar160": {
+          "type": "string"
+        },
+        "bar161": {
+          "type": "string"
+        },
+        "bar162": {
+          "type": "string"
+        },
+        "bar163": {
+          "type": "string"
+        },
+        "bar164": {
+          "type": "string"
+        },
+        "bar165": {
+          "type": "string"
+        },
+        "bar166": {
+          "type": "string"
+        },
+        "bar167": {
+          "type": "string"
+        },
+        "bar168": {
+          "type": "string"
+        },
+        "bar169": {
+          "type": "string"
+        },
+        "bar170": {
+          "type": "string"
+        },
+        "bar171": {
+          "type": "string"
+        },
+        "bar172": {
+          "type": "string"
+        },
+        "bar173": {
+          "type": "string"
+        },
+        "bar174": {
+          "type": "string"
+        },
+        "bar175": {
+          "type": "string"
+        },
+        "bar176": {
+          "type": "string"
+        },
+        "bar177": {
+          "type": "string"
+        },
+        "bar178": {
+          "type": "string"
+        },
+        "bar179": {
+          "type": "string"
+        },
+        "bar180": {
+          "type": "string"
+        },
+        "bar181": {
+          "type": "string"
+        },
+        "bar182": {
+          "type": "string"
+        },
+        "bar183": {
+          "type": "string"
+        },
+        "bar184": {
+          "type": "string"
+        },
+        "bar185": {
+          "type": "string"
+        },
+        "bar186": {
+          "type": "string"
+        },
+        "bar187": {
+          "type": "string"
+        },
+        "bar188": {
+          "type": "string"
+        },
+        "bar189": {
+          "type": "string"
+        },
+        "bar190": {
+          "type": "string"
+        },
+        "bar191": {
+          "type": "string"
+        },
+        "bar192": {
+          "type": "string"
+        },
+        "bar193": {
+          "type": "string"
+        },
+        "bar194": {
+          "type": "string"
+        },
+        "bar195": {
+          "type": "string"
+        },
+        "bar196": {
+          "type": "string"
+        },
+        "bar197": {
+          "type": "string"
+        },
+        "bar198": {
+          "type": "string"
+        },
+        "bar199": {
+          "type": "string"
+        },
+        "bar200": {
+          "type": "string"
+        },
+        "bar201": {
+          "type": "string"
+        },
+        "bar202": {
+          "type": "string"
+        },
+        "bar203": {
+          "type": "string"
+        },
+        "bar204": {
+          "type": "string"
+        },
+        "bar205": {
+          "type": "string"
+        },
+        "bar206": {
+          "type": "string"
+        },
+        "bar207": {
+          "type": "string"
+        },
+        "bar208": {
+          "type": "string"
+        },
+        "bar209": {
+          "type": "string"
+        },
+        "bar210": {
+          "type": "string"
+        },
+        "bar211": {
+          "type": "string"
+        },
+        "bar212": {
+          "type": "string"
+        },
+        "bar213": {
+          "type": "string"
+        },
+        "bar214": {
+          "type": "string"
+        },
+        "bar215": {
+          "type": "string"
+        },
+        "bar216": {
+          "type": "string"
+        },
+        "bar217": {
+          "type": "string"
+        },
+        "bar218": {
+          "type": "string"
+        },
+        "bar219": {
+          "type": "string"
+        },
+        "bar220": {
+          "type": "string"
+        },
+        "bar221": {
+          "type": "string"
+        },
+        "bar222": {
+          "type": "string"
+        },
+        "bar223": {
+          "type": "string"
+        },
+        "bar224": {
+          "type": "string"
+        },
+        "bar225": {
+          "type": "string"
+        },
+        "bar226": {
+          "type": "string"
+        },
+        "bar227": {
+          "type": "string"
+        },
+        "bar228": {
+          "type": "string"
+        },
+        "bar229": {
+          "type": "string"
+        },
+        "bar230": {
+          "type": "string"
+        },
+        "bar231": {
+          "type": "string"
+        },
+        "bar232": {
+          "type": "string"
+        },
+        "bar233": {
+          "type": "string"
+        },
+        "bar234": {
+          "type": "string"
+        },
+        "bar235": {
+          "type": "string"
+        },
+        "bar236": {
+          "type": "string"
+        },
+        "bar237": {
+          "type": "string"
+        },
+        "bar238": {
+          "type": "string"
+        },
+        "bar239": {
+          "type": "string"
+        },
+        "bar240": {
+          "type": "string"
+        },
+        "bar241": {
+          "type": "string"
+        },
+        "bar242": {
+          "type": "string"
+        },
+        "bar243": {
+          "type": "string"
+        },
+        "bar244": {
+          "type": "string"
+        },
+        "bar245": {
+          "type": "string"
+        },
+        "bar246": {
+          "type": "string"
+        },
+        "bar247": {
+          "type": "string"
+        },
+        "bar248": {
+          "type": "string"
+        },
+        "bar249": {
+          "type": "string"
+        },
+        "bar250": {
+          "type": "string"
+        },
+        "bar251": {
+          "type": "string"
+        },
+        "bar252": {
+          "type": "string"
+        },
+        "bar253": {
+          "type": "string"
+        },
+        "bar254": {
+          "type": "string"
+        },
+        "bar255": {
+          "type": "string"
+        },
+        "bar256": {
+          "type": "string"
+        },
+        "default": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "resources": {
+    "jumbo::ACustomResource": {
+      "properties": {
+        "foo": {
+          "$ref": "#/types/jumbo::ACustomType"
+        },
+        "bar1": {
+          "type": "string"
+        },
+        "bar2": {
+          "type": "string"
+        },
+        "bar3": {
+          "type": "string"
+        },
+        "bar4": {
+          "type": "string"
+        },
+        "bar5": {
+          "type": "string"
+        },
+        "bar6": {
+          "type": "string"
+        },
+        "bar7": {
+          "type": "string"
+        },
+        "bar8": {
+          "type": "string"
+        },
+        "bar9": {
+          "type": "string"
+        },
+        "bar10": {
+          "type": "string"
+        },
+        "bar11": {
+          "type": "string"
+        },
+        "bar12": {
+          "type": "string"
+        },
+        "bar13": {
+          "type": "string"
+        },
+        "bar14": {
+          "type": "string"
+        },
+        "bar15": {
+          "type": "string"
+        },
+        "bar16": {
+          "type": "string"
+        },
+        "bar17": {
+          "type": "string"
+        },
+        "bar18": {
+          "type": "string"
+        },
+        "bar19": {
+          "type": "string"
+        },
+        "bar20": {
+          "type": "string"
+        },
+        "bar21": {
+          "type": "string"
+        },
+        "bar22": {
+          "type": "string"
+        },
+        "bar23": {
+          "type": "string"
+        },
+        "bar24": {
+          "type": "string"
+        },
+        "bar25": {
+          "type": "string"
+        },
+        "bar26": {
+          "type": "string"
+        },
+        "bar27": {
+          "type": "string"
+        },
+        "bar28": {
+          "type": "string"
+        },
+        "bar29": {
+          "type": "string"
+        },
+        "bar30": {
+          "type": "string"
+        },
+        "bar31": {
+          "type": "string"
+        },
+        "bar32": {
+          "type": "string"
+        },
+        "bar33": {
+          "type": "string"
+        },
+        "bar34": {
+          "type": "string"
+        },
+        "bar35": {
+          "type": "string"
+        },
+        "bar36": {
+          "type": "string"
+        },
+        "bar37": {
+          "type": "string"
+        },
+        "bar38": {
+          "type": "string"
+        },
+        "bar39": {
+          "type": "string"
+        },
+        "bar40": {
+          "type": "string"
+        },
+        "bar41": {
+          "type": "string"
+        },
+        "bar42": {
+          "type": "string"
+        },
+        "bar43": {
+          "type": "string"
+        },
+        "bar44": {
+          "type": "string"
+        },
+        "bar45": {
+          "type": "string"
+        },
+        "bar46": {
+          "type": "string"
+        },
+        "bar47": {
+          "type": "string"
+        },
+        "bar48": {
+          "type": "string"
+        },
+        "bar49": {
+          "type": "string"
+        },
+        "bar50": {
+          "type": "string"
+        },
+        "bar51": {
+          "type": "string"
+        },
+        "bar52": {
+          "type": "string"
+        },
+        "bar53": {
+          "type": "string"
+        },
+        "bar54": {
+          "type": "string"
+        },
+        "bar55": {
+          "type": "string"
+        },
+        "bar56": {
+          "type": "string"
+        },
+        "bar57": {
+          "type": "string"
+        },
+        "bar58": {
+          "type": "string"
+        },
+        "bar59": {
+          "type": "string"
+        },
+        "bar60": {
+          "type": "string"
+        },
+        "bar61": {
+          "type": "string"
+        },
+        "bar62": {
+          "type": "string"
+        },
+        "bar63": {
+          "type": "string"
+        },
+        "bar64": {
+          "type": "string"
+        },
+        "bar65": {
+          "type": "string"
+        },
+        "bar66": {
+          "type": "string"
+        },
+        "bar67": {
+          "type": "string"
+        },
+        "bar68": {
+          "type": "string"
+        },
+        "bar69": {
+          "type": "string"
+        },
+        "bar70": {
+          "type": "string"
+        },
+        "bar71": {
+          "type": "string"
+        },
+        "bar72": {
+          "type": "string"
+        },
+        "bar73": {
+          "type": "string"
+        },
+        "bar74": {
+          "type": "string"
+        },
+        "bar75": {
+          "type": "string"
+        },
+        "bar76": {
+          "type": "string"
+        },
+        "bar77": {
+          "type": "string"
+        },
+        "bar78": {
+          "type": "string"
+        },
+        "bar79": {
+          "type": "string"
+        },
+        "bar80": {
+          "type": "string"
+        },
+        "bar81": {
+          "type": "string"
+        },
+        "bar82": {
+          "type": "string"
+        },
+        "bar83": {
+          "type": "string"
+        },
+        "bar84": {
+          "type": "string"
+        },
+        "bar85": {
+          "type": "string"
+        },
+        "bar86": {
+          "type": "string"
+        },
+        "bar87": {
+          "type": "string"
+        },
+        "bar88": {
+          "type": "string"
+        },
+        "bar89": {
+          "type": "string"
+        },
+        "bar90": {
+          "type": "string"
+        },
+        "bar91": {
+          "type": "string"
+        },
+        "bar92": {
+          "type": "string"
+        },
+        "bar93": {
+          "type": "string"
+        },
+        "bar94": {
+          "type": "string"
+        },
+        "bar95": {
+          "type": "string"
+        },
+        "bar96": {
+          "type": "string"
+        },
+        "bar97": {
+          "type": "string"
+        },
+        "bar98": {
+          "type": "string"
+        },
+        "bar99": {
+          "type": "string"
+        },
+        "bar100": {
+          "type": "string"
+        },
+        "bar101": {
+          "type": "string"
+        },
+        "bar102": {
+          "type": "string"
+        },
+        "bar103": {
+          "type": "string"
+        },
+        "bar104": {
+          "type": "string"
+        },
+        "bar105": {
+          "type": "string"
+        },
+        "bar106": {
+          "type": "string"
+        },
+        "bar107": {
+          "type": "string"
+        },
+        "bar108": {
+          "type": "string"
+        },
+        "bar109": {
+          "type": "string"
+        },
+        "bar110": {
+          "type": "string"
+        },
+        "bar111": {
+          "type": "string"
+        },
+        "bar112": {
+          "type": "string"
+        },
+        "bar113": {
+          "type": "string"
+        },
+        "bar114": {
+          "type": "string"
+        },
+        "bar115": {
+          "type": "string"
+        },
+        "bar116": {
+          "type": "string"
+        },
+        "bar117": {
+          "type": "string"
+        },
+        "bar118": {
+          "type": "string"
+        },
+        "bar119": {
+          "type": "string"
+        },
+        "bar120": {
+          "type": "string"
+        },
+        "bar121": {
+          "type": "string"
+        },
+        "bar122": {
+          "type": "string"
+        },
+        "bar123": {
+          "type": "string"
+        },
+        "bar124": {
+          "type": "string"
+        },
+        "bar125": {
+          "type": "string"
+        },
+        "bar126": {
+          "type": "string"
+        },
+        "bar127": {
+          "type": "string"
+        },
+        "bar128": {
+          "type": "string"
+        },
+        "bar129": {
+          "type": "string"
+        },
+        "bar130": {
+          "type": "string"
+        },
+        "bar131": {
+          "type": "string"
+        },
+        "bar132": {
+          "type": "string"
+        },
+        "bar133": {
+          "type": "string"
+        },
+        "bar134": {
+          "type": "string"
+        },
+        "bar135": {
+          "type": "string"
+        },
+        "bar136": {
+          "type": "string"
+        },
+        "bar137": {
+          "type": "string"
+        },
+        "bar138": {
+          "type": "string"
+        },
+        "bar139": {
+          "type": "string"
+        },
+        "bar140": {
+          "type": "string"
+        },
+        "bar141": {
+          "type": "string"
+        },
+        "bar142": {
+          "type": "string"
+        },
+        "bar143": {
+          "type": "string"
+        },
+        "bar144": {
+          "type": "string"
+        },
+        "bar145": {
+          "type": "string"
+        },
+        "bar146": {
+          "type": "string"
+        },
+        "bar147": {
+          "type": "string"
+        },
+        "bar148": {
+          "type": "string"
+        },
+        "bar149": {
+          "type": "string"
+        },
+        "bar150": {
+          "type": "string"
+        },
+        "bar151": {
+          "type": "string"
+        },
+        "bar152": {
+          "type": "string"
+        },
+        "bar153": {
+          "type": "string"
+        },
+        "bar154": {
+          "type": "string"
+        },
+        "bar155": {
+          "type": "string"
+        },
+        "bar156": {
+          "type": "string"
+        },
+        "bar157": {
+          "type": "string"
+        },
+        "bar158": {
+          "type": "string"
+        },
+        "bar159": {
+          "type": "string"
+        },
+        "bar160": {
+          "type": "string"
+        },
+        "bar161": {
+          "type": "string"
+        },
+        "bar162": {
+          "type": "string"
+        },
+        "bar163": {
+          "type": "string"
+        },
+        "bar164": {
+          "type": "string"
+        },
+        "bar165": {
+          "type": "string"
+        },
+        "bar166": {
+          "type": "string"
+        },
+        "bar167": {
+          "type": "string"
+        },
+        "bar168": {
+          "type": "string"
+        },
+        "bar169": {
+          "type": "string"
+        },
+        "bar170": {
+          "type": "string"
+        },
+        "bar171": {
+          "type": "string"
+        },
+        "bar172": {
+          "type": "string"
+        },
+        "bar173": {
+          "type": "string"
+        },
+        "bar174": {
+          "type": "string"
+        },
+        "bar175": {
+          "type": "string"
+        },
+        "bar176": {
+          "type": "string"
+        },
+        "bar177": {
+          "type": "string"
+        },
+        "bar178": {
+          "type": "string"
+        },
+        "bar179": {
+          "type": "string"
+        },
+        "bar180": {
+          "type": "string"
+        },
+        "bar181": {
+          "type": "string"
+        },
+        "bar182": {
+          "type": "string"
+        },
+        "bar183": {
+          "type": "string"
+        },
+        "bar184": {
+          "type": "string"
+        },
+        "bar185": {
+          "type": "string"
+        },
+        "bar186": {
+          "type": "string"
+        },
+        "bar187": {
+          "type": "string"
+        },
+        "bar188": {
+          "type": "string"
+        },
+        "bar189": {
+          "type": "string"
+        },
+        "bar190": {
+          "type": "string"
+        },
+        "bar191": {
+          "type": "string"
+        },
+        "bar192": {
+          "type": "string"
+        },
+        "bar193": {
+          "type": "string"
+        },
+        "bar194": {
+          "type": "string"
+        },
+        "bar195": {
+          "type": "string"
+        },
+        "bar196": {
+          "type": "string"
+        },
+        "bar197": {
+          "type": "string"
+        },
+        "bar198": {
+          "type": "string"
+        },
+        "bar199": {
+          "type": "string"
+        },
+        "bar200": {
+          "type": "string"
+        },
+        "bar201": {
+          "type": "string"
+        },
+        "bar202": {
+          "type": "string"
+        },
+        "bar203": {
+          "type": "string"
+        },
+        "bar204": {
+          "type": "string"
+        },
+        "bar205": {
+          "type": "string"
+        },
+        "bar206": {
+          "type": "string"
+        },
+        "bar207": {
+          "type": "string"
+        },
+        "bar208": {
+          "type": "string"
+        },
+        "bar209": {
+          "type": "string"
+        },
+        "bar210": {
+          "type": "string"
+        },
+        "bar211": {
+          "type": "string"
+        },
+        "bar212": {
+          "type": "string"
+        },
+        "bar213": {
+          "type": "string"
+        },
+        "bar214": {
+          "type": "string"
+        },
+        "bar215": {
+          "type": "string"
+        },
+        "bar216": {
+          "type": "string"
+        },
+        "bar217": {
+          "type": "string"
+        },
+        "bar218": {
+          "type": "string"
+        },
+        "bar219": {
+          "type": "string"
+        },
+        "bar220": {
+          "type": "string"
+        },
+        "bar221": {
+          "type": "string"
+        },
+        "bar222": {
+          "type": "string"
+        },
+        "bar223": {
+          "type": "string"
+        },
+        "bar224": {
+          "type": "string"
+        },
+        "bar225": {
+          "type": "string"
+        },
+        "bar226": {
+          "type": "string"
+        },
+        "bar227": {
+          "type": "string"
+        },
+        "bar228": {
+          "type": "string"
+        },
+        "bar229": {
+          "type": "string"
+        },
+        "bar230": {
+          "type": "string"
+        },
+        "bar231": {
+          "type": "string"
+        },
+        "bar232": {
+          "type": "string"
+        },
+        "bar233": {
+          "type": "string"
+        },
+        "bar234": {
+          "type": "string"
+        },
+        "bar235": {
+          "type": "string"
+        },
+        "bar236": {
+          "type": "string"
+        },
+        "bar237": {
+          "type": "string"
+        },
+        "bar238": {
+          "type": "string"
+        },
+        "bar239": {
+          "type": "string"
+        },
+        "bar240": {
+          "type": "string"
+        },
+        "bar241": {
+          "type": "string"
+        },
+        "bar242": {
+          "type": "string"
+        },
+        "bar243": {
+          "type": "string"
+        },
+        "bar244": {
+          "type": "string"
+        },
+        "bar245": {
+          "type": "string"
+        },
+        "bar246": {
+          "type": "string"
+        },
+        "bar247": {
+          "type": "string"
+        },
+        "bar248": {
+          "type": "string"
+        },
+        "bar249": {
+          "type": "string"
+        },
+        "bar250": {
+          "type": "string"
+        },
+        "bar251": {
+          "type": "string"
+        },
+        "bar252": {
+          "type": "string"
+        },
+        "bar253": {
+          "type": "string"
+        },
+        "bar254": {
+          "type": "string"
+        },
+        "bar255": {
+          "type": "string"
+        },
+        "bar256": {
+          "type": "string"
+        }
+      },
+      "inputProperties": {
+        "foo": {
+          "$ref": "#/types/jumbo::ACustomType"
+        },
+        "bar1": {
+          "type": "string"
+        },
+        "bar2": {
+          "type": "string"
+        },
+        "bar3": {
+          "type": "string"
+        },
+        "bar4": {
+          "type": "string"
+        },
+        "bar5": {
+          "type": "string"
+        },
+        "bar6": {
+          "type": "string"
+        },
+        "bar7": {
+          "type": "string"
+        },
+        "bar8": {
+          "type": "string"
+        },
+        "bar9": {
+          "type": "string"
+        },
+        "bar10": {
+          "type": "string"
+        },
+        "bar11": {
+          "type": "string"
+        },
+        "bar12": {
+          "type": "string"
+        },
+        "bar13": {
+          "type": "string"
+        },
+        "bar14": {
+          "type": "string"
+        },
+        "bar15": {
+          "type": "string"
+        },
+        "bar16": {
+          "type": "string"
+        },
+        "bar17": {
+          "type": "string"
+        },
+        "bar18": {
+          "type": "string"
+        },
+        "bar19": {
+          "type": "string"
+        },
+        "bar20": {
+          "type": "string"
+        },
+        "bar21": {
+          "type": "string"
+        },
+        "bar22": {
+          "type": "string"
+        },
+        "bar23": {
+          "type": "string"
+        },
+        "bar24": {
+          "type": "string"
+        },
+        "bar25": {
+          "type": "string"
+        },
+        "bar26": {
+          "type": "string"
+        },
+        "bar27": {
+          "type": "string"
+        },
+        "bar28": {
+          "type": "string"
+        },
+        "bar29": {
+          "type": "string"
+        },
+        "bar30": {
+          "type": "string"
+        },
+        "bar31": {
+          "type": "string"
+        },
+        "bar32": {
+          "type": "string"
+        },
+        "bar33": {
+          "type": "string"
+        },
+        "bar34": {
+          "type": "string"
+        },
+        "bar35": {
+          "type": "string"
+        },
+        "bar36": {
+          "type": "string"
+        },
+        "bar37": {
+          "type": "string"
+        },
+        "bar38": {
+          "type": "string"
+        },
+        "bar39": {
+          "type": "string"
+        },
+        "bar40": {
+          "type": "string"
+        },
+        "bar41": {
+          "type": "string"
+        },
+        "bar42": {
+          "type": "string"
+        },
+        "bar43": {
+          "type": "string"
+        },
+        "bar44": {
+          "type": "string"
+        },
+        "bar45": {
+          "type": "string"
+        },
+        "bar46": {
+          "type": "string"
+        },
+        "bar47": {
+          "type": "string"
+        },
+        "bar48": {
+          "type": "string"
+        },
+        "bar49": {
+          "type": "string"
+        },
+        "bar50": {
+          "type": "string"
+        },
+        "bar51": {
+          "type": "string"
+        },
+        "bar52": {
+          "type": "string"
+        },
+        "bar53": {
+          "type": "string"
+        },
+        "bar54": {
+          "type": "string"
+        },
+        "bar55": {
+          "type": "string"
+        },
+        "bar56": {
+          "type": "string"
+        },
+        "bar57": {
+          "type": "string"
+        },
+        "bar58": {
+          "type": "string"
+        },
+        "bar59": {
+          "type": "string"
+        },
+        "bar60": {
+          "type": "string"
+        },
+        "bar61": {
+          "type": "string"
+        },
+        "bar62": {
+          "type": "string"
+        },
+        "bar63": {
+          "type": "string"
+        },
+        "bar64": {
+          "type": "string"
+        },
+        "bar65": {
+          "type": "string"
+        },
+        "bar66": {
+          "type": "string"
+        },
+        "bar67": {
+          "type": "string"
+        },
+        "bar68": {
+          "type": "string"
+        },
+        "bar69": {
+          "type": "string"
+        },
+        "bar70": {
+          "type": "string"
+        },
+        "bar71": {
+          "type": "string"
+        },
+        "bar72": {
+          "type": "string"
+        },
+        "bar73": {
+          "type": "string"
+        },
+        "bar74": {
+          "type": "string"
+        },
+        "bar75": {
+          "type": "string"
+        },
+        "bar76": {
+          "type": "string"
+        },
+        "bar77": {
+          "type": "string"
+        },
+        "bar78": {
+          "type": "string"
+        },
+        "bar79": {
+          "type": "string"
+        },
+        "bar80": {
+          "type": "string"
+        },
+        "bar81": {
+          "type": "string"
+        },
+        "bar82": {
+          "type": "string"
+        },
+        "bar83": {
+          "type": "string"
+        },
+        "bar84": {
+          "type": "string"
+        },
+        "bar85": {
+          "type": "string"
+        },
+        "bar86": {
+          "type": "string"
+        },
+        "bar87": {
+          "type": "string"
+        },
+        "bar88": {
+          "type": "string"
+        },
+        "bar89": {
+          "type": "string"
+        },
+        "bar90": {
+          "type": "string"
+        },
+        "bar91": {
+          "type": "string"
+        },
+        "bar92": {
+          "type": "string"
+        },
+        "bar93": {
+          "type": "string"
+        },
+        "bar94": {
+          "type": "string"
+        },
+        "bar95": {
+          "type": "string"
+        },
+        "bar96": {
+          "type": "string"
+        },
+        "bar97": {
+          "type": "string"
+        },
+        "bar98": {
+          "type": "string"
+        },
+        "bar99": {
+          "type": "string"
+        },
+        "bar100": {
+          "type": "string"
+        },
+        "bar101": {
+          "type": "string"
+        },
+        "bar102": {
+          "type": "string"
+        },
+        "bar103": {
+          "type": "string"
+        },
+        "bar104": {
+          "type": "string"
+        },
+        "bar105": {
+          "type": "string"
+        },
+        "bar106": {
+          "type": "string"
+        },
+        "bar107": {
+          "type": "string"
+        },
+        "bar108": {
+          "type": "string"
+        },
+        "bar109": {
+          "type": "string"
+        },
+        "bar110": {
+          "type": "string"
+        },
+        "bar111": {
+          "type": "string"
+        },
+        "bar112": {
+          "type": "string"
+        },
+        "bar113": {
+          "type": "string"
+        },
+        "bar114": {
+          "type": "string"
+        },
+        "bar115": {
+          "type": "string"
+        },
+        "bar116": {
+          "type": "string"
+        },
+        "bar117": {
+          "type": "string"
+        },
+        "bar118": {
+          "type": "string"
+        },
+        "bar119": {
+          "type": "string"
+        },
+        "bar120": {
+          "type": "string"
+        },
+        "bar121": {
+          "type": "string"
+        },
+        "bar122": {
+          "type": "string"
+        },
+        "bar123": {
+          "type": "string"
+        },
+        "bar124": {
+          "type": "string"
+        },
+        "bar125": {
+          "type": "string"
+        },
+        "bar126": {
+          "type": "string"
+        },
+        "bar127": {
+          "type": "string"
+        },
+        "bar128": {
+          "type": "string"
+        },
+        "bar129": {
+          "type": "string"
+        },
+        "bar130": {
+          "type": "string"
+        },
+        "bar131": {
+          "type": "string"
+        },
+        "bar132": {
+          "type": "string"
+        },
+        "bar133": {
+          "type": "string"
+        },
+        "bar134": {
+          "type": "string"
+        },
+        "bar135": {
+          "type": "string"
+        },
+        "bar136": {
+          "type": "string"
+        },
+        "bar137": {
+          "type": "string"
+        },
+        "bar138": {
+          "type": "string"
+        },
+        "bar139": {
+          "type": "string"
+        },
+        "bar140": {
+          "type": "string"
+        },
+        "bar141": {
+          "type": "string"
+        },
+        "bar142": {
+          "type": "string"
+        },
+        "bar143": {
+          "type": "string"
+        },
+        "bar144": {
+          "type": "string"
+        },
+        "bar145": {
+          "type": "string"
+        },
+        "bar146": {
+          "type": "string"
+        },
+        "bar147": {
+          "type": "string"
+        },
+        "bar148": {
+          "type": "string"
+        },
+        "bar149": {
+          "type": "string"
+        },
+        "bar150": {
+          "type": "string"
+        },
+        "bar151": {
+          "type": "string"
+        },
+        "bar152": {
+          "type": "string"
+        },
+        "bar153": {
+          "type": "string"
+        },
+        "bar154": {
+          "type": "string"
+        },
+        "bar155": {
+          "type": "string"
+        },
+        "bar156": {
+          "type": "string"
+        },
+        "bar157": {
+          "type": "string"
+        },
+        "bar158": {
+          "type": "string"
+        },
+        "bar159": {
+          "type": "string"
+        },
+        "bar160": {
+          "type": "string"
+        },
+        "bar161": {
+          "type": "string"
+        },
+        "bar162": {
+          "type": "string"
+        },
+        "bar163": {
+          "type": "string"
+        },
+        "bar164": {
+          "type": "string"
+        },
+        "bar165": {
+          "type": "string"
+        },
+        "bar166": {
+          "type": "string"
+        },
+        "bar167": {
+          "type": "string"
+        },
+        "bar168": {
+          "type": "string"
+        },
+        "bar169": {
+          "type": "string"
+        },
+        "bar170": {
+          "type": "string"
+        },
+        "bar171": {
+          "type": "string"
+        },
+        "bar172": {
+          "type": "string"
+        },
+        "bar173": {
+          "type": "string"
+        },
+        "bar174": {
+          "type": "string"
+        },
+        "bar175": {
+          "type": "string"
+        },
+        "bar176": {
+          "type": "string"
+        },
+        "bar177": {
+          "type": "string"
+        },
+        "bar178": {
+          "type": "string"
+        },
+        "bar179": {
+          "type": "string"
+        },
+        "bar180": {
+          "type": "string"
+        },
+        "bar181": {
+          "type": "string"
+        },
+        "bar182": {
+          "type": "string"
+        },
+        "bar183": {
+          "type": "string"
+        },
+        "bar184": {
+          "type": "string"
+        },
+        "bar185": {
+          "type": "string"
+        },
+        "bar186": {
+          "type": "string"
+        },
+        "bar187": {
+          "type": "string"
+        },
+        "bar188": {
+          "type": "string"
+        },
+        "bar189": {
+          "type": "string"
+        },
+        "bar190": {
+          "type": "string"
+        },
+        "bar191": {
+          "type": "string"
+        },
+        "bar192": {
+          "type": "string"
+        },
+        "bar193": {
+          "type": "string"
+        },
+        "bar194": {
+          "type": "string"
+        },
+        "bar195": {
+          "type": "string"
+        },
+        "bar196": {
+          "type": "string"
+        },
+        "bar197": {
+          "type": "string"
+        },
+        "bar198": {
+          "type": "string"
+        },
+        "bar199": {
+          "type": "string"
+        },
+        "bar200": {
+          "type": "string"
+        },
+        "bar201": {
+          "type": "string"
+        },
+        "bar202": {
+          "type": "string"
+        },
+        "bar203": {
+          "type": "string"
+        },
+        "bar204": {
+          "type": "string"
+        },
+        "bar205": {
+          "type": "string"
+        },
+        "bar206": {
+          "type": "string"
+        },
+        "bar207": {
+          "type": "string"
+        },
+        "bar208": {
+          "type": "string"
+        },
+        "bar209": {
+          "type": "string"
+        },
+        "bar210": {
+          "type": "string"
+        },
+        "bar211": {
+          "type": "string"
+        },
+        "bar212": {
+          "type": "string"
+        },
+        "bar213": {
+          "type": "string"
+        },
+        "bar214": {
+          "type": "string"
+        },
+        "bar215": {
+          "type": "string"
+        },
+        "bar216": {
+          "type": "string"
+        },
+        "bar217": {
+          "type": "string"
+        },
+        "bar218": {
+          "type": "string"
+        },
+        "bar219": {
+          "type": "string"
+        },
+        "bar220": {
+          "type": "string"
+        },
+        "bar221": {
+          "type": "string"
+        },
+        "bar222": {
+          "type": "string"
+        },
+        "bar223": {
+          "type": "string"
+        },
+        "bar224": {
+          "type": "string"
+        },
+        "bar225": {
+          "type": "string"
+        },
+        "bar226": {
+          "type": "string"
+        },
+        "bar227": {
+          "type": "string"
+        },
+        "bar228": {
+          "type": "string"
+        },
+        "bar229": {
+          "type": "string"
+        },
+        "bar230": {
+          "type": "string"
+        },
+        "bar231": {
+          "type": "string"
+        },
+        "bar232": {
+          "type": "string"
+        },
+        "bar233": {
+          "type": "string"
+        },
+        "bar234": {
+          "type": "string"
+        },
+        "bar235": {
+          "type": "string"
+        },
+        "bar236": {
+          "type": "string"
+        },
+        "bar237": {
+          "type": "string"
+        },
+        "bar238": {
+          "type": "string"
+        },
+        "bar239": {
+          "type": "string"
+        },
+        "bar240": {
+          "type": "string"
+        },
+        "bar241": {
+          "type": "string"
+        },
+        "bar242": {
+          "type": "string"
+        },
+        "bar243": {
+          "type": "string"
+        },
+        "bar244": {
+          "type": "string"
+        },
+        "bar245": {
+          "type": "string"
+        },
+        "bar246": {
+          "type": "string"
+        },
+        "bar247": {
+          "type": "string"
+        },
+        "bar248": {
+          "type": "string"
+        },
+        "bar249": {
+          "type": "string"
+        },
+        "bar250": {
+          "type": "string"
+        },
+        "bar251": {
+          "type": "string"
+        },
+        "bar252": {
+          "type": "string"
+        },
+        "bar253": {
+          "type": "string"
+        },
+        "bar254": {
+          "type": "string"
+        },
+        "bar255": {
+          "type": "string"
+        },
+        "bar256": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  }
+}
