@@ -2,7 +2,7 @@ name: Besom build and test
 
 on:
   push:
-    branches: [ 'main', 'develop' ]
+    branches: [ 'main', 'develop', 'refactor-decoders' ]
     paths-ignore: 
     - '**.md'
     - 'LICENSE'
@@ -11,7 +11,7 @@ on:
     - 'experimental'
     - 'website'
   pull_request:
-    branches: [ 'main', 'develop' ]
+    branches: [ 'main', 'develop', 'refactor-decoders' ]
     types: [ 'opened', 'reopened', 'synchronize' ]
     paths-ignore: 
     - '**.md'
