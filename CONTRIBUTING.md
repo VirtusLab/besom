@@ -197,14 +197,14 @@ IntelliJ support is experimental.
 
 1. Make sure you have the latest IntelliJ
 2. Install Scala plugin and set update chanel to "Nightly Builds"
-3. Use BSP ([documentation](https://www.jetbrains.com/help/idea/bsp-support.html))
+3. Use [BSP with `scala-cli`](https://scala-cli.virtuslab.org/docs/cookbooks/intellij-multi-bsp) (also see [IntelliJ documentation](https://www.jetbrains.com/help/idea/bsp-support.html))
 
 To make sure you have `.bsp` directories, by running:
 ```bash
 just setup-intellij
 ```
 
-Now open the project in IntelliJ and add modules manually using "Project Structure > Import Module" dialog.
+Now open the project in IntelliJ. If neede and add modules manually using "Project Structure > Import Module" dialog.
 
 Additionally, please set `scalafmt` as the formatter.
 
