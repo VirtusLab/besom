@@ -62,7 +62,7 @@ You will want to install the following on your machine:
 - Go 1.20 or higher
 - [protoc](https://grpc.io/docs/protoc-installation/) 24.3 or higher
 - [just](https://github.com/casey/just#installation) 1.14.0 or higher
-- git
+- git 2.37.1 or higher
 - unzip
 
 ### Preparing a pull request
@@ -228,6 +228,16 @@ lazy val infra = project.in(file("infrastructure")).settings(
    ```
 This just informs your IDE about the existence of the infrastructure module,
 DO NOT remove dependencies from `project.scala`, because they are necessary in both places.
+
+## Troubleshooting
+
+### `git` failed to clone or checkout the repository
+
+GitHub might be throttling your requests, try to authenticate:
+
+```bash
+export GITHUB_TOKEN=$(gh auth token)
+```
 
 ## Getting Help
 
