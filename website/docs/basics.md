@@ -3,7 +3,7 @@ title: Pulumi Basics
 ---
 import Version from '@site/src/components/Version';
 
-Before we dive into the [details of Besom](architecture), let's take a look at the basics of Pulumi.
+Before we dive into the [details of Besom](architecture.md), let's take a look at the basics of Pulumi.
 This page offers an executive summary of [Pulumi's concepts](https://www.pulumi.com/docs/concepts/).
 
 ### What is Pulumi?
@@ -85,7 +85,7 @@ A minimal Besom program consists of:
     ```
   
 :::tip
-Pass [`Context`](context) everywhere you are using Besom outside of `Pulumi.run` block with `(using besom.Context)`.
+Pass [`Context`](context.md) everywhere you are using Besom outside of `Pulumi.run` block with `(using besom.Context)`.
 :::
 
 #### Stacks
@@ -113,7 +113,7 @@ Stacks can export values as [Stack Outputs](https://www.pulumi.com/docs/concepts
 These outputs are shown by Pulumi CLI commands, and are displayed in the Pulumi Cloud, and can be accessed 
 programmatically using [Stack References](#stack-references).
 
-To export values from a stack in Besom, use the [`Pulumi.exports`](exports) function in your program.
+To export values from a stack in Besom, use the [`Pulumi.exports`](exports.md) function in your program.
 
 ##### Stack References
 
@@ -131,7 +131,7 @@ Resources are the primary [construct of Pulumi](https://www.pulumi.com/docs/conc
 Resources represent the fundamental units that make up your infrastructure, such as a compute instance,
 a storage bucket, or a Kubernetes cluster.
 
-Resources are defined using a [**resource constructor**](constructors). Each resource in Pulumi has:
+Resources are defined using a [**resource constructor**](constructors.md). Each resource in Pulumi has:
 - a [logical name and a physical name](https://www.pulumi.com/docs/concepts/resources/names/#resource-names)
   The logical name establishes a notion of identity within Pulumi, and the physical name is used as identity by the provider
 - a [resource type](https://www.pulumi.com/docs/concepts/resources/names/#types), which identifies the provider and the kind of resource being created
@@ -162,9 +162,11 @@ Outputs are used to:
 - track the _secretness_ of its value
 
 Output transformations available in Besom:
-- [`map` and `flatMap`](apply_methods) methods take a callback that receives the plain value, and computes a new output
-- [lifting](lifting) directly read properties off an output value
-- [interpolation](interpolator) concatenate string outputs with other strings directly
+
+- [`map` and `flatMap`](apply_methods.md) methods take a callback that receives the plain value, and computes a new
+  output
+- [lifting](lifting.md) directly read properties off an output value
+- [interpolation](interpolator.md) concatenate string outputs with other strings directly
 - `sequence` method combines multiple outputs into a single output of a list
 - `zip` method combines multiple outputs into a single output of a tuple
 - `traverse` method transforms a map of outputs into a single output of a map
@@ -215,7 +217,7 @@ val names: List[String] = List("John", "Paul")
 val outputNames: Output[List[String]] = names.traverse(name => Output(name))
 ```
 
-To access `String` outputs directly, use the [interpolator](interpolator):
+To access `String` outputs directly, use the [interpolator](interpolator.md):
 
 ```scala
 val port: Output[Int] = pod.port
@@ -223,8 +225,8 @@ val host: Output[String] = node.hostname
 val https: Output[String] = p"https://$host:$port/api/"
 ```
 
-We encourage you to learn more about relationship between [resources](#resources) and [outputs](#inputs-and-outputs) 
-in the [Resource constructors and asynchronicity](constructors) section.
+We encourage you to learn more about relationship between [resources](#resources) and [outputs](#inputs-and-outputs)
+in the [Resource constructors and asynchronicity](constructors.md) section.
 
 #### Configuration
 

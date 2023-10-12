@@ -2,8 +2,8 @@
 title: Exports
 ---
 
-Pulumi stack can export values as [Stack Outputs](basics#stack-outputs)
-to expose values to the user and share values between stacks using [Stack References](basics#stack-references).
+Pulumi stack can export values as [Stack Outputs](basics.md#stack-outputs)
+to expose values to the user and share values between stacks using [Stack References](basics.md#stack-references).
 
 In other SDKs you are free to call an `export` method on the Pulumi Context object whenever you want in a program. 
 Besom's functional design disallows this - since **your program is a function**, exported keys and values have to be 

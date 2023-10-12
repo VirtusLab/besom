@@ -12,7 +12,7 @@ To make this common pattern easier Besom implements a **type-safe interpolator**
 val o1: Output[Int] = pod.port
 val o2: Output[String] = node.hostname
 val version: String = "v1"
-​
+
 // or just p"" for shorthand
 val http: Output[String]  = pulumi"http://$o2:$o1/api/$version/" 
 val https: Output[String] = p"https://$o2:$o1/api/$version/"

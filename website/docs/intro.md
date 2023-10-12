@@ -24,8 +24,8 @@ We want to allow our users to benefit from Scala's compiler support to **catch p
 of programs that manage the live infrastructure. We believe that **typeful functional** programming is the best approach 
 for mission-critical software like infrastructure-as-code solutions.
 
-Besom follows the general model of Pulumi SDKs and operates using the **same basic constructs and primitives**. 
-It is therefore strongly advised to get acquainted with [**Pulumi's basics**](basics) section as 
+Besom follows the general model of Pulumi SDKs and operates using the **same basic constructs and primitives**.
+It is therefore strongly advised to get acquainted with [**Pulumi's basics**](basics.md) section as
 a fast way to get up to speed with the general concepts. 
 
 #### Uniqueness
@@ -43,7 +43,9 @@ written in functional style, to name two:
 - smaller chunks of the program have to be composed into the main flow of the program to be executed. 
 
 #### Next steps:
-- [Getting started](getting_started) section helps you **get your hands dirty** and figure out the details as you go
-- [Basics](basics) offers an **executive summary** of Pulumi's key concepts and how they are implemented in Besom
-- [Tutorial](tutorial) is a **crash course in cloud engineering** using Scala, Pulumi and AWS
-- [Architecture Overview](architecture) helps you learn more about the **details and differences** between Besom and other Pulumi SDKs
+
+- [Getting started](getting_started.md) section helps you **get your hands dirty** and figure out the details as you go
+- [Basics](basics.md) offers an **executive summary** of Pulumi's key concepts and how they are implemented in Besom
+- [Tutorial](tutorial.md) is a **crash course in cloud engineering** using Scala, Pulumi and AWS
+- [Architecture Overview](architecture.md) helps you learn more about the **details and differences** between Besom and
+  other Pulumi SDKs

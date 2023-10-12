@@ -16,7 +16,8 @@ using the Scala programming language. Scala support is currently in **Public Bet
 
 * **[Besom Docs](https://virtuslab.github.io/besom/)**: Learn about Besom concepts, follow user-guides, and consult the reference documentation.
 
-* **[Examples](examples)**: Browse Scala examples across many clouds and scenarios including containers, serverless, and infrastructure.
+* **[Examples](./examples)**: Browse Scala examples across many clouds and scenarios including containers, serverless,
+  and infrastructure.
 
 ## <a name="getting-started"></a>Getting Started
 
@@ -92,8 +93,8 @@ using the Scala programming language. Scala support is currently in **Public Bet
 
 To learn more, head over to 
 [virtuslab.github.io/besom](https://virtuslab.github.io/besom/) for much more information, including
-[tutorial](https://virtuslab.github.io/besom/docs/tutorial), 
-[examples](examples), 
+[tutorial](https://virtuslab.github.io/besom/docs/tutorial),
+[examples](./examples),
 and [architecture and programming model concepts](https://virtuslab.github.io/besom/docs/architecture).
 
 ## Explaining the project structure
@@ -153,7 +154,7 @@ Other build tools are supported via the `runtime.options.binary`
 configuration option that can point to a pre-built jar in
 `Pulumi.yaml`, e.g.:
 
-```
+```yaml
 name: myproject
 runtime:
   name: scala
@@ -183,7 +184,6 @@ is being added to an already existing project that uses sbt as the main build to
 IDE setup for `sbt` works automatically with both Intellij IDEA and Metals.
 
 [Mill](https://mill-build.com/) is not yet supported.
-
 
 ## Contributing
 

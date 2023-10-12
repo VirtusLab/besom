@@ -6,11 +6,11 @@ import TabItem from '@theme/TabItem';
 
 ### Resources
 
-Resources are the [primary construct of Pulumi](basics#resources) programs.
+Resources are the [primary construct of Pulumi](basics.md#resources) programs.
 
 ### Outputs
 
-Outputs are the [primary asynchronous data structure of Pulumi](basics#inputs-and-outputs) programs.
+Outputs are the [primary asynchronous data structure of Pulumi](basics.md#inputs-and-outputs) programs.
 
 ### Resource constructor syntax
 

@@ -5,12 +5,12 @@ title: Laziness
 
 Due to Besom's **lazy semantics** it's possible to declare resources in code and never actually execute that code.
 
-Let's expand on the `s3Bucket` example used in the [Exports](exports) section:
-​
+Let's expand on the `s3Bucket` example used in the [Exports](exports.md) section:
+
 ```scala
 import besom.*
 import besom.api.aws
-​
+
 @main def main = Pulumi.run {
   val s3Bucket: Output[aws.s3.Bucket] = aws.s3.Bucket("my-bucket")
   
@@ -27,10 +27,10 @@ are the Outputs of that resource you should manually compose it so that the reso
 ```scala
 import besom.*
 import besom.api.aws
-​
+
 @main def main = Pulumi.run {
   val s3Bucket: Output[aws.s3.Bucket] = aws.s3.Bucket("my-bucket")
-​
+
   for 
     _ <- s3Bucket
   yield Pulumi.exports() 
@@ -43,21 +43,19 @@ it into the main flow of the program and evaluate it:
 ```scala
 import besom.*
 import besom.api.aws
-​
+
 @main def main = Pulumi.run {
   val s3Bucket: Output[aws.s3.Bucket] = aws.s3.Bucket("my-bucket")
-​
+
   Output(Pulumi.exports(s3Url = s3Bucket.map(_.websiteEndpoint)))
 }
 ```
 This will also work if you pass any of the Outputs of any resource as inputs to another resource's constructor.
-​
 
 To help you avoid mistakes with dangling resources that never get evaluated we are working on a feature that will warn 
 you during dry run phase that there were resource constructor calls encountered during the evaluation of your program 
 that were never composed back into the main flow of the Besom program. 
 Meanwhile, you can use the `-Wunused:all` compiler flag.
-​
 
 There's also one more property of Besom's resource constructors that needs a mention here. Pure, functional programs are 
 expected to **execute side effects** as many times as they are executed. 
@@ -66,7 +64,7 @@ Let's see this on an example:
 ```scala
 import besom.*
 import besom.api.aws
-​
+
 @main def main = Pulumi.run {
   val s3Bucket: Output[aws.s3.Bucket] = aws.s3.Bucket("my-bucket")
   val launchMissiles: Output[_] = Output { launch() }

@@ -12,7 +12,7 @@ yet functional serverless application built in Scala 3. The target environment w
 [Amazon Web Services](https://aws.amazon.com/). Everything covered in this tutorial fits into the free tier so the only requirement is to 
 actually have an AWS account. You can [create one here](https://portal.aws.amazon.com/billing/signup) if you don't have one.
 
-To start first install all the necessary tools mentioned in [Getting started](./getting_started) section.
+To start first install all the necessary tools mentioned in [Getting started](./getting_started.md) section.
 
 You will also need to obtain **AWS Access Key ID** and **AWS Secret Access Key** from IAM Console. Once you have them,
 install [the AWS CLI](https://aws.amazon.com/cli/) for your platform and perform 
@@ -491,7 +491,8 @@ val addIntegration = apigateway.Integration(
 )
 ```
 
-Finally, you have to create a deployment of the API with it's stage (here's where we reuse the `stageName` value from Lambdas section!):
+Finally, you have to create a deployment of the API with its stage (here's where we reuse the `stageName` value from
+Lambdas section):
 
 ```scala
 val apiDeployment = apigateway.Deployment(
@@ -545,8 +546,9 @@ Two things that need attention here is that API deployment has to be sequenced w
 [`deleteBeforeReplace` resource option](https://www.pulumi.com/docs/concepts/options/deletebeforereplace/) makes 
 an appearance. These are necessary for AWS to correctly handle the deployment of these resources.
 
-Ok, that's it. Add *all* of these resources to the final `for/yield` block and then modify the [`exports`](./exports)) block
-so that it matches this:
+Ok, that's it. Add *all* of these resources to the final `for/yield` block and then modify
+the [`exports`](./exports.md))
+block so that it matches this:
 ```scala
 Pulumi.exports(
   feedBucket = bucket.bucket,

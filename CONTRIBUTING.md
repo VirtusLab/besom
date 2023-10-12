@@ -64,6 +64,7 @@ You will want to install the following on your machine:
 - [just](https://github.com/casey/just#installation) 1.14.0 or higher
 - git 2.37.1 or higher
 - unzip
+- coursier
 
 ### Preparing a pull request
 

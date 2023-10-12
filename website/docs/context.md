@@ -18,7 +18,7 @@ Here's a sample:
 
 ```scala
 import besom.*
- 
+
 // functions used in besom that are outside of `Pulumi.run` 
 // have to have `(using Context)` parameter clause
 def createAComponent(name: String)(using Context) =
@@ -36,3 +36,4 @@ def createAComponent(name: String)(using Context) =
     aComponentUrn = component.urn
   )
 }
+```

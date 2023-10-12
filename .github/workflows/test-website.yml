@@ -15,14 +15,22 @@ jobs:
       run:
         working-directory: website
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: extractions/setup-just@v1
+        with:
+          just-version: '1.14.0' # just for sanity
       - uses: actions/setup-node@v3
         with:
           node-version: 18
           cache: yarn
           cache-dependency-path: '**/package-lock.json'
-
+      - uses: coursier/cache-action@v6
+      - uses: coursier/setup-action@v1
+        with:
+          apps: mdoc
       - name: Install dependencies
         run: yarn install --frozen-lockfile
       - name: Test build website
         run: yarn build
+      - name: Run mdoc
+        run: just test-markdown
