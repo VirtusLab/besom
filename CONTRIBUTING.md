@@ -65,6 +65,17 @@ You will want to install the following on your machine:
 - git 2.37.1 or higher
 - unzip
 
+#### Mac OS
+
+```bash
+brew install pulumi/tap/pulumi
+brew install Virtuslab/scala-cli/scala-cli
+brew install coursier/formulas/coursier
+brew install just
+brew install git
+brew install unzip
+```
+
 ### Preparing a pull request
 
 1. Ensure running `just` passes with no issues.
