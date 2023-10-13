@@ -180,15 +180,6 @@ build-language-host $GOOS="" $GOARCH="":
 # Builds the entire scala language plugin
 build-language-plugin: build-language-plugin-bootstrap build-language-host
 
-# Runs the tests for the language plugin assuming it has already been built
-run-language-plugin-tests:
-	PULUMI_SCALA_PLUGIN_VERSION={{besom-version}} \
-	PULUMI_SCALA_PLUGIN_LOCAL_PATH={{language-plugin-output-dir}} \
-	scala-cli test language-plugin/tests/src
-
-# Builds and tests the language plugin
-test-language-plugin: build-language-plugin run-language-plugin-tests
-
 # Installs the scala language plugin locally
 install-language-plugin: build-language-plugin
 	#!/usr/bin/env sh
@@ -257,7 +248,7 @@ publish-local-provider-sdk schema-name schema-version:
 ####################
 
 # Runs all integration tests
-test-integration: test-integration-core test-integration-compiler-plugin test-integration-codegen test-language-plugin
+test-integration: test-integration-core test-integration-compiler-plugin test-integration-codegen test-integration-language-plugin
 	scala-cli --power test integration-tests
 
 # Cleans after integration tests
@@ -274,6 +265,11 @@ test-integration-core: publish-local-core install-language-plugin publish-local-
 # Runs integration tests for compiler plugin
 test-integration-compiler-plugin: publish-local-core install-language-plugin publish-local-compiler-plugin
 	scala-cli --power test integration-tests --test-only 'besom.integration.compilerplugin*'
+
+# Runs integration tests for language plugin
+test-integration-language-plugin: publish-local-core install-language-plugin publish-local-compiler-plugin
+	PULUMI_SCALA_PLUGIN_LOCAL_PATH={{language-plugin-output-dir}} \
+	scala-cli --power test integration-tests --test-only 'besom.integration.languageplugin*'
 
 # Runs integration tests for codegen
 test-integration-codegen: compile-codegen

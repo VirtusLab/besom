@@ -1,0 +1,10 @@
+name: language-plugin-test
+description: jar executor test
+runtime:
+  name: scala
+  options:
+    binary: app.jar
+    # language host debugging options, for full list of options:
+    #   ~/.pulumi/plugins/language-scala-v0.1.0/pulumi-language-scala -h
+    v: 5
+    logtostderr: true
