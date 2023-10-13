@@ -1,6 +1,0 @@
-name: language-plugin-test
-description: jar executor test
-runtime:
-  name: scala
-  options:
-    binary: app.jar

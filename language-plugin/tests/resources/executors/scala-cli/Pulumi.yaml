@@ -1,4 +1,0 @@
-name: language-plugin-test
-description: scala-cli executor test
-runtime:
-  name: scala
