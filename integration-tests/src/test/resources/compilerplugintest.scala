@@ -4,8 +4,6 @@
 
 import besom.*
 
-case class Data(name: Output[String], age: Int)
-
 @main
 def main = Pulumi.run {
   val name: Output[String] = Output("Biden")
@@ -60,7 +58,7 @@ def main = Pulumi.run {
   }
 
   implicit val ageOutput: Output[Int] = Output(30)
-  takesMultipleParameterLists(anOutput) // Should detect that ageOutput is unused.
+  takesMultipleParameterLists(anOutput)
 
   val tupleWithOutput = (Output("First"), "Second")
   tupleWithOutput._1 // error
@@ -68,8 +66,9 @@ def main = Pulumi.run {
   val optionWithOutput: Option[Output[String]] = Some(Output("Hello"))
   optionWithOutput.map { case IgnoredOutput(_) => "Ignored" } // correct, no error
   optionWithOutput.map { output => "This should raise an error" } // error
+  optionWithOutput.map { _ => "This should raise an error" } // error
 
-  // case class Data(name: Output[String], age: Int)
+  case class Data(name: Output[String], age: Int)
   val myData = Data(Output("John"), 25)
   myData.name // error
 
@@ -82,7 +81,7 @@ def main = Pulumi.run {
     y <- Output("Y")
     z <- for {
       a <- Output("A")
-      IgnoredOutput(_) <- Output("B")
+      IgnoredOutput(_) <- Output(Output("B"))
     } yield a
     w <- Output("W")
   } yield x

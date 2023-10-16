@@ -161,26 +161,16 @@ object Output:
 
     def isGeneratedIgnoredOutputMatch(tree: Tree): Boolean = tree match {
       case Match(_, cases) =>
-        // cases.map(_.pattern).exists {
-        //   case Typed(Unapply(TypeApply(Select(term, "unapply"), _), _, _), _)
-        //   if term.toString.contains("IgnoredOutput")/*term.tpe <:< ignoredOutputSymbol.typeRef*/ =>
-        //     true
-        //   case Unapply(TypeApply(Select(term, "unapply"), _), _, _)
-        //   if term.toString.contains("IgnoredOutput")/*term.tpe <:< ignoredOutputSymbol.typeRef*/ =>
-        //     true
-        //   case expr: Typed => // this doesn't match:
-        //     // Typed(UnApply(TypeApply(Select(Ident(IgnoredOutput),unapply),List(TypeTree[TypeRef(TermRef(ThisType(TypeRef(NoPrefix,module class <root>)),object scala),Any)])),List(),List(Ident(_))),TypeTree[AppliedType(TypeRef(TermRef(ThisType(TypeRef(NoPrefix,module class besom)),object internal),Output),List(TypeRef(TermRef(ThisType(TypeRef(NoPrefix,module class <root>)),object scala),Any)))])
-        //     // :/ WTF not?!
-        //     println("1")
-        //     println((expr.expr))
-        //     true
-        //   case tree =>
-        //     println("2")
-        //     println(tree.getClass())
-        //     println((tree))
-        //     false
-        // }
-        cases.map(_.pattern).exists(_.toString().contains("IgnoredOutput")) // I'm sorry
+        cases.map(_.pattern).exists {
+          case Typed(Unapply(TypeApply(Select(term, "unapply"), _), _, _), _)
+          if term.tpe <:< ignoredOutputSymbol.typeRef =>
+            true
+          case Unapply(TypeApply(Select(term, "unapply"), _), _, _)
+          if term.tpe <:< ignoredOutputSymbol.typeRef =>
+            true
+          case tree =>
+            false
+        }
       case _ =>
         false
     }
