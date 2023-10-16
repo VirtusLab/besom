@@ -73,6 +73,7 @@ brew install Virtuslab/scala-cli/scala-cli
 brew install coursier/formulas/coursier
 brew install just
 brew install java11
+brew install sbt
 brew install go
 brew install git
 brew install unzip
