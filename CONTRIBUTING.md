@@ -72,6 +72,7 @@ brew install pulumi/tap/pulumi
 brew install Virtuslab/scala-cli/scala-cli
 brew install coursier/formulas/coursier
 brew install just
+brew install java11
 brew install git
 brew install unzip
 ```
