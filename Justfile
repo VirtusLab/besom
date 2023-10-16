@@ -310,6 +310,20 @@ clean-test-examples:
 	for file in `ls -d examples/*/ | cut -f2 -d'/'`; do just clean-test-example $file; done
 
 ####################
+# Website and docs
+####################
+
+# Runs tests for website and docs
+test-markdown:
+	cs launch org.scalameta:mdoc_2.12:2.3.8 -- --in ./README.md ./CONTRIBUTING.md --out target/mdoc-readme --site.version=$(cat version.txt)
+	cs launch org.scalameta:mdoc_2.12:2.3.8 -- --in ./website --out target/mdoc-website --exclude node_modules --site.version=$(cat version.txt)
+
+# Cleans after website and docs tests
+clean-test-markdown:
+	rm -rf target/mdoc-readme
+	rm -rf target/mdoc-website
+
+####################
 # Demo
 ####################
 

@@ -26,14 +26,14 @@ Here's a small example using the S3 bucket resource again:
 import besom.*
 import besom.api.aws
 import java.time.OffsetDateTime
-​
+
 case class ZooVisit(
   catPicsUrl: Output[String], 
   parrotPicsUrl: Output[String]
 )(using ComponentBase) 
   extends ComponentResource 
   derives RegistersOutputs
-​
+
 def ZooVisit(date: OffsetDateTime)(using Context): Output[ZooVisit] = 
   component(s"zoo-visit-at-$date", "user:component:ZooVisit") { 
     for 
@@ -41,7 +41,7 @@ def ZooVisit(date: OffsetDateTime)(using Context): Output[ZooVisit] =
       parrotsUrl <- aws.s3.Bucket(s"parrot-$date").websiteEndpoint
     yield ZooVisit(catsUrl, parrotsUrl)
   }
-​
+
 @main def main = Pulumi.run {
 	ZooVisit(OffsetDateTime.now()).map { visit =>
 		Pulumi.exports(
