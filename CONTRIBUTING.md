@@ -66,6 +66,20 @@ You will want to install the following on your machine:
 - unzip
 - coursier
 
+#### Mac OS
+
+```bash
+brew install pulumi/tap/pulumi
+brew install Virtuslab/scala-cli/scala-cli
+brew install coursier/formulas/coursier
+brew install just
+brew install java11
+brew install sbt
+brew install go
+brew install git
+brew install unzip
+```
+
 ### Preparing a pull request
 
 1. Ensure running `just` passes with no issues.
