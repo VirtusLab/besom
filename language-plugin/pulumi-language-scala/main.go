@@ -13,9 +13,10 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
+	"path/filepath"
 	"strings"
 	"time"
-	"path/filepath"
 
 	"github.com/virtuslab/besom/language-host/executors"
 	"github.com/virtuslab/besom/language-host/fsys"
@@ -24,7 +25,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource/plugin"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/util/cmdutil"
-	"github.com/pulumi/pulumi/sdk/v3/go/common/util/executable"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/util/logging"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/util/rpcutil"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/version"
@@ -50,23 +50,19 @@ func main() {
 		"Use the given program as the executor instead of looking for one on PATH")
 
 	flag.Parse()
-	var cancelChannel chan bool
 	args := flag.Args()
 	logging.InitLogging(false, 0, false)
 	cmdutil.InitTracing("pulumi-language-scala", "pulumi-language-scala", tracing)
 
 	wd, err := os.Getwd()
-
 	if err != nil {
 		cmdutil.Exit(fmt.Errorf("could not get the working directory: %w", err))
 	}
 
 	execPath, err := os.Executable()
-
 	if err != nil {
 		cmdutil.Exit(fmt.Errorf("could not get the path of the executable: %w", err))
 	}
-
 	bootstrapLibJarPath := filepath.Join(filepath.Dir(execPath), "bootstrap.jar") // TODO: hardocoded jar name
 
 	scalaExecOptions := executors.ScalaExecutorOptions{
@@ -76,54 +72,46 @@ func main() {
 		BootstrapLibJarPath: bootstrapLibJarPath,
 	}
 
-	// Optionally pluck out the engine so we can do logging, etc.
+	// Optionally pluck out the engine, so we can do logging, etc.
 	var engineAddress string
 	if len(args) > 0 {
 		engineAddress = args[0]
-		var err error
-		cancelChannel, err = setupHealthChecks(engineAddress)
-
-		if err != nil {
-			cmdutil.Exit(errors.Wrapf(err, "could not start health check host RPC server"))
-		}
 	}
 
-	// Fire up a gRPC server, letting the kernel choose a free port.
-	port, done, err := rpcutil.Serve(0, cancelChannel, []func(*grpc.Server) error{
-		func(srv *grpc.Server) error {
-			host := newLanguageHost(scalaExecOptions, engineAddress, tracing)
-			pulumirpc.RegisterLanguageRuntimeServer(srv, host)
-			return nil
-		},
-	}, nil)
-	if err != nil {
-		cmdutil.Exit(errors.Wrapf(err, "could not start language host RPC server"))
-	}
-
-	// Otherwise, print out the port so that the spawner knows how to reach us.
-	fmt.Printf("%d\n", port)
-
-	// And finally wait for the server to stop serving.
-	if err := <-done; err != nil {
-		cmdutil.Exit(errors.Wrapf(err, "language host RPC stopped serving"))
-	}
-}
-
-func setupHealthChecks(engineAddress string) (chan bool, error) {
-	// If we have a host cancel our cancellation context if it fails the healthcheck
-	ctx, cancel := context.WithCancel(context.Background())
-
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	// map the context Done channel to the rpcutil boolean cancel channel
 	cancelChannel := make(chan bool)
 	go func() {
 		<-ctx.Done()
+		cancel() // deregister the interrupt handler
 		close(cancelChannel)
 	}()
-	err := rpcutil.Healthcheck(ctx, engineAddress, 5*time.Minute, cancel)
+	err = rpcutil.Healthcheck(ctx, engineAddress, 5*time.Minute, cancel)
 	if err != nil {
-		return nil, err
+		cmdutil.Exit(fmt.Errorf("could not start health check host RPC server: %w", err))
 	}
-	return cancelChannel, nil
+
+	// Fire up a gRPC server, letting the kernel choose a free port.
+	handle, err := rpcutil.ServeWithOptions(rpcutil.ServeOptions{
+		Cancel: cancelChannel,
+		Init: func(srv *grpc.Server) error {
+			host := newLanguageHost(scalaExecOptions, engineAddress, tracing)
+			pulumirpc.RegisterLanguageRuntimeServer(srv, host)
+			return nil
+		},
+		Options: rpcutil.OpenTracingServerInterceptorOptions(nil),
+	})
+	if err != nil {
+		cmdutil.Exit(fmt.Errorf("could not start language host RPC server: %w", err))
+	}
+
+	// Otherwise, print out the port so that the spawner knows how to reach us.
+	fmt.Printf("%d\n", handle.Port)
+
+	// And finally wait for the server to stop serving.
+	if err := <-handle.Done; err != nil {
+		cmdutil.Exit(errors.Wrapf(err, "language host RPC stopped serving"))
+	}
 }
 
 // scalaLanguageHost implements the LanguageRuntimeServer interface
@@ -140,16 +128,6 @@ type scalaLanguageHost struct {
 func newLanguageHost(execOptions executors.ScalaExecutorOptions,
 	engineAddress, tracing string,
 ) /* pulumirpc.LanguageRuntimeServer */ *scalaLanguageHost {
-	return &scalaLanguageHost{
-		execOptions:   execOptions,
-		engineAddress: engineAddress,
-		tracing:       tracing,
-	}
-}
-
-func tmpNewLanguageHost(execOptions executors.ScalaExecutorOptions,
-	engineAddress, tracing string,
-) *scalaLanguageHost {
 	return &scalaLanguageHost{
 		execOptions:   execOptions,
 		engineAddress: engineAddress,
@@ -222,10 +200,9 @@ func (host *scalaLanguageHost) determinePulumiPackages(
 	// Run our classpath introspection from the SDK and parse the resulting JSON
 	cmd := exec.Cmd
 	args := exec.PluginArgs
-	quiet := true
-	output, err := host.runHostCommand(ctx, exec.Dir, cmd, args, quiet)
+	output, err := host.runHostCommand(ctx, exec.Dir, cmd, args, true, false)
 	if err != nil {
-		// Plugin determination is an advisory feature so it does not need to escalate to an error.
+		// Plugin determination is an advisory feature, so it does not need to escalate to an error.
 		logging.V(3).Infof("language host could not run plugin discovery command successfully, "+
 			"returning empty plugins; cause: %s", err)
 		logging.V(3).Infof("%s", output.stdout)
@@ -241,7 +218,7 @@ func (host *scalaLanguageHost) determinePulumiPackages(
 		if e, ok := err.(*json.SyntaxError); ok {
 			logging.V(5).Infof("JSON syntax error at byte offset %d", e.Offset)
 		}
-		// Plugin determination is an advisory feature so it doe not need to escalate to an error.
+		// Plugin determination is an advisory feature, so it does not need to escalate to an error.
 		logging.V(3).Infof("language host could not unmarshall plugin package information, "+
 			"returning empty plugins; cause: %s", err)
 		return []plugin.PulumiPluginJSON{}, nil
@@ -256,35 +233,37 @@ type hostCommandOutput struct {
 }
 
 func (host *scalaLanguageHost) runHostCommand(
-	ctx context.Context, dir, name string, args []string, quiet bool,
+	ctx context.Context, dir, name string, args []string, quiet bool, combineOutput bool,
 ) (hostCommandOutput, error) {
 	commandStr := strings.Join(args, " ")
 	if logging.V(5) {
-		logging.V(5).Infoln("Language host launching process: ", name, commandStr)
-	}
-
-	stdoutBuffer := &bytes.Buffer{}
-	stderrBuffer := &bytes.Buffer{}
-
-	var stdoutWriter io.Writer = stdoutBuffer
-	var stderrWriter io.Writer = stderrBuffer
-
-	if !quiet {
-		stdoutWriter = io.MultiWriter(os.Stdout, stdoutWriter)
-		stderrWriter = io.MultiWriter(os.Stderr, stderrWriter)
+		logging.V(5).Infoln("Language host launching process: ", name, " ", commandStr)
 	}
 
 	// Now simply spawn a process to execute the requested program, wiring up stdout/stderr directly.
-	cmd := exec.Command(name, args...) // nolint: gas // intentionally running dynamic program name.
+	cmd := exec.CommandContext(ctx, name, args...) // nolint: gas // intentionally running dynamic program name.
 	if dir != "" {
 		cmd.Dir = dir
 	}
 
+	stdoutBuffer := &bytes.Buffer{}
+	stderrBuffer := &bytes.Buffer{}
+	var stdoutWriter io.Writer = stdoutBuffer
+	if !quiet {
+		stdoutWriter = io.MultiWriter(os.Stdout, stdoutWriter)
+	}
 	cmd.Stdout = stdoutWriter
-	cmd.Stderr = stderrWriter
+	if combineOutput {
+		cmd.Stderr = stdoutWriter // redirect stderr to stdout
+	} else {
+		var stderrWriter io.Writer = stderrBuffer
+		if !quiet {
+			stderrWriter = io.MultiWriter(os.Stderr, stderrWriter)
+		}
+		cmd.Stderr = stderrWriter
+	}
 
 	err := runCommand(cmd)
-
 	if err == nil && logging.V(5) {
 		logging.V(5).Infof("'%v %v' completed successfully\n", name, commandStr)
 	}
@@ -321,12 +300,12 @@ func (host *scalaLanguageHost) Run(ctx context.Context, req *pulumirpc.RunReques
 
 	if logging.V(5) {
 		commandStr := strings.Join(args, " ")
-		logging.V(5).Infoln("Language host launching process: ", executable, commandStr)
+		logging.V(5).Infoln("Language host launching process: ", executable, " ", commandStr)
 	}
 
 	// Now simply spawn a process to execute the requested program, wiring up stdout/stderr directly.
 	var errResult string
-	cmd := exec.Command(executable, args...) // nolint: gas // intentionally running dynamic program name.
+	cmd := exec.CommandContext(ctx, executable, args...) // nolint: gas // intentionally running dynamic program name.
 	if executor.Dir != "" {
 		cmd.Dir = executor.Dir
 	}
@@ -352,7 +331,7 @@ func (host *scalaLanguageHost) Run(ctx context.Context, req *pulumirpc.RunReques
 }
 
 // constructEnv constructs an environ for `pulumi-language-scala`
-// by enumerating all of the optional and non-optional evn vars present
+// by enumerating all the optional and non-optional evn vars present
 // in a RunRequest.
 func (host *scalaLanguageHost) constructEnv(req *pulumirpc.RunRequest, config, configSecretKeys string) []string {
 	env := os.Environ()
@@ -409,7 +388,7 @@ func (host *scalaLanguageHost) constructConfigSecretKeys(req *pulumirpc.RunReque
 	return string(configSecretKeysJSON), nil
 }
 
-func (host *scalaLanguageHost) GetPluginInfo(ctx context.Context, req *pbempty.Empty) (*pulumirpc.PluginInfo, error) {
+func (host *scalaLanguageHost) GetPluginInfo(_ context.Context, _ *pbempty.Empty) (*pulumirpc.PluginInfo, error) {
 	return &pulumirpc.PluginInfo{
 		Version: version.Version,
 	}, nil
@@ -461,44 +440,38 @@ func (host *scalaLanguageHost) GetProgramDependencies(
 	return &pulumirpc.GetProgramDependenciesResponse{}, nil
 }
 
-func (host *scalaLanguageHost) About(ctx context.Context, req *emptypb.Empty) (*pulumirpc.AboutResponse, error) {
-	getResponse := func(collectStderr bool, execString string, args ...string) (string, error) {
-		ex, err := executable.FindExecutable(execString)
-		if err != nil {
-			return "", fmt.Errorf("could not find executable '%s': %w", execString, err)
-		}
-		cmd := exec.Command(ex, args...)
-		var out []byte
-
-		if collectStderr {
-			out, err = cmd.CombinedOutput()
-		} else {
-			out, err = cmd.Output()
-		}
-
-		if err != nil {
-			cmd := ex
-			if len(args) != 0 {
-				cmd += " " + strings.Join(args, " ")
-			}
-			return "", fmt.Errorf("failed to execute '%s'", cmd)
-		}
-		return strings.TrimSpace(string(out)), nil
-	}
-
+func (host *scalaLanguageHost) About(ctx context.Context, _ *emptypb.Empty) (*pulumirpc.AboutResponse, error) {
 	metadata := make(map[string]string)
 
-	if javaVersion, err := getResponse(true, "java", "-version"); err == nil {
-		metadata["java"] = strings.ReplaceAll(javaVersion, "\n", "; ")
+	scalaExec, err := host.Executor()
+	if err != nil {
+		return nil, err
 	}
 
-	if scalaCliVersion, err := getResponse(false, "scala-cli", "version", "--cli"); err == nil {
-		metadata["scala-cli"] = scalaCliVersion
+	javaExec, err := executors.NewScalaExecutor(executors.ScalaExecutorOptions{
+		UseExecutor:         "jar",
+		WD:                  host.execOptions.WD,
+		BootstrapLibJarPath: host.execOptions.BootstrapLibJarPath,
+		Binary:              host.execOptions.Binary,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if javaVersion, err := host.runHostCommand(
+		ctx, javaExec.Dir, javaExec.Cmd, javaExec.VersionArgs, true, true,
+	); err == nil {
+		metadata["java"] = strings.ReplaceAll(strings.TrimSpace(javaVersion.stdout), "\n", "; ")
+	}
+
+	if executorVersion, err := host.runHostCommand(
+		ctx, scalaExec.Dir, scalaExec.Cmd, scalaExec.VersionArgs, true, false,
+	); err == nil {
+		metadata[scalaExec.Name] = strings.TrimSpace(executorVersion.stdout)
 	}
 
 	return &pulumirpc.AboutResponse{
-		Executable: "",
-		Version:    "",
+		Executable: scalaExec.Cmd,
+		Version:    version.Version,
 		Metadata:   metadata,
 	}, nil
 }

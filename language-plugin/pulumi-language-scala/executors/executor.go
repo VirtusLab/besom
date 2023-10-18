@@ -8,9 +8,12 @@ import (
 	"github.com/virtuslab/besom/language-host/fsys"
 )
 
-// Abstracts interactions with a Scala project, ability to build, run
+// ScalaExecutor abstracts interactions with a Scala project, ability to build, run
 // Scala code, and detect plugin dependencies.
 type ScalaExecutor struct {
+	// User-friendly name of the executor.
+	Name string
+
 	// Path to the command to run.
 	Cmd string
 
@@ -27,9 +30,12 @@ type ScalaExecutor struct {
 	// Command to autodetect and print Pulumi plugins depended on
 	// by the Scala program.
 	PluginArgs []string
+
+	// Command to print the version of the command.
+	VersionArgs []string
 }
 
-// Information available to pick an executor.
+// ScalaExecutorOptions contains information used to pick an executor.
 type ScalaExecutorOptions struct {
 	// Current working directory. Abstract to enable testing.
 	WD fsys.ParentFS
@@ -48,8 +54,8 @@ type ScalaExecutorOptions struct {
 }
 
 type scalaExecutorFactory interface {
-	// Tries configuring an executor from the given options. May
-	// return nil if options are not-applicable.
+	// NewScalaExecutor tries configuring an executor from the given options.
+	// May return nil if options are not-applicable.
 	NewScalaExecutor(ScalaExecutorOptions) (*ScalaExecutor, error)
 }
 
@@ -63,7 +69,7 @@ func NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, error) {
 		return nil, err
 	}
 	if e == nil {
-		return nil, fmt.Errorf("failed to configure executor, tried: scala-cli, sbt, jar")
+		return nil, fmt.Errorf("failed to configure executor, tried: jar, sbt, scala-cli")
 	}
 	return e, nil
 }

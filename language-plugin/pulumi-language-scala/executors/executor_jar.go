@@ -33,9 +33,11 @@ func (jarexec) newJarExecutor(cmd string, bootstrapLibJarPath string, rawBinaryP
 	classPath := bootstrapLibJarPath + ":" + binaryPath
 
 	return &ScalaExecutor{
-		Cmd:        cmd,
-		BuildArgs:  nil, // not supported
-		RunArgs:    []string{"-jar", binaryPath},
-		PluginArgs: []string{"-cp", classPath, "besom.bootstrap.PulumiPluginsDiscoverer"},
+		Name:        "jar",
+		Cmd:         cmd,
+		BuildArgs:   nil, // not supported
+		RunArgs:     []string{"-jar", binaryPath},
+		PluginArgs:  []string{"-cp", classPath, "besom.bootstrap.PulumiPluginsDiscoverer"},
+		VersionArgs: []string{"-version"},
 	}, nil
 }
