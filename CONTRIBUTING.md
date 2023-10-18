@@ -254,12 +254,56 @@ DO NOT remove dependencies from `project.scala`, because they are necessary in b
 
 ## Troubleshooting
 
-### `git` failed to clone or checkout the repository
+### GitHub might be throttling your requests
 
+If you see an error like this:
+- `git` failed to clone or checkout the repository
+- `pulumi` failed to download the provider (401)
 GitHub might be throttling your requests, try to authenticate:
 
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
+```
+
+### Verbosity and debugging options
+
+Pulumi has a few options that can help with debugging.
+
+#### CLI command line
+
+You can pass [debug options](https://www.pulumi.com/docs/support/troubleshooting/#verbose-logging) 
+to any `pulumi` CLI command, e.g.:
+```bash
+pulumi up -v5 --logtostderr
+```
+
+Use the flag `--logflow` to apply the same log level to resource providers (but not a language provider).
+
+#### `Pulumi.yaml` `runtime.options`
+
+You can set `runtime.options` in `Pulumi.yaml` to pass options to the language host provider, e.g.:
+```yaml
+name: example
+runtime:
+  name: scala
+  options:
+    logtostderr: true
+    v: 5
+```
+
+#### Environment variables
+
+- `PULUMI_BESOM_LOG_LEVEL` - for setting Besom log level (default is `WARN`)
+- `PULUMI_ENABLE_TRACE_LOGGING_TO_FILE` - for enabling Besom trace logging to file
+- `PULUMI_DEBUG_COMMANDS=1` - for activating hidden debugging Pulumi CLI commands
+- `TF_LOG=TRACE` - for debugging Terraform-based provider
+
+#### Tracing
+
+To collect and view [a trace](https://www.pulumi.com/docs/support/troubleshooting/#tracing):
+```bash
+pulumi up --tracing=file:./up.trace
+PULUMI_DEBUG_COMMANDS=1 pulumi view-trace ./up.trace
 ```
 
 ## Getting Help
