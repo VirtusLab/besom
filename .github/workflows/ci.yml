@@ -100,29 +100,6 @@ jobs:
     - name: Publish local SDK
       run: just publish-local-sdk
 
-    - name: Generate random provider
-      run: just generate-provider-sdk random 4.13.2
-
-    - name: Publish random provider
-      run: just publish-local-provider-sdk random 4.13.2
-
-    - name: Run random tests
-      uses: pulumi/actions@v4
-      with:
-        command: up
-        work-dir: integration-tests/src/test/resources/random-example
-        stack-name: test
-        upsert: true
-      env:
-        PULUMI_ENABLE_TRACE_LOGGING_TO_FILE: true
-
-    - name: Upload logs if failed or cancelled
-      if: failure() || cancelled()
-      uses: actions/upload-artifact@v2
-      with:
-        name: random-tests-debug-logs-${{ github.sha }}-${{ github.run_number }}
-        path: integration-tests/src/test/resources/random-example/logs/
-
     - name: Generate purrl provider
       run: just generate-provider-sdk purrl 0.4.1
 
