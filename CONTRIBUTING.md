@@ -155,20 +155,6 @@ automatically test templates, for example to test
 just test-template default
 ```
 
-### Testing codegen locally
-
-Codegen is tested by running:
-
-```bash
-just test-integration-codegen
-```
-
-To update test schema files from upstream:
-
-```bash
-just copy-test-schemas
-```
-
 ### Testing Protobuf/gRPC codegen locally
 
 Protobuf/gRPC codegen is tested by running:
