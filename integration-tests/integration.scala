@@ -11,6 +11,7 @@ val scalaVersion         = "3.3.1"
 val coreVersion          = os.read(os.pwd / "version.txt").trim
 val scalaPluginVersion   = coreVersion
 val scalaPluginLocalPath = envVar("PULUMI_SCALA_PLUGIN_LOCAL_PATH").map(os.Path(_))
+val providerRandomVersion = s"4.13.2-core.$coreVersion"
 
 val defaultProjectFile =
   s"""|//> using scala $scalaVersion

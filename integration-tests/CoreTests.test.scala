@@ -13,9 +13,27 @@ class CoreTests extends munit.FunSuite {
     ),
     teardown = pulumi.fixture.teardown
   ).test("SDK logging be visible in Pulumi CLI") { ctx =>
-    val result = pulumi.preview(ctx.stackName).call(cwd = ctx.testDir, env = ctx.env)
+    val result = pulumi.up(ctx.stackName).call(cwd = ctx.testDir, env = ctx.env)
     val output = result.out.text()
     assert(output.contains("Nothing here yet. It's waiting for you!"), s"Output:\n$output\n")
+    assert(result.exitCode == 0)
+  }
+
+  FunFixture[pulumi.FixtureContext](
+    setup = {
+      pulumi.fixture.setup(
+        wd / "resources" / "random-example",
+        projectFiles = Map(
+          "project.scala" ->
+            (defaultProjectFile + s"""//> using dep org.virtuslab::besom-random:$providerRandomVersion""")
+        )
+      )
+    },
+    teardown = pulumi.fixture.teardown
+  ).test("random provider and memoization should work") { ctx =>
+    val result = pulumi.up(ctx.stackName).call(cwd = ctx.testDir, env = ctx.env)
+    val output = result.out.text()
+    assert(output.contains("randomString:"), s"Output:\n$output\n")
     assert(result.exitCode == 0)
   }
 }
