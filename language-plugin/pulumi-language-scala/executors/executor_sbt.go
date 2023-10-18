@@ -57,10 +57,12 @@ func (sbt) newSbtExecutor(cmd string, bootstrapLibJarPath string) (*ScalaExecuto
 	sbtModule := os.Getenv("BESOM_SBT_MODULE")
 
 	se := &ScalaExecutor{
-		Cmd:        cmd,
-		BuildArgs:  makeArgs(sbtModule, "compile"),
-		RunArgs:    makeArgs(sbtModule, "run"),
-		PluginArgs: append([]string{"-batch", "-error"}, makePluginsSbtCommandParts(sbtModule, bootstrapLibJarPath)),
+		Name:        "sbt",
+		Cmd:         cmd,
+		RunArgs:     makeArgs(sbtModule, "run"),
+		BuildArgs:   makeArgs(sbtModule, "compile"),
+		PluginArgs:  append([]string{"-batch", "-error"}, makePluginsSbtCommandParts(sbtModule, bootstrapLibJarPath)),
+		VersionArgs: []string{"--numeric-version"},
 	}
 
 	return se, nil
