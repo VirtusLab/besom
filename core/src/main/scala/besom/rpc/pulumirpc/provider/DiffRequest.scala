@@ -10,11 +10,13 @@ package pulumirpc.provider
   * @param urn
   *   the Pulumi URN for this resource.
   * @param olds
-  *   the old values of provider inputs to diff.
+  *   the old output values of resource to diff.
   * @param news
-  *   the new values of provider inputs to diff.
+  *   the new input values of resource to diff.
   * @param ignoreChanges
   *   a set of property paths that should be treated as unchanged.
+  * @param oldInputs
+  *   the old input values of the resource to diff.
   */
 @SerialVersionUID(0L)
 final case class DiffRequest(
@@ -23,6 +25,7 @@ final case class DiffRequest(
     olds: _root_.scala.Option[com.google.protobuf.struct.Struct] = _root_.scala.None,
     news: _root_.scala.Option[com.google.protobuf.struct.Struct] = _root_.scala.None,
     ignoreChanges: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
+    oldInputs: _root_.scala.Option[com.google.protobuf.struct.Struct] = _root_.scala.None,
     unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
     ) extends scalapb.GeneratedMessage with scalapb.lenses.Updatable[DiffRequest] {
     @transient
@@ -55,6 +58,10 @@ final case class DiffRequest(
         val __value = __item
         __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(5, __value)
       }
+      if (oldInputs.isDefined) {
+        val __value = oldInputs.get
+        __size += 1 + _root_.com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag(__value.serializedSize) + __value.serializedSize
+      };
       __size += unknownFields.serializedSize
       __size
     }
@@ -96,6 +103,12 @@ final case class DiffRequest(
         val __m = __v
         _output__.writeString(5, __m)
       };
+      oldInputs.foreach { __v =>
+        val __m = __v
+        _output__.writeTag(6, 2)
+        _output__.writeUInt32NoTag(__m.serializedSize)
+        __m.writeTo(_output__)
+      };
       unknownFields.writeTo(_output__)
     }
     def withId(__v: _root_.scala.Predef.String): DiffRequest = copy(id = __v)
@@ -110,6 +123,9 @@ final case class DiffRequest(
     def addIgnoreChanges(__vs: _root_.scala.Predef.String *): DiffRequest = addAllIgnoreChanges(__vs)
     def addAllIgnoreChanges(__vs: Iterable[_root_.scala.Predef.String]): DiffRequest = copy(ignoreChanges = ignoreChanges ++ __vs)
     def withIgnoreChanges(__v: _root_.scala.Seq[_root_.scala.Predef.String]): DiffRequest = copy(ignoreChanges = __v)
+    def getOldInputs: com.google.protobuf.struct.Struct = oldInputs.getOrElse(com.google.protobuf.struct.Struct.defaultInstance)
+    def clearOldInputs: DiffRequest = copy(oldInputs = _root_.scala.None)
+    def withOldInputs(__v: com.google.protobuf.struct.Struct): DiffRequest = copy(oldInputs = Option(__v))
     def withUnknownFields(__v: _root_.scalapb.UnknownFieldSet) = copy(unknownFields = __v)
     def discardUnknownFields = copy(unknownFields = _root_.scalapb.UnknownFieldSet.empty)
     def getFieldByNumber(__fieldNumber: _root_.scala.Int): _root_.scala.Any = {
@@ -125,6 +141,7 @@ final case class DiffRequest(
         case 3 => olds.orNull
         case 4 => news.orNull
         case 5 => ignoreChanges
+        case 6 => oldInputs.orNull
       }
     }
     def getField(__field: _root_.scalapb.descriptors.FieldDescriptor): _root_.scalapb.descriptors.PValue = {
@@ -135,6 +152,7 @@ final case class DiffRequest(
         case 3 => olds.map(_.toPMessage).getOrElse(_root_.scalapb.descriptors.PEmpty)
         case 4 => news.map(_.toPMessage).getOrElse(_root_.scalapb.descriptors.PEmpty)
         case 5 => _root_.scalapb.descriptors.PRepeated(ignoreChanges.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
+        case 6 => oldInputs.map(_.toPMessage).getOrElse(_root_.scalapb.descriptors.PEmpty)
       }
     }
     def toProtoString: _root_.scala.Predef.String = _root_.scalapb.TextFormat.printToUnicodeString(this)
@@ -150,6 +168,7 @@ object DiffRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
     var __olds: _root_.scala.Option[com.google.protobuf.struct.Struct] = _root_.scala.None
     var __news: _root_.scala.Option[com.google.protobuf.struct.Struct] = _root_.scala.None
     val __ignoreChanges: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
+    var __oldInputs: _root_.scala.Option[com.google.protobuf.struct.Struct] = _root_.scala.None
     var `_unknownFields__`: _root_.scalapb.UnknownFieldSet.Builder = null
     var _done__ = false
     while (!_done__) {
@@ -166,6 +185,8 @@ object DiffRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
           __news = Option(__news.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 42 =>
           __ignoreChanges += _input__.readStringRequireUtf8()
+        case 50 =>
+          __oldInputs = Option(__oldInputs.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -179,6 +200,7 @@ object DiffRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
         olds = __olds,
         news = __news,
         ignoreChanges = __ignoreChanges.result(),
+        oldInputs = __oldInputs,
         unknownFields = if (_unknownFields__ == null) _root_.scalapb.UnknownFieldSet.empty else _unknownFields__.result()
     )
   }
@@ -190,7 +212,8 @@ object DiffRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
         urn = __fieldsMap.get(scalaDescriptor.findFieldByNumber(2).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
         olds = __fieldsMap.get(scalaDescriptor.findFieldByNumber(3).get).flatMap(_.as[_root_.scala.Option[com.google.protobuf.struct.Struct]]),
         news = __fieldsMap.get(scalaDescriptor.findFieldByNumber(4).get).flatMap(_.as[_root_.scala.Option[com.google.protobuf.struct.Struct]]),
-        ignoreChanges = __fieldsMap.get(scalaDescriptor.findFieldByNumber(5).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty)
+        ignoreChanges = __fieldsMap.get(scalaDescriptor.findFieldByNumber(5).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
+        oldInputs = __fieldsMap.get(scalaDescriptor.findFieldByNumber(6).get).flatMap(_.as[_root_.scala.Option[com.google.protobuf.struct.Struct]])
       )
     case _ => throw new RuntimeException("Expected PMessage")
   }
@@ -201,6 +224,7 @@ object DiffRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
     (__number: @_root_.scala.unchecked) match {
       case 3 => __out = com.google.protobuf.struct.Struct
       case 4 => __out = com.google.protobuf.struct.Struct
+      case 6 => __out = com.google.protobuf.struct.Struct
     }
     __out
   }
@@ -211,7 +235,8 @@ object DiffRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
     urn = "",
     olds = _root_.scala.None,
     news = _root_.scala.None,
-    ignoreChanges = _root_.scala.Seq.empty
+    ignoreChanges = _root_.scala.Seq.empty,
+    oldInputs = _root_.scala.None
   )
   implicit class DiffRequestLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.DiffRequest]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.provider.DiffRequest](_l) {
     def id: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.id)((c_, f_) => c_.copy(id = f_))
@@ -221,24 +246,29 @@ object DiffRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
     def news: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getNews)((c_, f_) => c_.copy(news = Option(f_)))
     def optionalNews: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.news)((c_, f_) => c_.copy(news = f_))
     def ignoreChanges: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.ignoreChanges)((c_, f_) => c_.copy(ignoreChanges = f_))
+    def oldInputs: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getOldInputs)((c_, f_) => c_.copy(oldInputs = Option(f_)))
+    def optionalOldInputs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.oldInputs)((c_, f_) => c_.copy(oldInputs = f_))
   }
   final val ID_FIELD_NUMBER = 1
   final val URN_FIELD_NUMBER = 2
   final val OLDS_FIELD_NUMBER = 3
   final val NEWS_FIELD_NUMBER = 4
   final val IGNORECHANGES_FIELD_NUMBER = 5
+  final val OLD_INPUTS_FIELD_NUMBER = 6
   def of(
     id: _root_.scala.Predef.String,
     urn: _root_.scala.Predef.String,
     olds: _root_.scala.Option[com.google.protobuf.struct.Struct],
     news: _root_.scala.Option[com.google.protobuf.struct.Struct],
-    ignoreChanges: _root_.scala.Seq[_root_.scala.Predef.String]
+    ignoreChanges: _root_.scala.Seq[_root_.scala.Predef.String],
+    oldInputs: _root_.scala.Option[com.google.protobuf.struct.Struct]
   ): _root_.pulumirpc.provider.DiffRequest = _root_.pulumirpc.provider.DiffRequest(
     id,
     urn,
     olds,
     news,
-    ignoreChanges
+    ignoreChanges,
+    oldInputs
   )
   // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.DiffRequest])
 }

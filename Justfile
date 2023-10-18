@@ -46,6 +46,7 @@ compile-all: compile-sdk compile-codegen build-language-plugin
 # Language SDK
 ####################
 
+# Compiles the protobufs for the language SDK
 compile-pulumi-protobufs:
 	scala-cli run ./scripts -M proto -- all
 

@@ -31,6 +31,10 @@ package pulumirpc.resource
   *   when true operations should return resource references as strongly typed.
   * @param pluginDownloadURL
   *   the server url of the provider to use when servicing this request.
+  * @param pluginChecksums
+  *   a map of checksums of the provider to use when servicing this request.
+  * @param sourcePosition
+  *   the optional source position of the user code that initiated the read.
   */
 @SerialVersionUID(0L)
 final case class ReadResourceRequest(
@@ -46,6 +50,8 @@ final case class ReadResourceRequest(
     additionalSecretOutputs: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
     acceptResources: _root_.scala.Boolean = false,
     pluginDownloadURL: _root_.scala.Predef.String = "",
+    pluginChecksums: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString] = _root_.scala.collection.immutable.Map.empty,
+    sourcePosition: _root_.scala.Option[pulumirpc.source.SourcePosition] = _root_.scala.None,
     unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
     ) extends scalapb.GeneratedMessage with scalapb.lenses.Updatable[ReadResourceRequest] {
     @transient
@@ -126,6 +132,14 @@ final case class ReadResourceRequest(
         if (!__value.isEmpty) {
           __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(13, __value)
         }
+      };
+      pluginChecksums.foreach { __item =>
+        val __value = pulumirpc.resource.ReadResourceRequest._typemapper_pluginChecksums.toBase(__item)
+        __size += 1 + _root_.com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag(__value.serializedSize) + __value.serializedSize
+      }
+      if (sourcePosition.isDefined) {
+        val __value = sourcePosition.get
+        __size += 1 + _root_.com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag(__value.serializedSize) + __value.serializedSize
       };
       __size += unknownFields.serializedSize
       __size
@@ -208,6 +222,18 @@ final case class ReadResourceRequest(
           _output__.writeString(13, __v)
         }
       };
+      sourcePosition.foreach { __v =>
+        val __m = __v
+        _output__.writeTag(14, 2)
+        _output__.writeUInt32NoTag(__m.serializedSize)
+        __m.writeTo(_output__)
+      };
+      pluginChecksums.foreach { __v =>
+        val __m = pulumirpc.resource.ReadResourceRequest._typemapper_pluginChecksums.toBase(__v)
+        _output__.writeTag(15, 2)
+        _output__.writeUInt32NoTag(__m.serializedSize)
+        __m.writeTo(_output__)
+      };
       unknownFields.writeTo(_output__)
     }
     def withId(__v: _root_.scala.Predef.String): ReadResourceRequest = copy(id = __v)
@@ -230,6 +256,13 @@ final case class ReadResourceRequest(
     def withAdditionalSecretOutputs(__v: _root_.scala.Seq[_root_.scala.Predef.String]): ReadResourceRequest = copy(additionalSecretOutputs = __v)
     def withAcceptResources(__v: _root_.scala.Boolean): ReadResourceRequest = copy(acceptResources = __v)
     def withPluginDownloadURL(__v: _root_.scala.Predef.String): ReadResourceRequest = copy(pluginDownloadURL = __v)
+    def clearPluginChecksums = copy(pluginChecksums = _root_.scala.collection.immutable.Map.empty)
+    def addPluginChecksums(__vs: (_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString) *): ReadResourceRequest = addAllPluginChecksums(__vs)
+    def addAllPluginChecksums(__vs: Iterable[(_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString)]): ReadResourceRequest = copy(pluginChecksums = pluginChecksums ++ __vs)
+    def withPluginChecksums(__v: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString]): ReadResourceRequest = copy(pluginChecksums = __v)
+    def getSourcePosition: pulumirpc.source.SourcePosition = sourcePosition.getOrElse(pulumirpc.source.SourcePosition.defaultInstance)
+    def clearSourcePosition: ReadResourceRequest = copy(sourcePosition = _root_.scala.None)
+    def withSourcePosition(__v: pulumirpc.source.SourcePosition): ReadResourceRequest = copy(sourcePosition = Option(__v))
     def withUnknownFields(__v: _root_.scalapb.UnknownFieldSet) = copy(unknownFields = __v)
     def discardUnknownFields = copy(unknownFields = _root_.scalapb.UnknownFieldSet.empty)
     def getFieldByNumber(__fieldNumber: _root_.scala.Int): _root_.scala.Any = {
@@ -273,6 +306,8 @@ final case class ReadResourceRequest(
           val __t = pluginDownloadURL
           if (__t != "") __t else null
         }
+        case 15 => pluginChecksums.iterator.map(pulumirpc.resource.ReadResourceRequest._typemapper_pluginChecksums.toBase(_)).toSeq
+        case 14 => sourcePosition.orNull
       }
     }
     def getField(__field: _root_.scalapb.descriptors.FieldDescriptor): _root_.scalapb.descriptors.PValue = {
@@ -290,6 +325,8 @@ final case class ReadResourceRequest(
         case 10 => _root_.scalapb.descriptors.PRepeated(additionalSecretOutputs.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
         case 12 => _root_.scalapb.descriptors.PBoolean(acceptResources)
         case 13 => _root_.scalapb.descriptors.PString(pluginDownloadURL)
+        case 15 => _root_.scalapb.descriptors.PRepeated(pluginChecksums.iterator.map(pulumirpc.resource.ReadResourceRequest._typemapper_pluginChecksums.toBase(_).toPMessage).toVector)
+        case 14 => sourcePosition.map(_.toPMessage).getOrElse(_root_.scalapb.descriptors.PEmpty)
       }
     }
     def toProtoString: _root_.scala.Predef.String = _root_.scalapb.TextFormat.printToUnicodeString(this)
@@ -312,6 +349,8 @@ object ReadResourceRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.r
     val __additionalSecretOutputs: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
     var __acceptResources: _root_.scala.Boolean = false
     var __pluginDownloadURL: _root_.scala.Predef.String = ""
+    val __pluginChecksums: _root_.scala.collection.mutable.Builder[(_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString), _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString]] = _root_.scala.collection.immutable.Map.newBuilder[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString]
+    var __sourcePosition: _root_.scala.Option[pulumirpc.source.SourcePosition] = _root_.scala.None
     var `_unknownFields__`: _root_.scalapb.UnknownFieldSet.Builder = null
     var _done__ = false
     while (!_done__) {
@@ -342,6 +381,10 @@ object ReadResourceRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.r
           __acceptResources = _input__.readBool()
         case 106 =>
           __pluginDownloadURL = _input__.readStringRequireUtf8()
+        case 122 =>
+          __pluginChecksums += pulumirpc.resource.ReadResourceRequest._typemapper_pluginChecksums.toCustom(_root_.scalapb.LiteParser.readMessage[pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry](_input__))
+        case 114 =>
+          __sourcePosition = Option(__sourcePosition.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.source.SourcePosition](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -362,6 +405,8 @@ object ReadResourceRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.r
         additionalSecretOutputs = __additionalSecretOutputs.result(),
         acceptResources = __acceptResources,
         pluginDownloadURL = __pluginDownloadURL,
+        pluginChecksums = __pluginChecksums.result(),
+        sourcePosition = __sourcePosition,
         unknownFields = if (_unknownFields__ == null) _root_.scalapb.UnknownFieldSet.empty else _unknownFields__.result()
     )
   }
@@ -380,20 +425,27 @@ object ReadResourceRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.r
         acceptSecrets = __fieldsMap.get(scalaDescriptor.findFieldByNumber(9).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
         additionalSecretOutputs = __fieldsMap.get(scalaDescriptor.findFieldByNumber(10).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
         acceptResources = __fieldsMap.get(scalaDescriptor.findFieldByNumber(12).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
-        pluginDownloadURL = __fieldsMap.get(scalaDescriptor.findFieldByNumber(13).get).map(_.as[_root_.scala.Predef.String]).getOrElse("")
+        pluginDownloadURL = __fieldsMap.get(scalaDescriptor.findFieldByNumber(13).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
+        pluginChecksums = __fieldsMap.get(scalaDescriptor.findFieldByNumber(15).get).map(_.as[_root_.scala.Seq[pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry]]).getOrElse(_root_.scala.Seq.empty).iterator.map(pulumirpc.resource.ReadResourceRequest._typemapper_pluginChecksums.toCustom(_)).toMap,
+        sourcePosition = __fieldsMap.get(scalaDescriptor.findFieldByNumber(14).get).flatMap(_.as[_root_.scala.Option[pulumirpc.source.SourcePosition]])
       )
     case _ => throw new RuntimeException("Expected PMessage")
   }
-  def javaDescriptor: _root_.com.google.protobuf.Descriptors.Descriptor = ResourceProto.javaDescriptor.getMessageTypes().get(3)
-  def scalaDescriptor: _root_.scalapb.descriptors.Descriptor = ResourceProto.scalaDescriptor.messages(3)
+  def javaDescriptor: _root_.com.google.protobuf.Descriptors.Descriptor = ResourceProto.javaDescriptor.getMessageTypes().get(2)
+  def scalaDescriptor: _root_.scalapb.descriptors.Descriptor = ResourceProto.scalaDescriptor.messages(2)
   def messageCompanionForFieldNumber(__number: _root_.scala.Int): _root_.scalapb.GeneratedMessageCompanion[_] = {
     var __out: _root_.scalapb.GeneratedMessageCompanion[_] = null
     (__number: @_root_.scala.unchecked) match {
       case 5 => __out = com.google.protobuf.struct.Struct
+      case 15 => __out = pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry
+      case 14 => __out = pulumirpc.source.SourcePosition
     }
     __out
   }
-  lazy val nestedMessagesCompanions: Seq[_root_.scalapb.GeneratedMessageCompanion[_ <: _root_.scalapb.GeneratedMessage]] = Seq.empty
+  lazy val nestedMessagesCompanions: Seq[_root_.scalapb.GeneratedMessageCompanion[_ <: _root_.scalapb.GeneratedMessage]] =
+    Seq[_root_.scalapb.GeneratedMessageCompanion[_ <: _root_.scalapb.GeneratedMessage]](
+      _root_.pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry
+    )
   def enumCompanionForFieldNumber(__fieldNumber: _root_.scala.Int): _root_.scalapb.GeneratedEnumCompanion[_] = throw new MatchError(__fieldNumber)
   lazy val defaultInstance = pulumirpc.resource.ReadResourceRequest(
     id = "",
@@ -407,8 +459,154 @@ object ReadResourceRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.r
     acceptSecrets = false,
     additionalSecretOutputs = _root_.scala.Seq.empty,
     acceptResources = false,
-    pluginDownloadURL = ""
+    pluginDownloadURL = "",
+    pluginChecksums = _root_.scala.collection.immutable.Map.empty,
+    sourcePosition = _root_.scala.None
   )
+  @SerialVersionUID(0L)
+  final case class PluginChecksumsEntry(
+      key: _root_.scala.Predef.String = "",
+      value: _root_.com.google.protobuf.ByteString = _root_.com.google.protobuf.ByteString.EMPTY,
+      unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
+      ) extends scalapb.GeneratedMessage with scalapb.lenses.Updatable[PluginChecksumsEntry] {
+      @transient
+      private[this] var __serializedSizeMemoized: _root_.scala.Int = 0
+      private[this] def __computeSerializedSize(): _root_.scala.Int = {
+        var __size = 0
+        
+        {
+          val __value = key
+          if (!__value.isEmpty) {
+            __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(1, __value)
+          }
+        };
+        
+        {
+          val __value = value
+          if (!__value.isEmpty) {
+            __size += _root_.com.google.protobuf.CodedOutputStream.computeBytesSize(2, __value)
+          }
+        };
+        __size += unknownFields.serializedSize
+        __size
+      }
+      override def serializedSize: _root_.scala.Int = {
+        var __size = __serializedSizeMemoized
+        if (__size == 0) {
+          __size = __computeSerializedSize() + 1
+          __serializedSizeMemoized = __size
+        }
+        __size - 1
+        
+      }
+      def writeTo(`_output__`: _root_.com.google.protobuf.CodedOutputStream): _root_.scala.Unit = {
+        {
+          val __v = key
+          if (!__v.isEmpty) {
+            _output__.writeString(1, __v)
+          }
+        };
+        {
+          val __v = value
+          if (!__v.isEmpty) {
+            _output__.writeBytes(2, __v)
+          }
+        };
+        unknownFields.writeTo(_output__)
+      }
+      def withKey(__v: _root_.scala.Predef.String): PluginChecksumsEntry = copy(key = __v)
+      def withValue(__v: _root_.com.google.protobuf.ByteString): PluginChecksumsEntry = copy(value = __v)
+      def withUnknownFields(__v: _root_.scalapb.UnknownFieldSet) = copy(unknownFields = __v)
+      def discardUnknownFields = copy(unknownFields = _root_.scalapb.UnknownFieldSet.empty)
+      def getFieldByNumber(__fieldNumber: _root_.scala.Int): _root_.scala.Any = {
+        (__fieldNumber: @_root_.scala.unchecked) match {
+          case 1 => {
+            val __t = key
+            if (__t != "") __t else null
+          }
+          case 2 => {
+            val __t = value
+            if (__t != _root_.com.google.protobuf.ByteString.EMPTY) __t else null
+          }
+        }
+      }
+      def getField(__field: _root_.scalapb.descriptors.FieldDescriptor): _root_.scalapb.descriptors.PValue = {
+        _root_.scala.Predef.require(__field.containingMessage eq companion.scalaDescriptor)
+        (__field.number: @_root_.scala.unchecked) match {
+          case 1 => _root_.scalapb.descriptors.PString(key)
+          case 2 => _root_.scalapb.descriptors.PByteString(value)
+        }
+      }
+      def toProtoString: _root_.scala.Predef.String = _root_.scalapb.TextFormat.printToUnicodeString(this)
+      def companion: pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry.type = pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry
+      // @@protoc_insertion_point(GeneratedMessage[pulumirpc.ReadResourceRequest.PluginChecksumsEntry])
+  }
+  
+  object PluginChecksumsEntry extends scalapb.GeneratedMessageCompanion[pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry] {
+    implicit def messageCompanion: scalapb.GeneratedMessageCompanion[pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry] = this
+    def parseFrom(`_input__`: _root_.com.google.protobuf.CodedInputStream): pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry = {
+      var __key: _root_.scala.Predef.String = ""
+      var __value: _root_.com.google.protobuf.ByteString = _root_.com.google.protobuf.ByteString.EMPTY
+      var `_unknownFields__`: _root_.scalapb.UnknownFieldSet.Builder = null
+      var _done__ = false
+      while (!_done__) {
+        val _tag__ = _input__.readTag()
+        _tag__ match {
+          case 0 => _done__ = true
+          case 10 =>
+            __key = _input__.readStringRequireUtf8()
+          case 18 =>
+            __value = _input__.readBytes()
+          case tag =>
+            if (_unknownFields__ == null) {
+              _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
+            }
+            _unknownFields__.parseField(tag, _input__)
+        }
+      }
+      pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry(
+          key = __key,
+          value = __value,
+          unknownFields = if (_unknownFields__ == null) _root_.scalapb.UnknownFieldSet.empty else _unknownFields__.result()
+      )
+    }
+    implicit def messageReads: _root_.scalapb.descriptors.Reads[pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry] = _root_.scalapb.descriptors.Reads{
+      case _root_.scalapb.descriptors.PMessage(__fieldsMap) =>
+        _root_.scala.Predef.require(__fieldsMap.keys.forall(_.containingMessage eq scalaDescriptor), "FieldDescriptor does not match message type.")
+        pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry(
+          key = __fieldsMap.get(scalaDescriptor.findFieldByNumber(1).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
+          value = __fieldsMap.get(scalaDescriptor.findFieldByNumber(2).get).map(_.as[_root_.com.google.protobuf.ByteString]).getOrElse(_root_.com.google.protobuf.ByteString.EMPTY)
+        )
+      case _ => throw new RuntimeException("Expected PMessage")
+    }
+    def javaDescriptor: _root_.com.google.protobuf.Descriptors.Descriptor = pulumirpc.resource.ReadResourceRequest.javaDescriptor.getNestedTypes().get(0)
+    def scalaDescriptor: _root_.scalapb.descriptors.Descriptor = pulumirpc.resource.ReadResourceRequest.scalaDescriptor.nestedMessages(0)
+    def messageCompanionForFieldNumber(__number: _root_.scala.Int): _root_.scalapb.GeneratedMessageCompanion[_] = throw new MatchError(__number)
+    lazy val nestedMessagesCompanions: Seq[_root_.scalapb.GeneratedMessageCompanion[_ <: _root_.scalapb.GeneratedMessage]] = Seq.empty
+    def enumCompanionForFieldNumber(__fieldNumber: _root_.scala.Int): _root_.scalapb.GeneratedEnumCompanion[_] = throw new MatchError(__fieldNumber)
+    lazy val defaultInstance = pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry(
+      key = "",
+      value = _root_.com.google.protobuf.ByteString.EMPTY
+    )
+    implicit class PluginChecksumsEntryLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry](_l) {
+      def key: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.key)((c_, f_) => c_.copy(key = f_))
+      def value: _root_.scalapb.lenses.Lens[UpperPB, _root_.com.google.protobuf.ByteString] = field(_.value)((c_, f_) => c_.copy(value = f_))
+    }
+    final val KEY_FIELD_NUMBER = 1
+    final val VALUE_FIELD_NUMBER = 2
+    @transient
+    implicit val keyValueMapper: _root_.scalapb.TypeMapper[pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry, (_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString)] =
+      _root_.scalapb.TypeMapper[pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry, (_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString)](__m => (__m.key, __m.value))(__p => pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry(__p._1, __p._2))
+    def of(
+      key: _root_.scala.Predef.String,
+      value: _root_.com.google.protobuf.ByteString
+    ): _root_.pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry = _root_.pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry(
+      key,
+      value
+    )
+    // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.ReadResourceRequest.PluginChecksumsEntry])
+  }
+  
   implicit class ReadResourceRequestLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.ReadResourceRequest]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.resource.ReadResourceRequest](_l) {
     def id: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.id)((c_, f_) => c_.copy(id = f_))
     def `type`: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.`type`)((c_, f_) => c_.copy(`type` = f_))
@@ -423,6 +621,9 @@ object ReadResourceRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.r
     def additionalSecretOutputs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.additionalSecretOutputs)((c_, f_) => c_.copy(additionalSecretOutputs = f_))
     def acceptResources: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.acceptResources)((c_, f_) => c_.copy(acceptResources = f_))
     def pluginDownloadURL: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.pluginDownloadURL)((c_, f_) => c_.copy(pluginDownloadURL = f_))
+    def pluginChecksums: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString]] = field(_.pluginChecksums)((c_, f_) => c_.copy(pluginChecksums = f_))
+    def sourcePosition: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.source.SourcePosition] = field(_.getSourcePosition)((c_, f_) => c_.copy(sourcePosition = Option(f_)))
+    def optionalSourcePosition: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[pulumirpc.source.SourcePosition]] = field(_.sourcePosition)((c_, f_) => c_.copy(sourcePosition = f_))
   }
   final val ID_FIELD_NUMBER = 1
   final val TYPE_FIELD_NUMBER = 2
@@ -436,6 +637,10 @@ object ReadResourceRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.r
   final val ADDITIONALSECRETOUTPUTS_FIELD_NUMBER = 10
   final val ACCEPTRESOURCES_FIELD_NUMBER = 12
   final val PLUGINDOWNLOADURL_FIELD_NUMBER = 13
+  final val PLUGINCHECKSUMS_FIELD_NUMBER = 15
+  final val SOURCEPOSITION_FIELD_NUMBER = 14
+  @transient
+  private[resource] val _typemapper_pluginChecksums: _root_.scalapb.TypeMapper[pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry, (_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString)] = implicitly[_root_.scalapb.TypeMapper[pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry, (_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString)]]
   def of(
     id: _root_.scala.Predef.String,
     `type`: _root_.scala.Predef.String,
@@ -448,7 +653,9 @@ object ReadResourceRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.r
     acceptSecrets: _root_.scala.Boolean,
     additionalSecretOutputs: _root_.scala.Seq[_root_.scala.Predef.String],
     acceptResources: _root_.scala.Boolean,
-    pluginDownloadURL: _root_.scala.Predef.String
+    pluginDownloadURL: _root_.scala.Predef.String,
+    pluginChecksums: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString],
+    sourcePosition: _root_.scala.Option[pulumirpc.source.SourcePosition]
   ): _root_.pulumirpc.resource.ReadResourceRequest = _root_.pulumirpc.resource.ReadResourceRequest(
     id,
     `type`,
@@ -461,7 +668,9 @@ object ReadResourceRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.r
     acceptSecrets,
     additionalSecretOutputs,
     acceptResources,
-    pluginDownloadURL
+    pluginDownloadURL,
+    pluginChecksums,
+    sourcePosition
   )
   // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.ReadResourceRequest])
 }

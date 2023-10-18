@@ -14,13 +14,14 @@
 
 syntax = "proto3";
 
-import "plugin.proto";
+import "pulumi/plugin.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
+import "pulumi/source.proto";
 
 package pulumirpc;
 
-option go_package = "github.com/pulumi/pulumi/v3/proto/go/pulumirpc";
+option go_package = "github.com/pulumi/pulumi/sdk/v3/proto/go;pulumirpc";
 
 // ResourceProvider is a service that understands how to create, read, update, or delete resources for types defined
 // within a single package.  It is driven by the overall planning engine in response to resource diffs.
@@ -78,6 +79,15 @@ service ResourceProvider {
 
     // Attach sends the engine address to an already running plugin.
     rpc Attach(PluginAttach) returns (google.protobuf.Empty)  {}
+
+    // GetMapping fetches the mapping for this resource provider, if any. A provider should return an empty
+    // response (not an error) if it doesn't have a mapping for the given key.
+    rpc GetMapping(GetMappingRequest) returns (GetMappingResponse) {}
+
+    // GetMappings is an optional method that returns what mappings (if any) a provider supports. If a provider does not
+    // implement this method the engine falls back to the old behaviour of just calling GetMapping without a name.
+    // If this method is implemented than the engine will then call GetMapping only with the names returned from this method.
+    rpc GetMappings(GetMappingsRequest) returns (GetMappingsResponse) {}
 }
 
 message GetSchemaRequest {
@@ -93,6 +103,7 @@ message ConfigureRequest {
     google.protobuf.Struct args = 2;   // the input properties for the provider. Only filled in for newer providers.
     bool acceptSecrets  = 3;           // when true, operations should return secrets as strongly typed.
     bool acceptResources = 4;          // when true, operations should return resources as strongly typed values to the provider.
+    bool sends_old_inputs = 5;         // when true, diff and update will be called with the old outputs and the old inputs.
 }
 
 message ConfigureResponse {
@@ -140,6 +151,7 @@ message CallRequest {
     string provider = 4;                                   // an optional reference to the provider to use for this invoke.
     string version = 5;                                    // the version of the provider to use when servicing this request.
     string pluginDownloadURL = 13;                         // the pluginDownloadURL of the provider to use when servicing this request.
+    map<string, bytes> pluginChecksums = 16;               // a map of checksums of the provider to use when servicing this request.
 
     string project = 6;             // the project name.
     string stack = 7;               // the name of the stack being deployed into.
@@ -148,6 +160,9 @@ message CallRequest {
     bool dryRun = 10;                // true if we're only doing a dryrun (preview).
     int32 parallel = 11;            // the degree of parallelism for resource operations (<=1 for serial).
     string monitorEndpoint = 12;    // the address for communicating back to the resource monitor.
+    string organization = 14;       // the organization of the stack being deployed into.
+
+    SourcePosition sourcePosition = 15; // the optional source position of the user code that initiated the call.
 }
 
 message CallResponse {
@@ -165,7 +180,12 @@ message CheckRequest {
     string urn = 1;                  // the Pulumi URN for this resource.
     google.protobuf.Struct olds = 2; // the old Pulumi inputs for this resource, if any.
     google.protobuf.Struct news = 3; // the new Pulumi inputs for this resource.
-    int32 sequenceNumber = 4;        // the sequence number for this resource, or 0 if sequence is unknown.
+
+    // We used to send sequenceNumber but that has been replaced by randomSeed.
+    reserved 4;
+    reserved "sequenceNumber";
+
+    bytes randomSeed = 5;            // a deterministically random hash, primarily intended for global unique naming.
 }
 
 message CheckResponse {
@@ -181,9 +201,10 @@ message CheckFailure {
 message DiffRequest {
     string id = 1;                     // the ID of the resource to diff.
     string urn = 2;                    // the Pulumi URN for this resource.
-    google.protobuf.Struct olds = 3;   // the old values of provider inputs to diff.
-    google.protobuf.Struct news = 4;   // the new values of provider inputs to diff.
+    google.protobuf.Struct olds = 3;   // the old output values of resource to diff.
+    google.protobuf.Struct news = 4;   // the new input values of resource to diff.
     repeated string ignoreChanges = 5; // a set of property paths that should be treated as unchanged.
+    google.protobuf.Struct old_inputs = 6;   // the old input values of the resource to diff.
 }
 
 message PropertyDiff {
@@ -284,6 +305,7 @@ message UpdateRequest {
     double timeout = 5;                // the update request timeout represented in seconds.
     repeated string ignoreChanges = 6; // a set of property paths that should be treated as unchanged.
     bool preview = 7;                   // true if this is a preview and the provider should not actually create the resource.
+    google.protobuf.Struct old_inputs = 8; // the old input values of the resource to diff.
 }
 
 message UpdateResponse {
@@ -303,6 +325,29 @@ message ConstructRequest {
         repeated string urns = 1; // A list of URNs this property depends on.
     }
 
+    // CustomTimeouts specifies timeouts for resource provisioning operations.
+    // Use it with the [Timeouts] option when creating new resources
+    // to override default timeouts.
+    //
+    // Each timeout is specified as a duration string such as,
+    // "5ms" (5 milliseconds), "40s" (40 seconds),
+    // and "1m30s" (1 minute, 30 seconds).
+    //
+    // The following units are accepted.
+    //
+    //   - ns: nanoseconds
+    //   - us: microseconds
+    //   - µs: microseconds
+    //   - ms: milliseconds
+    //   - s: seconds
+    //   - m: minutes
+    //   - h: hours
+    message CustomTimeouts {
+        string create = 1;
+        string update = 2;
+        string delete = 3;
+    }
+
     string project = 1;             // the project name.
     string stack = 2;               // the name of the stack being deployed into.
     map<string, string> config = 3; // the configuration variables to apply before running.
@@ -315,11 +360,22 @@ message ConstructRequest {
     string parent = 9;                                        // an optional parent URN that this child resource belongs to.
     google.protobuf.Struct inputs = 10;                       // the inputs to the resource constructor.
     map<string, PropertyDependencies> inputDependencies = 11; // a map from property keys to the dependencies of the property.
-    bool protect = 12;                                        // true if the resource should be marked protected.
     map<string, string> providers = 13;                       // the map of providers to use for this resource's children.
-    repeated string aliases = 14;                             // a list of additional URNs that shoud be considered the same.
     repeated string dependencies = 15;                        // a list of URNs that this resource depends on, as observed by the language host.
-    repeated string configSecretKeys = 16; // the configuration keys that have secret values.
+    repeated string configSecretKeys = 16;                    // the configuration keys that have secret values.
+    string organization = 17;                                 // the organization of the stack being deployed into.
+
+    // Resource options:
+    // Do not change field IDs. Add new fields at the end.
+    bool protect                            = 12; // true if the resource should be marked protected.
+    repeated string aliases                 = 14; // a list of additional URNs that shoud be considered the same.
+    repeated string additionalSecretOutputs = 18; // additional output properties that should be treated as secrets.
+    CustomTimeouts customTimeouts           = 19; // default timeouts for CRUD operations on this resource.
+    string deletedWith                      = 20; // URN of a resource that, if deleted, also deletes this resource.
+    bool deleteBeforeReplace                = 21; // whether to delete the resource before replacing it.
+    repeated string ignoreChanges           = 22; // properties that should be ignored during a diff
+    repeated string replaceOnChanges        = 23; // properties that, when changed, trigger a replacement
+    bool retainOnDelete                     = 24; // whether to retain the resource in the cloud provider when it is deleted
 }
 
 message ConstructResponse {
@@ -340,4 +396,43 @@ message ErrorResourceInitFailed {
     google.protobuf.Struct properties = 2; // any properties that were computed during updating.
     repeated string reasons = 3;           // error messages associated with initialization failure.
     google.protobuf.Struct inputs = 4;     // the current inputs to this resource (only applicable for Read)
+}
+
+
+
+// GetMappingRequest allows providers to return ecosystem specific information to allow the provider to be
+// converted from a source markup to Pulumi. It's expected that provider bridges that target a given ecosystem
+// (e.g. Terraform, Kubernetes) would also publish a conversion plugin to convert markup from that ecosystem
+// to Pulumi, using the bridged providers.
+message GetMappingRequest {
+    // the conversion key for the mapping being requested.
+    string key = 1;
+    // the optional provider key for the mapping being requested, if this is empty the provider should assume this
+    // request is from an old engine from before GetMappings and should return it's "primary" mapping. If this is set
+    // then the `provider` field in GetMappingResponse should be the same.
+    string provider = 2;
+}
+
+// GetMappingResponse returns convert plugin specific data for this provider. This will normally be human
+// readable JSON, but the engine doesn't mandate any form.
+message GetMappingResponse {
+    // the provider key this is mapping for. For example the Pulumi provider "terraform-template" would return "template" for this.
+    string provider = 1;
+
+    // the conversion plugin specific data.
+    bytes data = 2;
+}
+
+// GetMappingsRequest allows providers to return ecosystem specific information without having to send back large data
+// blobs for provider mappings that the engine doesn't then need.
+message GetMappingsRequest {
+    // the conversion key for the mapping being requested.
+    string key = 1;
+}
+
+// GetMappingsRequest returns a list of providers that this provider can provide mapping information for.
+message GetMappingsResponse {
+    // the provider keys this provider can supply mappings for. For example the Pulumi provider "terraform-template"
+    // would return ["template"] for this.
+    repeated string providers = 1;
 }

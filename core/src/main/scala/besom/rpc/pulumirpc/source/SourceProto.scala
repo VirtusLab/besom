@@ -3,19 +3,19 @@
 //
 // Protofile syntax: PROTO3
 
-package pulumirpc.errors
+package pulumirpc.source
 
-object ErrorsProto extends _root_.scalapb.GeneratedFileObject {
+object SourceProto extends _root_.scalapb.GeneratedFileObject {
   lazy val dependencies: Seq[_root_.scalapb.GeneratedFileObject] = Seq.empty
   lazy val messagesCompanions: Seq[_root_.scalapb.GeneratedMessageCompanion[_ <: _root_.scalapb.GeneratedMessage]] =
     Seq[_root_.scalapb.GeneratedMessageCompanion[_ <: _root_.scalapb.GeneratedMessage]](
-      pulumirpc.errors.ErrorCause
+      pulumirpc.source.SourcePosition
     )
   private lazy val ProtoBytes: _root_.scala.Array[Byte] =
       scalapb.Encoding.fromBase64(scala.collection.immutable.Seq(
-  """CgxlcnJvcnMucHJvdG8SCXB1bHVtaXJwYyJlCgpFcnJvckNhdXNlEiYKB21lc3NhZ2UYASABKAlCDOI/CRIHbWVzc2FnZVIHb
-  WVzc2FnZRIvCgpzdGFja1RyYWNlGAIgASgJQg/iPwwSCnN0YWNrVHJhY2VSCnN0YWNrVHJhY2VCMFouZ2l0aHViLmNvbS9wdWx1b
-  WkvcHVsdW1pL3YzL3Byb3RvL2dvL3B1bHVtaXJwY2IGcHJvdG8z"""
+  """ChNwdWx1bWkvc291cmNlLnByb3RvEglwdWx1bWlycGMicAoOU291cmNlUG9zaXRpb24SGgoDdXJpGAEgASgJQgjiPwUSA3Vya
+  VIDdXJpEh0KBGxpbmUYAiABKAVCCeI/BhIEbGluZVIEbGluZRIjCgZjb2x1bW4YAyABKAVCC+I/CBIGY29sdW1uUgZjb2x1bW5CN
+  FoyZ2l0aHViLmNvbS9wdWx1bWkvcHVsdW1pL3Nkay92My9wcm90by9nbztwdWx1bWlycGNiBnByb3RvMw=="""
       ).mkString)
   lazy val scalaDescriptor: _root_.scalapb.descriptors.FileDescriptor = {
     val scalaProto = com.google.protobuf.descriptor.FileDescriptorProto.parseFrom(ProtoBytes)

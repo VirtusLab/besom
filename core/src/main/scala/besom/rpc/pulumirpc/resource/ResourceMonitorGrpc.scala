@@ -110,51 +110,44 @@ object ResourceMonitorGrpc {
       _root_.io.grpc.ServerServiceDefinition.builder(SERVICE)
       .addMethod(
         METHOD_SUPPORTS_FEATURE,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.resource.SupportsFeatureRequest, pulumirpc.resource.SupportsFeatureResponse] {
-          override def invoke(request: pulumirpc.resource.SupportsFeatureRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.resource.SupportsFeatureResponse]): _root_.scala.Unit =
-            serviceImpl.supportsFeature(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.resource.SupportsFeatureRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.resource.SupportsFeatureResponse]) => {
+          serviceImpl.supportsFeature(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_INVOKE,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.resource.ResourceInvokeRequest, pulumirpc.provider.InvokeResponse] {
-          override def invoke(request: pulumirpc.resource.ResourceInvokeRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.InvokeResponse]): _root_.scala.Unit =
-            serviceImpl.invoke(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.resource.ResourceInvokeRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.InvokeResponse]) => {
+          serviceImpl.invoke(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_STREAM_INVOKE,
-        _root_.io.grpc.stub.ServerCalls.asyncServerStreamingCall(new _root_.io.grpc.stub.ServerCalls.ServerStreamingMethod[pulumirpc.resource.ResourceInvokeRequest, pulumirpc.provider.InvokeResponse] {
-          override def invoke(request: pulumirpc.resource.ResourceInvokeRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.InvokeResponse]): _root_.scala.Unit =
-            serviceImpl.streamInvoke(request, observer)
+        _root_.io.grpc.stub.ServerCalls.asyncServerStreamingCall((request: pulumirpc.resource.ResourceInvokeRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.InvokeResponse]) => {
+          serviceImpl.streamInvoke(request, observer)
         }))
       .addMethod(
         METHOD_CALL,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.provider.CallRequest, pulumirpc.provider.CallResponse] {
-          override def invoke(request: pulumirpc.provider.CallRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.CallResponse]): _root_.scala.Unit =
-            serviceImpl.call(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.CallRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.CallResponse]) => {
+          serviceImpl.call(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_READ_RESOURCE,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.resource.ReadResourceRequest, pulumirpc.resource.ReadResourceResponse] {
-          override def invoke(request: pulumirpc.resource.ReadResourceRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.resource.ReadResourceResponse]): _root_.scala.Unit =
-            serviceImpl.readResource(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.resource.ReadResourceRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.resource.ReadResourceResponse]) => {
+          serviceImpl.readResource(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_REGISTER_RESOURCE,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.resource.RegisterResourceRequest, pulumirpc.resource.RegisterResourceResponse] {
-          override def invoke(request: pulumirpc.resource.RegisterResourceRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.resource.RegisterResourceResponse]): _root_.scala.Unit =
-            serviceImpl.registerResource(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.resource.RegisterResourceRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.resource.RegisterResourceResponse]) => {
+          serviceImpl.registerResource(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .addMethod(
         METHOD_REGISTER_RESOURCE_OUTPUTS,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall(new _root_.io.grpc.stub.ServerCalls.UnaryMethod[pulumirpc.resource.RegisterResourceOutputsRequest, com.google.protobuf.empty.Empty] {
-          override def invoke(request: pulumirpc.resource.RegisterResourceOutputsRequest, observer: _root_.io.grpc.stub.StreamObserver[com.google.protobuf.empty.Empty]): _root_.scala.Unit =
-            serviceImpl.registerResourceOutputs(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
-              executionContext)
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.resource.RegisterResourceOutputsRequest, observer: _root_.io.grpc.stub.StreamObserver[com.google.protobuf.empty.Empty]) => {
+          serviceImpl.registerResourceOutputs(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
         }))
       .build()
   }

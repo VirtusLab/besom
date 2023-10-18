@@ -35,7 +35,7 @@ package pulumirpc.resource
   *   when true operations should return secrets as strongly typed.
   * @param additionalSecretOutputs
   *   a list of output properties that should also be treated as secret, in addition to ones we detect.
-  * @param urnAliases
+  * @param aliasURNs
   *   a list of additional URNs that should be considered the same.
   * @param importId
   *   if set, this resource's state should be imported from the given ID.
@@ -55,10 +55,24 @@ package pulumirpc.resource
   *   a list of properties that if changed should force a replacement.
   * @param pluginDownloadURL
   *   the server URL of the provider to use when servicing this request.
+  * @param pluginChecksums
+  *   a map of checksums expected for the provider plugin.
   * @param retainOnDelete
   *   if true the engine will not call the resource providers delete method for this resource.
   * @param aliases
   *   a list of additional aliases that should be considered the same.
+  * @param deletedWith
+  *   if set the engine will not call the resource providers delete method for this resource when specified resource is deleted.
+  * @param aliasSpecs
+  *   Indicates that alias specs are specified correctly according to the spec.
+  *   Older versions of the Node.js SDK did not send alias specs correctly.
+  *   If this is not set to true and the engine detects the request is from the
+  *   Node.js runtime, the engine will transform incorrect alias specs into
+  *   correct ones.
+  *   Other SDKs that are correctly specifying alias specs could set this to
+  *   true, but it's not necessary.
+  * @param sourcePosition
+  *   the optional source position of the user code that initiated the register.
   */
 @SerialVersionUID(0L)
 final case class RegisterResourceRequest(
@@ -76,7 +90,7 @@ final case class RegisterResourceRequest(
     ignoreChanges: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
     acceptSecrets: _root_.scala.Boolean = false,
     additionalSecretOutputs: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
-    @scala.deprecated(message="Marked as deprecated in proto file", "") urnAliases: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
+    aliasURNs: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
     importId: _root_.scala.Predef.String = "",
     customTimeouts: _root_.scala.Option[pulumirpc.resource.RegisterResourceRequest.CustomTimeouts] = _root_.scala.None,
     deleteBeforeReplaceDefined: _root_.scala.Boolean = false,
@@ -86,8 +100,12 @@ final case class RegisterResourceRequest(
     providers: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.scala.Predef.String] = _root_.scala.collection.immutable.Map.empty,
     replaceOnChanges: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
     pluginDownloadURL: _root_.scala.Predef.String = "",
+    pluginChecksums: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString] = _root_.scala.collection.immutable.Map.empty,
     retainOnDelete: _root_.scala.Boolean = false,
-    aliases: _root_.scala.Seq[pulumirpc.resource.Alias] = _root_.scala.Seq.empty,
+    aliases: _root_.scala.Seq[pulumirpc.alias.Alias] = _root_.scala.Seq.empty,
+    deletedWith: _root_.scala.Predef.String = "",
+    aliasSpecs: _root_.scala.Boolean = false,
+    sourcePosition: _root_.scala.Option[pulumirpc.source.SourcePosition] = _root_.scala.None,
     unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
     ) extends scalapb.GeneratedMessage with scalapb.lenses.Updatable[RegisterResourceRequest] {
     @transient
@@ -177,7 +195,7 @@ final case class RegisterResourceRequest(
         val __value = __item
         __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(14, __value)
       }
-      urnAliases.foreach { __item =>
+      aliasURNs.foreach { __item =>
         val __value = __item
         __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(15, __value)
       }
@@ -235,6 +253,10 @@ final case class RegisterResourceRequest(
           __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(24, __value)
         }
       };
+      pluginChecksums.foreach { __item =>
+        val __value = pulumirpc.resource.RegisterResourceRequest._typemapper_pluginChecksums.toBase(__item)
+        __size += 2 + _root_.com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag(__value.serializedSize) + __value.serializedSize
+      }
       
       {
         val __value = retainOnDelete
@@ -246,6 +268,24 @@ final case class RegisterResourceRequest(
         val __value = __item
         __size += 2 + _root_.com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag(__value.serializedSize) + __value.serializedSize
       }
+      
+      {
+        val __value = deletedWith
+        if (!__value.isEmpty) {
+          __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(27, __value)
+        }
+      };
+      
+      {
+        val __value = aliasSpecs
+        if (__value != false) {
+          __size += _root_.com.google.protobuf.CodedOutputStream.computeBoolSize(28, __value)
+        }
+      };
+      if (sourcePosition.isDefined) {
+        val __value = sourcePosition.get
+        __size += 2 + _root_.com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag(__value.serializedSize) + __value.serializedSize
+      };
       __size += unknownFields.serializedSize
       __size
     }
@@ -337,7 +377,7 @@ final case class RegisterResourceRequest(
         val __m = __v
         _output__.writeString(14, __m)
       };
-      urnAliases.foreach { __v =>
+      aliasURNs.foreach { __v =>
         val __m = __v
         _output__.writeString(15, __m)
       };
@@ -405,6 +445,30 @@ final case class RegisterResourceRequest(
         _output__.writeUInt32NoTag(__m.serializedSize)
         __m.writeTo(_output__)
       };
+      {
+        val __v = deletedWith
+        if (!__v.isEmpty) {
+          _output__.writeString(27, __v)
+        }
+      };
+      {
+        val __v = aliasSpecs
+        if (__v != false) {
+          _output__.writeBool(28, __v)
+        }
+      };
+      sourcePosition.foreach { __v =>
+        val __m = __v
+        _output__.writeTag(29, 2)
+        _output__.writeUInt32NoTag(__m.serializedSize)
+        __m.writeTo(_output__)
+      };
+      pluginChecksums.foreach { __v =>
+        val __m = pulumirpc.resource.RegisterResourceRequest._typemapper_pluginChecksums.toBase(__v)
+        _output__.writeTag(30, 2)
+        _output__.writeUInt32NoTag(__m.serializedSize)
+        __m.writeTo(_output__)
+      };
       unknownFields.writeTo(_output__)
     }
     def withType(__v: _root_.scala.Predef.String): RegisterResourceRequest = copy(`type` = __v)
@@ -435,10 +499,10 @@ final case class RegisterResourceRequest(
     def addAdditionalSecretOutputs(__vs: _root_.scala.Predef.String *): RegisterResourceRequest = addAllAdditionalSecretOutputs(__vs)
     def addAllAdditionalSecretOutputs(__vs: Iterable[_root_.scala.Predef.String]): RegisterResourceRequest = copy(additionalSecretOutputs = additionalSecretOutputs ++ __vs)
     def withAdditionalSecretOutputs(__v: _root_.scala.Seq[_root_.scala.Predef.String]): RegisterResourceRequest = copy(additionalSecretOutputs = __v)
-    def clearUrnAliases = copy(urnAliases = _root_.scala.Seq.empty)
-    def addUrnAliases(__vs: _root_.scala.Predef.String *): RegisterResourceRequest = addAllUrnAliases(__vs)
-    def addAllUrnAliases(__vs: Iterable[_root_.scala.Predef.String]): RegisterResourceRequest = copy(urnAliases = urnAliases ++ __vs)
-    def withUrnAliases(__v: _root_.scala.Seq[_root_.scala.Predef.String]): RegisterResourceRequest = copy(urnAliases = __v)
+    def clearAliasURNs = copy(aliasURNs = _root_.scala.Seq.empty)
+    def addAliasURNs(__vs: _root_.scala.Predef.String *): RegisterResourceRequest = addAllAliasURNs(__vs)
+    def addAllAliasURNs(__vs: Iterable[_root_.scala.Predef.String]): RegisterResourceRequest = copy(aliasURNs = aliasURNs ++ __vs)
+    def withAliasURNs(__v: _root_.scala.Seq[_root_.scala.Predef.String]): RegisterResourceRequest = copy(aliasURNs = __v)
     def withImportId(__v: _root_.scala.Predef.String): RegisterResourceRequest = copy(importId = __v)
     def getCustomTimeouts: pulumirpc.resource.RegisterResourceRequest.CustomTimeouts = customTimeouts.getOrElse(pulumirpc.resource.RegisterResourceRequest.CustomTimeouts.defaultInstance)
     def clearCustomTimeouts: RegisterResourceRequest = copy(customTimeouts = _root_.scala.None)
@@ -456,11 +520,20 @@ final case class RegisterResourceRequest(
     def addAllReplaceOnChanges(__vs: Iterable[_root_.scala.Predef.String]): RegisterResourceRequest = copy(replaceOnChanges = replaceOnChanges ++ __vs)
     def withReplaceOnChanges(__v: _root_.scala.Seq[_root_.scala.Predef.String]): RegisterResourceRequest = copy(replaceOnChanges = __v)
     def withPluginDownloadURL(__v: _root_.scala.Predef.String): RegisterResourceRequest = copy(pluginDownloadURL = __v)
+    def clearPluginChecksums = copy(pluginChecksums = _root_.scala.collection.immutable.Map.empty)
+    def addPluginChecksums(__vs: (_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString) *): RegisterResourceRequest = addAllPluginChecksums(__vs)
+    def addAllPluginChecksums(__vs: Iterable[(_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString)]): RegisterResourceRequest = copy(pluginChecksums = pluginChecksums ++ __vs)
+    def withPluginChecksums(__v: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString]): RegisterResourceRequest = copy(pluginChecksums = __v)
     def withRetainOnDelete(__v: _root_.scala.Boolean): RegisterResourceRequest = copy(retainOnDelete = __v)
     def clearAliases = copy(aliases = _root_.scala.Seq.empty)
-    def addAliases(__vs: pulumirpc.resource.Alias *): RegisterResourceRequest = addAllAliases(__vs)
-    def addAllAliases(__vs: Iterable[pulumirpc.resource.Alias]): RegisterResourceRequest = copy(aliases = aliases ++ __vs)
-    def withAliases(__v: _root_.scala.Seq[pulumirpc.resource.Alias]): RegisterResourceRequest = copy(aliases = __v)
+    def addAliases(__vs: pulumirpc.alias.Alias *): RegisterResourceRequest = addAllAliases(__vs)
+    def addAllAliases(__vs: Iterable[pulumirpc.alias.Alias]): RegisterResourceRequest = copy(aliases = aliases ++ __vs)
+    def withAliases(__v: _root_.scala.Seq[pulumirpc.alias.Alias]): RegisterResourceRequest = copy(aliases = __v)
+    def withDeletedWith(__v: _root_.scala.Predef.String): RegisterResourceRequest = copy(deletedWith = __v)
+    def withAliasSpecs(__v: _root_.scala.Boolean): RegisterResourceRequest = copy(aliasSpecs = __v)
+    def getSourcePosition: pulumirpc.source.SourcePosition = sourcePosition.getOrElse(pulumirpc.source.SourcePosition.defaultInstance)
+    def clearSourcePosition: RegisterResourceRequest = copy(sourcePosition = _root_.scala.None)
+    def withSourcePosition(__v: pulumirpc.source.SourcePosition): RegisterResourceRequest = copy(sourcePosition = Option(__v))
     def withUnknownFields(__v: _root_.scalapb.UnknownFieldSet) = copy(unknownFields = __v)
     def discardUnknownFields = copy(unknownFields = _root_.scalapb.UnknownFieldSet.empty)
     def getFieldByNumber(__fieldNumber: _root_.scala.Int): _root_.scala.Any = {
@@ -506,7 +579,7 @@ final case class RegisterResourceRequest(
           if (__t != false) __t else null
         }
         case 14 => additionalSecretOutputs
-        case 15 => urnAliases
+        case 15 => aliasURNs
         case 16 => {
           val __t = importId
           if (__t != "") __t else null
@@ -534,11 +607,21 @@ final case class RegisterResourceRequest(
           val __t = pluginDownloadURL
           if (__t != "") __t else null
         }
+        case 30 => pluginChecksums.iterator.map(pulumirpc.resource.RegisterResourceRequest._typemapper_pluginChecksums.toBase(_)).toSeq
         case 25 => {
           val __t = retainOnDelete
           if (__t != false) __t else null
         }
         case 26 => aliases
+        case 27 => {
+          val __t = deletedWith
+          if (__t != "") __t else null
+        }
+        case 28 => {
+          val __t = aliasSpecs
+          if (__t != false) __t else null
+        }
+        case 29 => sourcePosition.orNull
       }
     }
     def getField(__field: _root_.scalapb.descriptors.FieldDescriptor): _root_.scalapb.descriptors.PValue = {
@@ -558,7 +641,7 @@ final case class RegisterResourceRequest(
         case 12 => _root_.scalapb.descriptors.PRepeated(ignoreChanges.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
         case 13 => _root_.scalapb.descriptors.PBoolean(acceptSecrets)
         case 14 => _root_.scalapb.descriptors.PRepeated(additionalSecretOutputs.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
-        case 15 => _root_.scalapb.descriptors.PRepeated(urnAliases.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
+        case 15 => _root_.scalapb.descriptors.PRepeated(aliasURNs.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
         case 16 => _root_.scalapb.descriptors.PString(importId)
         case 17 => customTimeouts.map(_.toPMessage).getOrElse(_root_.scalapb.descriptors.PEmpty)
         case 18 => _root_.scalapb.descriptors.PBoolean(deleteBeforeReplaceDefined)
@@ -568,8 +651,12 @@ final case class RegisterResourceRequest(
         case 22 => _root_.scalapb.descriptors.PRepeated(providers.iterator.map(pulumirpc.resource.RegisterResourceRequest._typemapper_providers.toBase(_).toPMessage).toVector)
         case 23 => _root_.scalapb.descriptors.PRepeated(replaceOnChanges.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
         case 24 => _root_.scalapb.descriptors.PString(pluginDownloadURL)
+        case 30 => _root_.scalapb.descriptors.PRepeated(pluginChecksums.iterator.map(pulumirpc.resource.RegisterResourceRequest._typemapper_pluginChecksums.toBase(_).toPMessage).toVector)
         case 25 => _root_.scalapb.descriptors.PBoolean(retainOnDelete)
         case 26 => _root_.scalapb.descriptors.PRepeated(aliases.iterator.map(_.toPMessage).toVector)
+        case 27 => _root_.scalapb.descriptors.PString(deletedWith)
+        case 28 => _root_.scalapb.descriptors.PBoolean(aliasSpecs)
+        case 29 => sourcePosition.map(_.toPMessage).getOrElse(_root_.scalapb.descriptors.PEmpty)
       }
     }
     def toProtoString: _root_.scala.Predef.String = _root_.scalapb.TextFormat.printToUnicodeString(this)
@@ -594,7 +681,7 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     val __ignoreChanges: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
     var __acceptSecrets: _root_.scala.Boolean = false
     val __additionalSecretOutputs: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
-    val __urnAliases: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
+    val __aliasURNs: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
     var __importId: _root_.scala.Predef.String = ""
     var __customTimeouts: _root_.scala.Option[pulumirpc.resource.RegisterResourceRequest.CustomTimeouts] = _root_.scala.None
     var __deleteBeforeReplaceDefined: _root_.scala.Boolean = false
@@ -604,8 +691,12 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     val __providers: _root_.scala.collection.mutable.Builder[(_root_.scala.Predef.String, _root_.scala.Predef.String), _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.scala.Predef.String]] = _root_.scala.collection.immutable.Map.newBuilder[_root_.scala.Predef.String, _root_.scala.Predef.String]
     val __replaceOnChanges: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
     var __pluginDownloadURL: _root_.scala.Predef.String = ""
+    val __pluginChecksums: _root_.scala.collection.mutable.Builder[(_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString), _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString]] = _root_.scala.collection.immutable.Map.newBuilder[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString]
     var __retainOnDelete: _root_.scala.Boolean = false
-    val __aliases: _root_.scala.collection.immutable.VectorBuilder[pulumirpc.resource.Alias] = new _root_.scala.collection.immutable.VectorBuilder[pulumirpc.resource.Alias]
+    val __aliases: _root_.scala.collection.immutable.VectorBuilder[pulumirpc.alias.Alias] = new _root_.scala.collection.immutable.VectorBuilder[pulumirpc.alias.Alias]
+    var __deletedWith: _root_.scala.Predef.String = ""
+    var __aliasSpecs: _root_.scala.Boolean = false
+    var __sourcePosition: _root_.scala.Option[pulumirpc.source.SourcePosition] = _root_.scala.None
     var `_unknownFields__`: _root_.scalapb.UnknownFieldSet.Builder = null
     var _done__ = false
     while (!_done__) {
@@ -641,7 +732,7 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
         case 114 =>
           __additionalSecretOutputs += _input__.readStringRequireUtf8()
         case 122 =>
-          __urnAliases += _input__.readStringRequireUtf8()
+          __aliasURNs += _input__.readStringRequireUtf8()
         case 130 =>
           __importId = _input__.readStringRequireUtf8()
         case 138 =>
@@ -660,10 +751,18 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
           __replaceOnChanges += _input__.readStringRequireUtf8()
         case 194 =>
           __pluginDownloadURL = _input__.readStringRequireUtf8()
+        case 242 =>
+          __pluginChecksums += pulumirpc.resource.RegisterResourceRequest._typemapper_pluginChecksums.toCustom(_root_.scalapb.LiteParser.readMessage[pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry](_input__))
         case 200 =>
           __retainOnDelete = _input__.readBool()
         case 210 =>
-          __aliases += _root_.scalapb.LiteParser.readMessage[pulumirpc.resource.Alias](_input__)
+          __aliases += _root_.scalapb.LiteParser.readMessage[pulumirpc.alias.Alias](_input__)
+        case 218 =>
+          __deletedWith = _input__.readStringRequireUtf8()
+        case 224 =>
+          __aliasSpecs = _input__.readBool()
+        case 234 =>
+          __sourcePosition = Option(__sourcePosition.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.source.SourcePosition](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -686,7 +785,7 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
         ignoreChanges = __ignoreChanges.result(),
         acceptSecrets = __acceptSecrets,
         additionalSecretOutputs = __additionalSecretOutputs.result(),
-        urnAliases = __urnAliases.result(),
+        aliasURNs = __aliasURNs.result(),
         importId = __importId,
         customTimeouts = __customTimeouts,
         deleteBeforeReplaceDefined = __deleteBeforeReplaceDefined,
@@ -696,8 +795,12 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
         providers = __providers.result(),
         replaceOnChanges = __replaceOnChanges.result(),
         pluginDownloadURL = __pluginDownloadURL,
+        pluginChecksums = __pluginChecksums.result(),
         retainOnDelete = __retainOnDelete,
         aliases = __aliases.result(),
+        deletedWith = __deletedWith,
+        aliasSpecs = __aliasSpecs,
+        sourcePosition = __sourcePosition,
         unknownFields = if (_unknownFields__ == null) _root_.scalapb.UnknownFieldSet.empty else _unknownFields__.result()
     )
   }
@@ -719,7 +822,7 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
         ignoreChanges = __fieldsMap.get(scalaDescriptor.findFieldByNumber(12).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
         acceptSecrets = __fieldsMap.get(scalaDescriptor.findFieldByNumber(13).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
         additionalSecretOutputs = __fieldsMap.get(scalaDescriptor.findFieldByNumber(14).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
-        urnAliases = __fieldsMap.get(scalaDescriptor.findFieldByNumber(15).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
+        aliasURNs = __fieldsMap.get(scalaDescriptor.findFieldByNumber(15).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
         importId = __fieldsMap.get(scalaDescriptor.findFieldByNumber(16).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
         customTimeouts = __fieldsMap.get(scalaDescriptor.findFieldByNumber(17).get).flatMap(_.as[_root_.scala.Option[pulumirpc.resource.RegisterResourceRequest.CustomTimeouts]]),
         deleteBeforeReplaceDefined = __fieldsMap.get(scalaDescriptor.findFieldByNumber(18).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
@@ -729,13 +832,17 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
         providers = __fieldsMap.get(scalaDescriptor.findFieldByNumber(22).get).map(_.as[_root_.scala.Seq[pulumirpc.resource.RegisterResourceRequest.ProvidersEntry]]).getOrElse(_root_.scala.Seq.empty).iterator.map(pulumirpc.resource.RegisterResourceRequest._typemapper_providers.toCustom(_)).toMap,
         replaceOnChanges = __fieldsMap.get(scalaDescriptor.findFieldByNumber(23).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
         pluginDownloadURL = __fieldsMap.get(scalaDescriptor.findFieldByNumber(24).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
+        pluginChecksums = __fieldsMap.get(scalaDescriptor.findFieldByNumber(30).get).map(_.as[_root_.scala.Seq[pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry]]).getOrElse(_root_.scala.Seq.empty).iterator.map(pulumirpc.resource.RegisterResourceRequest._typemapper_pluginChecksums.toCustom(_)).toMap,
         retainOnDelete = __fieldsMap.get(scalaDescriptor.findFieldByNumber(25).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
-        aliases = __fieldsMap.get(scalaDescriptor.findFieldByNumber(26).get).map(_.as[_root_.scala.Seq[pulumirpc.resource.Alias]]).getOrElse(_root_.scala.Seq.empty)
+        aliases = __fieldsMap.get(scalaDescriptor.findFieldByNumber(26).get).map(_.as[_root_.scala.Seq[pulumirpc.alias.Alias]]).getOrElse(_root_.scala.Seq.empty),
+        deletedWith = __fieldsMap.get(scalaDescriptor.findFieldByNumber(27).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
+        aliasSpecs = __fieldsMap.get(scalaDescriptor.findFieldByNumber(28).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
+        sourcePosition = __fieldsMap.get(scalaDescriptor.findFieldByNumber(29).get).flatMap(_.as[_root_.scala.Option[pulumirpc.source.SourcePosition]])
       )
     case _ => throw new RuntimeException("Expected PMessage")
   }
-  def javaDescriptor: _root_.com.google.protobuf.Descriptors.Descriptor = ResourceProto.javaDescriptor.getMessageTypes().get(5)
-  def scalaDescriptor: _root_.scalapb.descriptors.Descriptor = ResourceProto.scalaDescriptor.messages(5)
+  def javaDescriptor: _root_.com.google.protobuf.Descriptors.Descriptor = ResourceProto.javaDescriptor.getMessageTypes().get(4)
+  def scalaDescriptor: _root_.scalapb.descriptors.Descriptor = ResourceProto.scalaDescriptor.messages(4)
   def messageCompanionForFieldNumber(__number: _root_.scala.Int): _root_.scalapb.GeneratedMessageCompanion[_] = {
     var __out: _root_.scalapb.GeneratedMessageCompanion[_] = null
     (__number: @_root_.scala.unchecked) match {
@@ -743,7 +850,9 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
       case 9 => __out = pulumirpc.resource.RegisterResourceRequest.PropertyDependenciesEntry
       case 17 => __out = pulumirpc.resource.RegisterResourceRequest.CustomTimeouts
       case 22 => __out = pulumirpc.resource.RegisterResourceRequest.ProvidersEntry
-      case 26 => __out = pulumirpc.resource.Alias
+      case 30 => __out = pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry
+      case 26 => __out = pulumirpc.alias.Alias
+      case 29 => __out = pulumirpc.source.SourcePosition
     }
     __out
   }
@@ -752,7 +861,8 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
       _root_.pulumirpc.resource.RegisterResourceRequest.PropertyDependencies,
       _root_.pulumirpc.resource.RegisterResourceRequest.CustomTimeouts,
       _root_.pulumirpc.resource.RegisterResourceRequest.PropertyDependenciesEntry,
-      _root_.pulumirpc.resource.RegisterResourceRequest.ProvidersEntry
+      _root_.pulumirpc.resource.RegisterResourceRequest.ProvidersEntry,
+      _root_.pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry
     )
   def enumCompanionForFieldNumber(__fieldNumber: _root_.scala.Int): _root_.scalapb.GeneratedEnumCompanion[_] = throw new MatchError(__fieldNumber)
   lazy val defaultInstance = pulumirpc.resource.RegisterResourceRequest(
@@ -770,7 +880,7 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     ignoreChanges = _root_.scala.Seq.empty,
     acceptSecrets = false,
     additionalSecretOutputs = _root_.scala.Seq.empty,
-    urnAliases = _root_.scala.Seq.empty,
+    aliasURNs = _root_.scala.Seq.empty,
     importId = "",
     customTimeouts = _root_.scala.None,
     deleteBeforeReplaceDefined = false,
@@ -780,8 +890,12 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     providers = _root_.scala.collection.immutable.Map.empty,
     replaceOnChanges = _root_.scala.Seq.empty,
     pluginDownloadURL = "",
+    pluginChecksums = _root_.scala.collection.immutable.Map.empty,
     retainOnDelete = false,
-    aliases = _root_.scala.Seq.empty
+    aliases = _root_.scala.Seq.empty,
+    deletedWith = "",
+    aliasSpecs = false,
+    sourcePosition = _root_.scala.None
   )
   /** PropertyDependencies describes the resources that a particular property depends on.
     *
@@ -1365,6 +1479,150 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.RegisterResourceRequest.ProvidersEntry])
   }
   
+  @SerialVersionUID(0L)
+  final case class PluginChecksumsEntry(
+      key: _root_.scala.Predef.String = "",
+      value: _root_.com.google.protobuf.ByteString = _root_.com.google.protobuf.ByteString.EMPTY,
+      unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
+      ) extends scalapb.GeneratedMessage with scalapb.lenses.Updatable[PluginChecksumsEntry] {
+      @transient
+      private[this] var __serializedSizeMemoized: _root_.scala.Int = 0
+      private[this] def __computeSerializedSize(): _root_.scala.Int = {
+        var __size = 0
+        
+        {
+          val __value = key
+          if (!__value.isEmpty) {
+            __size += _root_.com.google.protobuf.CodedOutputStream.computeStringSize(1, __value)
+          }
+        };
+        
+        {
+          val __value = value
+          if (!__value.isEmpty) {
+            __size += _root_.com.google.protobuf.CodedOutputStream.computeBytesSize(2, __value)
+          }
+        };
+        __size += unknownFields.serializedSize
+        __size
+      }
+      override def serializedSize: _root_.scala.Int = {
+        var __size = __serializedSizeMemoized
+        if (__size == 0) {
+          __size = __computeSerializedSize() + 1
+          __serializedSizeMemoized = __size
+        }
+        __size - 1
+        
+      }
+      def writeTo(`_output__`: _root_.com.google.protobuf.CodedOutputStream): _root_.scala.Unit = {
+        {
+          val __v = key
+          if (!__v.isEmpty) {
+            _output__.writeString(1, __v)
+          }
+        };
+        {
+          val __v = value
+          if (!__v.isEmpty) {
+            _output__.writeBytes(2, __v)
+          }
+        };
+        unknownFields.writeTo(_output__)
+      }
+      def withKey(__v: _root_.scala.Predef.String): PluginChecksumsEntry = copy(key = __v)
+      def withValue(__v: _root_.com.google.protobuf.ByteString): PluginChecksumsEntry = copy(value = __v)
+      def withUnknownFields(__v: _root_.scalapb.UnknownFieldSet) = copy(unknownFields = __v)
+      def discardUnknownFields = copy(unknownFields = _root_.scalapb.UnknownFieldSet.empty)
+      def getFieldByNumber(__fieldNumber: _root_.scala.Int): _root_.scala.Any = {
+        (__fieldNumber: @_root_.scala.unchecked) match {
+          case 1 => {
+            val __t = key
+            if (__t != "") __t else null
+          }
+          case 2 => {
+            val __t = value
+            if (__t != _root_.com.google.protobuf.ByteString.EMPTY) __t else null
+          }
+        }
+      }
+      def getField(__field: _root_.scalapb.descriptors.FieldDescriptor): _root_.scalapb.descriptors.PValue = {
+        _root_.scala.Predef.require(__field.containingMessage eq companion.scalaDescriptor)
+        (__field.number: @_root_.scala.unchecked) match {
+          case 1 => _root_.scalapb.descriptors.PString(key)
+          case 2 => _root_.scalapb.descriptors.PByteString(value)
+        }
+      }
+      def toProtoString: _root_.scala.Predef.String = _root_.scalapb.TextFormat.printToUnicodeString(this)
+      def companion: pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry.type = pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry
+      // @@protoc_insertion_point(GeneratedMessage[pulumirpc.RegisterResourceRequest.PluginChecksumsEntry])
+  }
+  
+  object PluginChecksumsEntry extends scalapb.GeneratedMessageCompanion[pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry] {
+    implicit def messageCompanion: scalapb.GeneratedMessageCompanion[pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry] = this
+    def parseFrom(`_input__`: _root_.com.google.protobuf.CodedInputStream): pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry = {
+      var __key: _root_.scala.Predef.String = ""
+      var __value: _root_.com.google.protobuf.ByteString = _root_.com.google.protobuf.ByteString.EMPTY
+      var `_unknownFields__`: _root_.scalapb.UnknownFieldSet.Builder = null
+      var _done__ = false
+      while (!_done__) {
+        val _tag__ = _input__.readTag()
+        _tag__ match {
+          case 0 => _done__ = true
+          case 10 =>
+            __key = _input__.readStringRequireUtf8()
+          case 18 =>
+            __value = _input__.readBytes()
+          case tag =>
+            if (_unknownFields__ == null) {
+              _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
+            }
+            _unknownFields__.parseField(tag, _input__)
+        }
+      }
+      pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry(
+          key = __key,
+          value = __value,
+          unknownFields = if (_unknownFields__ == null) _root_.scalapb.UnknownFieldSet.empty else _unknownFields__.result()
+      )
+    }
+    implicit def messageReads: _root_.scalapb.descriptors.Reads[pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry] = _root_.scalapb.descriptors.Reads{
+      case _root_.scalapb.descriptors.PMessage(__fieldsMap) =>
+        _root_.scala.Predef.require(__fieldsMap.keys.forall(_.containingMessage eq scalaDescriptor), "FieldDescriptor does not match message type.")
+        pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry(
+          key = __fieldsMap.get(scalaDescriptor.findFieldByNumber(1).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
+          value = __fieldsMap.get(scalaDescriptor.findFieldByNumber(2).get).map(_.as[_root_.com.google.protobuf.ByteString]).getOrElse(_root_.com.google.protobuf.ByteString.EMPTY)
+        )
+      case _ => throw new RuntimeException("Expected PMessage")
+    }
+    def javaDescriptor: _root_.com.google.protobuf.Descriptors.Descriptor = pulumirpc.resource.RegisterResourceRequest.javaDescriptor.getNestedTypes().get(4)
+    def scalaDescriptor: _root_.scalapb.descriptors.Descriptor = pulumirpc.resource.RegisterResourceRequest.scalaDescriptor.nestedMessages(4)
+    def messageCompanionForFieldNumber(__number: _root_.scala.Int): _root_.scalapb.GeneratedMessageCompanion[_] = throw new MatchError(__number)
+    lazy val nestedMessagesCompanions: Seq[_root_.scalapb.GeneratedMessageCompanion[_ <: _root_.scalapb.GeneratedMessage]] = Seq.empty
+    def enumCompanionForFieldNumber(__fieldNumber: _root_.scala.Int): _root_.scalapb.GeneratedEnumCompanion[_] = throw new MatchError(__fieldNumber)
+    lazy val defaultInstance = pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry(
+      key = "",
+      value = _root_.com.google.protobuf.ByteString.EMPTY
+    )
+    implicit class PluginChecksumsEntryLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry](_l) {
+      def key: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.key)((c_, f_) => c_.copy(key = f_))
+      def value: _root_.scalapb.lenses.Lens[UpperPB, _root_.com.google.protobuf.ByteString] = field(_.value)((c_, f_) => c_.copy(value = f_))
+    }
+    final val KEY_FIELD_NUMBER = 1
+    final val VALUE_FIELD_NUMBER = 2
+    @transient
+    implicit val keyValueMapper: _root_.scalapb.TypeMapper[pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry, (_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString)] =
+      _root_.scalapb.TypeMapper[pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry, (_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString)](__m => (__m.key, __m.value))(__p => pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry(__p._1, __p._2))
+    def of(
+      key: _root_.scala.Predef.String,
+      value: _root_.com.google.protobuf.ByteString
+    ): _root_.pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry = _root_.pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry(
+      key,
+      value
+    )
+    // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.RegisterResourceRequest.PluginChecksumsEntry])
+  }
+  
   implicit class RegisterResourceRequestLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.RegisterResourceRequest]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.resource.RegisterResourceRequest](_l) {
     def `type`: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.`type`)((c_, f_) => c_.copy(`type` = f_))
     def name: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.name)((c_, f_) => c_.copy(name = f_))
@@ -1381,7 +1639,7 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     def ignoreChanges: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.ignoreChanges)((c_, f_) => c_.copy(ignoreChanges = f_))
     def acceptSecrets: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.acceptSecrets)((c_, f_) => c_.copy(acceptSecrets = f_))
     def additionalSecretOutputs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.additionalSecretOutputs)((c_, f_) => c_.copy(additionalSecretOutputs = f_))
-    def urnAliases: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.urnAliases)((c_, f_) => c_.copy(urnAliases = f_))
+    def aliasURNs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.aliasURNs)((c_, f_) => c_.copy(aliasURNs = f_))
     def importId: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.importId)((c_, f_) => c_.copy(importId = f_))
     def customTimeouts: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.RegisterResourceRequest.CustomTimeouts] = field(_.getCustomTimeouts)((c_, f_) => c_.copy(customTimeouts = Option(f_)))
     def optionalCustomTimeouts: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[pulumirpc.resource.RegisterResourceRequest.CustomTimeouts]] = field(_.customTimeouts)((c_, f_) => c_.copy(customTimeouts = f_))
@@ -1392,8 +1650,13 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     def providers: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.scala.Predef.String]] = field(_.providers)((c_, f_) => c_.copy(providers = f_))
     def replaceOnChanges: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.replaceOnChanges)((c_, f_) => c_.copy(replaceOnChanges = f_))
     def pluginDownloadURL: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.pluginDownloadURL)((c_, f_) => c_.copy(pluginDownloadURL = f_))
+    def pluginChecksums: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString]] = field(_.pluginChecksums)((c_, f_) => c_.copy(pluginChecksums = f_))
     def retainOnDelete: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.retainOnDelete)((c_, f_) => c_.copy(retainOnDelete = f_))
-    def aliases: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[pulumirpc.resource.Alias]] = field(_.aliases)((c_, f_) => c_.copy(aliases = f_))
+    def aliases: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[pulumirpc.alias.Alias]] = field(_.aliases)((c_, f_) => c_.copy(aliases = f_))
+    def deletedWith: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.deletedWith)((c_, f_) => c_.copy(deletedWith = f_))
+    def aliasSpecs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.aliasSpecs)((c_, f_) => c_.copy(aliasSpecs = f_))
+    def sourcePosition: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.source.SourcePosition] = field(_.getSourcePosition)((c_, f_) => c_.copy(sourcePosition = Option(f_)))
+    def optionalSourcePosition: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[pulumirpc.source.SourcePosition]] = field(_.sourcePosition)((c_, f_) => c_.copy(sourcePosition = f_))
   }
   final val TYPE_FIELD_NUMBER = 1
   final val NAME_FIELD_NUMBER = 2
@@ -1409,7 +1672,7 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
   final val IGNORECHANGES_FIELD_NUMBER = 12
   final val ACCEPTSECRETS_FIELD_NUMBER = 13
   final val ADDITIONALSECRETOUTPUTS_FIELD_NUMBER = 14
-  final val URNALIASES_FIELD_NUMBER = 15
+  final val ALIASURNS_FIELD_NUMBER = 15
   final val IMPORTID_FIELD_NUMBER = 16
   final val CUSTOMTIMEOUTS_FIELD_NUMBER = 17
   final val DELETEBEFOREREPLACEDEFINED_FIELD_NUMBER = 18
@@ -1419,12 +1682,18 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
   final val PROVIDERS_FIELD_NUMBER = 22
   final val REPLACEONCHANGES_FIELD_NUMBER = 23
   final val PLUGINDOWNLOADURL_FIELD_NUMBER = 24
+  final val PLUGINCHECKSUMS_FIELD_NUMBER = 30
   final val RETAINONDELETE_FIELD_NUMBER = 25
   final val ALIASES_FIELD_NUMBER = 26
+  final val DELETEDWITH_FIELD_NUMBER = 27
+  final val ALIASSPECS_FIELD_NUMBER = 28
+  final val SOURCEPOSITION_FIELD_NUMBER = 29
   @transient
   private[resource] val _typemapper_propertyDependencies: _root_.scalapb.TypeMapper[pulumirpc.resource.RegisterResourceRequest.PropertyDependenciesEntry, (_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceRequest.PropertyDependencies)] = implicitly[_root_.scalapb.TypeMapper[pulumirpc.resource.RegisterResourceRequest.PropertyDependenciesEntry, (_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceRequest.PropertyDependencies)]]
   @transient
   private[resource] val _typemapper_providers: _root_.scalapb.TypeMapper[pulumirpc.resource.RegisterResourceRequest.ProvidersEntry, (_root_.scala.Predef.String, _root_.scala.Predef.String)] = implicitly[_root_.scalapb.TypeMapper[pulumirpc.resource.RegisterResourceRequest.ProvidersEntry, (_root_.scala.Predef.String, _root_.scala.Predef.String)]]
+  @transient
+  private[resource] val _typemapper_pluginChecksums: _root_.scalapb.TypeMapper[pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry, (_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString)] = implicitly[_root_.scalapb.TypeMapper[pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry, (_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString)]]
   def of(
     `type`: _root_.scala.Predef.String,
     name: _root_.scala.Predef.String,
@@ -1440,7 +1709,7 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     ignoreChanges: _root_.scala.Seq[_root_.scala.Predef.String],
     acceptSecrets: _root_.scala.Boolean,
     additionalSecretOutputs: _root_.scala.Seq[_root_.scala.Predef.String],
-    urnAliases: _root_.scala.Seq[_root_.scala.Predef.String],
+    aliasURNs: _root_.scala.Seq[_root_.scala.Predef.String],
     importId: _root_.scala.Predef.String,
     customTimeouts: _root_.scala.Option[pulumirpc.resource.RegisterResourceRequest.CustomTimeouts],
     deleteBeforeReplaceDefined: _root_.scala.Boolean,
@@ -1450,8 +1719,12 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     providers: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.scala.Predef.String],
     replaceOnChanges: _root_.scala.Seq[_root_.scala.Predef.String],
     pluginDownloadURL: _root_.scala.Predef.String,
+    pluginChecksums: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString],
     retainOnDelete: _root_.scala.Boolean,
-    aliases: _root_.scala.Seq[pulumirpc.resource.Alias]
+    aliases: _root_.scala.Seq[pulumirpc.alias.Alias],
+    deletedWith: _root_.scala.Predef.String,
+    aliasSpecs: _root_.scala.Boolean,
+    sourcePosition: _root_.scala.Option[pulumirpc.source.SourcePosition]
   ): _root_.pulumirpc.resource.RegisterResourceRequest = _root_.pulumirpc.resource.RegisterResourceRequest(
     `type`,
     name,
@@ -1467,7 +1740,7 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     ignoreChanges,
     acceptSecrets,
     additionalSecretOutputs,
-    urnAliases,
+    aliasURNs,
     importId,
     customTimeouts,
     deleteBeforeReplaceDefined,
@@ -1477,8 +1750,12 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     providers,
     replaceOnChanges,
     pluginDownloadURL,
+    pluginChecksums,
     retainOnDelete,
-    aliases
+    aliases,
+    deletedWith,
+    aliasSpecs,
+    sourcePosition
   )
   // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.RegisterResourceRequest])
 }
