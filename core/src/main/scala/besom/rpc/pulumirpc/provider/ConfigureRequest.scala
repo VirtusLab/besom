@@ -15,6 +15,8 @@ package pulumirpc.provider
   *   when true, operations should return resources as strongly typed values to the provider.
   * @param sendsOldInputs
   *   when true, diff and update will be called with the old outputs and the old inputs.
+  * @param sendsOldInputsToDelete
+  *   when true, delete will be called with the old outputs and the old inputs.
   */
 @SerialVersionUID(0L)
 final case class ConfigureRequest(
@@ -23,6 +25,7 @@ final case class ConfigureRequest(
     acceptSecrets: _root_.scala.Boolean = false,
     acceptResources: _root_.scala.Boolean = false,
     sendsOldInputs: _root_.scala.Boolean = false,
+    sendsOldInputsToDelete: _root_.scala.Boolean = false,
     unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
     ) extends scalapb.GeneratedMessage with scalapb.lenses.Updatable[ConfigureRequest] {
     @transient
@@ -56,6 +59,13 @@ final case class ConfigureRequest(
         val __value = sendsOldInputs
         if (__value != false) {
           __size += _root_.com.google.protobuf.CodedOutputStream.computeBoolSize(5, __value)
+        }
+      };
+      
+      {
+        val __value = sendsOldInputsToDelete
+        if (__value != false) {
+          __size += _root_.com.google.protobuf.CodedOutputStream.computeBoolSize(6, __value)
         }
       };
       __size += unknownFields.serializedSize
@@ -101,6 +111,12 @@ final case class ConfigureRequest(
           _output__.writeBool(5, __v)
         }
       };
+      {
+        val __v = sendsOldInputsToDelete
+        if (__v != false) {
+          _output__.writeBool(6, __v)
+        }
+      };
       unknownFields.writeTo(_output__)
     }
     def clearVariables = copy(variables = _root_.scala.collection.immutable.Map.empty)
@@ -113,6 +129,7 @@ final case class ConfigureRequest(
     def withAcceptSecrets(__v: _root_.scala.Boolean): ConfigureRequest = copy(acceptSecrets = __v)
     def withAcceptResources(__v: _root_.scala.Boolean): ConfigureRequest = copy(acceptResources = __v)
     def withSendsOldInputs(__v: _root_.scala.Boolean): ConfigureRequest = copy(sendsOldInputs = __v)
+    def withSendsOldInputsToDelete(__v: _root_.scala.Boolean): ConfigureRequest = copy(sendsOldInputsToDelete = __v)
     def withUnknownFields(__v: _root_.scalapb.UnknownFieldSet) = copy(unknownFields = __v)
     def discardUnknownFields = copy(unknownFields = _root_.scalapb.UnknownFieldSet.empty)
     def getFieldByNumber(__fieldNumber: _root_.scala.Int): _root_.scala.Any = {
@@ -131,6 +148,10 @@ final case class ConfigureRequest(
           val __t = sendsOldInputs
           if (__t != false) __t else null
         }
+        case 6 => {
+          val __t = sendsOldInputsToDelete
+          if (__t != false) __t else null
+        }
       }
     }
     def getField(__field: _root_.scalapb.descriptors.FieldDescriptor): _root_.scalapb.descriptors.PValue = {
@@ -141,6 +162,7 @@ final case class ConfigureRequest(
         case 3 => _root_.scalapb.descriptors.PBoolean(acceptSecrets)
         case 4 => _root_.scalapb.descriptors.PBoolean(acceptResources)
         case 5 => _root_.scalapb.descriptors.PBoolean(sendsOldInputs)
+        case 6 => _root_.scalapb.descriptors.PBoolean(sendsOldInputsToDelete)
       }
     }
     def toProtoString: _root_.scala.Predef.String = _root_.scalapb.TextFormat.printToUnicodeString(this)
@@ -156,6 +178,7 @@ object ConfigureRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
     var __acceptSecrets: _root_.scala.Boolean = false
     var __acceptResources: _root_.scala.Boolean = false
     var __sendsOldInputs: _root_.scala.Boolean = false
+    var __sendsOldInputsToDelete: _root_.scala.Boolean = false
     var `_unknownFields__`: _root_.scalapb.UnknownFieldSet.Builder = null
     var _done__ = false
     while (!_done__) {
@@ -172,6 +195,8 @@ object ConfigureRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
           __acceptResources = _input__.readBool()
         case 40 =>
           __sendsOldInputs = _input__.readBool()
+        case 48 =>
+          __sendsOldInputsToDelete = _input__.readBool()
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -185,6 +210,7 @@ object ConfigureRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
         acceptSecrets = __acceptSecrets,
         acceptResources = __acceptResources,
         sendsOldInputs = __sendsOldInputs,
+        sendsOldInputsToDelete = __sendsOldInputsToDelete,
         unknownFields = if (_unknownFields__ == null) _root_.scalapb.UnknownFieldSet.empty else _unknownFields__.result()
     )
   }
@@ -196,7 +222,8 @@ object ConfigureRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
         args = __fieldsMap.get(scalaDescriptor.findFieldByNumber(2).get).flatMap(_.as[_root_.scala.Option[com.google.protobuf.struct.Struct]]),
         acceptSecrets = __fieldsMap.get(scalaDescriptor.findFieldByNumber(3).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
         acceptResources = __fieldsMap.get(scalaDescriptor.findFieldByNumber(4).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
-        sendsOldInputs = __fieldsMap.get(scalaDescriptor.findFieldByNumber(5).get).map(_.as[_root_.scala.Boolean]).getOrElse(false)
+        sendsOldInputs = __fieldsMap.get(scalaDescriptor.findFieldByNumber(5).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
+        sendsOldInputsToDelete = __fieldsMap.get(scalaDescriptor.findFieldByNumber(6).get).map(_.as[_root_.scala.Boolean]).getOrElse(false)
       )
     case _ => throw new RuntimeException("Expected PMessage")
   }
@@ -220,7 +247,8 @@ object ConfigureRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
     args = _root_.scala.None,
     acceptSecrets = false,
     acceptResources = false,
-    sendsOldInputs = false
+    sendsOldInputs = false,
+    sendsOldInputsToDelete = false
   )
   @SerialVersionUID(0L)
   final case class VariablesEntry(
@@ -373,12 +401,14 @@ object ConfigureRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
     def acceptSecrets: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.acceptSecrets)((c_, f_) => c_.copy(acceptSecrets = f_))
     def acceptResources: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.acceptResources)((c_, f_) => c_.copy(acceptResources = f_))
     def sendsOldInputs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.sendsOldInputs)((c_, f_) => c_.copy(sendsOldInputs = f_))
+    def sendsOldInputsToDelete: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.sendsOldInputsToDelete)((c_, f_) => c_.copy(sendsOldInputsToDelete = f_))
   }
   final val VARIABLES_FIELD_NUMBER = 1
   final val ARGS_FIELD_NUMBER = 2
   final val ACCEPTSECRETS_FIELD_NUMBER = 3
   final val ACCEPTRESOURCES_FIELD_NUMBER = 4
   final val SENDS_OLD_INPUTS_FIELD_NUMBER = 5
+  final val SENDS_OLD_INPUTS_TO_DELETE_FIELD_NUMBER = 6
   @transient
   private[provider] val _typemapper_variables: _root_.scalapb.TypeMapper[pulumirpc.provider.ConfigureRequest.VariablesEntry, (_root_.scala.Predef.String, _root_.scala.Predef.String)] = implicitly[_root_.scalapb.TypeMapper[pulumirpc.provider.ConfigureRequest.VariablesEntry, (_root_.scala.Predef.String, _root_.scala.Predef.String)]]
   def of(
@@ -386,13 +416,15 @@ object ConfigureRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
     args: _root_.scala.Option[com.google.protobuf.struct.Struct],
     acceptSecrets: _root_.scala.Boolean,
     acceptResources: _root_.scala.Boolean,
-    sendsOldInputs: _root_.scala.Boolean
+    sendsOldInputs: _root_.scala.Boolean,
+    sendsOldInputsToDelete: _root_.scala.Boolean
   ): _root_.pulumirpc.provider.ConfigureRequest = _root_.pulumirpc.provider.ConfigureRequest(
     variables,
     args,
     acceptSecrets,
     acceptResources,
-    sendsOldInputs
+    sendsOldInputs,
+    sendsOldInputsToDelete
   )
   // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.ConfigureRequest])
 }

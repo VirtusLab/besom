@@ -13,6 +13,8 @@ package pulumirpc.provider
   *   the current properties on the resource.
   * @param timeout
   *   the delete request timeout represented in seconds.
+  * @param oldInputs
+  *   the old input values of the resource to delete.
   */
 @SerialVersionUID(0L)
 final case class DeleteRequest(
@@ -20,6 +22,7 @@ final case class DeleteRequest(
     urn: _root_.scala.Predef.String = "",
     properties: _root_.scala.Option[com.google.protobuf.struct.Struct] = _root_.scala.None,
     timeout: _root_.scala.Double = 0.0,
+    oldInputs: _root_.scala.Option[com.google.protobuf.struct.Struct] = _root_.scala.None,
     unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
     ) extends scalapb.GeneratedMessage with scalapb.lenses.Updatable[DeleteRequest] {
     @transient
@@ -50,6 +53,10 @@ final case class DeleteRequest(
         if (__value != 0.0) {
           __size += _root_.com.google.protobuf.CodedOutputStream.computeDoubleSize(4, __value)
         }
+      };
+      if (oldInputs.isDefined) {
+        val __value = oldInputs.get
+        __size += 1 + _root_.com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag(__value.serializedSize) + __value.serializedSize
       };
       __size += unknownFields.serializedSize
       __size
@@ -88,6 +95,12 @@ final case class DeleteRequest(
           _output__.writeDouble(4, __v)
         }
       };
+      oldInputs.foreach { __v =>
+        val __m = __v
+        _output__.writeTag(5, 2)
+        _output__.writeUInt32NoTag(__m.serializedSize)
+        __m.writeTo(_output__)
+      };
       unknownFields.writeTo(_output__)
     }
     def withId(__v: _root_.scala.Predef.String): DeleteRequest = copy(id = __v)
@@ -96,6 +109,9 @@ final case class DeleteRequest(
     def clearProperties: DeleteRequest = copy(properties = _root_.scala.None)
     def withProperties(__v: com.google.protobuf.struct.Struct): DeleteRequest = copy(properties = Option(__v))
     def withTimeout(__v: _root_.scala.Double): DeleteRequest = copy(timeout = __v)
+    def getOldInputs: com.google.protobuf.struct.Struct = oldInputs.getOrElse(com.google.protobuf.struct.Struct.defaultInstance)
+    def clearOldInputs: DeleteRequest = copy(oldInputs = _root_.scala.None)
+    def withOldInputs(__v: com.google.protobuf.struct.Struct): DeleteRequest = copy(oldInputs = Option(__v))
     def withUnknownFields(__v: _root_.scalapb.UnknownFieldSet) = copy(unknownFields = __v)
     def discardUnknownFields = copy(unknownFields = _root_.scalapb.UnknownFieldSet.empty)
     def getFieldByNumber(__fieldNumber: _root_.scala.Int): _root_.scala.Any = {
@@ -113,6 +129,7 @@ final case class DeleteRequest(
           val __t = timeout
           if (__t != 0.0) __t else null
         }
+        case 5 => oldInputs.orNull
       }
     }
     def getField(__field: _root_.scalapb.descriptors.FieldDescriptor): _root_.scalapb.descriptors.PValue = {
@@ -122,6 +139,7 @@ final case class DeleteRequest(
         case 2 => _root_.scalapb.descriptors.PString(urn)
         case 3 => properties.map(_.toPMessage).getOrElse(_root_.scalapb.descriptors.PEmpty)
         case 4 => _root_.scalapb.descriptors.PDouble(timeout)
+        case 5 => oldInputs.map(_.toPMessage).getOrElse(_root_.scalapb.descriptors.PEmpty)
       }
     }
     def toProtoString: _root_.scala.Predef.String = _root_.scalapb.TextFormat.printToUnicodeString(this)
@@ -136,6 +154,7 @@ object DeleteRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
     var __urn: _root_.scala.Predef.String = ""
     var __properties: _root_.scala.Option[com.google.protobuf.struct.Struct] = _root_.scala.None
     var __timeout: _root_.scala.Double = 0.0
+    var __oldInputs: _root_.scala.Option[com.google.protobuf.struct.Struct] = _root_.scala.None
     var `_unknownFields__`: _root_.scalapb.UnknownFieldSet.Builder = null
     var _done__ = false
     while (!_done__) {
@@ -150,6 +169,8 @@ object DeleteRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
           __properties = Option(__properties.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 33 =>
           __timeout = _input__.readDouble()
+        case 42 =>
+          __oldInputs = Option(__oldInputs.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -162,6 +183,7 @@ object DeleteRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
         urn = __urn,
         properties = __properties,
         timeout = __timeout,
+        oldInputs = __oldInputs,
         unknownFields = if (_unknownFields__ == null) _root_.scalapb.UnknownFieldSet.empty else _unknownFields__.result()
     )
   }
@@ -172,7 +194,8 @@ object DeleteRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
         id = __fieldsMap.get(scalaDescriptor.findFieldByNumber(1).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
         urn = __fieldsMap.get(scalaDescriptor.findFieldByNumber(2).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
         properties = __fieldsMap.get(scalaDescriptor.findFieldByNumber(3).get).flatMap(_.as[_root_.scala.Option[com.google.protobuf.struct.Struct]]),
-        timeout = __fieldsMap.get(scalaDescriptor.findFieldByNumber(4).get).map(_.as[_root_.scala.Double]).getOrElse(0.0)
+        timeout = __fieldsMap.get(scalaDescriptor.findFieldByNumber(4).get).map(_.as[_root_.scala.Double]).getOrElse(0.0),
+        oldInputs = __fieldsMap.get(scalaDescriptor.findFieldByNumber(5).get).flatMap(_.as[_root_.scala.Option[com.google.protobuf.struct.Struct]])
       )
     case _ => throw new RuntimeException("Expected PMessage")
   }
@@ -182,6 +205,7 @@ object DeleteRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
     var __out: _root_.scalapb.GeneratedMessageCompanion[_] = null
     (__number: @_root_.scala.unchecked) match {
       case 3 => __out = com.google.protobuf.struct.Struct
+      case 5 => __out = com.google.protobuf.struct.Struct
     }
     __out
   }
@@ -191,7 +215,8 @@ object DeleteRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
     id = "",
     urn = "",
     properties = _root_.scala.None,
-    timeout = 0.0
+    timeout = 0.0,
+    oldInputs = _root_.scala.None
   )
   implicit class DeleteRequestLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.DeleteRequest]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.provider.DeleteRequest](_l) {
     def id: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.id)((c_, f_) => c_.copy(id = f_))
@@ -199,21 +224,26 @@ object DeleteRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
     def properties: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getProperties)((c_, f_) => c_.copy(properties = Option(f_)))
     def optionalProperties: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.properties)((c_, f_) => c_.copy(properties = f_))
     def timeout: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Double] = field(_.timeout)((c_, f_) => c_.copy(timeout = f_))
+    def oldInputs: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getOldInputs)((c_, f_) => c_.copy(oldInputs = Option(f_)))
+    def optionalOldInputs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.oldInputs)((c_, f_) => c_.copy(oldInputs = f_))
   }
   final val ID_FIELD_NUMBER = 1
   final val URN_FIELD_NUMBER = 2
   final val PROPERTIES_FIELD_NUMBER = 3
   final val TIMEOUT_FIELD_NUMBER = 4
+  final val OLD_INPUTS_FIELD_NUMBER = 5
   def of(
     id: _root_.scala.Predef.String,
     urn: _root_.scala.Predef.String,
     properties: _root_.scala.Option[com.google.protobuf.struct.Struct],
-    timeout: _root_.scala.Double
+    timeout: _root_.scala.Double,
+    oldInputs: _root_.scala.Option[com.google.protobuf.struct.Struct]
   ): _root_.pulumirpc.provider.DeleteRequest = _root_.pulumirpc.provider.DeleteRequest(
     id,
     urn,
     properties,
-    timeout
+    timeout,
+    oldInputs
   )
   // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.DeleteRequest])
 }
