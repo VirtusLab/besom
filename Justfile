@@ -37,7 +37,7 @@ default:
 ####################
 
 # Cleans everything
-clean-all: clean-sdk clean-out clean-compiler-plugin clean-codegen
+clean-all: clean-sdk clean-out clean-compiler-plugin clean-codegen clean-test-integration clean-test-templates clean-test-examples
 
 # Compiles everything
 compile-all: compile-sdk compile-codegen build-language-plugin
@@ -160,6 +160,11 @@ clean-coverage: clean-sdk
 # Language plugin
 ####################
 
+# Run go mod tidy for language plugin
+tidy-language-plugin:
+    cd language-plugin/pulumi-language-scala && \
+    go mod tidy
+
 # Builds .jar file with language plugin bootstrap library
 build-language-plugin-bootstrap:
 	mkdir -p {{language-plugin-output-dir}} && \
@@ -169,7 +174,8 @@ build-language-plugin-bootstrap:
 build-language-host $GOOS="" $GOARCH="":
 	mkdir -p {{language-plugin-output-dir}} && \
 	cd language-plugin/pulumi-language-scala && \
-	go build -o {{language-plugin-output-dir}}/pulumi-language-scala
+	go build -o {{language-plugin-output-dir}}/pulumi-language-scala \
+	  -ldflags "-X github.com/pulumi/pulumi/sdk/v3/go/common/version.Version={{besom-version}}"
 
 # Builds the entire scala language plugin
 build-language-plugin: build-language-plugin-bootstrap build-language-host
@@ -184,7 +190,7 @@ run-language-plugin-tests:
 test-language-plugin: build-language-plugin run-language-plugin-tests
 
 # Installs the scala language plugin locally
-install-language-plugin:
+install-language-plugin: build-language-plugin
 	#!/usr/bin/env sh
 	just build-language-plugin-bootstrap
 	just build-language-host
@@ -251,15 +257,20 @@ publish-local-provider-sdk schema-name schema-version:
 ####################
 
 # Runs all integration tests
-test-integration: publish-local-sdk publish-local-compiler-plugin
+test-integration: test-integration-core test-integration-compiler-plugin test-language-plugin
 	scala-cli --power test integration-tests
 
+# Cleans after integration tests
+clean-test-integration:
+	scala-cli --power clean integration-tests
+
 # Runs integration tests for core
-test-integration-core: publish-local-sdk publish-local-compiler-plugin
+test-integration-core: publish-local-core install-language-plugin publish-local-compiler-plugin
+	PULUMI_SCALA_PLUGIN_LOCAL_PATH={{language-plugin-output-dir}} \
 	scala-cli --power test integration-tests --test-only 'besom.integration.core*'
 
 # Runs integration tests for compiler plugin
-test-compiler-plugin: publish-local-sdk publish-local-compiler-plugin
+test-integration-compiler-plugin: publish-local-core install-language-plugin publish-local-compiler-plugin
 	scala-cli --power test integration-tests --test-only 'besom.integration.compilerplugin*'
 
 ####################
