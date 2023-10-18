@@ -11,9 +11,7 @@ jobs:
   verify-pulumi-protos:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+    - uses: actions/checkout@v4
     - uses: extractions/setup-just@v1
       with:
         just-version: '1.14.0' # just for sanity

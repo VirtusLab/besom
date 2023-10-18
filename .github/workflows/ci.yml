@@ -25,6 +25,7 @@ on:
 
 env:
   PULUMI_CONFIG_PASSPHRASE: 'passphrase'
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
 
@@ -48,9 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+    - uses: actions/checkout@v4
     - uses: extractions/setup-just@v1
       with:
         just-version: '1.14.0' # just for sanity
@@ -96,7 +95,10 @@ jobs:
       run: just test-integration-core
 
     - name: Integration test for compiler plugin
-      run: just test-compiler-plugin
+      run: just test-integration-compiler-plugin
+
+    - name: Publish local SDK
+      run: just publish-local-sdk
 
     - name: Generate random provider
       run: just generate-provider-sdk random 4.13.2
