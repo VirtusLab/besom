@@ -89,22 +89,22 @@ test-sdk: compile-sdk test-core test-cats test-zio
 
 # Publishes locally core besom SDK
 publish-local-core:
-	scala-cli --power publish local core --project-version {{besom-version}}
+	scala-cli --power publish local core --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes locally besom cats-effect extension
 publish-local-cats: publish-local-core
-	scala-cli --power publish local besom-cats --project-version {{besom-version}} {{scala-cli-main-options-cats}}
+	scala-cli --power publish local besom-cats --project-version {{besom-version}} {{scala-cli-main-options-cats}}  --suppress-experimental-feature-warning
 
 # Publishes locally besom zio extension
 publish-local-zio: publish-local-core
-	scala-cli --power publish local besom-zio --project-version {{besom-version}} {{scala-cli-main-options-zio}}
+	scala-cli --power publish local besom-zio --project-version {{besom-version}} {{scala-cli-main-options-zio}} --suppress-experimental-feature-warning
 
 # Publishes locally all SDK modules: core, cats-effect extension, zio extension
 publish-local-sdk: publish-local-core publish-local-cats publish-local-zio
 
 # Publishes locally besom compiler plugin
 publish-local-compiler-plugin:
-	scala-cli --power publish local compiler-plugin --project-version {{besom-version}}
+	scala-cli --power publish local compiler-plugin --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes core besom SDK
 publish-maven-core:
@@ -220,7 +220,7 @@ package-language-plugins-all: build-language-plugin-bootstrap
 
 # Compiles codegen module
 compile-codegen:
-	scala-cli compile codegen
+	scala-cli --power compile codegen --suppress-experimental-feature-warning
 
 # Download the schema for a specific provider, e.g. `just get-schema kubernetes`
 get-schema schema-name schema-version:
@@ -233,15 +233,15 @@ get-schema schema-name schema-version:
 
 # Generate scala API code for the given provider, e.g. `just generate-provider-sdk kubernetes`
 generate-provider-sdk schema-name schema-version:
-	scala-cli run codegen -- {{schemas-output-dir}} {{codegen-output-dir}} {{schema-name}} {{schema-version}} {{besom-version}}
+	scala-cli --power run codegen --suppress-experimental-feature-warning -- {{schemas-output-dir}} {{codegen-output-dir}} {{schema-name}} {{schema-version}} {{besom-version}}
 
 # Compiles the previously generated scala API code for the given provider, e.g. `just compile-provider-sdk kubernetes`
 compile-provider-sdk schema-name:
-	scala-cli compile {{codegen-output-dir}}/{{schema-name}}
+	scala-cli --power compile {{codegen-output-dir}}/{{schema-name}} --suppress-experimental-feature-warning
 
 # Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes`
 publish-local-provider-sdk schema-name schema-version:
-	scala-cli --power publish local {{codegen-output-dir}}/{{schema-name}}/{{schema-version}}
+	scala-cli --power publish local {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning
 
 ####################
 # Integration testing
