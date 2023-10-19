@@ -21,7 +21,7 @@ object ResourceDecoder:
     )(using
       ctx: Context,
       mdc: BesomMDC[Label]
-    ): Either[DecodingError, OutputData[A]] =
+    ): Validated[DecodingError, OutputData[A]] =
       val resourceLabel = mdc.get(Key.LabelKey)
 
       val fieldDependencies = dependencies.get(propertyName).getOrElse(Set.empty)
@@ -44,7 +44,9 @@ object ResourceDecoder:
             if ctx.isDryRun then Validated.valid(OutputData.unknown().withDependency(resource))
             // TODO: formatted DecodingError
             else
-              Validated.invalid(DecodingError(s"Missing property $propertyName in resource $resourceLabel", label = propertyLabel))
+              Validated.invalid(
+                DecodingError(s"Missing property $propertyName in resource $resourceLabel", label = propertyLabel)
+              )
           }
           .map(_.withDependencies(fieldDependencies))
 
