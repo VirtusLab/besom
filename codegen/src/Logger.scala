@@ -1,15 +1,54 @@
 package besom.codegen
 
+import besom.codegen.Logger.Level
+import besom.codegen.Logger.Level.Info
+
 import scala.collection.mutable.ListBuffer
 
-class Logger {
-  private val buffer = ListBuffer.empty[String]
+class Logger(val printLevel: Level = Info) {
+  import Logger.Level._
 
-  def warn(message: String): Unit =
-    buffer.append(s"Warning: ${message}\n" )
+  private val buffer     = ListBuffer.empty[String]
+  private var errorCount = 0
+  private var warnCount  = 0
+
+  def error(message: String): Unit = {
+    if (printLevel >= Error) println(s"Error: ${message}")
+    buffer.append(s"Error: ${message}\n")
+    errorCount += 1
+  }
+
+  def warn(message: String): Unit = {
+    if (printLevel >= Warn) println(s"Warning: ${message}")
+    buffer.append(s"Warning: ${message}\n")
+    warnCount += 1
+  }
+
+  def info(message: String): Unit = {
+    if (printLevel >= Info) println(message)
+    buffer.append(s"Info: ${message}\n")
+  }
+
+  def debug(message: String): Unit = {
+    if (printLevel >= Debug) println(message)
+    buffer.append(s"Debug: ${message}\n")
+  }
 
   def writeToFile(file: os.Path): Unit =
-    os.write(file, buffer)
+    os.write(file, buffer, createFolders = true)
 
-  def nonEmpty = buffer.nonEmpty
+  def hasProblems: Boolean = errorCount + warnCount > 0
+}
+
+object Logger {
+  sealed abstract class Level(val level: Int) extends Ordered[Level] {
+    override def compare(that: Level): Int = level.compare(that.level)
+  }
+
+  object Level {
+    final case object Error extends Level(level = 0)
+    final case object Warn extends Level(level = 1)
+    final case object Info extends Level(level = 2)
+    final case object Debug extends Level(level = 3)
+  }
 }

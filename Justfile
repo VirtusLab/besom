@@ -89,22 +89,22 @@ test-sdk: compile-sdk test-core test-cats test-zio
 
 # Publishes locally core besom SDK
 publish-local-core:
-	scala-cli --power publish local core --project-version {{besom-version}}
+	scala-cli --power publish local core --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes locally besom cats-effect extension
 publish-local-cats: publish-local-core
-	scala-cli --power publish local besom-cats --project-version {{besom-version}} {{scala-cli-main-options-cats}}
+	scala-cli --power publish local besom-cats --project-version {{besom-version}} {{scala-cli-main-options-cats}}  --suppress-experimental-feature-warning
 
 # Publishes locally besom zio extension
 publish-local-zio: publish-local-core
-	scala-cli --power publish local besom-zio --project-version {{besom-version}} {{scala-cli-main-options-zio}}
+	scala-cli --power publish local besom-zio --project-version {{besom-version}} {{scala-cli-main-options-zio}} --suppress-experimental-feature-warning
 
 # Publishes locally all SDK modules: core, cats-effect extension, zio extension
 publish-local-sdk: publish-local-core publish-local-cats publish-local-zio
 
 # Publishes locally besom compiler plugin
 publish-local-compiler-plugin:
-	scala-cli --power publish local compiler-plugin --project-version {{besom-version}}
+	scala-cli --power publish local compiler-plugin --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes core besom SDK
 publish-maven-core:
@@ -220,7 +220,11 @@ package-language-plugins-all: build-language-plugin-bootstrap
 
 # Compiles codegen module
 compile-codegen:
-	scala-cli compile codegen
+	scala-cli --power compile codegen --suppress-experimental-feature-warning
+
+# Runs tests for codegen
+test-codegen:
+	scala-cli --power test codegen --suppress-experimental-feature-warning
 
 # Download the schema for a specific provider, e.g. `just get-schema kubernetes`
 get-schema schema-name schema-version:
@@ -231,17 +235,21 @@ get-schema schema-name schema-version:
 	mkdir -p $schema_dir
 	pulumi package get-schema $schema_source > $schema_dir/schema.json
 
+# Publishes locally besom codegen
+publish-local-codegen: test-codegen
+	scala-cli --power publish local codegen --project-version {{besom-version}} --suppress-experimental-feature-warning
+
 # Generate scala API code for the given provider, e.g. `just generate-provider-sdk kubernetes`
 generate-provider-sdk schema-name schema-version:
-	scala-cli run codegen -- {{schemas-output-dir}} {{codegen-output-dir}} {{schema-name}} {{schema-version}} {{besom-version}}
+	scala-cli --power run codegen --suppress-experimental-feature-warning -- {{schemas-output-dir}} {{codegen-output-dir}} {{schema-name}} {{schema-version}} {{besom-version}}
 
 # Compiles the previously generated scala API code for the given provider, e.g. `just compile-provider-sdk kubernetes`
 compile-provider-sdk schema-name:
-	scala-cli compile {{codegen-output-dir}}/{{schema-name}}
+	scala-cli --power compile {{codegen-output-dir}}/{{schema-name}} --suppress-experimental-feature-warning
 
 # Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes`
 publish-local-provider-sdk schema-name schema-version:
-	scala-cli --power publish local {{codegen-output-dir}}/{{schema-name}}/{{schema-version}}
+	scala-cli --power publish local {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning
 
 ####################
 # Integration testing
@@ -256,23 +264,19 @@ clean-test-integration: clean-test-integration-codegen
 	scala-cli --power clean integration-tests
 
 # Runs integration tests for core
-test-integration-core: publish-local-core install-language-plugin publish-local-compiler-plugin
-	just generate-provider-sdk random 4.13.2
-	just publish-local-provider-sdk random 4.13.2
-	PULUMI_SCALA_PLUGIN_LOCAL_PATH={{language-plugin-output-dir}} \
+test-integration-core: publish-local-codegen publish-local-core install-language-plugin publish-local-compiler-plugin
 	scala-cli --power test integration-tests --test-only 'besom.integration.core*'
 
 # Runs integration tests for compiler plugin
-test-integration-compiler-plugin: publish-local-core install-language-plugin publish-local-compiler-plugin
+test-integration-compiler-plugin: publish-local-codegen publish-local-core install-language-plugin publish-local-compiler-plugin
 	scala-cli --power test integration-tests --test-only 'besom.integration.compilerplugin*'
 
 # Runs integration tests for language plugin
-test-integration-language-plugin: publish-local-core install-language-plugin publish-local-compiler-plugin
-	PULUMI_SCALA_PLUGIN_LOCAL_PATH={{language-plugin-output-dir}} \
+test-integration-language-plugin: publish-local-codegen publish-local-core install-language-plugin publish-local-compiler-plugin
 	scala-cli --power test integration-tests --test-only 'besom.integration.languageplugin*'
 
 # Runs integration tests for codegen
-test-integration-codegen: compile-codegen
+test-integration-codegen: publish-local-codegen
 	scala-cli --power test integration-tests --test-only 'besom.integration.codegen*'
 
 # Cleans after the codegen integration tests

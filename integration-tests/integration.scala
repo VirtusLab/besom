@@ -1,17 +1,22 @@
 package besom.integration.common
 
+import munit.{Tag, Test}
 import os.Shellable
 
-import scala.util.{Try, Success, Failure}
+import scala.util.{Failure, Success, Try}
 
 case object LocalOnly extends munit.Tag("LocalOnly")
 
-val javaVersion          = "11"
-val scalaVersion         = "3.3.1"
-val coreVersion          = os.read(os.pwd / "version.txt").trim
-val scalaPluginVersion   = coreVersion
-val scalaPluginLocalPath = envVar("PULUMI_SCALA_PLUGIN_LOCAL_PATH").map(os.Path(_))
-val providerRandomVersion = s"4.13.2-core.$coreVersion"
+val javaVersion                 = "11"
+val scalaVersion                = "3.3.1"
+val coreVersion                 = os.read(os.pwd / "version.txt").trim
+val scalaPluginVersion          = coreVersion
+val providerRandomSchemaVersion = "4.13.2"
+val providerRandomVersion       = s"$providerRandomSchemaVersion-core.$coreVersion"
+
+val schemaDir         = os.pwd / ".out" / "schemas"
+val codegenDir        = os.pwd / ".out" / "codegen"
+val languagePluginDir = os.pwd / ".out" / "language-plugin"
 
 val defaultProjectFile =
   s"""|//> using scala $scalaVersion
@@ -68,7 +73,7 @@ object pulumi {
       "scala",
       scalaPluginVersion,
       "--file",
-      scalaPluginLocalPath.get,
+      languagePluginDir,
       "--reinstall"
     )
 
@@ -87,7 +92,7 @@ object pulumi {
       val tmpPulumiHome = os.temp.dir()
       val allEnv: Map[String, String] =
         Map(
-          "PULUMI_CONFIG_PASSPHRASE" -> envVarOpt("PULUMI_CONFIG_PASSPHRASE").getOrElse(""),
+          "PULUMI_CONFIG_PASSPHRASE" -> envVarOpt("PULUMI_CONFIG_PASSPHRASE").getOrElse("")
         ) ++ pulumiEnv ++ Map( // don't override test-critical env vars
           "PULUMI_HOME" -> tmpPulumiHome.toString,
           "PULUMI_STACK" -> stackName
@@ -118,6 +123,7 @@ object pulumi {
 object scalaCli {
   def compile(additional: os.Shellable*) = pproc(
     "scala-cli",
+    "--power",
     "compile",
     "--suppress-experimental-feature-warning",
     "--suppress-directives-in-multiple-files-warning",
@@ -135,6 +141,38 @@ object scalaCli {
   )
 }
 
+object codegen {
+  import besom.codegen.Main.generatePackageSources
+
+  def generatePackage(
+    providerName: String,
+    schemaVersion: String,
+    schemas: os.Path = schemaDir,
+    codegen: os.Path = codegenDir,
+    version: String = coreVersion
+  ): os.Path =
+    println(s"Generating package '$providerName' form schema")
+    generatePackageSources(schemas, codegen, providerName, schemaVersion, version)
+
+  def generatePackageFromSchema(
+    schema: os.Path,
+    providerName: String,
+    schemaVersion: String,
+    schemas: os.Path = schemaDir,
+    codegen: os.Path = codegenDir,
+    version: String = coreVersion
+  ): os.Path =
+    println(s"Generating test package '$providerName' form schema: ${schema.relativeTo(os.pwd)}")
+    generatePackageSources(
+      schemas,
+      codegen,
+      providerName,
+      schemaVersion,
+      version,
+      Map((providerName, schemaVersion) -> schema)
+    )
+}
+
 def pproc(command: Shellable*) = {
   val cmd = os.proc(command)
   println(cmd.commandChunks.mkString(" "))
@@ -146,8 +184,14 @@ def envVar(name: String): Try[String] =
     case Some(v) =>
       Option(v).filter(_.trim.nonEmpty) match
         case Some(value) => Success(value)
-        case None => Failure(new Exception(s"Environment variable $name is empty"))
+        case None        => Failure(new Exception(s"Environment variable $name is empty"))
     case None => Failure(new Exception(s"Environment variable $name is not set"))
 
 def envVarOpt(name: String): Option[String] =
   sys.env.get(name).map(_.trim).filter(_.nonEmpty)
+
+def tagsWhen(condition: Boolean)(excludedTag: Tag): Test => Boolean =
+  if condition then tags(excludedTag)(_)
+  else _ => false
+
+def tags(excludedTag: Tag): Test => Boolean = _.tags.contains(excludedTag)
