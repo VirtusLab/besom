@@ -4,11 +4,10 @@ import scala.compiletime.*
 import scala.compiletime.ops.string.*
 import scala.language.implicitConversions
 import scala.util.Try
-import besom.util.NonEmptyString
-import besom.internal.{Decoder, Encoder, DecodingError}
-import besom.internal.ResourceDecoder
-import besom.internal.CustomResourceOptions
-import besom.internal.ArgsEncoder
+import com.google.protobuf.struct.*, Value.Kind
+import besom.internal.ProtobufUtil.*
+import besom.util.*
+import besom.internal.*
 
 object types:
   // TODO: replace these stubs with proper implementations
@@ -147,28 +146,35 @@ object types:
     case AssetArchive(assets: Map[String, AssetOrArchive])
     // case InvalidArchive // TODO - should we use this?
 
-  sealed trait PulumiEnum:
+  sealed trait PulumiEnum[V]:
     def name: String
+    def value: V
 
-  trait BooleanEnum extends PulumiEnum:
-    def value: Boolean
+  trait BooleanEnum extends PulumiEnum[Boolean]
 
-  trait IntegerEnum extends PulumiEnum:
-    def value: Int
+  trait IntegerEnum extends PulumiEnum[Int]
 
-  trait NumberEnum extends PulumiEnum:
-    def value: Double
+  trait NumberEnum extends PulumiEnum[Double]
 
-  trait StringEnum extends PulumiEnum:
-    def value: String
+  trait StringEnum extends PulumiEnum[String]
 
-  trait EnumCompanion[E <: PulumiEnum](enumName: String):
+  trait EnumCompanion[V, E <: PulumiEnum[V]](enumName: String):
     def allInstances: Seq[E]
-    private lazy val namesToInstances: Map[String, E] = allInstances.map(instance => instance.name -> instance).toMap
+    private lazy val valuesToInstances: Map[Any, E] = allInstances.map(instance => instance.value -> instance).toMap
 
-    given Encoder[E] = Encoder.stringEncoder.contramap(instance => instance.name)
-    given Decoder[E] = Decoder.stringDecoder.emap { (name, label) =>
-      namesToInstances.get(name).toRight(DecodingError(s"$label: `${name}` is not a valid name of `${enumName}`"))
-    }
+    extension [A](a: A)
+      def asValueAny: Value = a match
+        case a: Int => a.asValue
+        case a: Double => a.asValue
+        case a: Boolean => a.asValue
+        case a: String => a.asValue
+
+    given Encoder[E] = (a: E) => Result.pure(Set.empty -> a.value.asValueAny)
+    given (using decV: Decoder[V]): Decoder[E] =
+      decV.emap { (value, label) =>
+        valuesToInstances
+          .get(value)
+          .toValidatedOrError(DecodingError(s"$label: `${value}` is not a valid value of `${enumName}`", label = label))
+      }
 
   export besom.aliases.{*, given}

@@ -5,6 +5,8 @@ import Constants.*
 import Decoder.*
 import ProtobufUtil.*
 import besom.types.Label
+import besom.util.*
+import scala.CanEqual.derived
 
 object DecoderTest:
   case class TestCaseClass(
@@ -15,10 +17,15 @@ object DecoderTest:
     optSome: Option[String]
   ) derives Decoder
 
+  case class SpecialCaseClass(
+    equals_ : Int,
+    eq_ : String,
+    normalOne: String
+  ) derives Decoder
 
   sealed abstract class TestEnum(val name: String, val value: String) extends besom.types.StringEnum
 
-  object TestEnum extends besom.types.EnumCompanion[TestEnum]("TestEnum"):
+  object TestEnum extends besom.types.EnumCompanion[String, TestEnum]("TestEnum"):
     object A extends TestEnum("A", "A value")
     object B extends TestEnum("B", "B value")
 
@@ -47,42 +54,56 @@ class DecoderTest extends munit.FunSuite:
     val d = summon[Decoder[TestCaseClass]]
 
     d.decode(v, dummyLabel) match
-      case Left(ex) => throw ex
-      case Right(OutputData.Known(res, isSecret, value)) =>
+      case Validated.Invalid(ex) => throw ex.head
+      case Validated.Valid(OutputData.Known(res, isSecret, value)) =>
         assert(value == Some(TestCaseClass(10, List("qwerty"), None, None, Some("abc"))))
-      case Right(_) => throw Exception("Unexpected unknown!")
+      case Validated.Valid(_) => throw Exception("Unexpected unknown!")
   }
 
   test("decode enum") {
-    val v = "A".asValue
+    val v = "A value".asValue
     val d = summon[Decoder[TestEnum]]
 
     d.decode(v, dummyLabel) match
-      case Left(ex)                                      => throw ex
-      case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some(TestEnum.A))
-      case Right(_)                                      => throw Exception("Unexpected unknown!")
+      case Validated.Invalid(ex)                                   => throw ex.head
+      case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some(TestEnum.A))
+      case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
   }
 
   test("decode int/string union") {
     val d = summon[Decoder[Int | String]]
     d.decode("A".asValue, dummyLabel) match
-      case Left(ex)                                      => throw ex
-      case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some("A"))
-      case Right(_)                                      => throw Exception("Unexpected unknown!")
+      case Validated.Invalid(ex)                                   => throw ex.head
+      case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some("A"))
+      case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
     d.decode(1.asValue, dummyLabel) match
-      case Left(ex)                                      => throw ex
-      case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some(1))
-      case Right(_)                                      => throw Exception("Unexpected unknown!")
+      case Validated.Invalid(ex)                                   => throw ex.head
+      case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some(1))
+      case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
   }
 
   test("decode string/custom resource union") {
     val d = summon[Decoder[Int | String]]
     d.decode("A".asValue, dummyLabel) match
-      case Left(ex)                                      => throw ex
-      case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some("A"))
-      case Right(_)                                      => throw Exception("Unexpected unknown!")
+      case Validated.Invalid(ex)                                   => throw ex.head
+      case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some("A"))
+      case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
     d.decode(1.asValue, dummyLabel) match
-      case Left(ex)                                      => throw ex
-      case Right(OutputData.Known(res, isSecret, value)) => assert(value == Some(1))
-      case Right(_)                                      => throw Exception("Unexpected unknown!")
+      case Validated.Invalid(ex)                                   => throw ex.head
+      case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some(1))
+      case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
+  }
+
+  test("decode special case class with unmangling") {
+    val v = Map(
+      "equals" -> 10.asValue,
+      "eq" -> "abc".asValue,
+      "normalOne" -> "qwerty".asValue
+    ).asValue
+    val d = summon[Decoder[SpecialCaseClass]]
+
+    d.decode(v, dummyLabel) match
+      case Validated.Invalid(ex)                                   => throw ex.head
+      case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some(SpecialCaseClass(10, "abc", "qwerty")))
+      case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
   }
