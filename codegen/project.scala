@@ -1,7 +1,9 @@
-//> using scala "2.13.10"
-//> using lib "org.scalameta::scalameta:4.8.10"
-//> using lib "com.lihaoyi::upickle:3.1.3"
-//> using lib "com.lihaoyi::os-lib:0.9.1"
+//> using scala 2.13.12
+//> using options "-release:11", "-target:11"
+
+//> using dep org.scalameta::scalameta:4.8.12
+//> using dep com.lihaoyi::upickle:3.1.3
+//> using dep com.lihaoyi::os-lib:0.9.1
 
 //> using publish.name "besom-codegen"
 //> using publish.organization "org.virtuslab"
