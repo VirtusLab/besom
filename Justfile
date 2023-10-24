@@ -231,6 +231,10 @@ get-schema schema-name schema-version:
 	mkdir -p $schema_dir
 	pulumi package get-schema $schema_source > $schema_dir/schema.json
 
+# Publishes locally besom codegen
+publish-local-codegen:
+	scala-cli --power publish local codegen --project-version {{besom-version}} --suppress-experimental-feature-warning
+
 # Generate scala API code for the given provider, e.g. `just generate-provider-sdk kubernetes`
 generate-provider-sdk schema-name schema-version:
 	scala-cli --power run codegen --suppress-experimental-feature-warning -- {{schemas-output-dir}} {{codegen-output-dir}} {{schema-name}} {{schema-version}} {{besom-version}}
