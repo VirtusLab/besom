@@ -15,6 +15,8 @@ val scalaPluginLocalPath        = envVar("PULUMI_SCALA_PLUGIN_LOCAL_PATH").map(o
 val providerRandomSchemaVersion = "4.13.2"
 val providerRandomVersion       = s"$providerRandomSchemaVersion-core.$coreVersion"
 
+val codegenDir        = os.pwd / ".out" / "codegen"
+
 val defaultProjectFile =
   s"""|//> using scala $scalaVersion
       |//> using options -java-output-version:$javaVersion -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
