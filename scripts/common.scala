@@ -57,6 +57,7 @@ def sparseCheckout(
     }
 
     os.remove.all(repoPath)
+    os.makeDir.all(repoPath / os.up)
     git(
       "clone",
       "--filter=tree:0",
