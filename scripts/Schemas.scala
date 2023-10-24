@@ -43,8 +43,18 @@ private def fetchSchemas(cwd: os.Path): Unit =
   val targetPath = cwd / "integration-tests" / "resources" / "testdata"
   os.remove.all(targetPath)
 
+  // copy test schemas
   copySchemas(pulumiRepo / "pkg" / "codegen" / "testing" / "test" / "testdata", targetPath)
   copySchemas(pulumiJavaRepo / "pkg" / "codegen" / "testing" / "test" / "testdata", targetPath)
+
+  // fetch sample production schemas
+  List(
+    "kubernetes",
+    "docker"
+  ).foreach( name =>
+    println(s"fetching $name")
+    os.proc("pulumi", "package", "get-schema", name).call(stdout = targetPath / s"$name.json")
+  )
   println("fetched test schema files")
 
 private def copySchemas(sourcePath: os.Path, targetPath: os.Path): Unit =
