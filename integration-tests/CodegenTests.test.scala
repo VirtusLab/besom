@@ -2,11 +2,20 @@ package besom.integration.codegen
 
 import os./
 import besom.integration.common.*
+import munit.{Slow, TestOptions}
 
 import scala.concurrent.duration.Duration
 
 //noinspection ScalaWeakerAccess,TypeAnnotation,ScalaFileName
 class CodegenTests extends munit.FunSuite {
+  val isSlowExclude = false
+  override def munitTests(): Seq[Test] = super
+    .munitTests()
+    .filterNot(tagsWhen(isCI)(LocalOnly))
+    .filterNot(
+      tagsWhen(isCI || isSlowExclude)(Slow)
+    )
+
   override val munitTimeout = Duration(20, "min")
   val testdata              = os.pwd / "integration-tests" / "resources" / "testdata"
 

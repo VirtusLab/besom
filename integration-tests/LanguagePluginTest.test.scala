@@ -6,6 +6,11 @@ import bpickle.*
 
 //noinspection ScalaWeakerAccess,TypeAnnotation,ScalaFileName
 class LanguagePluginTest extends munit.FunSuite {
+  override def munitTests(): Seq[Test] = super
+    .munitTests()
+    .filterNot(tagsWhen(envVarOpt("CI").contains("true"))(LocalOnly))
+    .filterNot(tags(Slow))
+
   val wd                  = os.pwd / "integration-tests"
   val resourcesDir        = wd / "resources"
   val executorsDir        = resourcesDir / "executors"
@@ -34,13 +39,6 @@ class LanguagePluginTest extends munit.FunSuite {
         |    )
         |  )
         |""".stripMargin
-
-  override def munitTests(): Seq[Test] = {
-    val isCI     = sys.env.get("CI").contains("true")
-    val allTests = super.munitTests()
-    if isCI then allTests.filterNot(_.tags.contains(LocalOnly))
-    else allTests
-  }
 
   def publishLocalResourcePlugin(pluginName: String) =
     scalaCli.publishLocal(".").call(cwd = resourcesDir / pluginName)
@@ -84,7 +82,8 @@ class LanguagePluginTest extends munit.FunSuite {
       }
 
     val pulumiUpOutput =
-      pulumi.up(ctx.stackName, "--skip-preview")
+      pulumi
+        .up(ctx.stackName, "--skip-preview")
         .call(cwd = ctx.testDir, env = ctx.env)
         .out
         .text()
@@ -129,7 +128,7 @@ class LanguagePluginTest extends munit.FunSuite {
   FunFixture[pulumi.FixtureContext](
     setup = pulumi.fixture.setup(
       testDir = executorsDir / "scala-cli",
-      projectFiles = Map("project.scala" -> projectFile),
+      projectFiles = Map("project.scala" -> projectFile)
     ),
     teardown = pulumi.fixture.teardown
   ).test("scala-cli") { ctx =>
@@ -149,7 +148,7 @@ class LanguagePluginTest extends munit.FunSuite {
   FunFixture[pulumi.FixtureContext](
     setup = pulumi.fixture.setup(
       executorsDir / "sbt",
-      projectFiles = Map("build.sbt" -> sbtBuildFile),
+      projectFiles = Map("build.sbt" -> sbtBuildFile)
     ),
     teardown = pulumi.fixture.teardown
   ).test("sbt".tag(LocalOnly)) { ctx =>
@@ -159,7 +158,7 @@ class LanguagePluginTest extends munit.FunSuite {
   FunFixture[pulumi.FixtureContext](
     setup = pulumi.fixture.setup(
       executorsDir / "jar",
-      projectFiles = Map(),
+      projectFiles = Map()
     ),
     teardown = pulumi.fixture.teardown
   ).test("jar") { ctx =>
