@@ -1,17 +1,19 @@
 package besom.integration.common
 
+import munit.{Tag, Test}
 import os.Shellable
 
-import scala.util.{Try, Success, Failure}
+import scala.util.{Failure, Success, Try}
 
 case object LocalOnly extends munit.Tag("LocalOnly")
 
-val javaVersion          = "11"
-val scalaVersion         = "3.3.1"
-val coreVersion          = os.read(os.pwd / "version.txt").trim
-val scalaPluginVersion   = coreVersion
-val scalaPluginLocalPath = envVar("PULUMI_SCALA_PLUGIN_LOCAL_PATH").map(os.Path(_))
-val providerRandomVersion = s"4.13.2-core.$coreVersion"
+val javaVersion                 = "11"
+val scalaVersion                = "3.3.1"
+val coreVersion                 = os.read(os.pwd / "version.txt").trim
+val scalaPluginVersion          = coreVersion
+val scalaPluginLocalPath        = envVar("PULUMI_SCALA_PLUGIN_LOCAL_PATH").map(os.Path(_))
+val providerRandomSchemaVersion = "4.13.2"
+val providerRandomVersion       = s"$providerRandomSchemaVersion-core.$coreVersion"
 
 val defaultProjectFile =
   s"""|//> using scala $scalaVersion
@@ -87,7 +89,7 @@ object pulumi {
       val tmpPulumiHome = os.temp.dir()
       val allEnv: Map[String, String] =
         Map(
-          "PULUMI_CONFIG_PASSPHRASE" -> envVarOpt("PULUMI_CONFIG_PASSPHRASE").getOrElse(""),
+          "PULUMI_CONFIG_PASSPHRASE" -> envVarOpt("PULUMI_CONFIG_PASSPHRASE").getOrElse("")
         ) ++ pulumiEnv ++ Map( // don't override test-critical env vars
           "PULUMI_HOME" -> tmpPulumiHome.toString,
           "PULUMI_STACK" -> stackName
@@ -146,8 +148,14 @@ def envVar(name: String): Try[String] =
     case Some(v) =>
       Option(v).filter(_.trim.nonEmpty) match
         case Some(value) => Success(value)
-        case None => Failure(new Exception(s"Environment variable $name is empty"))
+        case None        => Failure(new Exception(s"Environment variable $name is empty"))
     case None => Failure(new Exception(s"Environment variable $name is not set"))
 
 def envVarOpt(name: String): Option[String] =
   sys.env.get(name).map(_.trim).filter(_.nonEmpty)
+
+def tagsWhen(condition: Boolean)(excludedTag: Tag): Test => Boolean =
+  if condition then tags(excludedTag)(_)
+  else _ => false
+
+def tags(excludedTag: Tag): Test => Boolean = _.tags.contains(excludedTag)

@@ -1,11 +1,17 @@
 package besom.integration.languageplugin
 
-import os.*
+import besom.codegen.PulumiPluginJSON
 import besom.integration.common.*
-import bpickle.*
+import munit.Slow
+import os.*
 
 //noinspection ScalaWeakerAccess,TypeAnnotation,ScalaFileName
 class LanguagePluginTest extends munit.FunSuite {
+  override def munitTests(): Seq[Test] = super
+    .munitTests()
+    .filterNot(tagsWhen(envVarOpt("CI").contains("true"))(LocalOnly))
+    .filterNot(tags(Slow))
+
   val wd                  = os.pwd / "integration-tests"
   val resourcesDir        = wd / "resources"
   val executorsDir        = resourcesDir / "executors"
@@ -34,13 +40,6 @@ class LanguagePluginTest extends munit.FunSuite {
         |    )
         |  )
         |""".stripMargin
-
-  override def munitTests(): Seq[Test] = {
-    val isCI     = sys.env.get("CI").contains("true")
-    val allTests = super.munitTests()
-    if isCI then allTests.filterNot(_.tags.contains(LocalOnly))
-    else allTests
-  }
 
   def publishLocalResourcePlugin(pluginName: String) =
     scalaCli.publishLocal(".").call(cwd = resourcesDir / pluginName)
@@ -76,7 +75,7 @@ class LanguagePluginTest extends munit.FunSuite {
 
   def testExecutor(ctx: pulumi.FixtureContext, pluginsJson: String) =
     if pluginsJson.nonEmpty then
-      val actual = bpickle.read[List[PulumiPluginJSON]](pluginsJson)
+      val actual = PulumiPluginJSON.listFrom(pluginsJson)
       assert {
         clue(pluginsJson)
         clue(actual.length) == expectedBootstrapPluginsJson.length
@@ -84,7 +83,8 @@ class LanguagePluginTest extends munit.FunSuite {
       }
 
     val pulumiUpOutput =
-      pulumi.up(ctx.stackName, "--skip-preview")
+      pulumi
+        .up(ctx.stackName, "--skip-preview")
         .call(cwd = ctx.testDir, env = ctx.env)
         .out
         .text()
@@ -129,7 +129,7 @@ class LanguagePluginTest extends munit.FunSuite {
   FunFixture[pulumi.FixtureContext](
     setup = pulumi.fixture.setup(
       testDir = executorsDir / "scala-cli",
-      projectFiles = Map("project.scala" -> projectFile),
+      projectFiles = Map("project.scala" -> projectFile)
     ),
     teardown = pulumi.fixture.teardown
   ).test("scala-cli") { ctx =>
@@ -149,7 +149,7 @@ class LanguagePluginTest extends munit.FunSuite {
   FunFixture[pulumi.FixtureContext](
     setup = pulumi.fixture.setup(
       executorsDir / "sbt",
-      projectFiles = Map("build.sbt" -> sbtBuildFile),
+      projectFiles = Map("build.sbt" -> sbtBuildFile)
     ),
     teardown = pulumi.fixture.teardown
   ).test("sbt".tag(LocalOnly)) { ctx =>
@@ -159,7 +159,7 @@ class LanguagePluginTest extends munit.FunSuite {
   FunFixture[pulumi.FixtureContext](
     setup = pulumi.fixture.setup(
       executorsDir / "jar",
-      projectFiles = Map(),
+      projectFiles = Map()
     ),
     teardown = pulumi.fixture.teardown
   ).test("jar") { ctx =>
@@ -177,30 +177,5 @@ class LanguagePluginTest extends munit.FunSuite {
         .text()
 
     testExecutor(ctx, pluginsJson)
-  }
-}
-
-/** Provides additional information about a package's associated Pulumi plugin.
-  *
-  * For Scala, the content is inside `besom/<provider>/plugin.json` file inside the package.
-  *
-  * Keep in sync with
-  * [[https://github.com/pulumi/pulumi/blob/master/sdk/go/common/resource/plugin/plugin.go#L52 pulumi/sdk/go/common/resource/plugin/plugin.go:52]]
-  */
-case class PulumiPluginJSON(resource: Boolean, name: Option[String], version: Option[String], server: Option[String])
-    derives ReadWriter
-
-// Copied from besom.codegen.UpickleApi
-object bpickle extends upickle.AttributeTagged {
-  override implicit def OptionWriter[T: Writer]: Writer[Option[T]] =
-    implicitly[Writer[T]].comap[Option[T]] {
-      case None    => null.asInstanceOf[T]
-      case Some(x) => x
-    }
-
-  override implicit def OptionReader[T: Reader]: Reader[Option[T]] = {
-    new Reader.Delegate[Any, Option[T]](implicitly[Reader[T]].map(Some(_))) {
-      override def visitNull(index: Int): Option[Nothing] = None
-    }
   }
 }
