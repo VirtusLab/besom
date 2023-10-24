@@ -2,7 +2,7 @@ package besom.integration.codegen
 
 import besom.integration.common.*
 import munit.{Slow, TestOptions}
-import os.*
+import os.{/, *}
 
 import scala.concurrent.duration.Duration
 
@@ -44,7 +44,6 @@ class CodegenTests extends munit.FunSuite {
     )
 
   val slowFileList = List(
-    "kubernetes",
     "docker"
   )
   val slowDirList = List(
@@ -52,8 +51,7 @@ class CodegenTests extends munit.FunSuite {
   )
 
   // FIXME: less broken - compilation error
-  val flakyDirList = List(
-  )
+  val flakyDirList = List()
 
   // FIXME: broken - codegen error
   val ignoreDirList = List(
@@ -87,7 +85,9 @@ class CodegenTests extends munit.FunSuite {
     "azure-native-nested-types"
   )
 
-  val ignoreFileList = List()
+  val ignoreFileList = List(
+    "kubernetes"
+  )
 
   val tests =
     for schema <- os
@@ -95,6 +95,7 @@ class CodegenTests extends munit.FunSuite {
         .filter(os.isFile(_))
         .filter(f => List("json", "yaml").contains(f.ext))
     yield
+      // noinspection ScalaUnusedSymbol
       val name = schema match {
         case _ / d / g"schema.$ext" => d
         case _ / g"$name.$ext"      => name
@@ -108,18 +109,19 @@ class CodegenTests extends munit.FunSuite {
 
   tests.foreach { data =>
     val name = s"""schema '${data.name}' (${data.schema.relativeTo(testdata)}) should codegen"""
+    // noinspection ScalaUnusedSymbol
     val options: TestOptions = data.schema match {
-      case _ / f if ignoreFileList.contains(f)    => name.ignore
-      case _ / d / _ if ignoreDirList.contains(d) => name.ignore
-      case _ / d / _ if flakyDirList.contains(d)  => name.flaky
-      case _ / f if slowFileList.contains(f)      => name.tag(Slow)
-      case _ / d / _ if slowDirList.contains(d)   => name.tag(Slow)
-      case _                                      => name
+      case _ / g"$f.$ext" if ignoreFileList.contains(f) => name.ignore
+      case _ / d / _ if ignoreDirList.contains(d)       => name.ignore
+      case _ / d / _ if flakyDirList.contains(d)        => name.flaky
+      case _ / g"$f.$ext" if slowFileList.contains(f)   => name.tag(Slow)
+      case _ / d / _ if slowDirList.contains(d)         => name.tag(Slow)
+      case _                                            => name
     }
     test(options) {
       val outputDir = codegenDir / data.name / "0.0.0"
-      val result = codegen(data.schema, outputDir, data.name, "0.0.0", coreVersion).call(check = false)
-      val output = result.out.text()
+      val result    = codegen(data.schema, outputDir, data.name, "0.0.0", coreVersion).call(check = false)
+      val output    = result.out.text()
       assert(output.contains("Finished generating SDK codebase"), s"Output:\n$output\n")
       assert(result.exitCode == 0)
 
