@@ -22,7 +22,8 @@ class CoreTests extends munit.FunSuite {
   FunFixture[pulumi.FixtureContext](
     setup = {
       val schemaName = "random"
-      codegen.generatePackage(schemaName, providerRandomSchemaVersion)
+      val providerSource = codegen.generatePackage(schemaName, providerRandomSchemaVersion)
+      scalaCli.publishLocal(providerSource)
       pulumi.fixture.setup(
         wd / "resources" / "random-example",
         projectFiles = Map(

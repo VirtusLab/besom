@@ -11,12 +11,12 @@ val javaVersion                 = "11"
 val scalaVersion                = "3.3.1"
 val coreVersion                 = os.read(os.pwd / "version.txt").trim
 val scalaPluginVersion          = coreVersion
-val scalaPluginLocalPath        = envVar("PULUMI_SCALA_PLUGIN_LOCAL_PATH").map(os.Path(_))
 val providerRandomSchemaVersion = "4.13.2"
 val providerRandomVersion       = s"$providerRandomSchemaVersion-core.$coreVersion"
 
-val schemaDir  = os.pwd / ".out" / "schemas"
-val codegenDir = os.pwd / ".out" / "codegen"
+val schemaDir         = os.pwd / ".out" / "schemas"
+val codegenDir        = os.pwd / ".out" / "codegen"
+val languagePluginDir = os.pwd / ".out" / "language-plugin"
 
 val defaultProjectFile =
   s"""|//> using scala $scalaVersion
@@ -73,7 +73,7 @@ object pulumi {
       "scala",
       scalaPluginVersion,
       "--file",
-      scalaPluginLocalPath.get,
+      languagePluginDir,
       "--reinstall"
     )
 

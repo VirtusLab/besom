@@ -261,9 +261,6 @@ clean-test-integration: clean-test-integration-codegen
 
 # Runs integration tests for core
 test-integration-core: publish-local-codegen publish-local-core install-language-plugin publish-local-compiler-plugin
-	just generate-provider-sdk random 4.13.2
-	just publish-local-provider-sdk random 4.13.2
-	PULUMI_SCALA_PLUGIN_LOCAL_PATH={{language-plugin-output-dir}} \
 	scala-cli --power test integration-tests --test-only 'besom.integration.core*'
 
 # Runs integration tests for compiler plugin
@@ -272,7 +269,6 @@ test-integration-compiler-plugin: publish-local-codegen publish-local-core insta
 
 # Runs integration tests for language plugin
 test-integration-language-plugin: publish-local-codegen publish-local-core install-language-plugin publish-local-compiler-plugin
-	PULUMI_SCALA_PLUGIN_LOCAL_PATH={{language-plugin-output-dir}} \
 	scala-cli --power test integration-tests --test-only 'besom.integration.languageplugin*'
 
 # Runs integration tests for codegen
