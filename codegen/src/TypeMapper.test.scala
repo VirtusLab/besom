@@ -56,8 +56,7 @@ class TypeMapperTest extends munit.FunSuite {
   val tests = List(
     Data(
       providerName = "example",
-      typeToken = "example::SomeType",
-      tags = Set(munit.Ignore)
+      typeToken = "example::SomeType"
     )(
       ResourceClassExpectations(
         fullPackageName = "besom.api.example",
@@ -67,8 +66,7 @@ class TypeMapperTest extends munit.FunSuite {
     ),
     Data(
       providerName = "foo-bar",
-      typeToken = "foo-bar:index:TopLevel",
-      tags = Set(munit.Ignore)
+      typeToken = "foo-bar:index:TopLevel"
     )(
       ResourceClassExpectations(
         fullPackageName = "besom.api.foobar",
@@ -78,8 +76,7 @@ class TypeMapperTest extends munit.FunSuite {
     ),
     Data(
       providerName = "kubernetes",
-      typeToken = "kubernetes:meta/v1:APIVersions",
-      tags = Set(munit.Ignore)
+      typeToken = "kubernetes:meta/v1:APIVersions"
     )(
       ResourceClassExpectations(
         fullPackageName = "besom.api.kubernetes.meta.v1",
@@ -93,11 +90,10 @@ class TypeMapperTest extends munit.FunSuite {
       language = Language(
         java = Java(
           packages = Map(
-            "authentication.k8s.io/v1" -> "authentication/v1"
+            "authentication.k8s.io/v1" -> "authentication.v1"
           )
         )
-      ),
-      tags = Set(munit.Ignore)
+      )
     )(
       ResourceClassExpectations(
         fullPackageName = "besom.api.kubernetes.authentication.v1",
@@ -111,11 +107,10 @@ class TypeMapperTest extends munit.FunSuite {
       language = Language(
         java = Java(
           packages = Map(
-            "rbac.authorization.k8s.io/v1" -> "rbac/authorization/v1"
+            "rbac.authorization.k8s.io/v1" -> "rbac.authorization.v1"
           )
         )
-      ),
-      tags = Set(munit.Ignore)
+      )
     )(
       ResourceClassExpectations(
         fullPackageName = "besom.api.kubernetes.rbac.authorization.v1",
@@ -133,13 +128,13 @@ class TypeMapperTest extends munit.FunSuite {
       val tm: TypeMapper = new TypeMapper(
         defaultProviderName = data.providerName,
         defaultSchemaVersion = data.schemaVersion,
-        schemaProvider = schemaProvider,
-        moduleFormat = data.pulumiPackage.meta.moduleFormat.r
+        schemaProvider = schemaProvider
       )
 
       val ptc = tm.parseTypeToken(
         typeToken = data.typeToken,
-        moduleToPackageParts = data.pulumiPackage.moduleToPackageParts
+        moduleToPackageParts = data.pulumiPackage.moduleToPackageParts,
+        providerToPackageParts = data.pulumiPackage.providerToPackageParts
       )
 
       data.expected.foreach {

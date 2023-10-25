@@ -36,7 +36,7 @@ trait SchemaProvider {
       objectTypeTokens = objectTypeTokensBuffer.toSet,
       resourceTypeTokens = pulumiPackage.resources.keySet.map(_.toLowerCase),
       moduleToPackageParts = pulumiPackage.moduleToPackageParts,
-      moduleFormat = pulumiPackage.meta.moduleFormat.r
+      providerToPackageParts = pulumiPackage.providerToPackageParts
     )
   }
 }

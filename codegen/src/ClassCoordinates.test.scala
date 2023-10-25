@@ -20,8 +20,7 @@ class ClassCoordinatesTest extends munit.FunSuite {
     Data(
       providerPackageParts = Seq("example"),
       modulePackageParts = Seq(),
-      className = "Provider",
-      tags = munit.Ignore
+      className = "Provider"
     )(expected =
       Expectations(
         fullPackageName = "besom.api.example",
@@ -32,8 +31,7 @@ class ClassCoordinatesTest extends munit.FunSuite {
     Data(
       providerPackageParts = Seq("foo-bar"),
       modulePackageParts = Seq(),
-      className = "DashNamedProvider",
-      tags = munit.Ignore
+      className = "DashNamedProvider"
     )(expected =
       Expectations(
         fullPackageName = "besom.api.foobar",

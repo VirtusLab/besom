@@ -86,8 +86,7 @@ object Main {
     implicit val typeMapper: TypeMapper = new TypeMapper(
       defaultProviderName = providerName,
       defaultSchemaVersion = schemaVersion,
-      schemaProvider = schemaProvider,
-      moduleFormat = pulumiPackage.meta.moduleFormat.r
+      schemaProvider = schemaProvider
     )
 
     // make sure we don't have a dirty state

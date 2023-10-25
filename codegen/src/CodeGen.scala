@@ -1,10 +1,7 @@
 package besom.codegen
 
-import java.nio.file.{Path, Paths}
-
 import scala.meta._
 import scala.meta.dialects.Scala33
-
 import besom.codegen.metaschema._
 import besom.codegen.Utils._
 
@@ -97,10 +94,9 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
   }
 
   def sourceFilesForProviderResource(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
-    val providerName         = pulumiPackage.name
-    val providerPackageParts = typeMapper.defaultPackageInfo.moduleToPackageParts(providerName)
+    val providerName = pulumiPackage.name
     val typeCoordinates = PulumiTypeCoordinates(
-      providerPackageParts = typeMapper.defaultPackageInfo.moduleToPackageParts(providerName),
+      providerPackageParts = typeMapper.defaultPackageInfo.providerToPackageParts(providerName),
       modulePackageParts = Seq(Utils.indexModuleName),
       typeName = "Provider"
     )
@@ -113,10 +109,11 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
   }
 
   def sourceFilesForNonResourceTypes(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
-    val moduleToPackageParts = pulumiPackage.moduleToPackageParts
+    val moduleToPackageParts   = pulumiPackage.moduleToPackageParts
+    val providerToPackageParts = pulumiPackage.providerToPackageParts
 
     pulumiPackage.types.flatMap { case (typeToken, typeDefinition) =>
-      val typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts)
+      val typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts, providerToPackageParts)
 
       typeDefinition match {
         case enumDef: EnumTypeDefinition =>
@@ -320,13 +317,14 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
   }
 
   def sourceFilesForResources(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
-    val moduleToPackageParts = pulumiPackage.moduleToPackageParts
+    val moduleToPackageParts   = pulumiPackage.moduleToPackageParts
+    val providerToPackageParts = pulumiPackage.providerToPackageParts
 
     pulumiPackage.resources
       .collect {
         case (typeToken, resourceDefinition) if !resourceDefinition.isOverlay =>
           sourceFilesForResource(
-            typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts),
+            typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts, providerToPackageParts),
             resourceDefinition = resourceDefinition,
             typeToken = typeToken,
             isProvider = false
@@ -672,7 +670,12 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     importedIdentifiers.map(id => s"import $id").mkString("\n")
 }
 
-case class FilePath(pathParts: Seq[String]) {
+case class FilePath private (pathParts: Seq[String]) {
+  require(
+    pathParts.forall(!_.contains('/')),
+    s"Path parts cannot contain '/', got: ${pathParts.mkString("[", ",", "]")}"
+  )
+
   def osSubPath: os.SubPath = pathParts.foldLeft(os.sub)(_ / _)
 }
 

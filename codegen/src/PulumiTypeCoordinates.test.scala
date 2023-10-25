@@ -38,8 +38,7 @@ class PulumiTypeCoordinatesTest extends munit.FunSuite {
     Data(
       providerPackageParts = Seq("example"),
       modulePackageParts = Seq(),
-      typeName = "Provider",
-      tags = munit.Ignore
+      typeName = "Provider"
     )(expected =
       ResourceClassExpectations(
         fullPackageName = "besom.api.example",

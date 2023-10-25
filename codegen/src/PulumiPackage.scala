@@ -1,8 +1,7 @@
 package besom.codegen.metaschema
 
 import upickle.implicits.{key => fieldKey}
-
-import besom.codegen.UpickleApi
+import besom.codegen.{GeneralCodegenException, UpickleApi}
 import besom.codegen.UpickleApi._
 
 case class PulumiPackage(
@@ -18,9 +17,19 @@ case class PulumiPackage(
 object PulumiPackage {
   implicit val reader: Reader[PulumiPackage] = macroR
 
-  def fromFile(filePath: os.Path) = {
-    val input = os.read(filePath)
-    val json  = ujson.read(input)
+  /** Reads a Pulumi package from a Pulumi schema JSON file
+    * @param filePath
+    *   the path to the Pulumi schema JSON file
+    * @return
+    *   the Pulumi package
+    */
+  def fromFile(filePath: os.Path): PulumiPackage = {
+    // noinspection SimplifyBooleanMatch
+    val input = os.exists(filePath) match {
+      case false => throw GeneralCodegenException(s"File $filePath does not exist")
+      case true  => os.read(filePath)
+    }
+    val json = ujson.read(input)
     read[PulumiPackage](json)
   }
 }
