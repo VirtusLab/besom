@@ -23,10 +23,19 @@ object Utils {
     private def slashModuleToPackageParts: String => Seq[String] =
       pkg => pkg.split("/").toSeq.filter(_.nonEmpty)
 
+    private def languageModuleToPackageParts: String => Seq[String] = {
+      pulumiPackage.language.java.packages.view
+        .mapValues { pkg =>
+          pkg.split("\\.").filter(_.nonEmpty).toSeq
+        }
+        .toMap
+        .withDefault(slashModuleToPackageParts)
+    }
+
     private def packageFormatModuleToPackageParts: String => Seq[String] = { module: String =>
       val moduleFormat: Regex = pulumiPackage.meta.moduleFormat.r
       module match {
-        case moduleFormat(name)     => Seq(name)
+        case moduleFormat(name)     => languageModuleToPackageParts(name)
         case moduleFormat(all @ _*) => all
         case _ =>
           throw TypeMapperError(
@@ -36,23 +45,6 @@ object Utils {
       }
     }
 
-    private def languageModuleToPackageParts: String => Seq[String] = {
-      pulumiPackage.language.java.packages.view
-        .mapValues { pkg =>
-          pkg.split("\\.").filter(_.nonEmpty).toSeq
-        }
-        .toMap
-        .withDefault(packageFormatModuleToPackageParts)
-    }
-
-    def moduleToPackageParts: String => Seq[String] = { module: String =>
-      if (pulumiPackage.language.java.packages.nonEmpty) {
-        languageModuleToPackageParts(module)
-      } else if (pulumiPackage.meta.moduleFormat.nonEmpty) {
-        packageFormatModuleToPackageParts(module)
-      } else {
-        slashModuleToPackageParts(module)
-      }
-    }
+    def moduleToPackageParts: String => Seq[String] = packageFormatModuleToPackageParts
   }
 }

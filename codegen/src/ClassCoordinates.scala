@@ -18,7 +18,6 @@ case class ClassCoordinates private (
     parts
       .filterNot(_.isBlank)
       .map(_.replace("-", ""))
-      .flatMap(_.split("/"))
   }
 
   private def packageRef: Term.Ref = {
@@ -50,7 +49,7 @@ case class ClassCoordinates private (
 
   def filePath(implicit providerConfig: Config.ProviderConfig): FilePath = {
     // we DO NOT remove index from the file path, we add it if necessary
-    val moduleParts = modulePackageParts match {
+    val moduleParts = sanitizeParts(modulePackageParts) match {
       case moduleName :: tail =>
         // we need to exclude a module it does not compile
         if (providerConfig.noncompiledModules.contains(moduleName)) {
@@ -62,6 +61,6 @@ case class ClassCoordinates private (
       case Nil => Utils.indexModuleName :: Nil
       case p => p
     }
-    FilePath(Seq("src") ++ sanitizeParts(moduleParts) ++ Seq(s"${className}.scala"))
+    FilePath(Seq("src") ++ moduleParts ++ Seq(s"${className}.scala"))
   }
 }
