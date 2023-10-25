@@ -222,6 +222,10 @@ package-language-plugins-all: build-language-plugin-bootstrap
 compile-codegen:
 	scala-cli --power compile codegen --suppress-experimental-feature-warning
 
+# Runs tests for codegen
+test-codegen:
+	scala-cli --power test codegen --suppress-experimental-feature-warning
+
 # Download the schema for a specific provider, e.g. `just get-schema kubernetes`
 get-schema schema-name schema-version:
 	#!/usr/bin/env sh
@@ -232,7 +236,7 @@ get-schema schema-name schema-version:
 	pulumi package get-schema $schema_source > $schema_dir/schema.json
 
 # Publishes locally besom codegen
-publish-local-codegen:
+publish-local-codegen: test-codegen
 	scala-cli --power publish local codegen --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Generate scala API code for the given provider, e.g. `just generate-provider-sdk kubernetes`

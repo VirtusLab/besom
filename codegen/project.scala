@@ -4,6 +4,7 @@
 //> using dep org.scalameta::scalameta:4.8.12
 //> using dep com.lihaoyi::upickle:3.1.3
 //> using dep com.lihaoyi::os-lib:0.9.1
+//> using test.dep org.scalameta::munit::1.0.0-M10
 
 //> using publish.name "besom-codegen"
 //> using publish.organization "org.virtuslab"
