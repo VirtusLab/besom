@@ -107,7 +107,7 @@ class TypeMapperTest extends munit.FunSuite {
       language = Language(
         java = Java(
           packages = Map(
-            "rbac.authorization.k8s.io/v1" -> "rbac/authorization/v1"
+            "rbac.authorization.k8s.io/v1" -> "rbac.authorization.v1"
           )
         )
       )
