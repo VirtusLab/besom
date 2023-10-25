@@ -1,10 +1,7 @@
 package besom.codegen
 
-import java.nio.file.{Path, Paths}
-
 import scala.meta._
 import scala.meta.dialects.Scala33
-
 import besom.codegen.metaschema._
 import besom.codegen.Utils._
 
@@ -672,7 +669,12 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     importedIdentifiers.map(id => s"import $id").mkString("\n")
 }
 
-case class FilePath(pathParts: Seq[String]) {
+case class FilePath private (pathParts: Seq[String]) {
+  require(
+    pathParts.forall(!_.contains('/')),
+    s"Path parts cannot contain '/', got: ${pathParts.mkString("[", ",", "]")}"
+  )
+
   def osSubPath: os.SubPath = pathParts.foldLeft(os.sub)(_ / _)
 }
 
