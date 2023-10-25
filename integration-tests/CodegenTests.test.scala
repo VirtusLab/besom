@@ -2,7 +2,7 @@ package besom.integration.codegen
 
 import besom.integration.common.*
 import munit.{Slow, TestOptions}
-import os.{/, *}
+import os.*
 
 import scala.concurrent.duration.Duration
 
