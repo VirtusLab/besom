@@ -11,11 +11,12 @@ val javaVersion                 = "11"
 val scalaVersion                = "3.3.1"
 val coreVersion                 = os.read(os.pwd / "version.txt").trim
 val scalaPluginVersion          = coreVersion
-val scalaPluginLocalPath        = envVar("PULUMI_SCALA_PLUGIN_LOCAL_PATH").map(os.Path(_))
 val providerRandomSchemaVersion = "4.13.2"
 val providerRandomVersion       = s"$providerRandomSchemaVersion-core.$coreVersion"
 
+val schemaDir         = os.pwd / ".out" / "schemas"
 val codegenDir        = os.pwd / ".out" / "codegen"
+val languagePluginDir = os.pwd / ".out" / "language-plugin"
 
 val defaultProjectFile =
   s"""|//> using scala $scalaVersion
@@ -72,7 +73,7 @@ object pulumi {
       "scala",
       scalaPluginVersion,
       "--file",
-      scalaPluginLocalPath.get,
+      languagePluginDir,
       "--reinstall"
     )
 
@@ -122,6 +123,7 @@ object pulumi {
 object scalaCli {
   def compile(additional: os.Shellable*) = pproc(
     "scala-cli",
+    "--power",
     "compile",
     "--suppress-experimental-feature-warning",
     "--suppress-directives-in-multiple-files-warning",
@@ -137,6 +139,38 @@ object scalaCli {
     "--suppress-directives-in-multiple-files-warning",
     additional
   )
+}
+
+object codegen {
+  import besom.codegen.Main.generatePackageSources
+
+  def generatePackage(
+    providerName: String,
+    schemaVersion: String,
+    schemas: os.Path = schemaDir,
+    codegen: os.Path = codegenDir,
+    version: String = coreVersion
+  ): os.Path =
+    println(s"Generating package '$providerName' form schema")
+    generatePackageSources(schemas, codegen, providerName, schemaVersion, version)
+
+  def generatePackageFromSchema(
+    schema: os.Path,
+    providerName: String,
+    schemaVersion: String,
+    schemas: os.Path = schemaDir,
+    codegen: os.Path = codegenDir,
+    version: String = coreVersion
+  ): os.Path =
+    println(s"Generating test package '$providerName' form schema: ${schema.relativeTo(os.pwd)}")
+    generatePackageSources(
+      schemas,
+      codegen,
+      providerName,
+      schemaVersion,
+      version,
+      Map((providerName, schemaVersion) -> schema)
+    )
 }
 
 def pproc(command: Shellable*) = {

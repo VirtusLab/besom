@@ -15,7 +15,7 @@ class LanguagePluginTest extends munit.FunSuite {
   val wd                  = os.pwd / "integration-tests"
   val resourcesDir        = wd / "resources"
   val executorsDir        = resourcesDir / "executors"
-  val bootstrapLibJarPath = scalaPluginLocalPath.get / "bootstrap.jar"
+  val bootstrapLibJarPath = languagePluginDir / "bootstrap.jar"
 
   val projectFile =
     s"""|//> using scala $scalaVersion

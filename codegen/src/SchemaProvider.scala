@@ -1,7 +1,5 @@
 package besom.codegen
 
-import besom.codegen.SchemaProvider.{ProviderName, SchemaVersion}
-
 import scala.collection.mutable.ListBuffer
 import besom.codegen.metaschema._
 import besom.codegen.Utils.PulumiPackageOps
@@ -25,10 +23,12 @@ trait SchemaProvider {
     val enumTypeTokensBuffer   = ListBuffer.empty[String]
     val objectTypeTokensBuffer = ListBuffer.empty[String]
 
+    // post-process the package to improve its quality
     pulumiPackage.types.foreach {
       case (typeToken, _: EnumTypeDefinition) =>
         enumTypeTokensBuffer += typeToken.toLowerCase // Unifying to lower case to circumvent inconsistencies in low quality schemas (e.g. aws)
-      case (typeToken, _: ObjectTypeDefinition) => objectTypeTokensBuffer += typeToken.toLowerCase
+      case (typeToken, _: ObjectTypeDefinition) =>
+        objectTypeTokensBuffer += typeToken.toLowerCase
     }
 
     PulumiPackageInfo(
@@ -41,14 +41,8 @@ trait SchemaProvider {
   }
 }
 
-class TestSchemaProvider(schemaPath: os.Path) extends SchemaProvider {
-  override def pulumiPackage(providerName: ProviderName, schemaVersion: SchemaVersion): PulumiPackage =
-    pulumiPackage(schemaPath)
-  override def packageInfo(providerName: ProviderName, schemaVersion: SchemaVersion): PulumiPackageInfo =
-    loadPackageInfo(pulumiPackage(schemaPath))
-}
-
 class DownloadingSchemaProvider(schemaCacheDirPath: os.Path) extends SchemaProvider {
+
   import SchemaProvider._
 
   private val packageInfos: collection.mutable.Map[(ProviderName, SchemaVersion), PulumiPackageInfo] =
@@ -58,20 +52,28 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path) extends SchemaProvi
     val schemaFilePath = schemaCacheDirPath / providerName / schemaVersion / "schema.json"
 
     if (!os.exists(schemaFilePath)) {
-      val schemaSource = s"${providerName}@${schemaVersion}"
+      val schemaSource = s"$providerName@$schemaVersion"
       os.makeDir.all(schemaFilePath / os.up)
-      os.proc("pulumi", "plugin", "install", "resource", providerName, schemaVersion).call()
       os.proc("pulumi", "package", "get-schema", schemaSource).call(stdout = schemaFilePath)
     }
 
     schemaFilePath
   }
 
+  def addSchemaFile(providerName: ProviderName, schemaVersion: SchemaVersion, content: os.Path): os.Path = {
+    val schemaFilePath = schemaCacheDirPath / providerName / schemaVersion / "schema.json"
+    os.copy.over(content, schemaFilePath, replaceExisting = true, createFolders = true)
+    schemaFilePath
+  }
+
+  def addSchemaString(providerName: ProviderName, schemaVersion: SchemaVersion, content: String): os.Path = {
+    val schemaFilePath = schemaCacheDirPath / providerName / schemaVersion / "schema.json"
+    os.write.over(schemaFilePath, content, createFolders = true)
+    schemaFilePath
+  }
+
   def pulumiPackage(providerName: ProviderName, schemaVersion: SchemaVersion): PulumiPackage =
     pulumiPackage(downloadedSchemaFilePath(providerName, schemaVersion))
-
-  private def loadPackageInfo(providerName: ProviderName, schemaVersion: SchemaVersion): PulumiPackageInfo =
-    loadPackageInfo(pulumiPackage(providerName, schemaVersion))
 
   def packageInfo(providerName: ProviderName, schemaVersion: SchemaVersion): PulumiPackageInfo = {
     packageInfos.getOrElseUpdate(
@@ -79,4 +81,7 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path) extends SchemaProvi
       loadPackageInfo(providerName, schemaVersion)
     )
   }
+
+  private def loadPackageInfo(providerName: ProviderName, schemaVersion: SchemaVersion): PulumiPackageInfo =
+    loadPackageInfo(pulumiPackage(providerName, schemaVersion))
 }

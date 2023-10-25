@@ -21,28 +21,6 @@ class CodegenTests extends munit.FunSuite {
 
   val testdata = os.pwd / "integration-tests" / "resources" / "testdata"
 
-  def codegen(
-    schemaPath: os.Path,
-    codegenOutputDir: os.Path,
-    schemaName: String,
-    schemaVersion: String,
-    besomVersion: String
-  ): os.proc =
-    pproc(
-      "scala-cli",
-      "run",
-      "codegen",
-      "--suppress-experimental-feature-warning",
-      "--suppress-directives-in-multiple-files-warning",
-      "--",
-      "test",
-      schemaPath,
-      codegenOutputDir,
-      schemaName,
-      schemaVersion,
-      besomVersion
-    )
-
   val slowFileList = List(
     "docker"
   )
@@ -119,13 +97,8 @@ class CodegenTests extends munit.FunSuite {
       case _                                            => name
     }
     test(options) {
-      val outputDir = codegenDir / data.name / "0.0.0"
-      val result    = codegen(data.schema, outputDir, data.name, "0.0.0", coreVersion).call(check = false)
-      val output    = result.out.text()
-      assert(output.contains("Finished generating SDK codebase"), s"Output:\n$output\n")
-      assert(result.exitCode == 0)
-
-      val compiled = scalaCli.compile(outputDir).call(check = false)
+      val outputDir = codegen.generatePackageFromSchema(data.schema, data.name, "0.0.0")
+      val compiled  = scalaCli.compile(outputDir).call(check = false)
       assert {
         clue(data)
         compiled.exitCode == 0
