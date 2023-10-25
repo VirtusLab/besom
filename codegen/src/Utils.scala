@@ -46,5 +46,6 @@ object Utils {
     }
 
     def moduleToPackageParts: String => Seq[String] = packageFormatModuleToPackageParts
+    def providerToPackageParts: String => Seq[String] = module => Seq(module)
   }
 }

@@ -95,9 +95,8 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
 
   def sourceFilesForProviderResource(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
     val providerName         = pulumiPackage.name
-    val providerPackageParts = typeMapper.defaultPackageInfo.moduleToPackageParts(providerName)
     val typeCoordinates = PulumiTypeCoordinates(
-      providerPackageParts = typeMapper.defaultPackageInfo.moduleToPackageParts(providerName),
+      providerPackageParts = typeMapper.defaultPackageInfo.providerToPackageParts(providerName),
       modulePackageParts = Seq(Utils.indexModuleName),
       typeName = "Provider"
     )
