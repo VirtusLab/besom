@@ -94,7 +94,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
   }
 
   def sourceFilesForProviderResource(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
-    val providerName         = pulumiPackage.name
+    val providerName = pulumiPackage.name
     val typeCoordinates = PulumiTypeCoordinates(
       providerPackageParts = typeMapper.defaultPackageInfo.providerToPackageParts(providerName),
       modulePackageParts = Seq(Utils.indexModuleName),
@@ -109,10 +109,11 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
   }
 
   def sourceFilesForNonResourceTypes(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
-    val moduleToPackageParts = pulumiPackage.moduleToPackageParts
+    val moduleToPackageParts   = pulumiPackage.moduleToPackageParts
+    val providerToPackageParts = pulumiPackage.providerToPackageParts
 
     pulumiPackage.types.flatMap { case (typeToken, typeDefinition) =>
-      val typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts)
+      val typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts, providerToPackageParts)
 
       typeDefinition match {
         case enumDef: EnumTypeDefinition =>
@@ -316,13 +317,14 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
   }
 
   def sourceFilesForResources(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
-    val moduleToPackageParts = pulumiPackage.moduleToPackageParts
+    val moduleToPackageParts   = pulumiPackage.moduleToPackageParts
+    val providerToPackageParts = pulumiPackage.providerToPackageParts
 
     pulumiPackage.resources
       .collect {
         case (typeToken, resourceDefinition) if !resourceDefinition.isOverlay =>
           sourceFilesForResource(
-            typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts),
+            typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts, providerToPackageParts),
             resourceDefinition = resourceDefinition,
             typeToken = typeToken,
             isProvider = false

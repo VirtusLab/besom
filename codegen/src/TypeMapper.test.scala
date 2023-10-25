@@ -133,7 +133,8 @@ class TypeMapperTest extends munit.FunSuite {
 
       val ptc = tm.parseTypeToken(
         typeToken = data.typeToken,
-        moduleToPackageParts = data.pulumiPackage.moduleToPackageParts
+        moduleToPackageParts = data.pulumiPackage.moduleToPackageParts,
+        providerToPackageParts = data.pulumiPackage.providerToPackageParts
       )
 
       data.expected.foreach {

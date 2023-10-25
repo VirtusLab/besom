@@ -16,7 +16,11 @@ class TypeMapper(
   private val typeTokenFmt: String    = "(.*):(.*)?:(.*)" // provider:module:type
   private val typeTokenPattern: Regex = ("^" + typeTokenFmt + "$").r
 
-  def parseTypeToken(typeToken: String, moduleToPackageParts: String => Seq[String]): PulumiTypeCoordinates = {
+  def parseTypeToken(
+    typeToken: String,
+    moduleToPackageParts: String => Seq[String],
+    providerToPackageParts: String => Seq[String]
+  ): PulumiTypeCoordinates = {
     val (providerName, modulePortion, typeName) = typeToken match {
       case typeTokenPattern(providerName, modulePortion, typeName) =>
         (providerName, modulePortion, typeName)
@@ -27,7 +31,7 @@ class TypeMapper(
         )
     }
     PulumiTypeCoordinates(
-      providerPackageParts = moduleToPackageParts(providerName),
+      providerPackageParts = providerToPackageParts(providerName),
       modulePackageParts = moduleToPackageParts(modulePortion),
       typeName = typeName
     )
@@ -66,7 +70,8 @@ class TypeMapper(
     val typeToken          = escapedTypeToken.replace("%2F", "/") // TODO: Proper URL unescaping ?
     val uniformedTypeToken = typeToken.toLowerCase
 
-    val typeCoordinates = parseTypeToken(typeToken, packageInfo.moduleToPackageParts)
+    val typeCoordinates =
+      parseTypeToken(typeToken, packageInfo.moduleToPackageParts, packageInfo.providerToPackageParts)
 
     lazy val hasResourceDefinition  = packageInfo.resourceTypeTokens.contains(uniformedTypeToken)
     lazy val hasObjectTypeDefintion = packageInfo.objectTypeTokens.contains(uniformedTypeToken)
