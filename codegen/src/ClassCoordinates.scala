@@ -22,7 +22,7 @@ case class ClassCoordinates private (
 
   private def packageRef: Term.Ref = {
     try {
-      val moduleParts = modulePackageParts match {
+      val moduleParts = modulePackageParts.toList match {
         case head :: tail if head == Utils.indexModuleName => tail
         case p               => p
       }
