@@ -90,7 +90,7 @@ class TypeMapperTest extends munit.FunSuite {
       language = Language(
         java = Java(
           packages = Map(
-            "authentication.k8s.io/v1" -> "authentication/v1"
+            "authentication.k8s.io/v1" -> "authentication.v1"
           )
         )
       )
