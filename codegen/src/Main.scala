@@ -59,7 +59,7 @@ object Main {
 
     // Pre-load schemas from files if needed
     preLoadSchemas.foreach { case ((name, version), path) =>
-      schemaProvider.addSchema(name, version, path)
+      schemaProvider.addSchemaFile(name, version, path)
     }
 
     generatePackageSources(schemaProvider, outputDir, providerName, schemaVersion, besomVersion)

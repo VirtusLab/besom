@@ -60,13 +60,13 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path) extends SchemaProvi
     schemaFilePath
   }
 
-  def addSchema(providerName: ProviderName, schemaVersion: SchemaVersion, content: os.Path): os.Path = {
+  def addSchemaFile(providerName: ProviderName, schemaVersion: SchemaVersion, content: os.Path): os.Path = {
     val schemaFilePath = schemaCacheDirPath / providerName / schemaVersion / "schema.json"
     os.copy.over(content, schemaFilePath, replaceExisting = true, createFolders = true)
     schemaFilePath
   }
 
-  def addSchema(providerName: ProviderName, schemaVersion: SchemaVersion, content: String): os.Path = {
+  def addSchemaString(providerName: ProviderName, schemaVersion: SchemaVersion, content: String): os.Path = {
     val schemaFilePath = schemaCacheDirPath / providerName / schemaVersion / "schema.json"
     os.write.over(schemaFilePath, content, createFolders = true)
     schemaFilePath
