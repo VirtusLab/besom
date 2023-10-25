@@ -4,6 +4,9 @@ import scala.meta.Type
 import besom.codegen.metaschema.{TypeReference, PulumiPackage}
 
 object Utils {
+  // "index" is a placeholder module for classes that should be in
+  // the root package (according to pulumi's convention)
+  // Needs to be used in Pulumi types, but should NOT be translated to Scala code
   // Placeholder module for classes that should be in the root package (according to pulumi's convention)
   val indexModuleName = "index"
   val jvmMaxParamsCount = 253 // https://github.com/scala/bug/issues/7324 // TODO: Find some workaround to enable passing the remaining arguments
