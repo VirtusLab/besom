@@ -21,11 +21,13 @@ class CoreTests extends munit.FunSuite {
 
   FunFixture[pulumi.FixtureContext](
     setup = {
+      val schemaName = "random"
+      codegen.generatePackage(schemaName, providerRandomSchemaVersion)
       pulumi.fixture.setup(
         wd / "resources" / "random-example",
         projectFiles = Map(
           "project.scala" ->
-            (defaultProjectFile + s"""//> using dep org.virtuslab::besom-random:$providerRandomVersion""")
+            (defaultProjectFile + s"""//> using dep org.virtuslab::besom-$schemaName:$providerRandomVersion""")
         )
       )
     },

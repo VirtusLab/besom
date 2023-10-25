@@ -15,7 +15,8 @@ val scalaPluginLocalPath        = envVar("PULUMI_SCALA_PLUGIN_LOCAL_PATH").map(o
 val providerRandomSchemaVersion = "4.13.2"
 val providerRandomVersion       = s"$providerRandomSchemaVersion-core.$coreVersion"
 
-val codegenDir        = os.pwd / ".out" / "codegen"
+val schemaDir  = os.pwd / ".out" / "schemas"
+val codegenDir = os.pwd / ".out" / "codegen"
 
 val defaultProjectFile =
   s"""|//> using scala $scalaVersion
@@ -122,6 +123,7 @@ object pulumi {
 object scalaCli {
   def compile(additional: os.Shellable*) = pproc(
     "scala-cli",
+    "--power",
     "compile",
     "--suppress-experimental-feature-warning",
     "--suppress-directives-in-multiple-files-warning",
@@ -137,6 +139,38 @@ object scalaCli {
     "--suppress-directives-in-multiple-files-warning",
     additional
   )
+}
+
+object codegen {
+  import besom.codegen.Main.generatePackageSources
+
+  def generatePackage(
+    providerName: String,
+    schemaVersion: String,
+    schemas: os.Path = schemaDir,
+    codegen: os.Path = codegenDir,
+    version: String = coreVersion
+  ): os.Path =
+    println(s"Generating package '$providerName' form schema")
+    generatePackageSources(schemas, codegen, providerName, schemaVersion, version)
+
+  def generatePackageFromSchema(
+    schema: os.Path,
+    providerName: String,
+    schemaVersion: String,
+    schemas: os.Path = schemaDir,
+    codegen: os.Path = codegenDir,
+    version: String = coreVersion
+  ): os.Path =
+    println(s"Generating test package '$providerName' form schema: ${schema.relativeTo(os.pwd)}")
+    generatePackageSources(
+      schemas,
+      codegen,
+      providerName,
+      schemaVersion,
+      version,
+      Map((providerName, schemaVersion) -> schema)
+    )
 }
 
 def pproc(command: Shellable*) = {

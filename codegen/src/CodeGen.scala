@@ -8,20 +8,28 @@ import scala.meta.dialects.Scala33
 import besom.codegen.metaschema._
 import besom.codegen.Utils._
 
+//noinspection ScalaWeakerAccess
+object CodeGen {
+  val javaVersion  = "11"
+  val scalaVersion = "3.3.1"
+}
+
+//noinspection ScalaWeakerAccess,TypeAnnotation
 class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMapper, logger: Logger) {
+
+  import CodeGen._
+
   val commonImportedIdentifiers = Seq(
     "besom.types.Output",
     "besom.types.Context"
   )
 
-  def sourcesFromPulumiPackage(pulumiPackage: PulumiPackage, schemaVersion: String, besomVersion: String): Seq[SourceFile] = {
-    val scalaSources = (
-      sourceFilesForProviderResource(pulumiPackage) ++
-      sourceFilesForNonResourceTypes(pulumiPackage) ++
-      sourceFilesForCustomResources(pulumiPackage)
-    )
-
-    scalaSources ++ Seq(
+  def sourcesFromPulumiPackage(
+    pulumiPackage: PulumiPackage,
+    schemaVersion: String,
+    besomVersion: String
+  ): Seq[SourceFile] =
+    scalaFiles(pulumiPackage) ++ Seq(
       projectConfigFile(
         pulumiPackageName = pulumiPackage.name,
         schemaVersion = schemaVersion,
@@ -31,16 +39,18 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
         pluginName = pulumiPackage.name,
         pluginVersion = schemaVersion,
         pluginDownloadUrl = pulumiPackage.pluginDownloadURL
-      ),
+      )
     )
-  }
+
+  def scalaFiles(pulumiPackage: PulumiPackage): Seq[SourceFile] =
+    sourceFilesForProviderResource(pulumiPackage) ++
+      sourceFilesForNonResourceTypes(pulumiPackage) ++
+      sourceFilesForResources(pulumiPackage)
 
   def projectConfigFile(pulumiPackageName: String, schemaVersion: String, besomVersion: String): SourceFile = {
-    // TODO use original package version from the schema as publish.version?
-
     val fileContent =
-      s"""|//> using scala "3.3.0"
-          |//> using options "-java-output-version:11"
+      s"""|//> using scala $scalaVersion
+          |//> using options "-java-output-version:$javaVersion"
           |//> using options "-skip-by-regex:.*"
           |
           |//> using dep "org.virtuslab::besom-core:${besomVersion}"
@@ -64,10 +74,14 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     SourceFile(filePath = filePath, sourceCode = fileContent)
   }
 
-  def resourcePluginMetadataFile(pluginName: String, pluginVersion: String, pluginDownloadUrl: Option[String]): SourceFile = {
+  def resourcePluginMetadataFile(
+    pluginName: String,
+    pluginVersion: String,
+    pluginDownloadUrl: Option[String]
+  ): SourceFile = {
     val pluginDownloadUrlJsonValue = pluginDownloadUrl match {
       case Some(url) => s"\"${url}\""
-      case None => "null"
+      case None      => "null"
     }
     val fileContent =
       s"""|{
@@ -80,10 +94,10 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     val filePath = FilePath(Seq("resources", "besom", "api", pluginName, "plugin.json"))
 
     SourceFile(filePath = filePath, sourceCode = fileContent)
-  } 
+  }
 
   def sourceFilesForProviderResource(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
-    val providerName = pulumiPackage.name
+    val providerName         = pulumiPackage.name
     val providerPackageParts = typeMapper.defaultPackageInfo.moduleToPackageParts(providerName)
     val typeCoordinates = PulumiTypeCoordinates(
       providerPackageParts = typeMapper.defaultPackageInfo.moduleToPackageParts(providerName),
@@ -98,50 +112,57 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     )
   }
 
-
   def sourceFilesForNonResourceTypes(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
     val moduleToPackageParts = pulumiPackage.moduleToPackageParts
-    
+
     pulumiPackage.types.flatMap { case (typeToken, typeDefinition) =>
       val typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts)
 
       typeDefinition match {
-        case enumDef: EnumTypeDefinition => sourceFilesForEnum(typeCoordinates = typeCoordinates, enumDefinition = enumDef)
-        case objectDef: ObjectTypeDefinition => sourceFilesForObjectType(typeCoordinates = typeCoordinates, objectTypeDefinition = objectDef, typeToken = typeToken)
+        case enumDef: EnumTypeDefinition =>
+          sourceFilesForEnum(typeCoordinates = typeCoordinates, enumDefinition = enumDef)
+        case objectDef: ObjectTypeDefinition =>
+          sourceFilesForObjectType(
+            typeCoordinates = typeCoordinates,
+            objectTypeDefinition = objectDef,
+            typeToken = typeToken
+          )
       }
     }.toSeq
   }
 
-  def sourceFilesForEnum(typeCoordinates: PulumiTypeCoordinates, enumDefinition: EnumTypeDefinition): Seq[SourceFile] = {
+  def sourceFilesForEnum(
+    typeCoordinates: PulumiTypeCoordinates,
+    enumDefinition: EnumTypeDefinition
+  ): Seq[SourceFile] = {
     val classCoordinates = typeCoordinates.asEnumClass
 
-    val enumClassName = Type.Name(classCoordinates.className).syntax
+    val enumClassName       = Type.Name(classCoordinates.className).syntax
     val enumClassStringName = Lit.String(classCoordinates.className).syntax
 
     val (superclass, valueType) = enumDefinition.`type` match {
       case BooleanType => ("besom.types.BooleanEnum", "Boolean")
       case IntegerType => ("besom.types.IntegerEnum", "Int")
-      case NumberType => ("besom.types.NumberEnum", "Double")
-      case StringType => ("besom.types.StringEnum", "String")
+      case NumberType  => ("besom.types.NumberEnum", "Double")
+      case StringType  => ("besom.types.StringEnum", "String")
     }
 
     val instances = enumDefinition.`enum`.map { valueDefinition =>
       val caseRawName = valueDefinition.name.getOrElse {
         valueDefinition.value match {
           case StringConstValue(value) => value
-          case const => throw new Exception(s"The name of enum cannot be derived from value ${const}")
+          case const                   => throw new Exception(s"The name of enum cannot be derived from value ${const}")
         }
       }
-      val caseName = Term.Name(caseRawName).syntax
+      val caseName       = Term.Name(caseRawName).syntax
       val caseStringName = Lit.String(caseRawName).syntax
-      val caseValue = constValueAsCode(valueDefinition.value).syntax
+      val caseValue      = constValueAsCode(valueDefinition.value).syntax
 
       val definition = s"""object ${caseName} extends ${enumClassName}(${caseStringName}, ${caseValue})"""
-      val reference = caseName
+      val reference  = caseName
       (definition, reference)
     }
 
-    
     val fileContent =
       s"""|package ${classCoordinates.fullPackageName}
           |
@@ -155,59 +176,68 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
           |  )
           |""".stripMargin
 
-    Seq(SourceFile(
-      classCoordinates.filePath,
-      fileContent
-    ))
+    Seq(
+      SourceFile(
+        classCoordinates.filePath,
+        fileContent
+      )
+    )
   }
 
-  def sourceFilesForObjectType(typeCoordinates: PulumiTypeCoordinates, objectTypeDefinition: ObjectTypeDefinition, typeToken: String): Seq[SourceFile] = {
+  def sourceFilesForObjectType(
+    typeCoordinates: PulumiTypeCoordinates,
+    objectTypeDefinition: ObjectTypeDefinition,
+    typeToken: String
+  ): Seq[SourceFile] = {
     val baseClassCoordinates = typeCoordinates.asObjectClass(asArgsType = false)
     val argsClassCoordinates = typeCoordinates.asObjectClass(asArgsType = true)
-    
+
     val baseClassName = Type.Name(baseClassCoordinates.className).syntax
     val argsClassName = Type.Name(argsClassCoordinates.className).syntax
-    
-    val baseFileImports = makeImportStatements(commonImportedIdentifiers ++ Seq(
-      "besom.types.Decoder"
-    ))
 
-    val argsFileImports = makeImportStatements(commonImportedIdentifiers ++ Seq(
-      "besom.types.Input",
-      "besom.types.Encoder",
-      "besom.types.ArgsEncoder"
-    ))
+    val baseFileImports = makeImportStatements(
+      commonImportedIdentifiers ++ Seq(
+        "besom.types.Decoder"
+      )
+    )
+
+    val argsFileImports = makeImportStatements(
+      commonImportedIdentifiers ++ Seq(
+        "besom.types.Input",
+        "besom.types.Encoder",
+        "besom.types.ArgsEncoder"
+      )
+    )
 
     val objectProperties = {
       val allProperties = objectTypeDefinition.properties.toSeq.sortBy(_._1)
       val truncatedProperties =
-        if (allProperties.size <= jvmMaxParamsCount)
-          allProperties
+        if (allProperties.size <= jvmMaxParamsCount) allProperties
         else {
           logger.warn(s"Object type ${typeToken} has too many properties. Only first ${jvmMaxParamsCount} will be kept")
           allProperties.take(jvmMaxParamsCount)
         }
-      
-      truncatedProperties.map {
-        case (propertyName, propertyDefinition) =>
-          val isPropertyRequired = objectTypeDefinition.required.contains(propertyName)
-          makePropertyInfo(
-            propertyName = propertyName,
-            propertyDefinition = propertyDefinition,
-            isPropertyRequired = objectTypeDefinition.required.contains(propertyName)
-          )
+
+      truncatedProperties.map { case (propertyName, propertyDefinition) =>
+        makePropertyInfo(
+          propertyName = propertyName,
+          propertyDefinition = propertyDefinition,
+          isPropertyRequired = objectTypeDefinition.required.contains(propertyName)
+        )
       }
     }
 
     val baseClassParams = objectProperties.map { propertyInfo =>
-      val fieldType =  if (propertyInfo.isOptional) t"""Option[${propertyInfo.baseType}]""" else propertyInfo.baseType
-      Term.Param(
-        mods = List.empty,
+      val fieldType = if (propertyInfo.isOptional) t"""Option[${propertyInfo.baseType}]""" else propertyInfo.baseType
+      Term
+        .Param(
+          mods = List.empty,
           name = propertyInfo.name,
           decltpe = Some(fieldType),
           default = None
-        ).syntax
-      }
+        )
+        .syntax
+    }
     val baseOutputExtensionMethods = objectProperties.map { propertyInfo =>
       val innerType = if (propertyInfo.isOptional) t"""Option[${propertyInfo.baseType}]""" else propertyInfo.baseType
       q"""def ${propertyInfo.name}: Output[$innerType] = output.map(_.${propertyInfo.name})""".syntax
@@ -230,7 +260,8 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
 
     val baseCompanion =
       if (hasOutputExtensions) {
-        val classNameTerminator = if (baseClassName.endsWith("_")) " " else "" // colon after underscore would be treated as a part of the name
+        val classNameTerminator =
+          if (baseClassName.endsWith("_")) " " else "" // colon after underscore would be treated as a part of the name
 
         s"""|object ${baseClassName}${classNameTerminator}:
             |  given outputOps: {} with
@@ -244,9 +275,15 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
       } else {
         s"""object $baseClassName"""
       }
-    
-    val argsClass = makeArgsClass(argsClassName = argsClassName, inputProperties = objectProperties, isResource = false, isProvider = false)
-    val argsCompanion = makeArgsCompanion(argsClassName = argsClassName, inputProperties = objectProperties, isResource = false)
+
+    val argsClass = makeArgsClass(
+      argsClassName = argsClassName,
+      inputProperties = objectProperties,
+      isResource = false,
+      isProvider = false
+    )
+    val argsCompanion =
+      makeArgsCompanion(argsClassName = argsClassName, inputProperties = objectProperties, isResource = false)
 
     val baseClassFileContent =
       s"""|package ${baseClassCoordinates.fullPackageName}
@@ -261,7 +298,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
           |""".stripMargin
 
     val argsClassFileContent =
-      s"""|package ${argsClassCoordinates.fullPackageName} 
+      s"""|package ${argsClassCoordinates.fullPackageName}
           |
           |${argsFileImports}
           |
@@ -282,24 +319,33 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     )
   }
 
-  def sourceFilesForCustomResources(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
+  def sourceFilesForResources(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
     val moduleToPackageParts = pulumiPackage.moduleToPackageParts
 
-    pulumiPackage.resources.collect { case (typeToken, resourceDefinition) if !resourceDefinition.isOverlay =>
-      sourceFilesForResource(
-        typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts),
-        resourceDefinition = resourceDefinition,
-        typeToken = typeToken,
-        isProvider = false,
-      )
-    }.toSeq.flatten
+    pulumiPackage.resources
+      .collect {
+        case (typeToken, resourceDefinition) if !resourceDefinition.isOverlay =>
+          sourceFilesForResource(
+            typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts),
+            resourceDefinition = resourceDefinition,
+            typeToken = typeToken,
+            isProvider = false
+          )
+      }
+      .toSeq
+      .flatten
   }
 
-  def sourceFilesForResource(typeCoordinates: PulumiTypeCoordinates, resourceDefinition: ResourceDefinition, typeToken: String, isProvider: Boolean): Seq[SourceFile] = {
+  def sourceFilesForResource(
+    typeCoordinates: PulumiTypeCoordinates,
+    resourceDefinition: ResourceDefinition,
+    typeToken: String,
+    isProvider: Boolean
+  ): Seq[SourceFile] = {
     val baseClassCoordinates = typeCoordinates.asResourceClass(asArgsType = false)
     val argsClassCoordinates = typeCoordinates.asResourceClass(asArgsType = true)
-    val baseClassName = Type.Name(baseClassCoordinates.className).syntax
-    val argsClassName = Type.Name(argsClassCoordinates.className).syntax
+    val baseClassName        = Type.Name(baseClassCoordinates.className).syntax
+    val argsClassName        = Type.Name(argsClassCoordinates.className).syntax
 
     val baseFileImports = {
       val conditionalIdentifiers =
@@ -310,7 +356,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
       val unconditionalIdentifiers = Seq(
         "besom.ResourceDecoder",
         "besom.CustomResourceOptions",
-        "besom.util.NonEmptyString",
+        "besom.util.NonEmptyString"
       )
       makeImportStatements(commonImportedIdentifiers ++ conditionalIdentifiers ++ unconditionalIdentifiers)
     }
@@ -338,19 +384,19 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     val resourceProperties = {
       val allProperties = (resourceBaseProperties ++ resourceDefinition.properties.toSeq.sortBy(_._1))
       val truncatedProperties =
-        if (allProperties.size <= jvmMaxParamsCount)
-          allProperties
+        if (allProperties.size <= jvmMaxParamsCount) allProperties
         else {
-          logger.warn(s"Resource type ${typeToken} has too many properties. Only first ${jvmMaxParamsCount} will be kept")
+          logger.warn(
+            s"Resource type ${typeToken} has too many properties. Only first ${jvmMaxParamsCount} will be kept"
+          )
           allProperties.take(jvmMaxParamsCount)
         }
-      truncatedProperties.map {
-        case (propertyName, propertyDefinition) =>
-          makePropertyInfo(
-            propertyName = propertyName,
-            propertyDefinition = propertyDefinition,
-            isPropertyRequired = requiredOutputs.contains(propertyName)
-          )
+      truncatedProperties.map { case (propertyName, propertyDefinition) =>
+        makePropertyInfo(
+          propertyName = propertyName,
+          propertyDefinition = propertyDefinition,
+          isPropertyRequired = requiredOutputs.contains(propertyName)
+        )
       }
     }
 
@@ -358,36 +404,38 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
 
     val baseClassParams = resourceProperties.map { propertyInfo =>
       val innerType = if (propertyInfo.isOptional) t"""Option[${propertyInfo.baseType}]""" else propertyInfo.baseType
-      Term.Param(
-      mods = List.empty,
-        name = propertyInfo.name,
-        decltpe = Some(t"""Output[${innerType}]"""),
-        default = None
-      ).syntax
+      Term
+        .Param(
+          mods = List.empty,
+          name = propertyInfo.name,
+          decltpe = Some(t"""Output[${innerType}]"""),
+          default = None
+        )
+        .syntax
     }
 
     val baseOutputExtensionMethods = resourceProperties.map { propertyInfo =>
-      val innerType = if (propertyInfo.isOptional) t"""Option[${propertyInfo.baseType}]""" else propertyInfo.baseType
+      val innerType  = if (propertyInfo.isOptional) t"""Option[${propertyInfo.baseType}]""" else propertyInfo.baseType
       val resultType = t"Output[${innerType}]"
       q"""def ${propertyInfo.name}: $resultType = output.flatMap(_.${propertyInfo.name})""".syntax
     }
 
     val inputProperties = {
       val allProperties = resourceDefinition.inputProperties.toSeq.sortBy(_._1)
-      val truncatedProperties = 
-        if (allProperties.size <= jvmMaxParamsCount)
-          allProperties
+      val truncatedProperties =
+        if (allProperties.size <= jvmMaxParamsCount) allProperties
         else {
-          logger.warn(s"Resource type ${typeToken} has too many input properties. Only first ${jvmMaxParamsCount} will be kept")
+          logger.warn(
+            s"Resource type ${typeToken} has too many input properties. Only first ${jvmMaxParamsCount} will be kept"
+          )
           allProperties.take(jvmMaxParamsCount)
         }
-      truncatedProperties.map {
-        case (propertyName, propertyDefinition) =>
-          makePropertyInfo(
-            propertyName = propertyName,
-            propertyDefinition = propertyDefinition,
-            isPropertyRequired = requiredInputs.contains(propertyName)
-          )
+      truncatedProperties.map { case (propertyName, propertyDefinition) =>
+        makePropertyInfo(
+          propertyName = propertyName,
+          propertyDefinition = propertyDefinition,
+          isPropertyRequired = requiredInputs.contains(propertyName)
+        )
       }
     }
 
@@ -411,7 +459,8 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
 
     val argsDefault = if (hasDefaultArgsConstructor) s""" = ${argsClassName}()""" else ""
 
-    // the type has to match pulumi's resource type schema, ie kubernetes:core/v1:Pod
+    // the type has to match Pulumi's resource type schema, e.g. kubernetes:core/v1:Pod
+    // please make sure, it contains 'index' instead of empty module part if needed
     val typ = Lit.String(typeToken)
 
     val baseCompanion =
@@ -421,7 +470,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
             |    name: NonEmptyString,
             |    args: ${argsClassName}${argsDefault},
             |    opts: CustomResourceOptions = CustomResourceOptions()
-            |  ): Output[$baseClassName] = 
+            |  ): Output[$baseClassName] =
             |    ctx.registerResource[$baseClassName, $argsClassName](${typ}, name, args, opts)
             |
             |  given outputOps: {} with
@@ -431,9 +480,15 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
         s"""object $baseClassName"""
       }
 
-    val argsClass = makeArgsClass(argsClassName = argsClassName, inputProperties = inputProperties, isResource = true, isProvider = isProvider)
+    val argsClass = makeArgsClass(
+      argsClassName = argsClassName,
+      inputProperties = inputProperties,
+      isResource = true,
+      isProvider = isProvider
+    )
 
-    val argsCompanion = makeArgsCompanion(argsClassName = argsClassName, inputProperties = inputProperties, isResource = true)
+    val argsCompanion =
+      makeArgsCompanion(argsClassName = argsClassName, inputProperties = inputProperties, isResource = true)
 
     val baseClassFileContent =
       s"""|package ${baseClassCoordinates.fullPackageName}
@@ -468,13 +523,17 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     )
   }
 
-  private def makePropertyInfo(propertyName: String, propertyDefinition: PropertyDefinition, isPropertyRequired: Boolean): PropertyInfo = {
+  private def makePropertyInfo(
+    propertyName: String,
+    propertyDefinition: PropertyDefinition,
+    isPropertyRequired: Boolean
+  ): PropertyInfo = {
     val isRequired =
-        isPropertyRequired ||
+      isPropertyRequired ||
         propertyDefinition.default.nonEmpty ||
         propertyDefinition.const.nonEmpty
     val baseType = propertyDefinition.typeReference.asScalaType()
-    val argType = propertyDefinition.typeReference.asScalaType(asArgsType = true)
+    val argType  = propertyDefinition.typeReference.asScalaType(asArgsType = true)
     val inputArgType = propertyDefinition.typeReference match {
       case ArrayType(innerType) =>
         t"""scala.List[Input[${innerType.asScalaType(asArgsType = true)}]]"""
@@ -484,10 +543,12 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
         tp.asScalaType(asArgsType = true)
     }
     val defaultValue =
-      propertyDefinition.default.orElse(propertyDefinition.const)
+      propertyDefinition.default
+        .orElse(propertyDefinition.const)
         .map { value =>
           constValueAsCode(value)
-        }.orElse {
+        }
+        .orElse {
           if (isPropertyRequired) None else Some(q"""None""")
         }
     val constValue = propertyDefinition.const.map(constValueAsCode)
@@ -500,23 +561,30 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
       inputArgType = inputArgType,
       defaultValue = defaultValue,
       constValue = constValue,
-      isSecret = propertyDefinition.secret,
+      isSecret = propertyDefinition.secret
     )
   }
 
-  private def makeArgsClass(argsClassName: String, inputProperties: Seq[PropertyInfo], isResource: Boolean, isProvider: Boolean) = {
+  private def makeArgsClass(
+    argsClassName: String,
+    inputProperties: Seq[PropertyInfo],
+    isResource: Boolean,
+    isProvider: Boolean
+  ): String = {
     val derivedTypeclasses =
       if (isProvider) "ProviderArgsEncoder"
-      else if (isResource)  "ArgsEncoder"
+      else if (isResource) "ArgsEncoder"
       else "Encoder, ArgsEncoder"
     val argsClassParams = inputProperties.map { propertyInfo =>
       val fieldType = if (propertyInfo.isOptional) t"""Option[${propertyInfo.argType}]""" else propertyInfo.argType
-      Term.Param(
-        mods = List.empty,
-        name = propertyInfo.name,
-        decltpe = Some(t"""Output[${fieldType}]"""),
-        default = None
-      ).syntax
+      Term
+        .Param(
+          mods = List.empty,
+          name = propertyInfo.name,
+          decltpe = Some(t"""Output[${fieldType}]"""),
+          default = None
+        )
+        .syntax
     }
 
     s"""|final case class $argsClassName private(
@@ -526,15 +594,19 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
 
   private def makeArgsCompanion(argsClassName: String, inputProperties: Seq[PropertyInfo], isResource: Boolean) = {
     val argsCompanionApplyParams = inputProperties.filter(_.constValue.isEmpty).map { propertyInfo =>
-      val paramType = if (propertyInfo.isOptional) t"""Input.Optional[${propertyInfo.inputArgType}]""" else t"""Input[${propertyInfo.inputArgType}]"""
-      Term.Param(
-        mods = List.empty,
-        name = propertyInfo.name,
-        decltpe = Some(paramType),
-        default = propertyInfo.defaultValue,
-      ).syntax
+      val paramType =
+        if (propertyInfo.isOptional) t"""Input.Optional[${propertyInfo.inputArgType}]"""
+        else t"""Input[${propertyInfo.inputArgType}]"""
+      Term
+        .Param(
+          mods = List.empty,
+          name = propertyInfo.name,
+          decltpe = Some(paramType),
+          default = propertyInfo.defaultValue
+        )
+        .syntax
     }
-    
+
     val argsCompanionApplyBodyArgs = inputProperties.map { propertyInfo =>
       val isSecret = Lit.Boolean(propertyInfo.isSecret)
       val argValue = propertyInfo.constValue match {
@@ -584,12 +656,12 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     "getClass",
     "hashCode",
     "isInstanceOf",
-    "toString",
+    "toString"
   )
 
   // This logic must be undone the same way in codecs
   // Keep in sync with `unmanglePropertyName` in codecs.scala
-  private def manglePropertyName(name: String)(implicit logger: Logger): String = 
+  private def manglePropertyName(name: String)(implicit logger: Logger): String =
     if (anyRefMethodNames.contains(name)) {
       val mangledName = name + "_"
       logger.warn(s"Mangled property name '$name' as '$mangledName'")
