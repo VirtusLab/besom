@@ -3,10 +3,6 @@ package besom.codegen
 import scala.meta._
 import scala.meta.dialects.Scala33
 
-object ClassCoordinates {
-  private val baseApiPackagePrefixParts: Seq[String] = Seq("besom", "api")
-}
-
 case class ClassCoordinates private (
   private val providerPackageParts: Seq[String],
   private val modulePackageParts: Seq[String],
@@ -14,6 +10,8 @@ case class ClassCoordinates private (
 ) {
   import ClassCoordinates._
 
+  // only used for package parts sanitization
+  // DO NOT use for splitting the package parts
   private def sanitizeParts(parts: Seq[String]): Seq[String] = {
     parts
       .filterNot(_.isBlank)
@@ -62,5 +60,24 @@ case class ClassCoordinates private (
       case p => p
     }
     FilePath(Seq("src") ++ moduleParts ++ Seq(s"${className}.scala"))
+  }
+}
+
+object ClassCoordinates {
+  private val baseApiPackagePrefixParts: Seq[String] = Seq("besom", "api")
+
+  @throws[ClassCoordinatesError]("if 'className' is empty")
+  def apply(
+    providerPackageParts: Seq[String],
+    modulePackageParts: Seq[String],
+    className: String
+  ): ClassCoordinates = {
+    if (className.isBlank)
+      throw ClassCoordinatesError(s"Cannot create ClassCoordinates with empty className")
+    new ClassCoordinates(
+      providerPackageParts = providerPackageParts,
+      modulePackageParts = modulePackageParts,
+      className = className
+    )
   }
 }

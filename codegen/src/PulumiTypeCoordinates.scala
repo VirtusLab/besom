@@ -59,4 +59,15 @@ object PulumiTypeCoordinates {
       logger.warn(s"Mangled type name '$name' as '$mangledName'")
     mangledName
   }
+
+  @throws[PulumiTypeCoordinatesError]("if 'typeName' is empty")
+  def apply(
+    providerPackageParts: Seq[String],
+    modulePackageParts: Seq[String],
+    typeName: String
+  ): PulumiTypeCoordinates = {
+    if (typeName.isBlank)
+      throw PulumiTypeCoordinatesError("Unexpected empty 'typeName' parameter")
+    new PulumiTypeCoordinates(providerPackageParts, modulePackageParts, typeName)
+  }
 }
