@@ -4,8 +4,8 @@ object Config {
   case class ProviderConfig(
     noncompiledModules: Seq[String] = Seq.empty
   )
-  
-  val providersConfigs = Map(
+
+  val providersConfigs: Map[String, ProviderConfig] = Map(
     "aws" -> ProviderConfig(
       noncompiledModules = Seq(
         "quicksight", // Module too large
