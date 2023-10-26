@@ -50,7 +50,8 @@ private def fetchSchemas(cwd: os.Path): Unit =
   // fetch sample production schemas
   List(
     "kubernetes",
-    "docker"
+    "docker",
+    "digitalocean",
   ).foreach( name =>
     println(s"fetching $name")
     os.proc("pulumi", "package", "get-schema", name).call(stdout = targetPath / s"$name.json")

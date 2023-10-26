@@ -42,6 +42,7 @@ object Utils {
     private def packageFormatModuleToPackageParts: String => Seq[String] = { module: String =>
       val moduleFormat: Regex = pulumiPackage.meta.moduleFormat.r
       module match {
+        case _ if module == indexModuleName || module.isEmpty => Seq(module)
         case moduleFormat(name) => languageModuleToPackageParts(name)
         case _ =>
           throw TypeMapperError(

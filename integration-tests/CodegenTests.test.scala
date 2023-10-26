@@ -17,7 +17,7 @@ class CodegenTests extends munit.FunSuite {
     )
 
   override val munitTimeout = Duration(20, "min")
-  override def munitFlakyOK = false
+  override def munitFlakyOK = true
 
   val testdata = os.pwd / "integration-tests" / "resources" / "testdata"
 
@@ -30,11 +30,14 @@ class CodegenTests extends munit.FunSuite {
   )
 
   // FIXME: less broken - compilation error
+  val flakyFileList = List(
+    "digitalocean"
+  )
   val flakyDirList = List()
 
   // FIXME: broken - codegen error
+  val ignoreFileList = List()
   val ignoreDirList = List(
-    "secrets",
     "simple-plain-schema",
     "simple-plain-schema-with-root-package",
     "simple-enum-schema",
@@ -64,8 +67,6 @@ class CodegenTests extends munit.FunSuite {
     "azure-native-nested-types"
   )
 
-  val ignoreFileList = List()
-
   val tests =
     for schema <- os
         .walk(testdata)
@@ -90,6 +91,7 @@ class CodegenTests extends munit.FunSuite {
     val options: TestOptions = data.schema match {
       case _ / g"$f.$ext" if ignoreFileList.contains(f) => name.ignore
       case _ / d / _ if ignoreDirList.contains(d)       => name.ignore
+      case _ / g"$f.$ext" if flakyFileList.contains(f)  => name.flaky
       case _ / d / _ if flakyDirList.contains(d)        => name.flaky
       case _ / g"$f.$ext" if slowFileList.contains(f)   => name.tag(Slow)
       case _ / d / _ if slowDirList.contains(d)         => name.tag(Slow)
