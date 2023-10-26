@@ -439,6 +439,11 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
       }
     }
 
+    resourceDefinition.methods.foreach { m =>
+      // TODO: Implement
+      logger.warn(s"Method '${m}' was not generated")
+    }
+
     val hasOutputExtensions = baseOutputExtensionMethods.nonEmpty
 
     // TODO: Should we show entire descriptions as comments? Formatting of comments should be preserved. Examples for other languages should probably be filtered out.
