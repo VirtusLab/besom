@@ -184,3 +184,12 @@ class TypeMapperTest extends munit.FunSuite {
     }
   }
 }
+
+//noinspection ScalaFileName,TypeAnnotation
+class TypeTokenTest extends munit.FunSuite {
+  test("type token ensures index module") {
+    val t = TypeToken("provider", "", "SomeType")
+    assertEquals(t.sanitized.asString, "provider:index:SomeType")
+    assertEquals(t.sanitized.toString, "provider:index:SomeType")
+  }
+}
