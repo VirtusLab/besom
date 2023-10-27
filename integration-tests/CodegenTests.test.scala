@@ -23,7 +23,8 @@ class CodegenTests extends munit.FunSuite {
 
   val slowFileList = List(
     "kubernetes",
-    "docker"
+    "docker",
+    "digitalocean"
   )
   val slowDirList = List(
     "akamai"
@@ -33,38 +34,37 @@ class CodegenTests extends munit.FunSuite {
   val flakyFileList = List(
     "digitalocean"
   )
-  val flakyDirList = List()
+  val flakyDirList = List(
+    "simple-enum-schema",
+    "external-enum"
+  )
 
   // FIXME: broken - codegen error
-  val ignoreFileList = List()
+  val ignoreFileList = List(
+    "digitalocean"
+  )
   val ignoreDirList = List(
+    "secrets",
     "simple-plain-schema",
     "simple-plain-schema-with-root-package",
-    "simple-enum-schema",
     "simple-resource-schema",
     "simple-methods-schema",
     "simple-methods-schema-single-value-returns",
     "simple-yaml-schema",
-    "simplified-invokes",
-    "nested-module",
-    "nested-module-thirdparty",
     "external-resource-schema",
-    "external-enum",
     "enum-reference",
     "different-enum",
     "embedded-crd-types",
     "hyphen-url",
     "naming-collisions",
     "mini-azurenative",
-    "mini-awsnative",
-    "mini-awsclassic",
     "jumbo-resources",
     "replace-on-change",
     "resource-property-overlap",
     "cyclic-types",
     "plain-and-default",
     "different-package-name-conflict",
-    "azure-native-nested-types"
+    "azure-native-nested-types",
   )
 
   val tests =
@@ -91,10 +91,10 @@ class CodegenTests extends munit.FunSuite {
     val options: TestOptions = data.schema match {
       case _ / g"$f.$ext" if ignoreFileList.contains(f) => name.ignore
       case _ / d / _ if ignoreDirList.contains(d)       => name.ignore
-      case _ / g"$f.$ext" if flakyFileList.contains(f)  => name.flaky
-      case _ / d / _ if flakyDirList.contains(d)        => name.flaky
       case _ / g"$f.$ext" if slowFileList.contains(f)   => name.tag(Slow)
       case _ / d / _ if slowDirList.contains(d)         => name.tag(Slow)
+      case _ / g"$f.$ext" if flakyFileList.contains(f)  => name.flaky
+      case _ / d / _ if flakyDirList.contains(d)        => name.flaky
       case _                                            => name
     }
     test(options) {

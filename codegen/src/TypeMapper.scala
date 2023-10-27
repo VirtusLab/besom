@@ -44,7 +44,9 @@ class TypeMapper(
   ): Option[Type.Ref] = {
     // Example URIs:
     // "/provider/vX.Y.Z/schema.json#/types/pulumi:type:token"
-    // #/types/kubernetes:rbac.authorization.k8s.io%2Fv1beta1:Subject
+    // "/kubernetes/v3.7.0/schema.json#/provider"
+    // "/kubernetes/v3.7.0/schema.json#/resources/kubernetes:storage.k8s.io%2Fv1:StorageClass"
+    // "#/types/kubernetes:rbac.authorization.k8s.io%2Fv1beta1:Subject"
     // "aws:iam/documents:PolicyDocument"
 
     val (fileUri, typePath) = typeUri.replace("%2F", "/").split("#") match {
