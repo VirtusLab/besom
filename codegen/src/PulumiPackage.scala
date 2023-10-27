@@ -307,7 +307,7 @@ object TypeReferenceProto {
 /** A reference to a type. The particular kind of type referenced is determined based on the contents of the "type"
   * property and the presence or absence of the "additionalProperties", "items", "oneOf", and "ref" properties.
   * @see
-  *   [[TypeReferenceProto]] and [[TypeReferenceProtoLike]]
+  *   [[TypeReferenceProto]], [[TypeReferenceProtoLike]] and [[besom.codegen.Utils.TypeReferenceOps]]
   */
 sealed trait TypeReference {
 
@@ -370,10 +370,7 @@ case class MapType(additionalProperties: TypeReference) extends TypeReference
   *   "pulumi.json#/Archive", "pulumi.json#/Asset", and "pulumi.json#/Any", respectively. A type from this document is
   *   referenced as "#/types/pulumi:type:token". A type from another document is referenced as
   *   "path#/types/pulumi:type:token", where path is of the form: "/provider/vX.Y.Z/schema.json" or "pulumi.json" or
-  *   "http[s]://example.com/provider/vX.Y.Z/schema.json" A resource from this document is referenced as
-  *   "#/resources/pulumi:type:token". A resource from another document is referenced as
-  *   "path#/resources/pulumi:type:token", where path is of the form: "/provider/vX.Y.Z/schema.json" or "pulumi.json" or
-  *   "http[s]://example.com/provider/vX.Y.Z/schema.json"
+  *   "http[s]://example.com/provider/vX.Y.Z/schema.json".
   * @param `type`
   *   ignored; present for compatibility with existing schemas
   */
