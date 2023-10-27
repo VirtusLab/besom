@@ -15,7 +15,7 @@ trait SchemaProvider {
   def pulumiPackage(providerName: ProviderName, schemaVersion: SchemaVersion): PulumiPackage
   def packageInfo(providerName: ProviderName, schemaVersion: SchemaVersion): PulumiPackageInfo
 
-  def pulumiPackage(schemaFilePath: os.Path): PulumiPackage = {
+  def pulumiPackage(schemaFilePath: os.Path)(implicit logger: Logger, providerConfig: Config.ProviderConfig): PulumiPackage = {
     PulumiPackage.fromFile(schemaFilePath)
   }
 

@@ -1,7 +1,8 @@
 package besom.codegen.metaschema
 
+import besom.codegen.Config.ProviderConfig
 import upickle.implicits.{key => fieldKey}
-import besom.codegen.{GeneralCodegenException, UpickleApi}
+import besom.codegen.{GeneralCodegenException, Logger, UpickleApi}
 import besom.codegen.UpickleApi._
 
 /** PulumiPackage describes a Pulumi package.
@@ -9,7 +10,7 @@ import besom.codegen.UpickleApi._
   * Pulumi package metaschema:
   *   - ../resources/pulumi.json
   *   - https://github.com/pulumi/pulumi/blob/master/pkg/codegen/schema/schema.go
- *
+  *
   * @param name
   *   Name is the unqualified name of the package
   * @param version
@@ -53,14 +54,23 @@ object PulumiPackage {
     * @return
     *   the Pulumi package
     */
-  def fromFile(filePath: os.Path): PulumiPackage = {
+  def fromFile(filePath: os.Path)(implicit logger: Logger, config: ProviderConfig): PulumiPackage = {
     // noinspection SimplifyBooleanMatch
     val input = os.exists(filePath) match {
       case false => throw GeneralCodegenException(s"File $filePath does not exist")
       case true  => os.read(filePath)
     }
     val json = ujson.read(input)
-    read[PulumiPackage](json)
+    if (config.transformSchema.isDefined) {
+      val transformedPath = filePath / os.up / "transformed.json"
+      logger.warn(s"Transforming schema for ${filePath.relativeTo(os.pwd)} to ${transformedPath.relativeTo(os.pwd)}")
+      val transformedJson = config.transformSchema.get(json)
+      os.write.over(transformedPath, transformedJson.toString())
+      read[PulumiPackage](transformedJson)
+    } else {
+      logger.debug(s"Reading schema for ${filePath.relativeTo(os.pwd)}")
+      read[PulumiPackage](json)
+    }
   }
 }
 

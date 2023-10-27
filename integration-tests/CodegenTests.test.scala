@@ -31,18 +31,14 @@ class CodegenTests extends munit.FunSuite {
   )
 
   // FIXME: less broken - compilation error
-  val flakyFileList = List(
-    "digitalocean"
-  )
+  val flakyFileList = List()
   val flakyDirList = List(
     "simple-enum-schema",
     "external-enum"
   )
 
   // FIXME: broken - codegen error
-  val ignoreFileList = List(
-    "digitalocean"
-  )
+  val ignoreFileList = List()
   val ignoreDirList = List(
     "secrets",
     "simple-plain-schema",
