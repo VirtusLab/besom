@@ -90,6 +90,19 @@ class TypeMapperTest extends munit.FunSuite {
       )
     ),
     Data(
+      providerName = "digitalocean",
+      typeToken = "digitalocean:index/getProjectsProject:getProjectsProject",
+      meta = Meta(
+        moduleFormat = "(.*)(?:/[^/]*)"
+      )
+    )(
+      ResourceClassExpectations(
+        fullPackageName = "besom.api.digitalocean",
+        fullyQualifiedTypeRef = "besom.api.digitalocean.GetProjectsProject",
+        filePath = "src/index/GetProjectsProject.scala"
+      )
+    ),
+    Data(
       providerName = "foo-bar",
       typeToken = "foo-bar:index:TopLevel"
     )(
