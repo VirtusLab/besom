@@ -65,6 +65,32 @@ class TypeMapperTest extends munit.FunSuite {
       )
     ),
     Data(
+      providerName = "digitalocean",
+      typeToken = "digitalocean:index:Domain",
+      meta = Meta(
+        moduleFormat = "(.*)(?:/[^/]*)"
+      )
+    )(
+      ResourceClassExpectations(
+        fullPackageName = "besom.api.digitalocean",
+        fullyQualifiedTypeRef = "besom.api.digitalocean.Domain",
+        filePath = "src/index/Domain.scala"
+      )
+    ),
+    Data(
+      providerName = "digitalocean",
+      typeToken = "digitalocean::Domain",
+      meta = Meta(
+        moduleFormat = "(.*)(?:/[^/]*)"
+      )
+    )(
+      ResourceClassExpectations(
+        fullPackageName = "besom.api.digitalocean",
+        fullyQualifiedTypeRef = "besom.api.digitalocean.Domain",
+        filePath = "src/index/Domain.scala"
+      )
+    ),
+    Data(
       providerName = "foo-bar",
       typeToken = "foo-bar:index:TopLevel"
     )(

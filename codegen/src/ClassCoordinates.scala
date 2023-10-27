@@ -12,17 +12,19 @@ case class ClassCoordinates private (
 
   // only used for package parts sanitization
   // DO NOT use for splitting the package parts
-  private def sanitizeParts(parts: Seq[String]): Seq[String] = {
+  private def sanitizeParts(parts: Seq[String]): List[String] = {
     parts
+      .toList
       .filterNot(_.isBlank)
       .map(_.replace("-", ""))
   }
 
   private def packageRef: Term.Ref = {
     try {
+      // we remove index from the package, if necessary
       val moduleParts = modulePackageParts.toList match {
         case head :: tail if head == Utils.indexModuleName => tail
-        case p               => p
+        case p                                             => p
       }
       val partsHead :: partsTail = sanitizeParts(baseApiPackagePrefixParts ++ providerPackageParts ++ moduleParts)
       partsTail.foldLeft[Term.Ref](Term.Name(partsHead))((acc, name) => Term.Select(acc, Term.Name(name)))
@@ -57,7 +59,7 @@ case class ClassCoordinates private (
           moduleName :: tail
         }
       case Nil => Utils.indexModuleName :: Nil
-      case p => p
+      case p   => p
     }
     FilePath(Seq("src") ++ moduleParts ++ Seq(s"${className}.scala"))
   }
