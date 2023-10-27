@@ -49,7 +49,7 @@ object Main {
     } else {
       ""
     }
-    println(
+    logger.info(
       s"""|Generating package '$providerName:$schemaVersion' into '${outputDir.relativeTo(os.pwd)}'
           | - Besom version   : $besomVersion
           | - Scala version   : ${CodeGen.scalaVersion}
@@ -63,7 +63,7 @@ object Main {
     }
 
     generatePackageSources(schemaProvider, outputDir, providerName, schemaVersion, besomVersion)
-    println(s"Finished generating provider '$providerName' codebase")
+    logger.info(s"Finished generating provider '$providerName' codebase")
 
     outputDir
   }
@@ -76,10 +76,12 @@ object Main {
     besomVersion: String
   )(implicit logger: Logger, providerConfig: Config.ProviderConfig): Unit = {
     val pulumiPackage = schemaProvider.pulumiPackage(providerName = providerName, schemaVersion = schemaVersion)
-    println(
+    logger.info(
       s"""|Loaded package: ${pulumiPackage.name} ${pulumiPackage.version.getOrElse("")}
           | - Resources: ${pulumiPackage.resources.size}
           | - Types    : ${pulumiPackage.types.size}
+          | - Functions: ${pulumiPackage.functions.size}
+          | - Config   : ${pulumiPackage.config.variables.size}
           |""".stripMargin
     )
 
@@ -104,15 +106,17 @@ object Main {
         .foreach { sourceFile =>
           val filePath = outputDir / sourceFile.filePath.osSubPath
           os.makeDir.all(filePath / os.up)
+          logger.debug(s"Writing source file: '${filePath.relativeTo(os.pwd)}'")
           os.write(filePath, sourceFile.sourceCode, createFolders = true)
         }
-      println("Finished generating SDK codebase")
     } finally {
-      if (logger.nonEmpty) {
-        val logFile = outputDir / ".codegen-log.txt"
-        println(s"Some problems were encountered during the code generation. See ${logFile}")
-        logger.writeToFile(logFile)
+      val logFile = outputDir / ".codegen-log.txt"
+      if (logger.hasProblems) {
+        logger.error(s"Some problems were encountered during the code generation. See ${logFile.relativeTo(os.pwd)}")
+      } else {
+        logger.info(s"Code generation finished successfully. See ${logFile.relativeTo(os.pwd)}")
       }
+      logger.writeToFile(logFile)
     }
   }
 }

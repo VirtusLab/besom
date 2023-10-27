@@ -42,7 +42,9 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
   def scalaFiles(pulumiPackage: PulumiPackage): Seq[SourceFile] =
     sourceFilesForProviderResource(pulumiPackage) ++
       sourceFilesForNonResourceTypes(pulumiPackage) ++
-      sourceFilesForResources(pulumiPackage)
+      sourceFilesForResources(pulumiPackage) ++
+      sourceFilesForFunctions(pulumiPackage) ++
+      sourceFilesForConfig(pulumiPackage)
 
   def projectConfigFile(pulumiPackageName: String, schemaVersion: String, besomVersion: String): SourceFile = {
     val fileContent =
@@ -437,6 +439,11 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
       }
     }
 
+    resourceDefinition.methods.foreach { m =>
+      // TODO: Implement
+      logger.warn(s"Method '${m}' was not generated")
+    }
+
     val hasOutputExtensions = baseOutputExtensionMethods.nonEmpty
 
     // TODO: Should we show entire descriptions as comments? Formatting of comments should be preserved. Examples for other languages should probably be filtered out.
@@ -519,6 +526,42 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
         argsClassFileContent
       )
     )
+  }
+
+  def sourceFilesForFunctions(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
+    val moduleToPackageParts   = pulumiPackage.moduleToPackageParts
+    val providerToPackageParts = pulumiPackage.providerToPackageParts
+
+    pulumiPackage.functions
+      .collect {
+        case (typeToken, functionDefinition) if !functionDefinition.isOverlay =>
+          sourceFilesForFunction(
+            typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts, providerToPackageParts),
+            functionDefinition = functionDefinition,
+            typeToken = typeToken
+          )
+      }
+      .toSeq
+      .flatten
+  }
+
+  def sourceFilesForFunction(
+    typeCoordinates: PulumiTypeCoordinates,
+    functionDefinition: FunctionDefinition,
+    typeToken: String
+  ): Seq[SourceFile] = {
+    logger.warn(s"Function type '${typeToken}' was not generated")
+    Seq() // TODO: implement
+  }
+
+  def sourceFilesForConfig(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
+    pulumiPackage.config.variables
+      .collect { case (prop, propDefinition) =>
+        logger.warn(s"Config '${prop}' was not generated")
+        Seq() // TODO: implement
+      }
+      .toSeq
+      .flatten
   }
 
   private def makePropertyInfo(

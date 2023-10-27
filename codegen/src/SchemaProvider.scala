@@ -41,7 +41,7 @@ trait SchemaProvider {
   }
 }
 
-class DownloadingSchemaProvider(schemaCacheDirPath: os.Path) extends SchemaProvider {
+class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Logger, providerConfig: Config.ProviderConfig) extends SchemaProvider {
 
   import SchemaProvider._
 
@@ -52,9 +52,12 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path) extends SchemaProvi
     val schemaFilePath = schemaCacheDirPath / providerName / schemaVersion / "schema.json"
 
     if (!os.exists(schemaFilePath)) {
+      logger.debug(s"Downloading schema for $providerName:$schemaVersion' into '${schemaFilePath.relativeTo(os.pwd)}'")
       val schemaSource = s"$providerName@$schemaVersion"
       os.makeDir.all(schemaFilePath / os.up)
       os.proc("pulumi", "package", "get-schema", schemaSource).call(stdout = schemaFilePath)
+    } else {
+      logger.debug(s"Using cached schema for $providerName:$schemaVersion' from '${schemaFilePath.relativeTo(os.pwd)}'")
     }
 
     schemaFilePath

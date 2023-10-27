@@ -25,18 +25,24 @@ object Utils {
       pkg => pkg.split("/").filter(_.nonEmpty).toSeq
 
     private def languageModuleToPackageParts: String => Seq[String] = {
-      pulumiPackage.language.java.packages.view
-        .mapValues { pkg =>
+      if (pulumiPackage.language.java.packages.view.nonEmpty) {
+        pulumiPackage.language.java.packages.view.mapValues { pkg =>
           pkg.split("\\.").filter(_.nonEmpty).toSeq
-        }
-        .toMap
-        .withDefault(slashModuleToPackageParts)
+        }.toMap
+      } else {
+        // use nodejs mapping as a fallback
+        pulumiPackage.language.nodejs.moduleToPackage.view
+          .mapValues { pkg =>
+            pkg.split("/").filter(_.nonEmpty).toSeq
+          }
+          .toMap
+      }.withDefault(slashModuleToPackageParts) // fallback to slash mapping
     }
 
     private def packageFormatModuleToPackageParts: String => Seq[String] = { module: String =>
       val moduleFormat: Regex = pulumiPackage.meta.moduleFormat.r
       module match {
-        case moduleFormat(name)     => languageModuleToPackageParts(name)
+        case moduleFormat(name) => languageModuleToPackageParts(name)
         case _ =>
           throw TypeMapperError(
             s"Cannot parse module portion '$module' with " +
@@ -45,7 +51,9 @@ object Utils {
       }
     }
 
-    def moduleToPackageParts: String => Seq[String] = packageFormatModuleToPackageParts
+    // to get all of the package parts, first use the regexp provided by the schema
+    // then use a language specific mapping, and if everything fails, fallback to slash mapping
+    def moduleToPackageParts: String => Seq[String]   = packageFormatModuleToPackageParts
     def providerToPackageParts: String => Seq[String] = module => Seq(module)
   }
 }

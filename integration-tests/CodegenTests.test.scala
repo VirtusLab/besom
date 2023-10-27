@@ -22,6 +22,7 @@ class CodegenTests extends munit.FunSuite {
   val testdata = os.pwd / "integration-tests" / "resources" / "testdata"
 
   val slowFileList = List(
+    "kubernetes",
     "docker"
   )
   val slowDirList = List(
@@ -63,9 +64,7 @@ class CodegenTests extends munit.FunSuite {
     "azure-native-nested-types"
   )
 
-  val ignoreFileList = List(
-    "kubernetes"
-  )
+  val ignoreFileList = List()
 
   val tests =
     for schema <- os
