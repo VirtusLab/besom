@@ -5,6 +5,43 @@ import scala.meta._
 import scala.meta.dialects.Scala33
 import besom.codegen.metaschema._
 
+import scala.annotation.unused
+
+case class TypeToken private (provider: String, module: String, `type`: String, @unused dummy: Boolean = false) {
+  def asString: String = s"${provider}:${module}:${`type`}"
+}
+
+object TypeToken {
+  private val typeTokenFmt: String    = "(.*):(.*)?:(.*)" // provider:module:type
+  private val typeTokenPattern: Regex = ("^" + typeTokenFmt + "$").r
+
+  private def enforceNonEmptyModule(module: String): String =
+    module match {
+      case "" => "index"
+      case _ => module
+    }
+
+  def apply(typeToken: String): TypeToken = typeToken match {
+    case typeTokenPattern(provider, module, typ) =>
+      new TypeToken(
+        provider = provider,
+        module = enforceNonEmptyModule(module),
+        `type` = typ
+      )
+    case _ => throw TypeMapperError(s"Cannot parse type token: $typeToken, typeTokenPattern: $typeTokenPattern")
+  }
+
+  def apply(provider: String, module: String, `type`: String): TypeToken = {
+    new TypeToken(
+      provider = provider,
+      module = enforceNonEmptyModule(module),
+      `type` = `type`
+    )
+  }
+
+  def unapply(t: TypeToken): Option[(String, String, String)] = Some((t.provider, t.module, t.`type`))
+}
+
 class TypeMapper(
   defaultProviderName: SchemaProvider.ProviderName,
   defaultSchemaVersion: SchemaProvider.SchemaVersion,
@@ -13,23 +50,12 @@ class TypeMapper(
   def defaultPackageInfo: PulumiPackageInfo =
     schemaProvider.packageInfo(providerName = defaultProviderName, schemaVersion = defaultSchemaVersion)
 
-  private val typeTokenFmt: String    = "(.*):(.*)?:(.*)" // provider:module:type
-  private val typeTokenPattern: Regex = ("^" + typeTokenFmt + "$").r
-
   def parseTypeToken(
     typeToken: String,
     moduleToPackageParts: String => Seq[String],
     providerToPackageParts: String => Seq[String]
   ): PulumiTypeCoordinates = {
-    val (providerName, modulePortion, typeName) = typeToken match {
-      case typeTokenPattern(providerName, modulePortion, typeName) =>
-        (providerName, modulePortion, typeName)
-      case _ =>
-        throw TypeMapperError(
-          s"Cannot parse type token: $typeToken, " +
-            s"typeTokenPattern: $typeTokenPattern"
-        )
-    }
+    val TypeToken(providerName, modulePortion, typeName) = TypeToken(typeToken)
     PulumiTypeCoordinates(
       providerPackageParts = providerToPackageParts(providerName),
       modulePackageParts = moduleToPackageParts(modulePortion),
