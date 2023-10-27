@@ -30,7 +30,7 @@ object Utils {
           pkg.split("\\.").filter(_.nonEmpty).toSeq
         }.toMap
       } else {
-        // use nodejs mapping a a fallback
+        // use nodejs mapping as a fallback
         pulumiPackage.language.nodejs.moduleToPackage.view
           .mapValues { pkg =>
             pkg.split("/").filter(_.nonEmpty).toSeq
