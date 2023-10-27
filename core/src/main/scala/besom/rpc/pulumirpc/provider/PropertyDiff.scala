@@ -140,7 +140,8 @@ object PropertyDiff extends scalapb.GeneratedMessageCompanion[pulumirpc.provider
     inputDiff = false
   )
   sealed abstract class Kind(val value: _root_.scala.Int) extends _root_.scalapb.GeneratedEnum {
-    type EnumType = Kind
+    type EnumType = pulumirpc.provider.PropertyDiff.Kind
+    type RecognizedType = pulumirpc.provider.PropertyDiff.Kind.Recognized
     def isAdd: _root_.scala.Boolean = false
     def isAddReplace: _root_.scala.Boolean = false
     def isDelete: _root_.scala.Boolean = false
@@ -211,7 +212,7 @@ object PropertyDiff extends scalapb.GeneratedMessageCompanion[pulumirpc.provider
     
     @SerialVersionUID(0L)
     final case class Unrecognized(unrecognizedValue: _root_.scala.Int) extends Kind(unrecognizedValue) with _root_.scalapb.UnrecognizedEnum
-    lazy val values = scala.collection.immutable.Seq(ADD, ADD_REPLACE, DELETE, DELETE_REPLACE, UPDATE, UPDATE_REPLACE)
+    lazy val values: scala.collection.immutable.Seq[ValueType] = scala.collection.immutable.Seq(ADD, ADD_REPLACE, DELETE, DELETE_REPLACE, UPDATE, UPDATE_REPLACE)
     def fromValue(__value: _root_.scala.Int): Kind = __value match {
       case 0 => ADD
       case 1 => ADD_REPLACE

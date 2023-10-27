@@ -5,8 +5,8 @@ go 1.20
 require (
 	github.com/golang/protobuf v1.5.3
 	github.com/pkg/errors v0.9.1
-	github.com/pulumi/pulumi/sdk/v3 v3.89.0
-	google.golang.org/grpc v1.58.3
+	github.com/pulumi/pulumi/sdk/v3 v3.91.0
+	google.golang.org/grpc v1.57.2
 	google.golang.org/protobuf v1.31.0
 )
 
@@ -55,7 +55,7 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pkg/term v1.1.0 // indirect
-	github.com/pulumi/esc v0.5.2 // indirect
+	github.com/pulumi/esc v0.5.6 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rogpeppe/go-internal v1.11.0 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect

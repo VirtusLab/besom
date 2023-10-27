@@ -225,7 +225,7 @@ object ResourceProviderGrpc {
     * within a single package.  It is driven by the overall planning engine in response to resource diffs.
     */
   trait ResourceProvider extends _root_.scalapb.grpc.AbstractService {
-    override def serviceCompanion = ResourceProvider
+    override def serviceCompanion: _root_.scalapb.grpc.ServiceCompanion[ResourceProvider] = ResourceProvider
     /** GetSchema fetches the schema for this resource provider.
       */
     def getSchema(request: pulumirpc.provider.GetSchemaRequest): scala.concurrent.Future[pulumirpc.provider.GetSchemaResponse]
@@ -425,7 +425,7 @@ object ResourceProviderGrpc {
     * within a single package.  It is driven by the overall planning engine in response to resource diffs.
     */
   trait ResourceProviderBlockingClient {
-    def serviceCompanion = ResourceProvider
+    def serviceCompanion: _root_.scalapb.grpc.ServiceCompanion[ResourceProvider] = ResourceProvider
     /** GetSchema fetches the schema for this resource provider.
       */
     def getSchema(request: pulumirpc.provider.GetSchemaRequest): pulumirpc.provider.GetSchemaResponse

@@ -52,37 +52,37 @@ compile-pulumi-protobufs:
 
 # Compiles core besom SDK
 compile-core:
-	scala-cli --power compile core
+	scala-cli --power compile core --suppress-experimental-feature-warning
 
 # Compiles besom cats-effect extension
 compile-cats: publish-local-core
-	scala-cli --power compile besom-cats {{scala-cli-main-options-cats}}
+	scala-cli --power compile besom-cats {{scala-cli-main-options-cats}} --suppress-experimental-feature-warning
 
 # Compiles besom zio extension
 compile-zio: publish-local-core
-	scala-cli --power compile besom-zio {{scala-cli-main-options-zio}}
+	scala-cli --power compile besom-zio {{scala-cli-main-options-zio}} --suppress-experimental-feature-warning
 
 # Compiles all SDK modules
 compile-sdk: publish-local-core compile-cats compile-zio compile-compiler-plugin
 
 # Compiles besom compiler plugin
 compile-compiler-plugin:
-	scala-cli --power compile compiler-plugin
+	scala-cli --power compile compiler-plugin --suppress-experimental-feature-warning
 
 # Runs tests for core besom SDK
 test-core:
 	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-core}}; fi
-	scala-cli --power test core {{ scala-cli-test-options-core }}
+	scala-cli --power test core {{ scala-cli-test-options-core }} --suppress-experimental-feature-warning
 
 # Runs tests for besom cats-effect extension
 test-cats: publish-local-core
 	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-cats}}; fi
-	scala-cli --power test besom-cats {{ scala-cli-test-options-cats }}
+	scala-cli --power test besom-cats {{ scala-cli-test-options-cats }} --suppress-experimental-feature-warning
 
 # Runs tests for besom zio extension
 test-zio: publish-local-core
 	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-zio}}; fi
-	scala-cli --power test besom-zio {{ scala-cli-test-options-zio }}
+	scala-cli --power test besom-zio {{ scala-cli-test-options-zio }} --suppress-experimental-feature-warning
 
 # Runs all tests
 test-sdk: compile-sdk test-core test-cats test-zio
@@ -141,6 +141,7 @@ clean-zio:
 # Cleans all SDK builds, sets up all modules for IDE again
 clean-sdk: clean-core clean-cats clean-zio clean-compiler-plugin
 
+# Cleans codegen build
 clean-codegen:
 	scala-cli clean codegen
 
@@ -168,7 +169,7 @@ tidy-language-plugin:
 # Builds .jar file with language plugin bootstrap library
 build-language-plugin-bootstrap:
 	mkdir -p {{language-plugin-output-dir}} && \
-	scala-cli --power package language-plugin/bootstrap --assembly -o {{language-plugin-output-dir}}/bootstrap.jar -f
+	scala-cli --power package language-plugin/bootstrap --suppress-experimental-feature-warning --assembly -o {{language-plugin-output-dir}}/bootstrap.jar -f
 
 # Builds pulumi-language-scala binary
 build-language-host $GOOS="" $GOARCH="":

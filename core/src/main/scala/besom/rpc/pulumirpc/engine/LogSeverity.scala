@@ -8,7 +8,8 @@ package pulumirpc.engine
 /** LogSeverity is the severity level of a log message.  Errors are fatal; all others are informational.
   */
 sealed abstract class LogSeverity(val value: _root_.scala.Int) extends _root_.scalapb.GeneratedEnum {
-  type EnumType = LogSeverity
+  type EnumType = pulumirpc.engine.LogSeverity
+  type RecognizedType = pulumirpc.engine.LogSeverity.Recognized
   def isDebug: _root_.scala.Boolean = false
   def isInfo: _root_.scala.Boolean = false
   def isWarning: _root_.scala.Boolean = false
@@ -59,7 +60,7 @@ object LogSeverity extends _root_.scalapb.GeneratedEnumCompanion[LogSeverity] {
   
   @SerialVersionUID(0L)
   final case class Unrecognized(unrecognizedValue: _root_.scala.Int) extends LogSeverity(unrecognizedValue) with _root_.scalapb.UnrecognizedEnum
-  lazy val values = scala.collection.immutable.Seq(DEBUG, INFO, WARNING, ERROR)
+  lazy val values: scala.collection.immutable.Seq[ValueType] = scala.collection.immutable.Seq(DEBUG, INFO, WARNING, ERROR)
   def fromValue(__value: _root_.scala.Int): LogSeverity = __value match {
     case 0 => DEBUG
     case 1 => INFO
