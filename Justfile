@@ -351,6 +351,14 @@ clean-test-markdown:
 	rm -rf target/mdoc-website
 
 ####################
+# Troubleshooting
+####################
+
+power-wash: clean-all
+	git clean -i -d -x
+	killall -9 java
+
+####################
 # Demo
 ####################
 
