@@ -5,9 +5,7 @@ import scala.meta._
 import scala.meta.dialects.Scala33
 import besom.codegen.metaschema._
 
-import scala.annotation.unused
-
-case class TypeToken private (provider: String, module: String, `type`: String, @unused dummy: Boolean = false) {
+case class TypeToken private (provider: String, module: String, `type`: String) {
   def asString: String = s"${provider}:${module}:${`type`}"
 }
 
