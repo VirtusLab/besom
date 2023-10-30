@@ -105,7 +105,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     sourceFilesForResource(
       typeCoordinates = typeCoordinates,
       resourceDefinition = pulumiPackage.provider,
-      typeToken = s"pulumi:provider:${pulumiPackage.name}",
+      typeToken = TypeToken("pulumi", "provider", pulumiPackage.name),
       isProvider = true
     )
   }
@@ -328,7 +328,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
           sourceFilesForResource(
             typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts, providerToPackageParts),
             resourceDefinition = resourceDefinition,
-            typeToken = typeToken,
+            typeToken = TypeToken(typeToken),
             isProvider = false
           )
       }
@@ -339,7 +339,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
   def sourceFilesForResource(
     typeCoordinates: PulumiTypeCoordinates,
     resourceDefinition: ResourceDefinition,
-    typeToken: String,
+    typeToken: TypeToken,
     isProvider: Boolean
   ): Seq[SourceFile] = {
     val baseClassCoordinates = typeCoordinates.asResourceClass(asArgsType = false)
@@ -466,7 +466,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
 
     // the type has to match Pulumi's resource type schema, e.g. kubernetes:core/v1:Pod
     // please make sure, it contains 'index' instead of empty module part if needed
-    val typ = Lit.String(typeToken)
+    val typ = Lit.String(typeToken.asString)
 
     val baseCompanion =
       if (hasOutputExtensions) {

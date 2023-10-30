@@ -64,7 +64,7 @@ class CodegenTests extends munit.FunSuite {
     "cyclic-types",
     "plain-and-default",
     "different-package-name-conflict",
-    "azure-native-nested-types",
+    "azure-native-nested-types"
   )
 
   val tests =

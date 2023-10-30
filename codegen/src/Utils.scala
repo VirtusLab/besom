@@ -42,12 +42,13 @@ object Utils {
     private def packageFormatModuleToPackageParts: String => Seq[String] = { module: String =>
       val moduleFormat: Regex = pulumiPackage.meta.moduleFormat.r
       module match {
-        case _ if module == indexModuleName || module.isEmpty => Seq(module)
+        case _ if module.isEmpty =>
+          throw TypeMapperError("Module cannot be empty")
+        case _ if module == indexModuleName => Seq(indexModuleName)
         case moduleFormat(name) => languageModuleToPackageParts(name)
         case _ =>
           throw TypeMapperError(
-            s"Cannot parse module portion '$module' with " +
-              s"moduleFormat: $moduleFormat"
+            s"Cannot parse module portion '$module' with moduleFormat: $moduleFormat"
           )
       }
     }

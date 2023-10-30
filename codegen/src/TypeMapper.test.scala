@@ -1,5 +1,7 @@
 package besom.codegen
 
+import besom.codegen.Config.ProviderConfig
+
 //noinspection ScalaFileName,TypeAnnotation
 class TypeMapperTest extends munit.FunSuite {
   import besom.codegen.Utils.PulumiPackageOps
@@ -54,16 +56,6 @@ class TypeMapperTest extends munit.FunSuite {
 
   val tests = List(
     Data(
-      providerName = "example",
-      typeToken = "example::SomeType"
-    )(
-      ResourceClassExpectations(
-        fullPackageName = "besom.api.example",
-        fullyQualifiedTypeRef = "besom.api.example.SomeType",
-        filePath = "src/index/SomeType.scala"
-      )
-    ),
-    Data(
       providerName = "digitalocean",
       typeToken = "digitalocean:index:Domain",
       meta = Meta(
@@ -78,15 +70,15 @@ class TypeMapperTest extends munit.FunSuite {
     ),
     Data(
       providerName = "digitalocean",
-      typeToken = "digitalocean::Domain",
+      typeToken = "digitalocean:index/getProjectsProject:getProjectsProject",
       meta = Meta(
         moduleFormat = "(.*)(?:/[^/]*)"
       )
     )(
       ResourceClassExpectations(
         fullPackageName = "besom.api.digitalocean",
-        fullyQualifiedTypeRef = "besom.api.digitalocean.Domain",
-        filePath = "src/index/Domain.scala"
+        fullyQualifiedTypeRef = "besom.api.digitalocean.GetProjectsProject",
+        filePath = "src/index/GetProjectsProject.scala"
       )
     ),
     Data(
@@ -147,7 +139,7 @@ class TypeMapperTest extends munit.FunSuite {
 
   tests.foreach { data =>
     test(s"Type: ${data.typeToken}".withTags(data.tags)) {
-      implicit val providerConfig: Config.ProviderConfig = Config.providersConfigs(data.providerName)
+      implicit val providerConfig: ProviderConfig = Config.providersConfigs(data.providerName)
 
       val schemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = schemaDir)
 
@@ -218,7 +210,7 @@ class AsScalaTypeTest extends munit.FunSuite {
 
   tests.foreach { data =>
     test(s"${data.`type`.getClass.getSimpleName}".withTags(data.tags)) {
-      implicit val providerConfig: Config.ProviderConfig = Config.providersConfigs(data.providerName)
+      implicit val providerConfig: ProviderConfig = Config.providersConfigs(data.providerName)
 
       val schemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = schemaDir)
 
@@ -235,3 +227,19 @@ class AsScalaTypeTest extends munit.FunSuite {
   }
 }
 
+//noinspection ScalaFileName,TypeAnnotation
+class TypeTokenTest extends munit.FunSuite {
+  test("must provide string representation") {
+    val t1 = TypeToken("provider", "index", "SomeType")
+    assertEquals(t1.asString, "provider:index:SomeType")
+    val t2 = TypeToken("provider:index:SomeType")
+    assertEquals(t2.asString, "provider:index:SomeType")
+  }
+
+  test("must provide the missing module") {
+    val t1 = TypeToken("provider", "", "SomeType")
+    assertEquals(t1.asString, "provider:index:SomeType")
+    val t2 = TypeToken("provider::SomeType")
+    assertEquals(t2.asString, "provider:index:SomeType")
+  }
+}

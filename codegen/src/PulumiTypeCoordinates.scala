@@ -42,22 +42,27 @@ object PulumiTypeCoordinates {
 
   // This naïvely tries to avoid the limitation on the length of file paths in a file system
   // TODO: truncated file names with a suffix might still potentially clash with each other
-  private def uniquelyTruncateTypeName(name: String)(implicit logger: Logger) =
-    if (name.length <= maxNameLength) {
-      name
-    } else {
-      val preservedPrefix   = name.substring(0, maxNameLength)
-      val removedSuffixHash = Math.abs(name.substring(maxNameLength, name.length).hashCode)
-      val truncatedName     = s"${preservedPrefix}__${removedSuffixHash}__"
+  private def uniquelyTruncateTypeName(name: String) = {
+    val preservedPrefix   = name.substring(0, maxNameLength)
+    val removedSuffixHash = Math.abs(name.substring(maxNameLength, name.length).hashCode)
+    val truncatedName     = s"${preservedPrefix}__${removedSuffixHash}__"
 
-      truncatedName
-    }
+    truncatedName
+  }
 
   private def mangleTypeName(name: String)(implicit logger: Logger) = {
-    val mangledName = capitalize(uniquelyTruncateTypeName(name))
-    if (mangledName != name)
-      logger.warn(s"Mangled type name '$name' as '$mangledName'")
-    mangledName
+    val truncated = if (name.length <= maxNameLength) {
+      name
+    } else {
+      val truncated = uniquelyTruncateTypeName(name)
+      logger.warn(s"Mangled type name '$name' as '$truncated' (truncated)")
+      truncated
+    }
+    val capitalized = capitalize(truncated)
+    if (capitalized != truncated)
+      logger.debug(s"Mangled type name '$name' as '$capitalized' (capitalized)")
+
+    capitalized
   }
 
   @throws[PulumiTypeCoordinatesError]("if 'typeName' is empty")
