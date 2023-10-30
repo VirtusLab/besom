@@ -50,7 +50,7 @@ object EngineGrpc {
     * that can't store their own global state.
     */
   trait Engine extends _root_.scalapb.grpc.AbstractService {
-    override def serviceCompanion = Engine
+    override def serviceCompanion: _root_.scalapb.grpc.ServiceCompanion[Engine] = Engine
     /** Log logs a global message in the engine, including errors and warnings.
       */
     def log(request: pulumirpc.engine.LogRequest): scala.concurrent.Future[com.google.protobuf.empty.Empty]
@@ -95,7 +95,7 @@ object EngineGrpc {
     * that can't store their own global state.
     */
   trait EngineBlockingClient {
-    def serviceCompanion = Engine
+    def serviceCompanion: _root_.scalapb.grpc.ServiceCompanion[Engine] = Engine
     /** Log logs a global message in the engine, including errors and warnings.
       */
     def log(request: pulumirpc.engine.LogRequest): com.google.protobuf.empty.Empty

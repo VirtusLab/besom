@@ -78,6 +78,7 @@ brew install sbt
 brew install go
 brew install git
 brew install unzip
+brew install protobuf # protoc
 ```
 
 ### Preparing a pull request

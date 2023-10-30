@@ -92,7 +92,7 @@ object ResourceMonitorGrpc {
   /** ResourceMonitor is the interface a source uses to talk back to the planning monitor orchestrating the execution.
     */
   trait ResourceMonitor extends _root_.scalapb.grpc.AbstractService {
-    override def serviceCompanion = ResourceMonitor
+    override def serviceCompanion: _root_.scalapb.grpc.ServiceCompanion[ResourceMonitor] = ResourceMonitor
     def supportsFeature(request: pulumirpc.resource.SupportsFeatureRequest): scala.concurrent.Future[pulumirpc.resource.SupportsFeatureResponse]
     def invoke(request: pulumirpc.resource.ResourceInvokeRequest): scala.concurrent.Future[pulumirpc.provider.InvokeResponse]
     def streamInvoke(request: pulumirpc.resource.ResourceInvokeRequest, responseObserver: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.InvokeResponse]): _root_.scala.Unit
@@ -155,7 +155,7 @@ object ResourceMonitorGrpc {
   /** ResourceMonitor is the interface a source uses to talk back to the planning monitor orchestrating the execution.
     */
   trait ResourceMonitorBlockingClient {
-    def serviceCompanion = ResourceMonitor
+    def serviceCompanion: _root_.scalapb.grpc.ServiceCompanion[ResourceMonitor] = ResourceMonitor
     def supportsFeature(request: pulumirpc.resource.SupportsFeatureRequest): pulumirpc.resource.SupportsFeatureResponse
     def invoke(request: pulumirpc.resource.ResourceInvokeRequest): pulumirpc.provider.InvokeResponse
     def streamInvoke(request: pulumirpc.resource.ResourceInvokeRequest): scala.collection.Iterator[pulumirpc.provider.InvokeResponse]

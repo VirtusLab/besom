@@ -301,7 +301,8 @@ object DiffResponse extends scalapb.GeneratedMessageCompanion[pulumirpc.provider
     hasDetailedDiff = false
   )
   sealed abstract class DiffChanges(val value: _root_.scala.Int) extends _root_.scalapb.GeneratedEnum {
-    type EnumType = DiffChanges
+    type EnumType = pulumirpc.provider.DiffResponse.DiffChanges
+    type RecognizedType = pulumirpc.provider.DiffResponse.DiffChanges.Recognized
     def isDiffUnknown: _root_.scala.Boolean = false
     def isDiffNone: _root_.scala.Boolean = false
     def isDiffSome: _root_.scala.Boolean = false
@@ -342,7 +343,7 @@ object DiffResponse extends scalapb.GeneratedMessageCompanion[pulumirpc.provider
     
     @SerialVersionUID(0L)
     final case class Unrecognized(unrecognizedValue: _root_.scala.Int) extends DiffChanges(unrecognizedValue) with _root_.scalapb.UnrecognizedEnum
-    lazy val values = scala.collection.immutable.Seq(DIFF_UNKNOWN, DIFF_NONE, DIFF_SOME)
+    lazy val values: scala.collection.immutable.Seq[ValueType] = scala.collection.immutable.Seq(DIFF_UNKNOWN, DIFF_NONE, DIFF_SOME)
     def fromValue(__value: _root_.scala.Int): DiffChanges = __value match {
       case 0 => DIFF_UNKNOWN
       case 1 => DIFF_NONE
