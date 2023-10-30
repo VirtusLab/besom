@@ -1,13 +1,13 @@
 package besom.codegen
 
 //noinspection ScalaFileName,TypeAnnotation
-class ClassCoordinatesTest extends munit.FunSuite {
+class ScalaDefinitionCoordinatesTest extends munit.FunSuite {
   implicit val providerConfig: Config.ProviderConfig = Config.ProviderConfig()
 
   case class Data(
     providerPackageParts: Seq[String],
     modulePackageParts: Seq[String],
-    className: String,
+    definitionName: String,
     tags: munit.Tag*
   )(val expected: Expectations)
   case class Expectations(
@@ -20,7 +20,7 @@ class ClassCoordinatesTest extends munit.FunSuite {
     Data(
       providerPackageParts = Seq("example"),
       modulePackageParts = Seq(),
-      className = "Provider"
+      definitionName = "Provider"
     )(expected =
       Expectations(
         fullPackageName = "besom.api.example",
@@ -31,7 +31,7 @@ class ClassCoordinatesTest extends munit.FunSuite {
     Data(
       providerPackageParts = Seq("foo-bar"),
       modulePackageParts = Seq(),
-      className = "DashNamedProvider"
+      definitionName = "DashNamedProvider"
     )(expected =
       Expectations(
         fullPackageName = "besom.api.foobar",
@@ -42,16 +42,16 @@ class ClassCoordinatesTest extends munit.FunSuite {
   )
 
   tests.foreach { data =>
-    test(s"Type: ${data.className}".withTags(data.tags.toSet)) {
-      val cc: ClassCoordinates = ClassCoordinates(
+    test(s"Type: ${data.definitionName}".withTags(data.tags.toSet)) {
+      val coords: ScalaDefinitionCoordinates = ScalaDefinitionCoordinates(
         providerPackageParts = data.providerPackageParts,
         modulePackageParts = data.modulePackageParts,
-        className = data.className
+        definitionName = data.definitionName
       )
 
-      assertEquals(cc.fullPackageName, data.expected.fullPackageName)
-      assertEquals(cc.fullyQualifiedTypeRef.toString, data.expected.fullyQualifiedTypeRef)
-      assertEquals(cc.filePath.osSubPath.toString(), data.expected.filePath)
+      assertEquals(coords.fullPackageName, data.expected.fullPackageName)
+      assertEquals(coords.fullyQualifiedTypeRef.toString, data.expected.fullyQualifiedTypeRef)
+      assertEquals(coords.filePath.osSubPath.toString(), data.expected.filePath)
     }
   }
 }

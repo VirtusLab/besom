@@ -97,7 +97,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
 
   def sourceFilesForProviderResource(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
     val providerName = pulumiPackage.name
-    val typeCoordinates = PulumiTypeCoordinates(
+    val typeCoordinates = PulumiDefinitionCoordinates(
       providerPackageParts = typeMapper.defaultPackageInfo.providerToPackageParts(providerName),
       modulePackageParts = Seq(Utils.indexModuleName),
       typeName = "Provider"
@@ -105,7 +105,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     sourceFilesForResource(
       typeCoordinates = typeCoordinates,
       resourceDefinition = pulumiPackage.provider,
-      typeToken = TypeToken("pulumi", "provider", pulumiPackage.name),
+      typeToken = PulumiToken("pulumi", "provider", pulumiPackage.name),
       isProvider = true
     )
   }
@@ -115,7 +115,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     val providerToPackageParts = pulumiPackage.providerToPackageParts
 
     pulumiPackage.types.flatMap { case (typeToken, typeDefinition) =>
-      val typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts, providerToPackageParts)
+      val typeCoordinates = PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts)
 
       typeDefinition match {
         case enumDef: EnumTypeDefinition =>
@@ -131,13 +131,13 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
   }
 
   def sourceFilesForEnum(
-    typeCoordinates: PulumiTypeCoordinates,
+    typeCoordinates: PulumiDefinitionCoordinates,
     enumDefinition: EnumTypeDefinition
   ): Seq[SourceFile] = {
     val classCoordinates = typeCoordinates.asEnumClass
 
-    val enumClassName       = Type.Name(classCoordinates.className).syntax
-    val enumClassStringName = Lit.String(classCoordinates.className).syntax
+    val enumClassName       = Type.Name(classCoordinates.definitionName).syntax
+    val enumClassStringName = Lit.String(classCoordinates.definitionName).syntax
 
     val (superclass, valueType) = enumDefinition.`type` match {
       case BooleanType => ("besom.types.BooleanEnum", "Boolean")
@@ -184,15 +184,15 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
   }
 
   def sourceFilesForObjectType(
-    typeCoordinates: PulumiTypeCoordinates,
+    typeCoordinates: PulumiDefinitionCoordinates,
     objectTypeDefinition: ObjectTypeDefinition,
     typeToken: String
   ): Seq[SourceFile] = {
     val baseClassCoordinates = typeCoordinates.asObjectClass(asArgsType = false)
     val argsClassCoordinates = typeCoordinates.asObjectClass(asArgsType = true)
 
-    val baseClassName = Type.Name(baseClassCoordinates.className).syntax
-    val argsClassName = Type.Name(argsClassCoordinates.className).syntax
+    val baseClassName = Type.Name(baseClassCoordinates.definitionName).syntax
+    val argsClassName = Type.Name(argsClassCoordinates.definitionName).syntax
 
     val baseFileImports = makeImportStatements(
       commonImportedIdentifiers ++ Seq(
@@ -326,9 +326,9 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
       .collect {
         case (typeToken, resourceDefinition) if !resourceDefinition.isOverlay =>
           sourceFilesForResource(
-            typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts, providerToPackageParts),
+            typeCoordinates = PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts),
             resourceDefinition = resourceDefinition,
-            typeToken = TypeToken(typeToken),
+            typeToken = PulumiToken(typeToken),
             isProvider = false
           )
       }
@@ -337,15 +337,15 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
   }
 
   def sourceFilesForResource(
-    typeCoordinates: PulumiTypeCoordinates,
+    typeCoordinates: PulumiDefinitionCoordinates,
     resourceDefinition: ResourceDefinition,
-    typeToken: TypeToken,
+    typeToken: PulumiToken,
     isProvider: Boolean
   ): Seq[SourceFile] = {
     val baseClassCoordinates = typeCoordinates.asResourceClass(asArgsType = false)
     val argsClassCoordinates = typeCoordinates.asResourceClass(asArgsType = true)
-    val baseClassName        = Type.Name(baseClassCoordinates.className).syntax
-    val argsClassName        = Type.Name(argsClassCoordinates.className).syntax
+    val baseClassName        = Type.Name(baseClassCoordinates.definitionName).syntax
+    val argsClassName        = Type.Name(argsClassCoordinates.definitionName).syntax
 
     val baseFileImports = {
       val conditionalIdentifiers =
@@ -464,9 +464,9 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
 
     val argsDefault = if (hasDefaultArgsConstructor) s""" = ${argsClassName}()""" else ""
 
-    // the type has to match Pulumi's resource type schema, e.g. kubernetes:core/v1:Pod
+    // the token has to match Pulumi's resource type schema, e.g. kubernetes:core/v1:Pod
     // please make sure, it contains 'index' instead of empty module part if needed
-    val typ = Lit.String(typeToken.asString)
+    val token = Lit.String(typeToken.asString)
 
     val baseCompanion =
       if (hasOutputExtensions) {
@@ -476,7 +476,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
             |    args: ${argsClassName}${argsDefault},
             |    opts: CustomResourceOptions = CustomResourceOptions()
             |  ): Output[$baseClassName] =
-            |    ctx.registerResource[$baseClassName, $argsClassName](${typ}, name, args, opts)
+            |    ctx.registerResource[$baseClassName, $argsClassName](${token}, name, args, opts)
             |
             |  given outputOps: {} with
             |    extension(output: Output[$baseClassName])
@@ -534,11 +534,11 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
 
     pulumiPackage.functions
       .collect {
-        case (typeToken, functionDefinition) if !functionDefinition.isOverlay =>
+        case (functionToken, functionDefinition) if !functionDefinition.isOverlay =>
           sourceFilesForFunction(
-            typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts, providerToPackageParts),
+            functionCoordinates = PulumiDefinitionCoordinates.fromRawToken(functionToken, moduleToPackageParts, providerToPackageParts),
             functionDefinition = functionDefinition,
-            typeToken = typeToken
+            functionToken = functionToken
           )
       }
       .toSeq
@@ -546,11 +546,11 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
   }
 
   def sourceFilesForFunction(
-    typeCoordinates: PulumiTypeCoordinates,
+    functionCoordinates: PulumiDefinitionCoordinates,
     functionDefinition: FunctionDefinition,
-    typeToken: String
+    functionToken: String
   ): Seq[SourceFile] = {
-    logger.warn(s"Function type '${typeToken}' was not generated")
+    logger.warn(s"Function type '${functionToken}' was not generated")
     Seq() // TODO: implement
   }
 
