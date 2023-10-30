@@ -7,8 +7,8 @@ import besom.codegen.UpickleApi._
 /** PulumiPackage describes a Pulumi package.
   *
   * Pulumi package metaschema:
- *    - ../resources/pulumi.json
- *    - https://github.com/pulumi/pulumi/blob/master/pkg/codegen/schema/pulumi.json
+  *   - https://www.pulumi.com/docs/using-pulumi/pulumi-packages/schema/
+  *   - https://github.com/pulumi/pulumi/blob/master/pkg/codegen/schema/pulumi.json
   *   - https://github.com/pulumi/pulumi/blob/master/pkg/codegen/schema/schema.go
   *
   * @param name
@@ -49,6 +49,7 @@ object PulumiPackage {
   implicit val reader: Reader[PulumiPackage] = macroR
 
   /** Reads a Pulumi package from a Pulumi schema JSON file
+    *
     * @param filePath
     *   the path to the Pulumi schema JSON file
     * @return
@@ -64,11 +65,13 @@ object PulumiPackage {
   }
 
   /** Reads a Pulumi package from a Pulumi schema JSON string
+    *
     * @param input
     *   the Pulumi schema JSON string
     * @return
     *   the Pulumi package
     */
+  // noinspection ScalaWeakerAccess
   def fromString(input: String): PulumiPackage = {
     if (input.isEmpty) {
       throw GeneralCodegenError("Pulumi package input JSON string is empty")
