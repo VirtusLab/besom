@@ -5,21 +5,25 @@ import besom.codegen.metaschema._
 import besom.codegen.Utils.PulumiPackageOps
 
 object SchemaProvider {
-  type ProviderName  = String
+  type SchemaName    = String
   type SchemaVersion = String
+  type SchemaFile    = os.Path
+
+  val DefaultSchemaVersion: SchemaVersion = "0.0.0"
 }
 
 trait SchemaProvider {
   import SchemaProvider._
 
-  def pulumiPackage(providerName: ProviderName, schemaVersion: SchemaVersion): PulumiPackage
-  def packageInfo(providerName: ProviderName, schemaVersion: SchemaVersion): PulumiPackageInfo
+  def dependencies(schemaName: SchemaName, schemaVersion: SchemaVersion): List[(SchemaName, SchemaVersion)]
 
-  def pulumiPackage(schemaFilePath: os.Path): PulumiPackage = {
-    PulumiPackage.fromFile(schemaFilePath)
-  }
+  def pulumiPackage(schemaName: SchemaName, schemaVersion: SchemaVersion): PulumiPackage
+  def pulumiPackage(schema: SchemaFile): PulumiPackage
 
-  def loadPackageInfo(pulumiPackage: PulumiPackage): PulumiPackageInfo = {
+  def packageInfo(schemaName: SchemaName, schemaVersion: SchemaVersion): PulumiPackageInfo
+  def packageInfo(schema: SchemaFile): PulumiPackageInfo
+
+  def packageInfo(pulumiPackage: PulumiPackage): PulumiPackageInfo = {
     val enumTypeTokensBuffer   = ListBuffer.empty[String]
     val objectTypeTokensBuffer = ListBuffer.empty[String]
 
@@ -32,6 +36,8 @@ trait SchemaProvider {
     }
 
     PulumiPackageInfo(
+      schemaName = pulumiPackage.name,
+      schemaVersion = pulumiPackage.version.getOrElse(SchemaProvider.DefaultSchemaVersion),
       enumTypeTokens = enumTypeTokensBuffer.toSet,
       objectTypeTokens = objectTypeTokensBuffer.toSet,
       resourceTypeTokens = pulumiPackage.resources.keySet.map(_.toLowerCase),
@@ -41,21 +47,33 @@ trait SchemaProvider {
   }
 }
 
-class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Logger, providerConfig: Config.ProviderConfig) extends SchemaProvider {
+class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Logger) extends SchemaProvider {
 
   import SchemaProvider._
 
-  private val packageInfos: collection.mutable.Map[(ProviderName, SchemaVersion), PulumiPackageInfo] =
+  private val packageInfos: collection.mutable.Map[(SchemaName, SchemaVersion), PulumiPackageInfo] =
     collection.mutable.Map.empty
 
-  private def downloadedSchemaFilePath(providerName: ProviderName, schemaVersion: SchemaVersion): os.Path = {
+  private def downloadPulumiPackage(providerName: SchemaName, schemaVersion: SchemaVersion): PulumiPackage =
+    PulumiPackage.fromFile(downloadedSchemaFilePath(providerName, schemaVersion))
+
+  private def downloadedSchemaFilePath(providerName: SchemaName, schemaVersion: SchemaVersion): os.Path = {
     val schemaFilePath = schemaCacheDirPath / providerName / schemaVersion / "schema.json"
 
     if (!os.exists(schemaFilePath)) {
       logger.debug(s"Downloading schema for $providerName:$schemaVersion' into '${schemaFilePath.relativeTo(os.pwd)}'")
       val schemaSource = s"$providerName@$schemaVersion"
       os.makeDir.all(schemaFilePath / os.up)
-      os.proc("pulumi", "package", "get-schema", schemaSource).call(stdout = schemaFilePath)
+      try {
+        os.proc("pulumi", "package", "get-schema", schemaSource).call(stdout = schemaFilePath)
+      } catch {
+        case e: os.SubprocessException =>
+          os.remove.all(schemaFilePath) // cleanup the partially downloaded file
+          val msg =
+            s"Failed to download schema for $providerName:$schemaVersion' into '${schemaFilePath.relativeTo(os.pwd)}'"
+          logger.error(msg)
+          throw GeneralCodegenError(msg, e)
+      }
     } else {
       logger.debug(s"Using cached schema for $providerName:$schemaVersion' from '${schemaFilePath.relativeTo(os.pwd)}'")
     }
@@ -63,28 +81,51 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
     schemaFilePath
   }
 
-  def addSchemaFile(providerName: ProviderName, schemaVersion: SchemaVersion, content: os.Path): os.Path = {
+  private def saveSchemaFilePath(providerName: SchemaName, schemaVersion: SchemaVersion, schema: os.Path): Unit = {
     val schemaFilePath = schemaCacheDirPath / providerName / schemaVersion / "schema.json"
-    os.copy.over(content, schemaFilePath, replaceExisting = true, createFolders = true)
-    schemaFilePath
+    os.copy.over(schema, schemaFilePath, replaceExisting = true, createFolders = true)
   }
 
-  def addSchemaString(providerName: ProviderName, schemaVersion: SchemaVersion, content: String): os.Path = {
-    val schemaFilePath = schemaCacheDirPath / providerName / schemaVersion / "schema.json"
-    os.write.over(schemaFilePath, content, createFolders = true)
-    schemaFilePath
-  }
-
-  def pulumiPackage(providerName: ProviderName, schemaVersion: SchemaVersion): PulumiPackage =
-    pulumiPackage(downloadedSchemaFilePath(providerName, schemaVersion))
-
-  def packageInfo(providerName: ProviderName, schemaVersion: SchemaVersion): PulumiPackageInfo = {
+  override def packageInfo(pulumiPackage: PulumiPackage): PulumiPackageInfo = {
     packageInfos.getOrElseUpdate(
-      (providerName, schemaVersion),
-      loadPackageInfo(providerName, schemaVersion)
+      (pulumiPackage.name, pulumiPackage.version.getOrElse(DefaultSchemaVersion)),
+      super.packageInfo(pulumiPackage)
     )
   }
 
-  private def loadPackageInfo(providerName: ProviderName, schemaVersion: SchemaVersion): PulumiPackageInfo =
-    loadPackageInfo(pulumiPackage(providerName, schemaVersion))
+  def packageInfo(schemaName: SchemaName, schemaVersion: SchemaVersion): PulumiPackageInfo = {
+    packageInfos.getOrElseUpdate(
+      (schemaName, schemaVersion),
+      packageInfo(downloadPulumiPackage(schemaName, schemaVersion))
+    )
+  }
+
+  def pulumiPackage(schemaName: SchemaName, schemaVersion: SchemaVersion): PulumiPackage = {
+    downloadPulumiPackage(schemaName, schemaVersion)
+  }
+
+  def packageInfo(schema: SchemaFile): PulumiPackageInfo = {
+    val pack    = PulumiPackage.fromFile(schema)
+    val name    = pack.name
+    val version = pack.version.getOrElse(DefaultSchemaVersion)
+    packageInfos.getOrElseUpdate(
+      (name, version), {
+        saveSchemaFilePath(name, version, schema)
+        packageInfo(pack)
+      }
+    )
+  }
+
+  def pulumiPackage(schema: SchemaFile): PulumiPackage = {
+    val pack    = PulumiPackage.fromFile(schema)
+    val name    = pack.name
+    val version = pack.version.getOrElse(DefaultSchemaVersion)
+    saveSchemaFilePath(name, version, schema)
+    pack
+  }
+
+  def dependencies(schemaName: SchemaName, schemaVersion: SchemaVersion): List[(SchemaName, SchemaVersion)] =
+    packageInfos.keys.filterNot { case (name, version) =>
+      name == schemaName && version == schemaVersion
+    }.toList
 }

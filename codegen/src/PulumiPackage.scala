@@ -1,15 +1,16 @@
 package besom.codegen.metaschema
 
 import upickle.implicits.{key => fieldKey}
-import besom.codegen.{GeneralCodegenException, UpickleApi}
+import besom.codegen.{GeneralCodegenError, SchemaProviderError, UpickleApi}
 import besom.codegen.UpickleApi._
 
 /** PulumiPackage describes a Pulumi package.
   *
   * Pulumi package metaschema:
-  *   - ../resources/pulumi.json
+ *    - ../resources/pulumi.json
+ *    - https://github.com/pulumi/pulumi/blob/master/pkg/codegen/schema/pulumi.json
   *   - https://github.com/pulumi/pulumi/blob/master/pkg/codegen/schema/schema.go
- *
+  *
   * @param name
   *   Name is the unqualified name of the package
   * @param version
@@ -56,8 +57,21 @@ object PulumiPackage {
   def fromFile(filePath: os.Path): PulumiPackage = {
     // noinspection SimplifyBooleanMatch
     val input = os.exists(filePath) match {
-      case false => throw GeneralCodegenException(s"File $filePath does not exist")
+      case false => throw GeneralCodegenError(s"File $filePath does not exist")
       case true  => os.read(filePath)
+    }
+    fromString(input)
+  }
+
+  /** Reads a Pulumi package from a Pulumi schema JSON string
+    * @param input
+    *   the Pulumi schema JSON string
+    * @return
+    *   the Pulumi package
+    */
+  def fromString(input: String): PulumiPackage = {
+    if (input.isEmpty) {
+      throw GeneralCodegenError("Pulumi package input JSON string is empty")
     }
     val json = ujson.read(input)
     read[PulumiPackage](json)
@@ -374,7 +388,7 @@ case class MapType(additionalProperties: TypeReference) extends TypeReference
   * @param `type`
   *   ignored; present for compatibility with existing schemas
   */
-case class NamedType(typeUri: String, `type`: Option[PrimitiveType]) extends TypeReference
+case class NamedType(typeUri: String, `type`: Option[PrimitiveType] = None) extends TypeReference
 
 /** A reference to a union type. The "oneOf" property must be present. The union may additional specify an underlying
   * primitive type via the "type" property and a discriminator via the "discriminator" property. No other properties may

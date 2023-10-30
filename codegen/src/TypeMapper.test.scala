@@ -10,14 +10,14 @@ class TypeMapperTest extends munit.FunSuite {
   val schemaDir = os.pwd / ".out" / "schemas"
 
   case class Data(
-    providerName: SchemaProvider.ProviderName,
+    schemaName: SchemaProvider.SchemaName,
     typeToken: String,
     schemaVersion: SchemaProvider.SchemaVersion = "0.0.0",
     meta: Meta = Meta(),
     language: Language = Language(),
     tags: Set[munit.Tag] = Set()
   )(val expected: Expectations*) {
-    val pulumiPackage = PulumiPackage(name = providerName, meta = meta, language = language)
+    val pulumiPackage = PulumiPackage(name = schemaName, meta = meta, language = language)
   }
 
   sealed trait Expectations {
@@ -54,7 +54,7 @@ class TypeMapperTest extends munit.FunSuite {
 
   val tests = List(
     Data(
-      providerName = "example",
+      schemaName = "example",
       typeToken = "example::SomeType"
     )(
       ResourceClassExpectations(
@@ -64,7 +64,7 @@ class TypeMapperTest extends munit.FunSuite {
       )
     ),
     Data(
-      providerName = "digitalocean",
+      schemaName = "digitalocean",
       typeToken = "digitalocean:index:Domain",
       meta = Meta(
         moduleFormat = "(.*)(?:/[^/]*)"
@@ -77,7 +77,7 @@ class TypeMapperTest extends munit.FunSuite {
       )
     ),
     Data(
-      providerName = "digitalocean",
+      schemaName = "digitalocean",
       typeToken = "digitalocean::Domain",
       meta = Meta(
         moduleFormat = "(.*)(?:/[^/]*)"
@@ -90,7 +90,7 @@ class TypeMapperTest extends munit.FunSuite {
       )
     ),
     Data(
-      providerName = "foo-bar",
+      schemaName = "foo-bar",
       typeToken = "foo-bar:index:TopLevel"
     )(
       ResourceClassExpectations(
@@ -100,7 +100,7 @@ class TypeMapperTest extends munit.FunSuite {
       )
     ),
     Data(
-      providerName = "kubernetes",
+      schemaName = "kubernetes",
       typeToken = "kubernetes:meta/v1:APIVersions"
     )(
       ResourceClassExpectations(
@@ -110,7 +110,7 @@ class TypeMapperTest extends munit.FunSuite {
       )
     ),
     Data(
-      providerName = "kubernetes",
+      schemaName = "kubernetes",
       typeToken = "kubernetes:authentication.k8s.io/v1:TokenRequest",
       language = Language(
         java = Java(
@@ -127,7 +127,7 @@ class TypeMapperTest extends munit.FunSuite {
       )
     ),
     Data(
-      providerName = "kubernetes",
+      schemaName = "kubernetes",
       typeToken = "kubernetes:rbac.authorization.k8s.io/v1:ClusterRoleBinding",
       language = Language(
         java = Java(
@@ -147,15 +147,11 @@ class TypeMapperTest extends munit.FunSuite {
 
   tests.foreach { data =>
     test(s"Type: ${data.typeToken}".withTags(data.tags)) {
-      implicit val providerConfig: Config.ProviderConfig = Config.providersConfigs(data.providerName)
+      implicit val providerConfig: Config.ProviderConfig = Config.providersConfigs(data.schemaName)
 
       val schemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = schemaDir)
-
-      val tm: TypeMapper = new TypeMapper(
-        defaultProviderName = data.providerName,
-        defaultSchemaVersion = data.schemaVersion,
-        schemaProvider = schemaProvider
-      )
+      val packageInfo    = schemaProvider.packageInfo(data.pulumiPackage)
+      val tm: TypeMapper = new TypeMapper(packageInfo, schemaProvider)
 
       val ptc = tm.parseTypeToken(
         typeToken = data.typeToken,
@@ -196,10 +192,12 @@ class AsScalaTypeTest extends munit.FunSuite {
 
   case class Data(
     `type`: TypeReference,
-    providerName: SchemaProvider.ProviderName = "example",
-    schemaVersion: SchemaProvider.SchemaVersion = "0.0.0",
+    schemaName: SchemaProvider.SchemaName = "test-as-scala-type",
+    schemaVersion: SchemaProvider.SchemaVersion = SchemaProvider.DefaultSchemaVersion,
     tags: Set[munit.Tag] = Set()
-  )(val expected: Expectations*)
+  )(val expected: Expectations*) {
+    val pulumiPackage = PulumiPackage(name = schemaName)
+  }
 
   case class Expectations(scalaType: String)
 
@@ -213,20 +211,40 @@ class AsScalaTypeTest extends munit.FunSuite {
     Data(UrnType)(Expectations("besom.types.URN")),
     Data(ResourceIdType)(Expectations("besom.types.ResourceId")),
     Data(UnionType(List(StringType, IntegerType), None))(Expectations("String | Int")),
-    Data(NamedType("pulumi.json#/Archive", None))(Expectations("besom.types.Archive")),
+    Data(NamedType("pulumi.json#/Archive"))(Expectations("besom.types.Archive")),
+    Data(UnionType(List(StringType, NamedType("aws:iam/documents:PolicyDocument")), Some(StringType)))(
+      Expectations("String | besom.api.aws.iam.documents.PolicyDocument")
+    ),
+    Data(NamedType("#/types/kubernetes:rbac.authorization.k8s.io/v1beta1:RoleRef"))(
+      Expectations("rbac.authorization.k8s.io/v1beta1:RoleRef")
+    ),
+    Data(ArrayType(NamedType("#/types/kubernetes:rbac.authorization.k8s.io%2Fv1beta1:Subject")))(
+      Expectations("besom.api.rbac.authorization.v1beta1.Subject")
+    ),
+//    Data(NamedType("/kubernetes/v3.7.0/schema.json#/provider", None))(Expectations("besom.api.kubernetes.Provider")),
+    Data(NamedType("/aws/v4.36.0/schema.json#/resources/aws:ec2%2FsecurityGroup:SecurityGroup"))(
+      Expectations("besom.api.aws.ec2.SecurityGroup")
+    ),
+    Data(
+      NamedType(
+        "/google-native/v0.18.2/schema.json#/types/google-native:accesscontextmanager/v1:DevicePolicyAllowedDeviceManagementLevelsItem"
+      )
+    )(
+      Expectations("besom.api.googlenative.accesscontextmanager.v1.enums.DevicePolicyAllowedDeviceManagementLevelsItem")
+    ),
+    Data(
+      NamedType("https://example.com/random/v2.3.1/schema.json#/resources/random:index%2FrandomPet:RandomPet")
+    )(
+      Expectations("besom.api.example.randomPet.RandomPet")
+    )
   )
 
   tests.foreach { data =>
     test(s"${data.`type`.getClass.getSimpleName}".withTags(data.tags)) {
-      implicit val providerConfig: Config.ProviderConfig = Config.providersConfigs(data.providerName)
-
       val schemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = schemaDir)
+      val packageInfo    = schemaProvider.packageInfo(PulumiPackage(name = data.schemaName))
 
-      implicit val tm: TypeMapper = new TypeMapper(
-        defaultProviderName = data.providerName,
-        defaultSchemaVersion = data.schemaVersion,
-        schemaProvider = schemaProvider
-      )
+      implicit val tm: TypeMapper = new TypeMapper(packageInfo, schemaProvider)
 
       data.expected.foreach { e =>
         assertEquals(data.`type`.asScalaType().toString(), e.scalaType)
@@ -234,4 +252,3 @@ class AsScalaTypeTest extends munit.FunSuite {
     }
   }
 }
-

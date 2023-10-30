@@ -6,13 +6,9 @@ import scala.meta.dialects.Scala33
 import besom.codegen.metaschema._
 
 class TypeMapper(
-  defaultProviderName: SchemaProvider.ProviderName,
-  defaultSchemaVersion: SchemaProvider.SchemaVersion,
+  val defaultPackageInfo: PulumiPackageInfo,
   schemaProvider: SchemaProvider
 )(implicit logger: Logger) {
-  def defaultPackageInfo: PulumiPackageInfo =
-    schemaProvider.packageInfo(providerName = defaultProviderName, schemaVersion = defaultSchemaVersion)
-
   private val typeTokenFmt: String    = "(.*):(.*)?:(.*)" // provider:module:type
   private val typeTokenPattern: Regex = ("^" + typeTokenFmt + "$").r
 
@@ -39,16 +35,9 @@ class TypeMapper(
 
   private def scalaTypeFromTypeUri(
     typeUri: String,
-    asArgsType: Boolean,
-    underlyingType: Option[PrimitiveType]
+    asArgsType: Boolean
   ): Option[Type.Ref] = {
-    // Example URIs:
-    // "/provider/vX.Y.Z/schema.json#/types/pulumi:type:token"
-    // "/kubernetes/v3.7.0/schema.json#/provider"
-    // "/kubernetes/v3.7.0/schema.json#/resources/kubernetes:storage.k8s.io%2Fv1:StorageClass"
-    // "#/types/kubernetes:rbac.authorization.k8s.io%2Fv1beta1:Subject"
-    // "aws:iam/documents:PolicyDocument"
-
+    // Example URIs available in AsScalaTypeTest.scala
     val (fileUri, typePath) = typeUri.replace("%2F", "/").split("#") match {
       case Array(typePath)          => ("", typePath) // JSON Schema Pointer like reference
       case Array(fileUri, typePath) => (fileUri, typePath) // Reference to external schema
@@ -59,7 +48,7 @@ class TypeMapper(
       case "" =>
         defaultPackageInfo
       case s"/${providerName}/v${schemaVersion}/schema.json" =>
-        schemaProvider.packageInfo(providerName = providerName, schemaVersion = schemaVersion)
+        schemaProvider.packageInfo(schemaName = providerName, schemaVersion = schemaVersion)
     }
 
     val (escapedTypeToken, isFromTypeUri, isFromResourceUri) = typePath match {
@@ -75,9 +64,9 @@ class TypeMapper(
     val typeCoordinates =
       parseTypeToken(typeToken, packageInfo.moduleToPackageParts, packageInfo.providerToPackageParts)
 
-    lazy val hasResourceDefinition  = packageInfo.resourceTypeTokens.contains(uniformedTypeToken)
-    lazy val hasObjectTypeDefintion = packageInfo.objectTypeTokens.contains(uniformedTypeToken)
-    lazy val hasEnumTypeDefintion   = packageInfo.enumTypeTokens.contains(uniformedTypeToken)
+    lazy val hasResourceDefinition   = packageInfo.resourceTypeTokens.contains(uniformedTypeToken)
+    lazy val hasObjectTypeDefinition = packageInfo.objectTypeTokens.contains(uniformedTypeToken)
+    lazy val hasEnumTypeDefinition   = packageInfo.enumTypeTokens.contains(uniformedTypeToken)
 
     def resourceClassCoordinates: Option[ClassCoordinates] = {
       if (hasResourceDefinition) {
@@ -88,9 +77,9 @@ class TypeMapper(
     }
 
     def objectClassCoordinates: Option[ClassCoordinates] = {
-      if (hasObjectTypeDefintion) {
+      if (hasObjectTypeDefinition) {
         Some(typeCoordinates.asObjectClass(asArgsType = asArgsType))
-      } else if (hasEnumTypeDefintion) {
+      } else if (hasEnumTypeDefinition) {
         Some(typeCoordinates.asEnumClass)
       } else {
         None
@@ -141,15 +130,10 @@ class TypeMapper(
           t"besom.types.PulumiJson"
 
         case typeUri =>
-          scalaTypeFromTypeUri(typeUri, asArgsType = asArgsType, underlyingType = namedType.`type`)
+          scalaTypeFromTypeUri(typeUri, asArgsType = asArgsType)
             .getOrElse {
-              logger.warn(
-                s"Type URI ${typeUri} has no corresponding type definition - using its underlying type as fallback"
-              )
-              val underlyingType = namedType.`type`.getOrElse(
-                throw new Exception(s"Type with URI ${typeUri} has no underlying primitive type to be used as fallback")
-              )
-              asScalaType(underlyingType, asArgsType = asArgsType)
+              // we ignore namedType.`type` because it is deprecated according to metaschema
+              throw new Exception(s"Type with URI ${typeUri} has no corresponding type definition")
             }
       }
   }

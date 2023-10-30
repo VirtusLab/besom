@@ -1,5 +1,7 @@
 package besom.integration.common
 
+import besom.codegen.Config.CodegenConfig
+import besom.codegen.generator.Result
 import munit.{Tag, Test}
 import os.Shellable
 
@@ -142,35 +144,55 @@ object scalaCli {
 }
 
 object codegen {
-  import besom.codegen.Main.generatePackageSources
+  import besom.codegen.generator
+
+  def generateLocalPackage(
+    schemaName: String,
+    schemaVersion: String
+  ): Unit = {
+    val result = codegen.generatePackage(schemaName, schemaVersion)
+    scalaCli.publishLocal(result.outputDir).call()
+    if (result.dependencies.nonEmpty)
+      println(s"\nCompiling dependencies for ${result.schemaName}:${result.schemaVersion}...")
+    for (dep <- result.dependencies) {
+      generateLocalPackage(dep.schemaName, dep.schemaVersion)
+    }
+  }
 
   def generatePackage(
-    providerName: String,
+    schemaName: String,
     schemaVersion: String,
     schemas: os.Path = schemaDir,
     codegen: os.Path = codegenDir,
+    outputDir: Option[os.RelPath] = None,
     version: String = coreVersion
-  ): os.Path =
-    println(s"Generating package '$providerName' form schema")
-    generatePackageSources(schemas, codegen, providerName, schemaVersion, version)
+  ): generator.Result = {
+    // noinspection TypeAnnotation
+    implicit val config = CodegenConfig(
+      besomVersion = version,
+      schemasDir = schemas,
+      codegenDir = codegen,
+      outputDir = outputDir
+    )
+    generator.generatePackageSources(Right(schemaName, schemaVersion))
+  }
 
   def generatePackageFromSchema(
     schema: os.Path,
-    providerName: String,
-    schemaVersion: String,
     schemas: os.Path = schemaDir,
     codegen: os.Path = codegenDir,
+    outputDir: Option[os.RelPath] = None,
     version: String = coreVersion
-  ): os.Path =
-    println(s"Generating test package '$providerName' form schema: ${schema.relativeTo(os.pwd)}")
-    generatePackageSources(
-      schemas,
-      codegen,
-      providerName,
-      schemaVersion,
-      version,
-      Map((providerName, schemaVersion) -> schema)
+  ): generator.Result = {
+    // noinspection TypeAnnotation
+    implicit val config = CodegenConfig(
+      besomVersion = version,
+      schemasDir = schemas,
+      codegenDir = codegen,
+      outputDir = outputDir
     )
+    generator.generatePackageSources(Left(schema))
+  }
 }
 
 def pproc(command: Shellable*) = {

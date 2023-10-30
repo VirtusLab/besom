@@ -7,12 +7,12 @@ sealed abstract class CodegenError(message: Option[String], cause: Option[Throwa
     with Serializable
 
 @SerialVersionUID(1L)
-case class GeneralCodegenException(message: Option[String], cause: Option[Throwable])
+case class GeneralCodegenError(message: Option[String], cause: Option[Throwable])
     extends CodegenError(message, cause)
-object GeneralCodegenException {
-  def apply(message: String)                   = new GeneralCodegenException(Some(message), None)
-  def apply(message: String, cause: Throwable) = new GeneralCodegenException(Some(message), Some(cause))
-  def apply(cause: Throwable)                  = new GeneralCodegenException(None, Some(cause))
+object GeneralCodegenError {
+  def apply(message: String)                   = new GeneralCodegenError(Some(message), None)
+  def apply(message: String, cause: Throwable) = new GeneralCodegenError(Some(message), Some(cause))
+  def apply(cause: Throwable)                  = new GeneralCodegenError(None, Some(cause))
 }
 
 @SerialVersionUID(1L)
@@ -38,4 +38,12 @@ object TypeMapperError {
   def apply(message: String)                   = new TypeMapperError(Some(message), None)
   def apply(message: String, cause: Throwable) = new TypeMapperError(Some(message), Some(cause))
   def apply(cause: Throwable)                  = new TypeMapperError(None, Some(cause))
+}
+
+@SerialVersionUID(1L)
+case class SchemaProviderError(message: Option[String], cause: Option[Throwable]) extends CodegenError(message, cause)
+object SchemaProviderError {
+  def apply(message: String)                   = new SchemaProviderError(Some(message), None)
+  def apply(message: String, cause: Throwable) = new SchemaProviderError(Some(message), Some(cause))
+  def apply(cause: Throwable)                  = new SchemaProviderError(None, Some(cause))
 }
