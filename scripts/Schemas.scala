@@ -54,6 +54,8 @@ private def fetchSchemas(cwd: os.Path): Unit =
     "digitalocean",
   ).foreach( name =>
     println(s"fetching $name")
+    // we have to install plugin first, otherwise we get an old schema
+    os.proc("pulumi", "plugin", "install", "resource", name).call()
     os.proc("pulumi", "package", "get-schema", name).call(stdout = targetPath / s"$name.json")
   )
   println("fetched test schema files")
@@ -109,4 +111,3 @@ private def copySchemas(sourcePath: os.Path, targetPath: os.Path): Unit =
   val allowExtensions = List("json", "yaml")
 
   copyFilteredFiles(sourcePath, targetPath, allowDirList, allowFileList, allowExtensions)
-
