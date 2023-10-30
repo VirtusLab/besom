@@ -36,8 +36,6 @@ object TypeToken {
       `type` = `type`
     )
   }
-
-  def unapply(t: TypeToken): Option[(String, String, String)] = Some((t.provider, t.module, t.`type`))
 }
 
 class TypeMapper(
