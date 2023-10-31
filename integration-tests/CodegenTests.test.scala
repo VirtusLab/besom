@@ -19,7 +19,6 @@ class CodegenTests extends munit.FunSuite {
     )
 
   override val munitTimeout = Duration(20, "min")
-  override def munitFlakyOK = true
 
   val testdata = os.pwd / "integration-tests" / "resources" / "testdata"
 
@@ -31,12 +30,6 @@ class CodegenTests extends munit.FunSuite {
     "external-enum" // depends on google-native
   )
 
-  // FIXME: less broken - compilation error
-  val flakyList = List(
-    "digitalocean",
-    "external-enum" // depends on google-native, and the dep does not compile
-  )
-
   // FIXME: broken - codegen error
   val ignoreList = List(
     "secrets",
@@ -46,6 +39,7 @@ class CodegenTests extends munit.FunSuite {
     "simple-methods-schema",
     "simple-methods-schema-single-value-returns",
     "simple-yaml-schema",
+    "external-enum", // depends on google-native, and the dep does not compile
     "external-resource-schema",
     "enum-reference",
     "different-enum",
@@ -85,10 +79,8 @@ class CodegenTests extends munit.FunSuite {
     val name = s"""schema '${data.name}' (${data.schema.relativeTo(testdata)}) should codegen"""
     // noinspection ScalaUnusedSymbol
     val options: TestOptions = data.name match {
-      case "external-enum"             => name.only
       case n if ignoreList.contains(n) => name.ignore
       case n if slowList.contains(n)   => name.tag(Slow)
-      case n if flakyList.contains(n)  => name.flaky
       case _                           => name
     }
     test(options) {

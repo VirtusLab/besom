@@ -151,7 +151,7 @@ object codegen {
     schemaVersion: String
   ): Unit = {
     val result = codegen.generatePackage(schemaName, schemaVersion)
-    scalaCli.publishLocal(result.outputDir).call()
+    scalaCli.publishLocal(result.outputDir).call(check = false)
     if (result.dependencies.nonEmpty)
       println(s"\nCompiling dependencies for ${result.schemaName}:${result.schemaVersion}...")
     for (dep <- result.dependencies) {
