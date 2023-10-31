@@ -12,6 +12,7 @@ class CodeGen(implicit
   codegenConfig: CodegenConfig,
   providerConfig: ProviderConfig,
   typeMapper: TypeMapper,
+  schemaProvider: SchemaProvider,
   logger: Logger
 ) {
 
@@ -23,7 +24,7 @@ class CodeGen(implicit
   def sourcesFromPulumiPackage(
     pulumiPackage: PulumiPackage,
     packageInfo: PulumiPackageInfo
-  )(implicit schemaProvider: SchemaProvider): Seq[SourceFile] =
+  ): Seq[SourceFile] =
     scalaFiles(pulumiPackage) ++ Seq(
       projectConfigFile(
         schemaName = packageInfo.schemaName,
@@ -43,9 +44,7 @@ class CodeGen(implicit
       sourceFilesForFunctions(pulumiPackage) ++
       sourceFilesForConfig(pulumiPackage)
 
-  def projectConfigFile(schemaName: String, schemaVersion: String)(implicit
-    schemaProvider: SchemaProvider
-  ): SourceFile = {
+  def projectConfigFile(schemaName: String, schemaVersion: String): SourceFile = {
     val besomVersion = codegenConfig.besomVersion
     val scalaVersion = codegenConfig.scalaVersion
     val javaVersion  = codegenConfig.javaVersion
@@ -106,16 +105,14 @@ class CodeGen(implicit
   }
 
   def sourceFilesForProviderResource(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
-    val providerName = pulumiPackage.name
-    val typeCoordinates = PulumiTypeCoordinates(
-      providerPackageParts = typeMapper.defaultPackageInfo.providerToPackageParts(providerName),
-      modulePackageParts = Seq(Utils.indexModuleName),
-      typeName = "Provider"
-    )
+    val typeToken              = pulumiPackage.providerTypeToken
+    val moduleToPackageParts   = pulumiPackage.moduleToPackageParts
+    val providerToPackageParts = pulumiPackage.providerToPackageParts
+
     sourceFilesForResource(
-      typeCoordinates = typeCoordinates,
+      typeCoordinates = typeMapper.parseTypeToken(typeToken, moduleToPackageParts, providerToPackageParts),
       resourceDefinition = pulumiPackage.provider,
-      typeToken = s"pulumi:provider:${pulumiPackage.name}",
+      typeToken = pulumiPackage.providerTypeToken,
       isProvider = true
     )
   }

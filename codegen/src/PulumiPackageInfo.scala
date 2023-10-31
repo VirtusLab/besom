@@ -7,6 +7,7 @@ case class PulumiPackageInfo(
   schemaVersion: SchemaVersion,
   enumTypeTokens: Set[String],
   objectTypeTokens: Set[String],
+  providerTypeToken: String,
   resourceTypeTokens: Set[String],
   moduleToPackageParts: String => Seq[String],
   providerToPackageParts: String => Seq[String]

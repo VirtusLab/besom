@@ -23,7 +23,7 @@ case class ClassCoordinates private (
     try {
       // we remove index from the package, if necessary
       val moduleParts = modulePackageParts.toList match {
-        case head :: tail if head == Utils.indexModuleName => tail
+        case head :: tail if head == Utils.IndexModuleName => tail
         case p                                             => p
       }
       val partsHead :: partsTail = sanitizeParts(baseApiPackagePrefixParts ++ providerPackageParts ++ moduleParts)
@@ -58,7 +58,7 @@ case class ClassCoordinates private (
         } else {
           moduleName :: tail
         }
-      case Nil => Utils.indexModuleName :: Nil
+      case Nil => Utils.IndexModuleName :: Nil
       case p   => p
     }
     FilePath(Seq("src") ++ moduleParts ++ Seq(s"${className}.scala"))

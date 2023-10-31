@@ -10,7 +10,9 @@ object Utils {
   // the root package (according to pulumi's convention)
   // Needs to be used in Pulumi types, but should NOT be translated to Scala code
   // Placeholder module for classes that should be in the root package (according to pulumi's convention)
-  val indexModuleName = "index"
+  val IndexModuleName = "index"
+
+  val ProviderTypeName = "Provider"
 
   // TODO: Find some workaround to enable passing the remaining arguments
   val jvmMaxParamsCount = 253 // https://github.com/scala/bug/issues/7324
@@ -42,7 +44,7 @@ object Utils {
     private def packageFormatModuleToPackageParts: String => Seq[String] = { module: String =>
       val moduleFormat: Regex = pulumiPackage.meta.moduleFormat.r
       module match {
-        case _ if module == indexModuleName || module.isEmpty => Seq(module)
+        case _ if module == IndexModuleName || module.isEmpty => Seq(module)
         case moduleFormat(name) => languageModuleToPackageParts(name)
         case _ =>
           throw TypeMapperError(
@@ -56,5 +58,7 @@ object Utils {
     // then use a language specific mapping, and if everything fails, fallback to slash mapping
     def moduleToPackageParts: String => Seq[String]   = packageFormatModuleToPackageParts
     def providerToPackageParts: String => Seq[String] = module => Seq(module)
+
+    def providerTypeToken: String = s"pulumi:providers:${pulumiPackage.name}"
   }
 }

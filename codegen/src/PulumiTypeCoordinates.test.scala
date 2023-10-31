@@ -56,6 +56,17 @@ class PulumiTypeCoordinatesTest extends munit.FunSuite {
         fullyQualifiedTypeRef = "besom.api.example.Provider",
         filePath = "src/index/Provider.scala"
       )
+    ),
+    Data(
+      providerPackageParts = Seq("kubernetes"),
+      modulePackageParts = Seq("rbac", "v1beta1"),
+      typeName = "RoleRef"
+    )(expected =
+      ObjectClassExpectations(
+        fullPackageName = "besom.api.kubernetes.rbac.v1beta1.outputs",
+        fullyQualifiedTypeRef = "besom.api.kubernetes.rbac.v1beta1.outputs.RoleRef",
+        filePath = "src/rbac/v1beta1/outputs/RoleRef.scala"
+      )
     )
   )
 

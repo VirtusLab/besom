@@ -14,6 +14,7 @@ object SchemaProvider {
 
 trait SchemaProvider {
   import SchemaProvider._
+  import Utils.PulumiPackageOps
 
   def dependencies(schemaName: SchemaName, schemaVersion: SchemaVersion): List[(SchemaName, SchemaVersion)]
 
@@ -40,6 +41,7 @@ trait SchemaProvider {
       schemaVersion = pulumiPackage.version.getOrElse(SchemaProvider.DefaultSchemaVersion),
       enumTypeTokens = enumTypeTokensBuffer.toSet,
       objectTypeTokens = objectTypeTokensBuffer.toSet,
+      providerTypeToken = pulumiPackage.providerTypeToken,
       resourceTypeTokens = pulumiPackage.resources.keySet.map(_.toLowerCase),
       moduleToPackageParts = pulumiPackage.moduleToPackageParts,
       providerToPackageParts = pulumiPackage.providerToPackageParts

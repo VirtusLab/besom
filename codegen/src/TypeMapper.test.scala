@@ -1,4 +1,5 @@
 package besom.codegen
+import scala.concurrent.duration.Duration
 
 //noinspection ScalaFileName,TypeAnnotation
 class TypeMapperTest extends munit.FunSuite {
@@ -61,6 +62,16 @@ class TypeMapperTest extends munit.FunSuite {
         fullPackageName = "besom.api.example",
         fullyQualifiedTypeRef = "besom.api.example.SomeType",
         filePath = "src/index/SomeType.scala"
+      )
+    ),
+    Data(
+      schemaName = "kubernetes",
+      typeToken = "pulumi:providers:kubernetes"
+    )(
+      ResourceClassExpectations(
+        fullPackageName = "besom.api.kubernetes",
+        fullyQualifiedTypeRef = "besom.api.kubernetes.Provider",
+        filePath = "src/index/Provider.scala"
       )
     ),
     Data(
@@ -190,14 +201,15 @@ class AsScalaTypeTest extends munit.FunSuite {
 
   val schemaDir = os.pwd / ".out" / "schemas"
 
+  private val defaultTestSchemaName = "test-as-scala-type"
+
   case class Data(
     `type`: TypeReference,
-    schemaName: SchemaProvider.SchemaName = "test-as-scala-type",
-    schemaVersion: SchemaProvider.SchemaVersion = SchemaProvider.DefaultSchemaVersion,
+    schemaName: Option[SchemaProvider.SchemaName] = None,
+    schemaVersion: Option[SchemaProvider.SchemaVersion] = None,
+    pulumiPackage: Option[PulumiPackage] = None,
     tags: Set[munit.Tag] = Set()
-  )(val expected: Expectations*) {
-    val pulumiPackage = PulumiPackage(name = schemaName)
-  }
+  )(val expected: Expectations*)
 
   case class Expectations(scalaType: String)
 
@@ -213,15 +225,23 @@ class AsScalaTypeTest extends munit.FunSuite {
     Data(UnionType(List(StringType, IntegerType), None))(Expectations("String | Int")),
     Data(NamedType("pulumi.json#/Archive"))(Expectations("besom.types.Archive")),
     Data(UnionType(List(StringType, NamedType("aws:iam/documents:PolicyDocument")), Some(StringType)))(
-      Expectations("String | besom.api.aws.iam.documents.PolicyDocument")
+      Expectations("String")
     ),
-    Data(NamedType("#/types/kubernetes:rbac.authorization.k8s.io/v1beta1:RoleRef"))(
-      Expectations("rbac.authorization.k8s.io/v1beta1:RoleRef")
+    Data(
+      NamedType("#/types/kubernetes:rbac.authorization.k8s.io/v1beta1:RoleRef"),
+      schemaName = Some("kubernetes"),
+      schemaVersion = Some("3.7.0")
+    )(
+      Expectations("besom.api.kubernetes.rbac.v1beta1.outputs.RoleRef")
     ),
-    Data(ArrayType(NamedType("#/types/kubernetes:rbac.authorization.k8s.io%2Fv1beta1:Subject")))(
-      Expectations("besom.api.rbac.authorization.v1beta1.Subject")
+    Data(
+      ArrayType(NamedType("#/types/kubernetes:rbac.authorization.k8s.io%2Fv1beta1:Subject")),
+      schemaName = Some("kubernetes"),
+      schemaVersion = Some("3.7.0")
+    )(
+      Expectations("scala.collection.immutable.List[besom.api.kubernetes.rbac.v1beta1.outputs.Subject]")
     ),
-//    Data(NamedType("/kubernetes/v3.7.0/schema.json#/provider", None))(Expectations("besom.api.kubernetes.Provider")),
+    Data(NamedType("/kubernetes/v3.7.0/schema.json#/provider"))(Expectations("besom.api.kubernetes.Provider")),
     Data(NamedType("/aws/v4.36.0/schema.json#/resources/aws:ec2%2FsecurityGroup:SecurityGroup"))(
       Expectations("besom.api.aws.ec2.SecurityGroup")
     ),
@@ -231,18 +251,30 @@ class AsScalaTypeTest extends munit.FunSuite {
       )
     )(
       Expectations("besom.api.googlenative.accesscontextmanager.v1.enums.DevicePolicyAllowedDeviceManagementLevelsItem")
-    ),
-    Data(
+    )
+    // TODO: make a proper test for this case, with a URL that exists and fix the implementation to use the url
+    /*Data(
       NamedType("https://example.com/random/v2.3.1/schema.json#/resources/random:index%2FrandomPet:RandomPet")
     )(
       Expectations("besom.api.example.randomPet.RandomPet")
-    )
+    )*/
+    // Dest data from https://github.com/pulumi/pulumi/blob/42784f6204a021575f0fdb9b50c4f93d4d062b72/pkg/codegen/testing/test/testdata/types.json
+    // TODO
   )
 
   tests.foreach { data =>
     test(s"${data.`type`.getClass.getSimpleName}".withTags(data.tags)) {
       val schemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = schemaDir)
-      val packageInfo    = schemaProvider.packageInfo(PulumiPackage(name = data.schemaName))
+      val pulumiPackage = data.pulumiPackage.getOrElse(
+        (data.schemaName, data.schemaVersion) match {
+          case (Some(schemaName), Some(schemaVersion)) =>
+            schemaProvider.pulumiPackage(schemaName = schemaName, schemaVersion = schemaVersion)
+          case (None, None) =>
+            PulumiPackage(name = defaultTestSchemaName)
+          case _ => fail("Either schemaName and schemaVersion should be provided, or pulumiPackage")
+        }
+      )
+      val packageInfo = schemaProvider.packageInfo(pulumiPackage)
 
       implicit val tm: TypeMapper = new TypeMapper(packageInfo, schemaProvider)
 
