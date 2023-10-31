@@ -36,6 +36,7 @@ class CodegenTests extends munit.FunSuite {
     "simple-plain-schema",
     "simple-plain-schema-with-root-package",
     "simple-resource-schema",
+    "simple-enum-schema",
     "simple-methods-schema",
     "simple-methods-schema-single-value-returns",
     "simple-yaml-schema",

@@ -112,7 +112,10 @@ class TypeMapper(
             logger.warn(s"Assuming a '/types/` prefix for type URI, fileUri: ${fileUri}, typePath: ${typePath}")
             Some(coordinates)
           case (None, None) => None
-          case _ => throw new Exception(s"Type URI can refer to both a resource or an object type, fileUri: ${fileUri}, typePath: ${typePath}")
+          case _ =>
+            throw new Exception(
+              s"Type URI can refer to both a resource or an object type, fileUri: ${fileUri}, typePath: ${typePath}"
+            )
         }
       }
 
@@ -130,8 +133,8 @@ class TypeMapper(
       case ArrayType(elemType) => t"scala.collection.immutable.List[${asScalaType(elemType, asArgsType)}]"
       case MapType(elemType)   => t"scala.Predef.Map[String, ${asScalaType(elemType, asArgsType)}]"
       case unionType: UnionType =>
-        unionType.oneOf.map(asScalaType(_, asArgsType, unionType.`type`)).reduce {
-          (t1, t2) => if (t1.syntax == t2.syntax) t"$t1" else t"$t1 | $t2"
+        unionType.oneOf.map(asScalaType(_, asArgsType, unionType.`type`)).reduce { (t1, t2) =>
+          if (t1.syntax == t2.syntax) t"$t1" else t"$t1 | $t2"
         }
       case namedType: NamedType =>
         unescape(namedType.typeUri) match {
@@ -148,9 +151,10 @@ class TypeMapper(
             scalaTypeFromTypeUri(fileUri, typePath, asArgsType = asArgsType)
               .getOrElse {
                 // we ignore namedType.`type` because it is deprecated according to metaschema
-                throw new Exception(s"NamedType with URI ${namedType.typeUri} has no corresponding type definition")
+                throw TypeMapperError(s"NamedType with URI ${namedType.typeUri} has no corresponding type definition")
               }
 
+          // try a fallback type if specified, used by UnionType
           case _ =>
             fallbackType match {
               case Some(primitiveType) => asScalaType(primitiveType, asArgsType)
