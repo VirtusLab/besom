@@ -157,7 +157,7 @@ class CodeGen(implicit
       val caseRawName = valueDefinition.name.getOrElse {
         valueDefinition.value match {
           case StringConstValue(value) => value
-          case const                   => throw new Exception(s"The name of enum cannot be derived from value ${const}")
+          case const => throw GeneralCodegenError(s"The name of enum cannot be derived from value ${const}")
         }
       }
       val caseName       = Term.Name(caseRawName).syntax

@@ -296,11 +296,11 @@ trait TypeReferenceProtoLike {
               case "number"  => NumberType
               case "boolean" => BooleanType
               case "array" =>
-                ArrayType(items = items.getOrElse(throw new Exception(s"TypeReference $this lacks items")))
+                ArrayType(items = items.getOrElse(throw GeneralCodegenError(s"TypeReference $this lacks items")))
               case "object" =>
                 MapType(additionalProperties = additionalProperties.getOrElse(StringType))
             }
-            .getOrElse(throw new Exception(s"TypeReference '$this' lacks type"))
+            .getOrElse(throw GeneralCodegenError(s"TypeReference '$this' lacks type"))
       }
     }
   }

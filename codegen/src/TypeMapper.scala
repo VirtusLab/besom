@@ -45,7 +45,7 @@ class TypeMapper(
       case s"${protocol}://${host}/${providerName}/v${schemaVersion}/schema.json" =>
         // FIXME: Use the hostname to determine the download server
         logger.error(
-          s"Skipping --server while downloading of external schema - missing implementation for ${protocol}://${host}}"
+          s"Skipping --server while downloading of external schema - missing implementation for '${protocol}://${host}'}"
         )
         schemaProvider.packageInfo(schemaName = providerName, schemaVersion = schemaVersion)
     }
@@ -55,7 +55,9 @@ class TypeMapper(
       case s"/types/${token}"     => (token, true, false, false)
       case s"/resources/${token}" => (token, false, true, false)
       case s"/${rest}" =>
-        throw new Exception(s"Invalid named type reference, fileUri: ${fileUri}, typePath: ${typePath}, rest: ${rest}")
+        throw TypeMapperError(
+          s"Invalid named type reference, fileUri:' ${fileUri}', typePath: '${typePath}', rest: '${rest}''"
+        )
       case token => (token, false, false, false)
     }
 
@@ -106,15 +108,17 @@ class TypeMapper(
       } else {
         (resourceClassCoordinates, objectClassCoordinates) match {
           case (Some(coordinates), None) =>
-            logger.warn(s"Assuming a '/resources/` prefix for type URI, fileUri: ${fileUri}, typePath: ${typePath}")
+            logger.warn(
+              s"Assuming a '/resources/` prefix for type URI, fileUri: '${fileUri}', typePath: '${typePath}''"
+            )
             Some(coordinates)
           case (None, Some(coordinates)) =>
-            logger.warn(s"Assuming a '/types/` prefix for type URI, fileUri: ${fileUri}, typePath: ${typePath}")
+            logger.warn(s"Assuming a '/types/` prefix for type URI, fileUri: '${fileUri}', typePath: '${typePath}''")
             Some(coordinates)
           case (None, None) => None
           case _ =>
-            throw new Exception(
-              s"Type URI can refer to both a resource or an object type, fileUri: ${fileUri}, typePath: ${typePath}"
+            throw TypeMapperError(
+              s"Type URI can refer to both a resource or an object type, fileUri: '${fileUri}', typePath: '${typePath}''"
             )
         }
       }
@@ -151,7 +155,7 @@ class TypeMapper(
             scalaTypeFromTypeUri(fileUri, typePath, asArgsType = asArgsType)
               .getOrElse {
                 // we ignore namedType.`type` because it is deprecated according to metaschema
-                throw TypeMapperError(s"NamedType with URI ${namedType.typeUri} has no corresponding type definition")
+                throw TypeMapperError(s"NamedType with URI '${namedType.typeUri}' has no corresponding type definition")
               }
 
           // try a fallback type if specified, used by UnionType
@@ -160,7 +164,7 @@ class TypeMapper(
               case Some(primitiveType) => asScalaType(primitiveType, asArgsType)
               case None =>
                 throw TypeMapperError(
-                  s"Unsupported type: ${typeRef}, no corresponding type definition and no fallback type"
+                  s"Unsupported type: '${typeRef}', no corresponding type definition and no fallback type"
                 )
             }
         }
