@@ -3,18 +3,17 @@ package besom.codegen
 import scala.meta._
 import scala.meta.dialects.Scala33
 
-case class ClassCoordinates private (
+case class ScalaDefinitionCoordinates private (
   private val providerPackageParts: Seq[String],
   private val modulePackageParts: Seq[String],
-  className: String
+  definitionName: String
 ) {
-  import ClassCoordinates._
+  import ScalaDefinitionCoordinates._
 
   // only used for package parts sanitization
   // DO NOT use for splitting the package parts
   private def sanitizeParts(parts: Seq[String]): List[String] = {
-    parts
-      .toList
+    parts.toList
       .filterNot(_.isBlank)
       .map(_.replace("-", ""))
   }
@@ -30,8 +29,8 @@ case class ClassCoordinates private (
       partsTail.foldLeft[Term.Ref](Term.Name(partsHead))((acc, name) => Term.Select(acc, Term.Name(name)))
     } catch {
       case e: org.scalameta.invariants.InvariantFailedException =>
-        throw ClassCoordinatesError(
-          s"Cannot generate package reference for className: $className, " +
+        throw ScalaDefinitionCoordinatesError(
+          s"Cannot generate package reference for definition: \"$definitionName\", " +
             s"providerPackageParts: ${providerPackageParts.mkString("[", ",", "]")}, " +
             s"modulePackageParts: ${modulePackageParts.mkString("[", ",", "]")}",
           e
@@ -40,7 +39,7 @@ case class ClassCoordinates private (
   }
 
   def fullyQualifiedTypeRef: Type.Ref = {
-    Type.Select(packageRef, Type.Name(className))
+    Type.Select(packageRef, Type.Name(definitionName))
   }
 
   def fullPackageName: String = {
@@ -61,25 +60,25 @@ case class ClassCoordinates private (
       case Nil => Utils.indexModuleName :: Nil
       case p   => p
     }
-    FilePath(Seq("src") ++ moduleParts ++ Seq(s"${className}.scala"))
+    FilePath(Seq("src") ++ moduleParts ++ Seq(s"${definitionName}.scala"))
   }
 }
 
-object ClassCoordinates {
+object ScalaDefinitionCoordinates {
   private val baseApiPackagePrefixParts: Seq[String] = Seq("besom", "api")
 
-  @throws[ClassCoordinatesError]("if 'className' is empty")
+  @throws[ScalaDefinitionCoordinatesError]("if 'definitionName' is empty")
   def apply(
     providerPackageParts: Seq[String],
     modulePackageParts: Seq[String],
-    className: String
-  ): ClassCoordinates = {
-    if (className.isBlank)
-      throw ClassCoordinatesError(s"Cannot create ClassCoordinates with empty className")
-    new ClassCoordinates(
+    definitionName: String
+  ): ScalaDefinitionCoordinates = {
+    if (definitionName.isBlank)
+      throw ScalaDefinitionCoordinatesError(s"Cannot create ScalaDefinitionCoordinates with empty definitionName")
+    new ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
-      className = className
+      definitionName = definitionName
     )
   }
 }

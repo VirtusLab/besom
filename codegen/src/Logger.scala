@@ -42,7 +42,7 @@ object Logger {
     override def compare(that: Level): Int = level.compare(that.level)
   }
 
-  //noinspection ScalaWeakerAccess
+  // noinspection ScalaWeakerAccess
   object Level {
     final case object Error extends Level(level = 0)
     final case object Warn extends Level(level = 1)

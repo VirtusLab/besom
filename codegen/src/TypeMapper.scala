@@ -1,42 +1,8 @@
 package besom.codegen
 
-import scala.util.matching.Regex
 import scala.meta._
 import scala.meta.dialects.Scala33
 import besom.codegen.metaschema._
-
-case class TypeToken private (provider: String, module: String, `type`: String) {
-  def asString: String = s"${provider}:${module}:${`type`}"
-}
-
-object TypeToken {
-  private val typeTokenFmt: String    = "(.*):(.*)?:(.*)" // provider:module:type
-  private val typeTokenPattern: Regex = ("^" + typeTokenFmt + "$").r
-
-  private def enforceNonEmptyModule(module: String): String =
-    module match {
-      case "" => "index"
-      case _ => module
-    }
-
-  def apply(typeToken: String): TypeToken = typeToken match {
-    case typeTokenPattern(provider, module, typ) =>
-      new TypeToken(
-        provider = provider,
-        module = enforceNonEmptyModule(module),
-        `type` = typ
-      )
-    case _ => throw TypeMapperError(s"Cannot parse type token: $typeToken, typeTokenPattern: $typeTokenPattern")
-  }
-
-  def apply(provider: String, module: String, `type`: String): TypeToken = {
-    new TypeToken(
-      provider = provider,
-      module = enforceNonEmptyModule(module),
-      `type` = `type`
-    )
-  }
-}
 
 class TypeMapper(
   defaultProviderName: SchemaProvider.ProviderName,
@@ -45,19 +11,6 @@ class TypeMapper(
 )(implicit logger: Logger) {
   def defaultPackageInfo: PulumiPackageInfo =
     schemaProvider.packageInfo(providerName = defaultProviderName, schemaVersion = defaultSchemaVersion)
-
-  def parseTypeToken(
-    typeToken: String,
-    moduleToPackageParts: String => Seq[String],
-    providerToPackageParts: String => Seq[String]
-  ): PulumiTypeCoordinates = {
-    val TypeToken(providerName, modulePortion, typeName) = TypeToken(typeToken)
-    PulumiTypeCoordinates(
-      providerPackageParts = providerToPackageParts(providerName),
-      modulePackageParts = moduleToPackageParts(modulePortion),
-      typeName = typeName
-    )
-  }
 
   private def scalaTypeFromTypeUri(
     typeUri: String,
@@ -95,13 +48,17 @@ class TypeMapper(
     val uniformedTypeToken = typeToken.toLowerCase
 
     val typeCoordinates =
-      parseTypeToken(typeToken, packageInfo.moduleToPackageParts, packageInfo.providerToPackageParts)
+      PulumiDefinitionCoordinates.fromRawToken(
+        typeToken,
+        packageInfo.moduleToPackageParts,
+        packageInfo.providerToPackageParts
+      )
 
     lazy val hasResourceDefinition  = packageInfo.resourceTypeTokens.contains(uniformedTypeToken)
     lazy val hasObjectTypeDefintion = packageInfo.objectTypeTokens.contains(uniformedTypeToken)
     lazy val hasEnumTypeDefintion   = packageInfo.enumTypeTokens.contains(uniformedTypeToken)
 
-    def resourceClassCoordinates: Option[ClassCoordinates] = {
+    def resourceClassCoordinates: Option[ScalaDefinitionCoordinates] = {
       if (hasResourceDefinition) {
         Some(typeCoordinates.asResourceClass(asArgsType = asArgsType))
       } else {
@@ -109,7 +66,7 @@ class TypeMapper(
       }
     }
 
-    def objectClassCoordinates: Option[ClassCoordinates] = {
+    def objectClassCoordinates: Option[ScalaDefinitionCoordinates] = {
       if (hasObjectTypeDefintion) {
         Some(typeCoordinates.asObjectClass(asArgsType = asArgsType))
       } else if (hasEnumTypeDefintion) {
@@ -119,7 +76,7 @@ class TypeMapper(
       }
     }
 
-    val classCoordinates: Option[ClassCoordinates] =
+    val classCoordinates: Option[ScalaDefinitionCoordinates] =
       if (isFromResourceUri) {
         resourceClassCoordinates
       } else if (isFromTypeUri) {

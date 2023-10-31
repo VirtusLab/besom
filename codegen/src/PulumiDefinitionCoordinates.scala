@@ -1,42 +1,55 @@
 package besom.codegen
 
-case class PulumiTypeCoordinates private (
+case class PulumiDefinitionCoordinates private (
   private val providerPackageParts: Seq[String],
   private val modulePackageParts: Seq[String],
   private val typeName: String
 ) {
-  import PulumiTypeCoordinates._
+  import PulumiDefinitionCoordinates._
 
   def className(asArgsType: Boolean)(implicit logger: Logger): String = {
     val classNameSuffix = if (asArgsType) "Args" else ""
     mangleTypeName(typeName) ++ classNameSuffix
   }
 
-  def asResourceClass(asArgsType: Boolean)(implicit logger: Logger): ClassCoordinates = {
-    ClassCoordinates(
+  def asResourceClass(asArgsType: Boolean)(implicit logger: Logger): ScalaDefinitionCoordinates = {
+    ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
-      className = className(asArgsType)
+      definitionName = className(asArgsType)
     )
   }
-  def asObjectClass(asArgsType: Boolean)(implicit logger: Logger): ClassCoordinates = {
+  def asObjectClass(asArgsType: Boolean)(implicit logger: Logger): ScalaDefinitionCoordinates = {
     val packageSuffix = if (asArgsType) "inputs" else "outputs"
-    ClassCoordinates(
+    ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts :+ packageSuffix,
-      className = className(asArgsType)
+      definitionName = className(asArgsType)
     )
   }
-  def asEnumClass(implicit logger: Logger): ClassCoordinates = {
-    ClassCoordinates(
+  def asEnumClass(implicit logger: Logger): ScalaDefinitionCoordinates = {
+    ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts :+ "enums",
-      className = mangleTypeName(typeName)
+      definitionName = mangleTypeName(typeName)
     )
   }
 }
 
-object PulumiTypeCoordinates {
+object PulumiDefinitionCoordinates {
+  def fromRawToken(
+    typeToken: String,
+    moduleToPackageParts: String => Seq[String],
+    providerToPackageParts: String => Seq[String]
+  ): PulumiDefinitionCoordinates = {
+    val PulumiToken(providerName, modulePortion, typeName) = PulumiToken(typeToken)
+    PulumiDefinitionCoordinates(
+      providerPackageParts = providerToPackageParts(providerName),
+      modulePackageParts = moduleToPackageParts(modulePortion),
+      typeName = typeName
+    )
+  }
+
   private def capitalize(s: String) = s(0).toUpper.toString ++ s.substring(1, s.length)
   private val maxNameLength         = 200
 
@@ -65,14 +78,14 @@ object PulumiTypeCoordinates {
     capitalized
   }
 
-  @throws[PulumiTypeCoordinatesError]("if 'typeName' is empty")
+  @throws[PulumiDefinitionCoordinatesError]("if 'typeName' is empty")
   def apply(
     providerPackageParts: Seq[String],
     modulePackageParts: Seq[String],
     typeName: String
-  ): PulumiTypeCoordinates = {
+  ): PulumiDefinitionCoordinates = {
     if (typeName.isBlank)
-      throw PulumiTypeCoordinatesError("Unexpected empty 'typeName' parameter")
-    new PulumiTypeCoordinates(providerPackageParts, modulePackageParts, typeName)
+      throw PulumiDefinitionCoordinatesError("Unexpected empty 'typeName' parameter")
+    new PulumiDefinitionCoordinates(providerPackageParts, modulePackageParts, typeName)
   }
 }

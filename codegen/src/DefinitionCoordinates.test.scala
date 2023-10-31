@@ -1,7 +1,7 @@
 package besom.codegen
 
 //noinspection ScalaFileName,TypeAnnotation
-class PulumiTypeCoordinatesTest extends munit.FunSuite {
+class DefinitionCoordinatesTest extends munit.FunSuite {
   implicit val logger: Logger                        = new Logger
   implicit val providerConfig: Config.ProviderConfig = Config.ProviderConfig()
 
@@ -61,7 +61,7 @@ class PulumiTypeCoordinatesTest extends munit.FunSuite {
 
   tests.foreach(data => {
     test(s"Type: ${data.typeName}".withTags(data.tags.toSet)) {
-      val ptc = PulumiTypeCoordinates(
+      val coords = PulumiDefinitionCoordinates(
         providerPackageParts = data.providerPackageParts,
         modulePackageParts = data.modulePackageParts,
         typeName = data.typeName
@@ -69,17 +69,17 @@ class PulumiTypeCoordinatesTest extends munit.FunSuite {
 
       data.expected.foreach {
         case ResourceClassExpectations(fullPackageName, fullyQualifiedTypeRef, filePath, asArgsType) =>
-          val rc = ptc.asResourceClass(asArgsType = asArgsType)
+          val rc = coords.asResourceClass(asArgsType = asArgsType)
           assertEquals(rc.fullPackageName, fullPackageName)
           assertEquals(rc.fullyQualifiedTypeRef.toString, fullyQualifiedTypeRef)
           assertEquals(rc.filePath.osSubPath.toString(), filePath)
         case ObjectClassExpectations(fullPackageName, fullyQualifiedTypeRef, filePath, asArgsType) =>
-          val oc = ptc.asObjectClass(asArgsType = asArgsType)
+          val oc = coords.asObjectClass(asArgsType = asArgsType)
           assertEquals(oc.fullPackageName, fullPackageName)
           assertEquals(oc.fullyQualifiedTypeRef.toString, fullyQualifiedTypeRef)
           assertEquals(oc.filePath.osSubPath.toString(), filePath)
         case EnumClassExpectations(fullPackageName, fullyQualifiedTypeRef, filePath) =>
-          val ec = ptc.asEnumClass
+          val ec = coords.asEnumClass
           assertEquals(ec.fullPackageName, fullPackageName)
           assertEquals(ec.fullyQualifiedTypeRef.toString, fullyQualifiedTypeRef)
           assertEquals(ec.filePath.osSubPath.toString(), filePath)

@@ -31,11 +31,9 @@ object Utils {
         }.toMap
       } else {
         // use nodejs mapping as a fallback
-        pulumiPackage.language.nodejs.moduleToPackage.view
-          .mapValues { pkg =>
-            pkg.split("/").filter(_.nonEmpty).toSeq
-          }
-          .toMap
+        pulumiPackage.language.nodejs.moduleToPackage.view.mapValues { pkg =>
+          pkg.split("/").filter(_.nonEmpty).toSeq
+        }.toMap
       }.withDefault(slashModuleToPackageParts) // fallback to slash mapping
     }
 
@@ -45,7 +43,7 @@ object Utils {
         case _ if module.isEmpty =>
           throw TypeMapperError("Module cannot be empty")
         case _ if module == indexModuleName => Seq(indexModuleName)
-        case moduleFormat(name) => languageModuleToPackageParts(name)
+        case moduleFormat(name)             => languageModuleToPackageParts(name)
         case _ =>
           throw TypeMapperError(
             s"Cannot parse module portion '$module' with moduleFormat: $moduleFormat"

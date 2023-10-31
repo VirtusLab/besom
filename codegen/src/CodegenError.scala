@@ -16,20 +16,21 @@ object GeneralCodegenException {
 }
 
 @SerialVersionUID(1L)
-case class PulumiTypeCoordinatesError private (message: Option[String], cause: Option[Throwable])
+case class PulumiDefinitionCoordinatesError private (message: Option[String], cause: Option[Throwable])
     extends CodegenError(message, cause)
-object PulumiTypeCoordinatesError {
-  def apply(message: String)                   = new PulumiTypeCoordinatesError(Some(message), None)
-  def apply(message: String, cause: Throwable) = new PulumiTypeCoordinatesError(Some(message), Some(cause))
-  def apply(cause: Throwable)                  = new PulumiTypeCoordinatesError(None, Some(cause))
+object PulumiDefinitionCoordinatesError {
+  def apply(message: String)                   = new PulumiDefinitionCoordinatesError(Some(message), None)
+  def apply(message: String, cause: Throwable) = new PulumiDefinitionCoordinatesError(Some(message), Some(cause))
+  def apply(cause: Throwable)                  = new PulumiDefinitionCoordinatesError(None, Some(cause))
 }
 
 @SerialVersionUID(1L)
-case class ClassCoordinatesError(message: Option[String], cause: Option[Throwable]) extends CodegenError(message, cause)
-object ClassCoordinatesError {
-  def apply(message: String)                   = new ClassCoordinatesError(Some(message), None)
-  def apply(message: String, cause: Throwable) = new ClassCoordinatesError(Some(message), Some(cause))
-  def apply(cause: Throwable)                  = new ClassCoordinatesError(None, Some(cause))
+case class ScalaDefinitionCoordinatesError(message: Option[String], cause: Option[Throwable])
+    extends CodegenError(message, cause)
+object ScalaDefinitionCoordinatesError {
+  def apply(message: String)                   = new ScalaDefinitionCoordinatesError(Some(message), None)
+  def apply(message: String, cause: Throwable) = new ScalaDefinitionCoordinatesError(Some(message), Some(cause))
+  def apply(cause: Throwable)                  = new ScalaDefinitionCoordinatesError(None, Some(cause))
 }
 
 @SerialVersionUID(1L)
