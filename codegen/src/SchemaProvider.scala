@@ -41,10 +41,7 @@ trait SchemaProvider {
   }
 }
 
-class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit
-  logger: Logger,
-  providerConfig: Config.ProviderConfig
-) extends SchemaProvider {
+class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Logger) extends SchemaProvider {
 
   import SchemaProvider._
 

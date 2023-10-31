@@ -7,7 +7,9 @@ import besom.codegen.UpickleApi._
 /** PulumiPackage describes a Pulumi package.
   *
   * Pulumi package metaschema:
-  *   - ../resources/pulumi.json
+  *   - codegen/resources/pulumi.json
+  *   - https://www.pulumi.com/docs/using-pulumi/pulumi-packages/schema/
+  *   - https://github.com/pulumi/pulumi/blob/master/pkg/codegen/schema/pulumi.json
   *   - https://github.com/pulumi/pulumi/blob/master/pkg/codegen/schema/schema.go
   *
   * @param name
@@ -48,6 +50,7 @@ object PulumiPackage {
   implicit val reader: Reader[PulumiPackage] = macroR
 
   /** Reads a Pulumi package from a Pulumi schema JSON file
+    *
     * @param filePath
     *   the path to the Pulumi schema JSON file
     * @return
@@ -265,7 +268,7 @@ trait TypeReferenceProtoLike {
   def toTypeReference: TypeReference = {
     if (oneOf.nonEmpty) {
       val primitiveType = `type`.map(PrimitiveType.fromString)
-      UnionType(oneOf = oneOf, `type` = primitiveType)
+      UnionType(oneOf = oneOf, `type` = primitiveType) // TODO: Handle the discriminator
     } else {
       ref match {
         case Some(typeUri) =>
@@ -374,7 +377,7 @@ case class MapType(additionalProperties: TypeReference) extends TypeReference
   * @param `type`
   *   ignored; present for compatibility with existing schemas
   */
-case class NamedType(typeUri: String, `type`: Option[PrimitiveType]) extends TypeReference
+case class NamedType(typeUri: String, `type`: Option[PrimitiveType] = None) extends TypeReference
 
 /** A reference to a union type. The "oneOf" property must be present. The union may additional specify an underlying
   * primitive type via the "type" property and a discriminator via the "discriminator" property. No other properties may

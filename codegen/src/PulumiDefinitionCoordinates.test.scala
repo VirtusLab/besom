@@ -69,6 +69,17 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
       )
     ),
     Data(
+      providerName = "kubernetes",
+      typeToken = "pulumi:providers:kubernetes",
+      tags = Set(munit.Ignore) // TODO: Fix this test
+    )(
+      ResourceClassExpectations(
+        fullPackageName = "besom.api.kubernetes",
+        fullyQualifiedTypeRef = "besom.api.kubernetes.Provider",
+        filePath = "src/index/Provider.scala"
+      )
+    ),
+    Data(
       providerName = "digitalocean",
       typeToken = "digitalocean:index/getProjectsProject:getProjectsProject",
       meta = Meta(
