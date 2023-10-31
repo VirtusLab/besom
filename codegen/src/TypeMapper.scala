@@ -152,22 +152,29 @@ class TypeMapper(
             t"besom.types.PulumiJson"
 
           case s"$fileUri#$typePath" =>
-            scalaTypeFromTypeUri(fileUri, typePath, asArgsType = asArgsType)
-              .getOrElse {
-                // we ignore namedType.`type` because it is deprecated according to metaschema
-                throw TypeMapperError(s"NamedType with URI '${namedType.typeUri}' has no corresponding type definition")
-              }
-
-          // try a fallback type if specified, used by UnionType
-          case _ =>
-            fallbackType match {
-              case Some(primitiveType) => asScalaType(primitiveType, asArgsType)
+            scalaTypeFromTypeUri(fileUri, typePath, asArgsType) match {
+              case Some(scalaType) => scalaType
+              // we ignore namedType.`type` because it is deprecated according to metaschema
               case None =>
-                throw TypeMapperError(
-                  s"Unsupported type: '${typeRef}', no corresponding type definition and no fallback type"
-                )
+                throw TypeMapperError(s"NamedType with URI '${namedType.typeUri}' has no corresponding type definition")
+            }
+          case token =>
+            scalaTypeFromTypeUri("", token, asArgsType) match {
+              case Some(scalaType) => scalaType
+              // we ignore namedType.`type` because it is deprecated according to metaschema
+              case None =>
+                throw TypeMapperError(s"NamedType with URI '${namedType.typeUri}' has no corresponding type definition")
             }
         }
+
+      // try a fallback type if specified, used by UnionType
+      case _ => fallbackType match {
+        case Some(primitiveType) => asScalaType(primitiveType, asArgsType)
+        case None =>
+          throw TypeMapperError(
+            s"Unsupported type: '${typeRef}', no corresponding type definition and no fallback type"
+          )
+      }
     }
 
   private def unescape(value: String) = {

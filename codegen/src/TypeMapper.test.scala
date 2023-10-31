@@ -224,7 +224,18 @@ class AsScalaTypeTest extends munit.FunSuite {
     Data(ResourceIdType)(Expectations("besom.types.ResourceId")),
     Data(UnionType(List(StringType, IntegerType), None))(Expectations("String | Int")),
     Data(NamedType("pulumi.json#/Archive"))(Expectations("besom.types.Archive")),
-    Data(UnionType(List(StringType, NamedType("aws:iam/documents:PolicyDocument")), Some(StringType)))(
+    Data(
+      UnionType(List(StringType, NamedType("aws:iam/documents:PolicyDocument")), Some(StringType)),
+      schemaName = Some("aws"),
+      schemaVersion = Some("6.7.0")
+    )(
+      Expectations("String")
+    ),
+    Data(
+      UnionType(List(StringType, NamedType("#/types/aws:iam/role:Role")), Some(StringType)),
+      schemaName = Some("aws"),
+      schemaVersion = Some("6.7.0")
+    )(
       Expectations("String")
     ),
     Data(
