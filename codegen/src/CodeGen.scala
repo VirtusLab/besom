@@ -115,7 +115,8 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
     val providerToPackageParts = pulumiPackage.providerToPackageParts
 
     pulumiPackage.types.flatMap { case (typeToken, typeDefinition) =>
-      val typeCoordinates = PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts)
+      val typeCoordinates =
+        PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts)
 
       typeDefinition match {
         case enumDef: EnumTypeDefinition =>
@@ -326,7 +327,8 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
       .collect {
         case (typeToken, resourceDefinition) if !resourceDefinition.isOverlay =>
           sourceFilesForResource(
-            typeCoordinates = PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts),
+            typeCoordinates =
+              PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts),
             resourceDefinition = resourceDefinition,
             typeToken = PulumiToken(typeToken),
             isProvider = false
@@ -536,7 +538,8 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
       .collect {
         case (functionToken, functionDefinition) if !functionDefinition.isOverlay =>
           sourceFilesForFunction(
-            functionCoordinates = PulumiDefinitionCoordinates.fromRawToken(functionToken, moduleToPackageParts, providerToPackageParts),
+            functionCoordinates =
+              PulumiDefinitionCoordinates.fromRawToken(functionToken, moduleToPackageParts, providerToPackageParts),
             functionDefinition = functionDefinition,
             functionToken = functionToken
           )

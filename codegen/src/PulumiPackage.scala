@@ -9,7 +9,7 @@ import besom.codegen.UpickleApi._
   * Pulumi package metaschema:
   *   - ../resources/pulumi.json
   *   - https://github.com/pulumi/pulumi/blob/master/pkg/codegen/schema/schema.go
- *
+  *
   * @param name
   *   Name is the unqualified name of the package
   * @param version

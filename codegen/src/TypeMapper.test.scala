@@ -30,7 +30,7 @@ class TypeMapperTest extends munit.FunSuite {
     Data(UrnType)(Expectations("besom.types.URN")),
     Data(ResourceIdType)(Expectations("besom.types.ResourceId")),
     Data(UnionType(List(StringType, IntegerType), None))(Expectations("String | Int")),
-    Data(NamedType("pulumi.json#/Archive", None))(Expectations("besom.types.Archive")),
+    Data(NamedType("pulumi.json#/Archive", None))(Expectations("besom.types.Archive"))
   )
 
   tests.foreach { data =>

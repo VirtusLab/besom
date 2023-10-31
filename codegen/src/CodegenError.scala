@@ -25,7 +25,8 @@ object PulumiDefinitionCoordinatesError {
 }
 
 @SerialVersionUID(1L)
-case class ScalaDefinitionCoordinatesError(message: Option[String], cause: Option[Throwable]) extends CodegenError(message, cause)
+case class ScalaDefinitionCoordinatesError(message: Option[String], cause: Option[Throwable])
+    extends CodegenError(message, cause)
 object ScalaDefinitionCoordinatesError {
   def apply(message: String)                   = new ScalaDefinitionCoordinatesError(Some(message), None)
   def apply(message: String, cause: Throwable) = new ScalaDefinitionCoordinatesError(Some(message), Some(cause))

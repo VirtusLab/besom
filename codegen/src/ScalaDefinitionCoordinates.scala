@@ -13,8 +13,7 @@ case class ScalaDefinitionCoordinates private (
   // only used for package parts sanitization
   // DO NOT use for splitting the package parts
   private def sanitizeParts(parts: Seq[String]): List[String] = {
-    parts
-      .toList
+    parts.toList
       .filterNot(_.isBlank)
       .map(_.replace("-", ""))
   }

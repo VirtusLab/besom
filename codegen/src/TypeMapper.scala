@@ -48,7 +48,11 @@ class TypeMapper(
     val uniformedTypeToken = typeToken.toLowerCase
 
     val typeCoordinates =
-      PulumiDefinitionCoordinates.fromRawToken(typeToken, packageInfo.moduleToPackageParts, packageInfo.providerToPackageParts)
+      PulumiDefinitionCoordinates.fromRawToken(
+        typeToken,
+        packageInfo.moduleToPackageParts,
+        packageInfo.providerToPackageParts
+      )
 
     lazy val hasResourceDefinition  = packageInfo.resourceTypeTokens.contains(uniformedTypeToken)
     lazy val hasObjectTypeDefintion = packageInfo.objectTypeTokens.contains(uniformedTypeToken)

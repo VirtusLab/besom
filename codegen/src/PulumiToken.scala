@@ -13,7 +13,7 @@ object PulumiToken {
   private def enforceNonEmptyModule(module: String): String =
     module match {
       case "" => "index"
-      case _ => module
+      case _  => module
     }
 
   def apply(token: String): PulumiToken = token match {
