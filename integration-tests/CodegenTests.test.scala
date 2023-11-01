@@ -17,40 +17,28 @@ class CodegenTests extends munit.FunSuite {
     )
 
   override val munitTimeout = Duration(20, "min")
-  override def munitFlakyOK = true
 
   val testdata = os.pwd / "integration-tests" / "resources" / "testdata"
 
-  val slowFileList = List(
+  val slowList = List(
     "kubernetes",
     "docker",
-    "digitalocean"
-  )
-  val slowDirList = List(
-    "akamai"
-  )
-
-  // FIXME: less broken - compilation error
-  val flakyFileList = List(
-    "digitalocean"
-  )
-  val flakyDirList = List(
-    "simple-enum-schema",
-    "external-enum"
+    "digitalocean",
+    "akamai",
+    "external-enum" // depends on google-native
   )
 
   // FIXME: broken - codegen error
-  val ignoreFileList = List(
-    "digitalocean"
-  )
-  val ignoreDirList = List(
+  val ignoreList = List(
     "secrets",
     "simple-plain-schema",
     "simple-plain-schema-with-root-package",
     "simple-resource-schema",
+    "simple-enum-schema",
     "simple-methods-schema",
     "simple-methods-schema-single-value-returns",
     "simple-yaml-schema",
+    "external-enum", // depends on google-native, and the dep does not compile
     "external-resource-schema",
     "enum-reference",
     "different-enum",
@@ -64,7 +52,8 @@ class CodegenTests extends munit.FunSuite {
     "cyclic-types",
     "plain-and-default",
     "different-package-name-conflict",
-    "azure-native-nested-types"
+    "azure-native-nested-types",
+    "digitalocean"
   )
 
   val tests =
@@ -88,14 +77,10 @@ class CodegenTests extends munit.FunSuite {
   tests.foreach { data =>
     val name = s"""schema '${data.name}' (${data.schema.relativeTo(testdata)}) should codegen"""
     // noinspection ScalaUnusedSymbol
-    val options: TestOptions = data.schema match {
-      case _ / g"$f.$ext" if ignoreFileList.contains(f) => name.ignore
-      case _ / d / _ if ignoreDirList.contains(d)       => name.ignore
-      case _ / g"$f.$ext" if slowFileList.contains(f)   => name.tag(Slow)
-      case _ / d / _ if slowDirList.contains(d)         => name.tag(Slow)
-      case _ / g"$f.$ext" if flakyFileList.contains(f)  => name.flaky
-      case _ / d / _ if flakyDirList.contains(d)        => name.flaky
-      case _                                            => name
+    val options: TestOptions = data.name match {
+      case n if ignoreList.contains(n) => name.ignore
+      case n if slowList.contains(n)   => name.tag(Slow)
+      case _                           => name
     }
     test(options) {
       val outputDir = codegen.generatePackageFromSchema(data.schema, data.name, "0.0.0")
