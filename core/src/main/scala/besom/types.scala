@@ -24,7 +24,9 @@ object types:
 
   export Opaques.*
 
-  opaque type ResourceType <: String = String
+  opaque type PulumiToken <: String = String
+
+  opaque type ResourceType <: PulumiToken = String
 
   extension (rt: ResourceType)
     def getPackage: String      = if isProviderType then rt.split(":").last else rt.split(":").head
@@ -65,6 +67,20 @@ object types:
     implicit inline def str2ProviderType(inline s: String): ProviderType = ProviderType.from(s)
 
   end ProviderType
+
+  opaque type FunctionToken <: PulumiToken = String
+
+  object FunctionToken:
+    // validate that function token contains two colons between three identifiers, see @ResourceType
+    inline def from(s: String): FunctionToken =
+      requireConst(s)
+      inline if !constValue[Matches[s.type, ".+:.+:.+"]] then
+        error("Invalid function token")
+      else s
+
+    implicit inline def str2FunctionToken(inline s: String): FunctionToken = FunctionToken.from(s)
+
+  end FunctionToken
 
   opaque type Label <: String = String
 

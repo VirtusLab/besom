@@ -2,7 +2,7 @@ package besom.internal
 
 import com.google.protobuf.struct.*
 import besom.util.*
-import besom.types.{ResourceType, URN, Label, ProviderType}
+import besom.types.{ResourceType, FunctionToken, URN, Label, ProviderType}
 import besom.internal.logging.*
 import scala.annotation.implicitNotFound
 import besom.internal.ComponentResource
@@ -63,6 +63,12 @@ trait Context extends TaskTracker:
     outputs: Result[Struct]
   )(using Context): Result[Unit]
 
+  private[besom] def invoke[A: ArgsEncoder, R: Decoder](
+    token: FunctionToken,
+    args: A,
+    opts: InvokeOptions
+  )(using Context): Output[R]
+
   private[besom] def close(): Result[Unit]
 
 class ComponentContext(private val globalContext: Context, private val componentURN: Result[URN]) extends Context:
@@ -85,18 +91,18 @@ class ContextImpl(
 
   export taskTracker.{registerTask, waitForAllTasks, fail}
 
-  private[besom] def isDryRun: Boolean = runInfo.dryRun
+  override private[besom] def isDryRun: Boolean = runInfo.dryRun
 
-  private[besom] def getParentURN: Result[URN] =
+  override private[besom] def getParentURN: Result[URN] =
     stackPromise.get.flatMap(_.urn.getData).map(_.getValue).flatMap {
       case Some(urn) => Result.pure(urn)
       case None      => Result.fail(Exception("Stack urn is not available. This should not happen."))
     }
 
-  private[besom] def initializeStack: Result[Unit] =
+  override private[besom] def initializeStack: Result[Unit] =
     Stack.initializeStack(runInfo)(using this).flatMap(stackPromise.fulfill)
 
-  private[besom] def registerComponentResource(
+  override private[besom] def registerComponentResource(
     name: NonEmptyString,
     typ: ResourceType
   )(using Context): Result[ComponentBase] =
@@ -111,7 +117,7 @@ class ContextImpl(
       )
     }
 
-  private[besom] def registerProvider[R <: Resource: ResourceDecoder, A: ProviderArgsEncoder](
+  override private[besom] def registerProvider[R <: Resource: ResourceDecoder, A: ProviderArgsEncoder](
     typ: ProviderType,
     name: NonEmptyString,
     args: A,
@@ -121,7 +127,7 @@ class ContextImpl(
       Output.ofData(ResourceOps().registerResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
     }
 
-  private[besom] def registerResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
+  override private[besom] def registerResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
     typ: ResourceType,
     name: NonEmptyString,
     args: A,
@@ -131,14 +137,14 @@ class ContextImpl(
       Output.ofData(ResourceOps().registerResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
     }
 
-  private[besom] def readResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
+  override private[besom] def readResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
     typ: ResourceType,
     name: NonEmptyString,
     args: A,
     options: ResourceOptions
   )(using Context): Output[R] = ???
 
-  private[besom] def registerResourceOutputs(
+  override private[besom] def registerResourceOutputs(
     name: NonEmptyString,
     typ: ResourceType,
     urnResult: Result[URN],
@@ -148,7 +154,7 @@ class ContextImpl(
       ResourceOps().registerResourceOutputsInternal(urnResult, outputs)
     }
 
-  private[besom] def close(): Result[Unit] =
+  override private[besom] def close(): Result[Unit] =
     for
       _ <- monitor.close()
       _ <- engine.close()
@@ -164,6 +170,13 @@ class ContextImpl(
     // registerResourceCreation(typ, name, effect) // put into ConcurrentHashMap eagerly!
     // effect
     ???
+
+  override private[besom] def invoke[A: ArgsEncoder, R: Decoder](
+    token: FunctionToken,
+    args: A,
+    opts: InvokeOptions
+  )(using Context): Output[R] =
+    ??? // TODO: ResourceOps().invoke[A, R](token, args, opts)
 
 object Context:
 

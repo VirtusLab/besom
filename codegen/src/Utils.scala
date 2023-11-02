@@ -12,6 +12,9 @@ object Utils {
   // Placeholder module for classes that should be in the root package (according to pulumi's convention)
   val indexModuleName = "index"
 
+  // Name of the self parameter of resource methods
+  val selfParameterName = "__self__"
+
   // TODO: Find some workaround to enable passing the remaining arguments
   val jvmMaxParamsCount = 253 // https://github.com/scala/bug/issues/7324
 

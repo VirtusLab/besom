@@ -8,7 +8,7 @@ class DefinitionCoordinatesTest extends munit.FunSuite {
   case class Data(
     providerPackageParts: Seq[String],
     modulePackageParts: Seq[String],
-    typeName: String,
+    definitionName: String,
     tags: munit.Tag*
   )(val expected: Expectations*)
   sealed trait Expectations {
@@ -38,7 +38,7 @@ class DefinitionCoordinatesTest extends munit.FunSuite {
     Data(
       providerPackageParts = Seq("example"),
       modulePackageParts = Seq(),
-      typeName = "Provider"
+      definitionName = "Provider"
     )(expected =
       ResourceClassExpectations(
         fullPackageName = "besom.api.example",
@@ -49,7 +49,7 @@ class DefinitionCoordinatesTest extends munit.FunSuite {
     Data(
       providerPackageParts = Seq("example"),
       modulePackageParts = Seq("index"),
-      typeName = "Provider"
+      definitionName = "Provider"
     )(expected =
       ResourceClassExpectations(
         fullPackageName = "besom.api.example",
@@ -60,11 +60,11 @@ class DefinitionCoordinatesTest extends munit.FunSuite {
   )
 
   tests.foreach(data => {
-    test(s"Type: ${data.typeName}".withTags(data.tags.toSet)) {
+    test(s"Type: ${data.definitionName}".withTags(data.tags.toSet)) {
       val coords = PulumiDefinitionCoordinates(
         providerPackageParts = data.providerPackageParts,
         modulePackageParts = data.modulePackageParts,
-        typeName = data.typeName
+        definitionName = data.definitionName
       )
 
       data.expected.foreach {

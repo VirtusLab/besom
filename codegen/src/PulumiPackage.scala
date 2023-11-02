@@ -126,8 +126,8 @@ case class FunctionDefinition(
   description: Option[String] = None,
   deprecationMessage: Option[String] = None,
   isOverlay: Boolean = false,
-//  inputs: ObjectTypeDetails = ObjectTypeDetails(),
-//  outputs: TypeReference | ObjectTypeDetails = TypeReference | ObjectTypeDetails(),
+  inputs: ObjectTypeDefinition = ObjectTypeDefinition(),
+  outputs: ObjectTypeDefinition = ObjectTypeDefinition(), // TODO: Allow TypeReference too
   multiArgumentInputs: List[String] = Nil
 )
 object FunctionDefinition {
@@ -542,9 +542,22 @@ case class EnumTypeDefinition(
   *   always be set for outputs
   */
 case class ObjectTypeDefinition(
-  properties: Map[String, PropertyDefinition],
+  properties: Map[String, PropertyDefinition] = Map.empty,
   required: List[String] = Nil,
   description: Option[String] = None,
   isOverlay: Boolean = false
 ) extends TypeDefinition
     with ObjectTypeDetails
+
+object ObjectTypeDefinition {
+  // TODO: For some reason the semi-automatic derivation doesn't work
+  // implicit val reader: Reader[ObjectTypeDefinition] = macroR
+
+  implicit val reader: Reader[ObjectTypeDefinition] = UpickleApi.reader[TypeDefinitionProto].map { proto =>
+    ObjectTypeDefinition(
+      properties = proto.properties,
+      required = proto.required,
+      isOverlay = proto.isOverlay
+    )
+  }
+}
