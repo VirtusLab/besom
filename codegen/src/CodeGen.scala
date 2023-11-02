@@ -438,20 +438,22 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
 
       val resultClassCoordinates = functionCoordinates.methodResultClass
 
-      val requiredOutputs = functionDefinition.outputs.required
-      val outputProperties =
-        functionDefinition.outputs.properties.toSeq.sortBy(_._1).map { case (propertyName, propertyDefinition) =>
-          makePropertyInfo(
-            propertyName = propertyName,
-            propertyDefinition = propertyDefinition,
-            isPropertyRequired = requiredOutputs.contains(propertyName)
-          )
-        }
+      val resultClassSourceFileOpt = functionDefinition.outputs.objectTypeDefinition.map { outputTypeDefinition =>
+        val requiredOutputs = outputTypeDefinition.required
+        val outputProperties =
+          outputTypeDefinition.properties.toSeq.sortBy(_._1).map { case (propertyName, propertyDefinition) =>
+            makePropertyInfo(
+              propertyName = propertyName,
+              propertyDefinition = propertyDefinition,
+              isPropertyRequired = requiredOutputs.contains(propertyName)
+            )
+          }
 
-      val resultClassSourceFile = makeOutputClassSourceFile(
-        classCoordinates = resultClassCoordinates,
-        properties = inputProperties
-      )
+        makeOutputClassSourceFile(
+          classCoordinates = resultClassCoordinates,
+          properties = outputProperties
+        )
+      }
 
       val argsClassRef = argsClassCoordinates.fullyQualifiedTypeRef
 
@@ -460,7 +462,15 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
           s" = ${argsClassRef}()"
         } else ""
 
-      val resultClassRef = resultClassCoordinates.fullyQualifiedTypeRef
+      val resultTypeRef: Type =
+        (functionDefinition.outputs.objectTypeDefinition, functionDefinition.outputs.typeReference) match {
+          case (Some(_), _) =>
+            resultClassCoordinates.fullyQualifiedTypeRef
+          case (None, Some(ref)) =>
+            ref.asScalaType()
+          case (None, None) =>
+            t"scala.Unit"
+        }
 
       val methodSourceFile = {
         val token = Lit.String(functionToken.asString)
@@ -471,14 +481,14 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
               |def ${Term.Name(methodName)}(using ctx: besom.types.Context)(
               |  args: ${argsClassRef}${argsDefault},
               |  opts: besom.InvokeOptions = besom.InvokeOptions()
-              |): besom.types.Output[${resultClassRef}] =
-              |   ctx.invoke[$argsClassRef, $resultClassRef](${token}, args, opts)
+              |): besom.types.Output[${resultTypeRef}] =
+              |   ctx.invoke[$argsClassRef, $resultTypeRef](${token}, args, opts)
               |""".stripMargin
 
         SourceFile(filePath = methodCoordinates.filePath, sourceCode = fileContent)
       }
 
-      Seq(argsClassSourceFile, resultClassSourceFile, methodSourceFile)
+      Seq(argsClassSourceFile, methodSourceFile) ++ resultClassSourceFileOpt
     }
   }
 
