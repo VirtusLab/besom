@@ -613,18 +613,26 @@ case class ObjectTypeDefinitionOrTypeReference(
 object ObjectTypeDefinitionOrTypeReference {
   implicit val reader: Reader[ObjectTypeDefinitionOrTypeReference] =
     ObjectTypeDefinitionOrTypeReferenceProto.reader.map { proto =>
-      def typeReferenceOpt = proto.maybeAsTypeReference.map(typeReference =>
-        ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = None, typeReference = Some(typeReference))
-      )
       def objectTypeDefinitionOpt = proto.maybeAsObjectTypeDefinition.map(objectTypeDefinition =>
         ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = Some(objectTypeDefinition), typeReference = None)
       )
+      def typeReferenceOpt = proto.maybeAsTypeReference.map(typeReference =>
+        ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = None, typeReference = Some(typeReference))
+      )
 
-      typeReferenceOpt
-        .orElse(objectTypeDefinitionOpt)
-        .getOrElse(
-          throw new Exception(s"Cannot read TypeReference or ObjectTypeDefinition from prototype structure: ${proto}")
-        )
+      val deserialized = 
+        if (proto.properties.nonEmpty)
+          proto.maybeAsObjectTypeDefinition.map(objectTypeDefinition =>
+            ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = Some(objectTypeDefinition), typeReference = None)
+          )
+        else
+          proto.maybeAsTypeReference.map(typeReference =>
+            ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = None, typeReference = Some(typeReference))
+          )
+
+      deserialized.getOrElse(
+        throw new Exception(s"Cannot read TypeReference or ObjectTypeDefinition from prototype structure: ${proto}")
+      )
     }
 
   def empty = ObjectTypeDefinitionOrTypeReference(None, None)
