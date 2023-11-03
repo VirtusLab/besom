@@ -3,13 +3,13 @@ package besom.codegen
 case class PulumiDefinitionCoordinates private (
   private val providerPackageParts: Seq[String],
   private val modulePackageParts: Seq[String],
-  private val typeName: String
+  private val definitionName: String
 ) {
   import PulumiDefinitionCoordinates._
 
   def className(asArgsType: Boolean)(implicit logger: Logger): String = {
     val classNameSuffix = if (asArgsType) "Args" else ""
-    mangleTypeName(typeName) ++ classNameSuffix
+    mangleTypeName(definitionName) ++ classNameSuffix
   }
 
   def asResourceClass(asArgsType: Boolean)(implicit logger: Logger): ScalaDefinitionCoordinates = {
@@ -20,7 +20,7 @@ case class PulumiDefinitionCoordinates private (
     )
   }
   def asObjectClass(asArgsType: Boolean)(implicit logger: Logger): ScalaDefinitionCoordinates = {
-    val packageSuffix = if (asArgsType) "inputs" else "outputs"
+    val packageSuffix = if (asArgsType) inputsPackage else outputsPackage
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts :+ packageSuffix,
@@ -30,10 +30,31 @@ case class PulumiDefinitionCoordinates private (
   def asEnumClass(implicit logger: Logger): ScalaDefinitionCoordinates = {
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
-      modulePackageParts = modulePackageParts :+ "enums",
-      definitionName = mangleTypeName(typeName)
+      modulePackageParts = modulePackageParts :+ enumsPackage,
+      definitionName = mangleTypeName(definitionName)
     )
   }
+
+  def topLevelMethod(implicit logger: Logger): ScalaDefinitionCoordinates =
+    ScalaDefinitionCoordinates(
+      providerPackageParts = providerPackageParts,
+      modulePackageParts = modulePackageParts,
+      definitionName = mangleMethodName(definitionName)
+    )
+
+  def methodArgsClass(implicit logger: Logger): ScalaDefinitionCoordinates =
+    ScalaDefinitionCoordinates(
+      providerPackageParts = providerPackageParts,
+      modulePackageParts = modulePackageParts,
+      definitionName = mangleTypeName(capitalize(definitionName)) + "Args"
+    )
+
+  def methodResultClass(implicit logger: Logger): ScalaDefinitionCoordinates =
+    ScalaDefinitionCoordinates(
+      providerPackageParts = providerPackageParts,
+      modulePackageParts = modulePackageParts,
+      definitionName = mangleTypeName(capitalize(definitionName)) + "Result"
+    )
 }
 
 object PulumiDefinitionCoordinates {
@@ -42,16 +63,21 @@ object PulumiDefinitionCoordinates {
     moduleToPackageParts: String => Seq[String],
     providerToPackageParts: String => Seq[String]
   ): PulumiDefinitionCoordinates = {
-    val PulumiToken(providerName, modulePortion, typeName) = PulumiToken(typeToken)
+    val PulumiToken(providerName, modulePortion, definitionName) = PulumiToken(typeToken)
     PulumiDefinitionCoordinates(
       providerPackageParts = providerToPackageParts(providerName),
       modulePackageParts = moduleToPackageParts(modulePortion),
-      typeName = typeName
+      definitionName = definitionName
     )
   }
 
-  private def capitalize(s: String) = s(0).toUpper.toString ++ s.substring(1, s.length)
-  private val maxNameLength         = 200
+  private def inputsPackage  = "inputs"
+  private def outputsPackage = "outputs"
+  private def enumsPackage   = "enums"
+
+  private def capitalize(s: String)   = s(0).toUpper.toString ++ s.substring(1, s.length)
+  private def decapitalize(s: String) = s(0).toLower.toString ++ s.substring(1, s.length)
+  private val maxNameLength           = 200
 
   // This naïvely tries to avoid the limitation on the length of file paths in a file system
   // TODO: truncated file names with a suffix might still potentially clash with each other
@@ -78,14 +104,21 @@ object PulumiDefinitionCoordinates {
     capitalized
   }
 
-  @throws[PulumiDefinitionCoordinatesError]("if 'typeName' is empty")
+  private def mangleMethodName(name: String)(implicit logger: Logger) = {
+    val decapitalized = decapitalize(name)
+    if (decapitalized != name)
+      logger.debug(s"Mangled method name '$name' as '$decapitalized' (decapitalized)")
+    decapitalized
+  }
+
+  @throws[PulumiDefinitionCoordinatesError]("if 'definitionName' is empty")
   def apply(
     providerPackageParts: Seq[String],
     modulePackageParts: Seq[String],
-    typeName: String
+    definitionName: String
   ): PulumiDefinitionCoordinates = {
-    if (typeName.isBlank)
-      throw PulumiDefinitionCoordinatesError("Unexpected empty 'typeName' parameter")
-    new PulumiDefinitionCoordinates(providerPackageParts, modulePackageParts, typeName)
+    if (definitionName.isBlank)
+      throw PulumiDefinitionCoordinatesError("Unexpected empty 'definitionName' parameter")
+    new PulumiDefinitionCoordinates(providerPackageParts, modulePackageParts, definitionName)
   }
 }

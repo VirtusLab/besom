@@ -103,7 +103,7 @@ case class ResourceDefinition(
   methods: Map[String, String] = Map.empty,
   requiredInputs: List[String] = Nil
   // stateInputs: ,
-) extends ObjectTypeDetails
+)
 object ResourceDefinition {
   implicit val reader: Reader[ResourceDefinition] = macroR
 }
@@ -115,6 +115,8 @@ object ResourceDefinition {
   *   Indicates whether the function is deprecated.
   * @param inputs
   *   The bag of input values for the function, if any.
+  * @param outputs
+  *   Specifies the return type of the function definition.
   * @param multiArgumentInputs
   *   A list of parameter names that determines whether the input bag should be treated as a single argument or as
   *   multiple arguments. The list corresponds to the order in which the parameters should be passed to the function.
@@ -126,8 +128,8 @@ case class FunctionDefinition(
   description: Option[String] = None,
   deprecationMessage: Option[String] = None,
   isOverlay: Boolean = false,
-//  inputs: ObjectTypeDetails = ObjectTypeDetails(),
-//  outputs: TypeReference | ObjectTypeDetails = TypeReference | ObjectTypeDetails(),
+  inputs: ObjectTypeDefinition = ObjectTypeDefinition(),
+  outputs: ObjectTypeDefinitionOrTypeReference = ObjectTypeDefinitionOrTypeReference.empty,
   multiArgumentInputs: List[String] = Nil
 )
 object FunctionDefinition {
@@ -225,22 +227,6 @@ case class BooleanConstValue(value: Boolean) extends ConstValue
 case class DoubleConstValue(value: Double) extends ConstValue
 case class IntConstValue(value: Int) extends ConstValue
 
-/** Describes a Pulumi metaschema object type details
-  */
-trait ObjectTypeDetails {
-
-  /** @return
-    *   A map from property name to propertySpec that describes the object's properties
-    */
-  def properties: Map[String, PropertyDefinition]
-
-  /** @return
-    *   A list of the names of an object type's required properties. These properties must be set for inputs and will
-    *   always be set for outputs
-    */
-  def required: List[String]
-}
-
 /** Informs the consumer of an alternative schema based on the value associated with it
   * @param propertyName
   *   PropertyName is the name of the property in the payload that will hold the discriminator value
@@ -265,15 +251,15 @@ trait TypeReferenceProtoLike {
   @fieldKey("$ref")
   def ref: Option[String]
 
-  def toTypeReference: TypeReference = {
+  def maybeAsTypeReference: Option[TypeReference] = {
     if (oneOf.nonEmpty) {
       val primitiveType = `type`.map(PrimitiveType.fromString)
-      UnionType(oneOf = oneOf, `type` = primitiveType) // TODO: Handle the discriminator
+      Some(UnionType(oneOf = oneOf, `type` = primitiveType)) // TODO: Handle the discriminator
     } else {
       ref match {
         case Some(typeUri) =>
           val primitiveType = `type`.map(PrimitiveType.fromString)
-          NamedType(typeUri = typeUri, `type` = primitiveType)
+          Some(NamedType(typeUri = typeUri, `type` = primitiveType))
         case None =>
           `type`
             .map {
@@ -282,11 +268,15 @@ trait TypeReferenceProtoLike {
               case "number"  => NumberType
               case "boolean" => BooleanType
               case "array" =>
-                ArrayType(items = items.getOrElse(throw new Exception(s"TypeReference $this lacks items")))
+                items match {
+                  case Some(itemsType) =>
+                    ArrayType(items = itemsType)
+                  case None =>
+                    throw new Exception(s"TypeReference $this lacks `items`")
+                }
               case "object" =>
                 MapType(additionalProperties = additionalProperties.getOrElse(StringType))
             }
-            .getOrElse(throw new Exception(s"TypeReference '$this' lacks type"))
       }
     }
   }
@@ -322,7 +312,9 @@ sealed trait TypeReference {
 
 object TypeReference {
   implicit val reader: Reader[TypeReference] = TypeReferenceProto.reader.map { proto =>
-    proto.toTypeReference
+    proto.maybeAsTypeReference.getOrElse(
+      throw new Exception(s"Cannot read TypeReference from prototype structure: ${proto}")
+    )
   }
 }
 
@@ -454,7 +446,9 @@ case class PropertyDefinition(
 object PropertyDefinition {
   implicit val reader: Reader[PropertyDefinition] = PropertyDefinitionProto.reader.map { proto =>
     PropertyDefinition(
-      typeReference = proto.toTypeReference,
+      typeReference = proto.maybeAsTypeReference.getOrElse(
+        throw new Exception(s"Cannot read TypeReference from prototype structure: ${proto}")
+      ),
       const = proto.const,
       default = proto.default,
       deprecationMessage = proto.deprecationMessage,
@@ -499,12 +493,13 @@ object EnumValueDefinition {
   *   Indicates that the implementation of the type should not be generated from the schema, and is instead provided
   *   out-of-band by the package author
   */
-sealed abstract class TypeDefinition(
-  description: Option[String] = None,
-  isOverlay: Boolean = false
-)
+sealed trait TypeDefinition {
+  def description: Option[String]
+  def isOverlay: Boolean
+}
+
 object TypeDefinition {
-  implicit val reader: Reader[TypeDefinition] = UpickleApi.reader[TypeDefinitionProto].map { proto =>
+  implicit val reader: Reader[TypeDefinition] = TypeDefinitionProto.reader.map { proto =>
     if (proto.`enum`.nonEmpty) {
       EnumTypeDefinition(
         `enum` = proto.`enum`,
@@ -534,6 +529,41 @@ case class EnumTypeDefinition(
   isOverlay: Boolean = false
 ) extends TypeDefinition
 
+trait ObjectTypeDefinitionProtoLike {
+  def `type`: Option[String]
+  def properties: Map[String, PropertyDefinition]
+  def required: List[String]
+  def description: Option[String]
+  def isOverlay: Boolean
+
+  def maybeAsObjectTypeDefinition: Option[ObjectTypeDefinition] =
+    `type` match {
+      case Some("object") =>
+        Some(
+          ObjectTypeDefinition(
+            properties = properties,
+            required = required,
+            description = description,
+            isOverlay = isOverlay
+          )
+        )
+      case _ =>
+        None
+    }
+}
+
+case class ObjectTypeDefinitionProto(
+  `type`: Option[String] = None,
+  properties: Map[String, PropertyDefinition] = Map.empty,
+  required: List[String] = List.empty,
+  description: Option[String] = None,
+  isOverlay: Boolean = false
+) extends ObjectTypeDefinitionProtoLike
+
+object ObjectTypeDefinitionProto {
+  implicit val reader: Reader[ObjectTypeDefinitionProto] = macroR
+}
+
 /** Describes a Pulumi metaschema object type
   * @param properties
   *   A map from property name to propertySpec that describes the object's properties
@@ -542,9 +572,68 @@ case class EnumTypeDefinition(
   *   always be set for outputs
   */
 case class ObjectTypeDefinition(
-  properties: Map[String, PropertyDefinition],
+  properties: Map[String, PropertyDefinition] = Map.empty,
   required: List[String] = Nil,
   description: Option[String] = None,
   isOverlay: Boolean = false
 ) extends TypeDefinition
-    with ObjectTypeDetails
+
+object ObjectTypeDefinition {
+  implicit val reader: Reader[ObjectTypeDefinition] = ObjectTypeDefinitionProto.reader.map { proto =>
+    proto.maybeAsObjectTypeDefinition.getOrElse(
+      throw new Exception(s"Cannot read ObjectTypeDefinition from prototype structure: ${proto}")
+    )
+  }
+}
+
+case class ObjectTypeDefinitionOrTypeReferenceProto(
+  properties: Map[String, besom.codegen.metaschema.PropertyDefinition] = Map.empty,
+  required: List[String] = List.empty,
+  description: Option[String] = None,
+  isOverlay: Boolean = false,
+  additionalProperties: Option[besom.codegen.metaschema.TypeReference] = None,
+  discriminator: Option[besom.codegen.metaschema.Discriminator] = None,
+  items: Option[besom.codegen.metaschema.TypeReference] = None,
+  oneOf: List[besom.codegen.metaschema.TypeReference] = List.empty,
+  @fieldKey("$ref")
+  ref: Option[String] = None,
+  `type`: Option[String] = None
+) extends ObjectTypeDefinitionProtoLike
+    with TypeReferenceProtoLike
+
+object ObjectTypeDefinitionOrTypeReferenceProto {
+  implicit val reader: Reader[ObjectTypeDefinitionOrTypeReferenceProto] = macroR
+}
+
+case class ObjectTypeDefinitionOrTypeReference(
+  objectTypeDefinition: Option[ObjectTypeDefinition],
+  typeReference: Option[TypeReference]
+)
+
+object ObjectTypeDefinitionOrTypeReference {
+  implicit val reader: Reader[ObjectTypeDefinitionOrTypeReference] =
+    ObjectTypeDefinitionOrTypeReferenceProto.reader.map { proto =>
+      def objectTypeDefinitionOpt = proto.maybeAsObjectTypeDefinition.map(objectTypeDefinition =>
+        ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = Some(objectTypeDefinition), typeReference = None)
+      )
+      def typeReferenceOpt = proto.maybeAsTypeReference.map(typeReference =>
+        ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = None, typeReference = Some(typeReference))
+      )
+
+      val deserialized = 
+        if (proto.properties.nonEmpty)
+          proto.maybeAsObjectTypeDefinition.map(objectTypeDefinition =>
+            ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = Some(objectTypeDefinition), typeReference = None)
+          )
+        else
+          proto.maybeAsTypeReference.map(typeReference =>
+            ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = None, typeReference = Some(typeReference))
+          )
+
+      deserialized.getOrElse(
+        throw new Exception(s"Cannot read TypeReference or ObjectTypeDefinition from prototype structure: ${proto}")
+      )
+    }
+
+  def empty = ObjectTypeDefinitionOrTypeReference(None, None)
+}

@@ -96,6 +96,9 @@ object NameUnmangler:
 object Decoder extends DecoderInstancesLowPrio1:
   import spray.json.*
 
+  given Decoder[Unit] with
+    def mapping(value: Value, label: Label): Unit = ()
+
   // for recursive stuff like Map[String, Value]
   given Decoder[Value] with
     def mapping(value: Value, label: Label): Value = value
