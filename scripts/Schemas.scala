@@ -1,6 +1,6 @@
 //> using scala 3.3.1
 
-//> using dep com.lihaoyi::os-lib:0.9.1
+//> using dep com.lihaoyi::os-lib:0.9.2
 //> using file common.scala
 
 import os.*
@@ -47,17 +47,6 @@ private def fetchSchemas(cwd: os.Path): Unit =
   copySchemas(pulumiRepo / "pkg" / "codegen" / "testing" / "test" / "testdata", targetPath)
   copySchemas(pulumiJavaRepo / "pkg" / "codegen" / "testing" / "test" / "testdata", targetPath)
 
-  // fetch sample production schemas
-  List(
-    "kubernetes",
-    "docker",
-    "digitalocean",
-  ).foreach( name =>
-    println(s"fetching $name")
-    // we have to install plugin first, otherwise we get an old schema
-    os.proc("pulumi", "plugin", "install", "resource", name).call()
-    os.proc("pulumi", "package", "get-schema", name).call(stdout = targetPath / s"$name.json")
-  )
   println("fetched test schema files")
 
 private def copySchemas(sourcePath: os.Path, targetPath: os.Path): Unit =
@@ -103,7 +92,6 @@ private def copySchemas(sourcePath: os.Path, targetPath: os.Path): Unit =
     "mini-awsx",
     "mini-kubernetes",
     "jumbo-resources",
-    "akamai" // long time to compile
   )
 
   val allowFileList = List()

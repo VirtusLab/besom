@@ -1,5 +1,7 @@
 package besom.codegen
 
+import besom.codegen.PackageVersion.PackageVersion
+
 import scala.meta.Type
 import besom.codegen.metaschema.{PulumiPackage, TypeReference}
 
@@ -58,5 +60,13 @@ object Utils {
     // then use a language specific mapping, and if everything fails, fallback to slash mapping
     def moduleToPackageParts: String => Seq[String]   = packageFormatModuleToPackageParts
     def providerToPackageParts: String => Seq[String] = module => Seq(module)
+
+    def providerTypeToken: String = s"pulumi:providers:${pulumiPackage.name}"
+    def reconcileVersion(packageVersion: PackageVersion)(implicit logger: Logger): PackageVersion = {
+      import PackageVersion._
+      pulumiPackage.version.flatMap(PackageVersion.parse).getOrElse(PackageVersion.default).reconcile(packageVersion)
+    }
+    def toPackageMetadata(defaultVersion: PackageVersion = PackageVersion.default)(implicit logger: Logger): PackageMetadata =
+      PackageMetadata(pulumiPackage.name, pulumiPackage.reconcileVersion(defaultVersion))
   }
 }

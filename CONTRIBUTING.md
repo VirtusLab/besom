@@ -65,6 +65,7 @@ You will want to install the following on your machine:
 - git 2.37.1 or higher
 - unzip
 - coursier
+- gh
 
 #### Mac OS
 
@@ -79,6 +80,7 @@ brew install go
 brew install git
 brew install unzip
 brew install protobuf # protoc
+brew install gh
 ```
 
 ### Preparing a pull request

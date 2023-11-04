@@ -1,10 +1,12 @@
 package besom.codegen
 
-import besom.codegen.Config.ProviderConfig
+import besom.codegen.PackageMetadata.SchemaVersion
+import besom.codegen.Utils.PulumiPackageOps
 
-//noinspection TypeAnnotation
+//noinspection TypeAnnotation,ScalaFileName
 class TypeMapperTest extends munit.FunSuite {
   import besom.codegen.Utils.TypeReferenceOps
+  import besom.codegen.PackageMetadata.SchemaName
   import besom.codegen.metaschema._
 
   implicit val logger: Logger = new Logger
@@ -12,12 +14,11 @@ class TypeMapperTest extends munit.FunSuite {
   val schemaDir = os.pwd / ".out" / "schemas"
 
   private val defaultTestSchemaName = "test-as-scala-type"
-  private val defaultTestSchemaVersion = "0.0.0"
 
   case class Data(
     `type`: TypeReference,
-    schemaName: Option[SchemaProvider.ProviderName] = None,
-    schemaVersion: Option[SchemaProvider.SchemaVersion] = None,
+    schemaName: Option[SchemaName] = None,
+    schemaVersion: Option[SchemaVersion] = None,
     pulumiPackage: Option[PulumiPackage] = None,
     asArgsType: Boolean = false,
     tags: Set[munit.Tag] = Set()
@@ -87,34 +88,27 @@ class TypeMapperTest extends munit.FunSuite {
     Data(MapType(StringType))(Expectations("scala.Predef.Map[String, String]")),
     Data(NamedType("pulumi.json#/Any"))(Expectations("besom.types.PulumiAny")),
     Data(NamedType("pulumi.json#/Archive"))(Expectations("besom.types.Archive")),
-    Data(NamedType("pulumi.json#/Asset"), tags = Set(munit.Ignore))(Expectations("besom.types.AssetOrArchive")), // TODO: Fix this test
+    Data(NamedType("pulumi.json#/Asset"), tags = Set(munit.Ignore))(
+      Expectations("besom.types.AssetOrArchive")
+    ), // TODO: Fix this test
     Data(BooleanType)(Expectations("Boolean")),
     Data(IntegerType)(Expectations("Int")),
     Data(NamedType("pulumi.json#/Json"))(Expectations("besom.types.PulumiJson")),
     Data(NumberType)(Expectations("Double")),
     Data(StringType)(Expectations("String")),
-    Data(UnionType(List(StringType, NumberType), None))(Expectations("String | Double")),
+    Data(UnionType(List(StringType, NumberType), None))(Expectations("String | Double"))
     // TODO: input tests
   )
 
   tests.foreach { data =>
     test(s"${data.`type`.getClass.getSimpleName}".withTags(data.tags)) {
       val schemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = schemaDir)
-      val pulumiPackage = data.pulumiPackage.getOrElse(
-        (data.schemaName, data.schemaVersion) match {
-          case (Some(schemaName), Some(schemaVersion)) =>
-            schemaProvider.pulumiPackage(schemaName, schemaVersion)
-          case (None, None) =>
-            PulumiPackage(name = defaultTestSchemaName)
-          case _ => fail("Either schemaName and schemaVersion should be provided, or pulumiPackage")
-        }
-      )
-
-      implicit val tm: TypeMapper = new TypeMapper(
-        defaultProviderName = pulumiPackage.name,
-        defaultSchemaVersion = pulumiPackage.version.getOrElse(defaultTestSchemaVersion),
-        schemaProvider = schemaProvider
-      )
+      val (pulumiPackage, packageMetadata) = data.pulumiPackage match {
+        case Some(pulumiPackage) => (pulumiPackage, pulumiPackage.toPackageMetadata(PackageVersion.default))
+        case None => (PulumiPackage(defaultTestSchemaName), PackageMetadata(defaultTestSchemaName, "0.0.0"))
+      }
+      val (_, packageInfo)        = schemaProvider.packageInfo(pulumiPackage, packageMetadata)
+      implicit val tm: TypeMapper = new TypeMapper(packageInfo, schemaProvider)
 
       data.expected.foreach { e =>
         assertEquals(data.`type`.asScalaType(data.asArgsType).toString(), e.scalaType)

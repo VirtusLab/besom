@@ -227,7 +227,18 @@ compile-codegen:
 test-codegen:
 	scala-cli --power test codegen --suppress-experimental-feature-warning
 
-# Download the schema for a specific provider, e.g. `just get-schema kubernetes`
+get-metadata-all:
+	export GITHUB_TOKEN=$(gh auth token); \
+	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts/Packages.scala -- metadata-all
+
+generate-provider-all:
+	export GITHUB_TOKEN=$(gh auth token); \
+	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts/Packages.scala -- generate-all
+
+publish-local-provider-all:
+    scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts/Packages.scala -- publish-local-all
+
+# Download the schema for a specific provider, e.g. `just get-schema kubernetes 4.0.0`
 get-schema schema-name schema-version:
 	#!/usr/bin/env sh
 	pulumi plugin install resource {{schema-name}} {{schema-version}};
@@ -240,15 +251,15 @@ get-schema schema-name schema-version:
 publish-local-codegen: test-codegen
 	scala-cli --power publish local codegen --project-version {{besom-version}} --suppress-experimental-feature-warning
 
-# Generate scala API code for the given provider, e.g. `just generate-provider-sdk kubernetes`
+# Generate scala API code for the given provider, e.g. `just generate-provider-sdk kubernetes 4.0.0`
 generate-provider-sdk schema-name schema-version:
-	scala-cli --power run codegen --suppress-experimental-feature-warning -- {{schemas-output-dir}} {{codegen-output-dir}} {{schema-name}} {{schema-version}} {{besom-version}}
+	scala-cli --power run codegen --suppress-experimental-feature-warning -- named {{schema-name}} {{schema-version}}
 
-# Compiles the previously generated scala API code for the given provider, e.g. `just compile-provider-sdk kubernetes`
-compile-provider-sdk schema-name:
-	scala-cli --power compile {{codegen-output-dir}}/{{schema-name}} --suppress-experimental-feature-warning
+# Compiles the previously generated scala API code for the given provider, e.g. `just compile-provider-sdk kubernetes 4.0.0`
+compile-provider-sdk schema-name schema-version:
+	scala-cli --power compile {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning
 
-# Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes`
+# Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes 4.0.0`
 publish-local-provider-sdk schema-name schema-version:
 	scala-cli --power publish local {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning
 
@@ -278,6 +289,7 @@ test-integration-language-plugin: publish-local-codegen publish-local-core insta
 
 # Runs integration tests for codegen
 test-integration-codegen: publish-local-codegen
+	export GITHUB_TOKEN=$(gh auth token); \
 	scala-cli --power test integration-tests --test-only 'besom.integration.codegen*'
 
 # Cleans after the codegen integration tests

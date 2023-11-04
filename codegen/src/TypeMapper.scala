@@ -5,24 +5,15 @@ import scala.meta.dialects.Scala33
 import besom.codegen.metaschema._
 
 class TypeMapper(
-  defaultProviderName: SchemaProvider.ProviderName,
-  defaultSchemaVersion: SchemaProvider.SchemaVersion,
+  val defaultPackageInfo: PulumiPackageInfo,
   schemaProvider: SchemaProvider
 )(implicit logger: Logger) {
-  def defaultPackageInfo: PulumiPackageInfo =
-    schemaProvider.packageInfo(providerName = defaultProviderName, schemaVersion = defaultSchemaVersion)
-
   private def scalaTypeFromTypeUri(
     typeUri: String,
     asArgsType: Boolean,
     underlyingType: Option[PrimitiveType]
   ): Option[Type.Ref] = {
-    // Example URIs:
-    // "/provider/vX.Y.Z/schema.json#/types/pulumi:type:token"
-    // "/kubernetes/v3.7.0/schema.json#/provider"
-    // "/kubernetes/v3.7.0/schema.json#/resources/kubernetes:storage.k8s.io%2Fv1:StorageClass"
-    // "#/types/kubernetes:rbac.authorization.k8s.io%2Fv1beta1:Subject"
-    // "aws:iam/documents:PolicyDocument"
+    // Example URIs available in TypeMapper.test.scala
 
     val (fileUri, typePath) = typeUri.replace("%2F", "/").split("#") match {
       case Array(typePath)          => ("", typePath) // JSON Schema Pointer like reference
@@ -34,7 +25,14 @@ class TypeMapper(
       case "" =>
         defaultPackageInfo
       case s"/${providerName}/v${schemaVersion}/schema.json" =>
-        schemaProvider.packageInfo(providerName = providerName, schemaVersion = schemaVersion)
+        schemaProvider.packageInfo(PackageMetadata(providerName, schemaVersion))._2
+      case s"${protocol}://${host}/${providerName}/v${schemaVersion}/schema.json" =>
+        schemaProvider
+          .packageInfo(
+            PackageMetadata(providerName, schemaVersion)
+              .withUrl(s"${protocol}://${host}/${providerName}")
+          )
+          ._2
     }
 
     val (escapedTypeToken, isFromTypeUri, isFromResourceUri) = typePath match {
@@ -90,7 +88,7 @@ class TypeMapper(
             logger.warn(s"Assuming a '/types/` prefix for type URI ${typeUri}")
             Some(coordinates)
           case (None, None) => None
-          case _ => throw new Exception(s"Type URI ${typeUri} can refer to both a resource or an object type")
+          case _ => throw TypeMapperError(s"Type URI ${typeUri} can refer to both a resource or an object type")
         }
       }
 
