@@ -28,6 +28,8 @@ scala-cli-test-options-zio := scala-cli-main-options-zio + " " + scala-cli-cover
 
 publish-maven-auth-options := "--user env:OSSRH_USERNAME --password env:OSSRH_PASSWORD --gpg-key $PGP_KEY_ID --gpg-option --pinentry-mode --gpg-option loopback --gpg-option --passphrase --gpg-option $PGP_PASSWORD"
 
+scala-cli-bloop-opts := "--jvm=17 --bloop-jvm=17 --bloop-java-opt='-XX:MaxRAMPercentage=95.0' --bloop-java-opt='-XX:InitialRAMPercentage=70.0' --bloop-java-opt='-XX:+UseUseParallelGC'"
+
 # This list of available targets
 default:
 	@just --list
@@ -37,10 +39,13 @@ default:
 ####################
 
 # Cleans everything
-clean-all: clean-sdk clean-out clean-compiler-plugin clean-codegen clean-test-integration clean-test-templates clean-test-examples
+clean-all: clean-sdk clean-out clean-compiler-plugin clean-codegen clean-test-integration clean-test-templates clean-test-examples clean-test-markdown
 
 # Compiles everything
-compile-all: compile-sdk compile-codegen build-language-plugin
+compile-all: compile-sdk compile-codegen compile-compiler-plugin build-language-plugin
+
+# Tests everything
+test-all: test-sdk test-codegen test-markdown test-integration test-templates test-examples test-markdown
 
 ####################
 # Language SDK
@@ -257,11 +262,11 @@ generate-provider-sdk schema-name schema-version:
 
 # Compiles the previously generated scala API code for the given provider, e.g. `just compile-provider-sdk kubernetes 4.0.0`
 compile-provider-sdk schema-name schema-version:
-	scala-cli --power compile {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning
+	scala-cli --power compile {{scala-cli-bloop-opts}} {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning --interactive=false
 
 # Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes 4.0.0`
 publish-local-provider-sdk schema-name schema-version:
-	scala-cli --power publish local {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish local {{scala-cli-bloop-opts}} {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning
 
 ####################
 # Integration testing
@@ -285,6 +290,7 @@ test-integration-compiler-plugin: publish-local-codegen publish-local-core insta
 
 # Runs integration tests for language plugin
 test-integration-language-plugin: publish-local-codegen publish-local-core install-language-plugin publish-local-compiler-plugin
+	export GITHUB_TOKEN=$(gh auth token); \
 	scala-cli --power test integration-tests --test-only 'besom.integration.languageplugin*'
 
 # Runs integration tests for codegen

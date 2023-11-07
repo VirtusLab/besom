@@ -13,6 +13,11 @@ object Main {
         generator.generatePackageSources(
           schemaOrMetadata = Right(PackageMetadata(name, version))
         )
+      case "named" :: name :: version :: outputDir :: Nil =>
+        implicit val codegenConfig: CodegenConfig = CodegenConfig(outputDir = Some(os.rel / outputDir))
+        generator.generatePackageSources(
+          schemaOrMetadata = Right(PackageMetadata(name, version))
+        )
       case "metadata" :: metadataPath :: Nil =>
         implicit val codegenConfig: CodegenConfig = CodegenConfig()
         generator.generatePackageSources(Right(PackageMetadata.fromJsonFile(os.Path(metadataPath))))
@@ -24,19 +29,19 @@ object Main {
         generator.generatePackageSources(
           schemaOrMetadata = Right(PackageMetadata(providerName, schemaVersion))
         )
-      case "schema" :: providerName :: schemaVersion :: outputDir :: Nil =>
-        implicit val codegenConfig: CodegenConfig = CodegenConfig(outputDir = Some(os.rel / outputDir))
+      case "schema" :: schemaPath :: Nil =>
+        implicit val codegenConfig: CodegenConfig = CodegenConfig()
         generator.generatePackageSources(
-          schemaOrMetadata = Right(PackageMetadata(providerName, schemaVersion))
+          schemaOrMetadata = Left(os.Path(schemaPath))
         )
       case _ =>
         System.err.println(
           s"""|Unknown arguments: '${args.mkString(" ")}'
               |
               |Usage:
-              |  named <name> <version>              - Generate package from name and version
-              |  metadata <metadataPath> [outputDir] - Generate package from metadata file
-              |  schema <providerName> <schemaVersion> [outputDir] - Generate package from schema file
+              |  named <name> <version> [outputDir]   - Generate package from name and version
+              |  metadata <metadataPath> [outputDir]  - Generate package from metadata file
+              |  schema <schemaPath> [outputDir]      - Generate package from schema file
               |""".stripMargin
         )
         sys.exit(1)
@@ -140,10 +145,9 @@ object generator {
               // write the duplicate class for debugging purposes
               val fileDuplicate = filePath / os.up / s"${filePath.last}.duplicate"
               os.write(fileDuplicate, sourceFile.sourceCode, createFolders = true)
-              val message = s"Duplicate file '${filePath.relativeTo(os.pwd)}' while, " +
+              val message = s"Duplicate file '${fileDuplicate.relativeTo(os.pwd)}' while, " +
                 s"generating package '${packageInfo.name}:${packageInfo.version}', error: ${e.getMessage}"
               logger.error(message)
-              throw GeneralCodegenException(message, e)
           }
         }
     } catch {

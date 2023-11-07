@@ -43,7 +43,7 @@ class CodeGen(implicit
   def projectConfigFile(schemaName: String, packageVersion: PackageVersion): SourceFile = {
     val besomVersion = codegenConfig.besomVersion
     val scalaVersion = codegenConfig.scalaVersion
-    val javaVersion = codegenConfig.javaVersion
+    val javaVersion  = codegenConfig.javaVersion
 
     val dependencies = schemaProvider
       .dependencies(schemaName, packageVersion)
@@ -102,16 +102,16 @@ class CodeGen(implicit
   }
 
   def sourceFilesForProviderResource(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
-    val providerName = pulumiPackage.name
-    val typeCoordinates = PulumiDefinitionCoordinates(
-      providerPackageParts = typeMapper.defaultPackageInfo.providerToPackageParts(providerName),
-      modulePackageParts = Seq(Utils.indexModuleName),
-      definitionName = "Provider"
-    )
+    val typeToken              = pulumiPackage.providerTypeToken
+    val moduleToPackageParts   = pulumiPackage.moduleToPackageParts
+    val providerToPackageParts = pulumiPackage.providerToPackageParts
+
+    val typeCoordinates =
+      PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts)
     sourceFilesForResource(
       typeCoordinates = typeCoordinates,
       resourceDefinition = pulumiPackage.provider,
-      typeToken = PulumiToken("pulumi", "provider", pulumiPackage.name),
+      typeToken = PulumiToken(pulumiPackage.providerTypeToken),
       isProvider = true
     )
   }
@@ -157,7 +157,7 @@ class CodeGen(implicit
       val caseRawName = valueDefinition.name.getOrElse {
         valueDefinition.value match {
           case StringConstValue(value) => value
-          case const                   => throw new Exception(s"The name of enum cannot be derived from value ${const}")
+          case const => throw GeneralCodegenException(s"The name of enum cannot be derived from value ${const}")
         }
       }
       val caseName       = Term.Name(caseRawName).syntax
@@ -425,7 +425,7 @@ class CodeGen(implicit
 
       val methodName = methodCoordinates.definitionName
       if (methodName.contains("/")) {
-        throw new Exception(s"Top level function name ${methodName} containing a '/' is not allowed")
+        throw GeneralCodegenException(s"Top level function name ${methodName} containing a '/' is not allowed")
       }
 
       val requiredInputs = functionDefinition.inputs.required

@@ -13,6 +13,7 @@ object Utils {
   // Needs to be used in Pulumi types, but should NOT be translated to Scala code
   // Placeholder module for classes that should be in the root package (according to pulumi's convention)
   val indexModuleName = "index"
+  val providerTypeName = "Provider"
 
   // Name of the self parameter of resource methods
   val selfParameterName = "__self__"
@@ -21,8 +22,13 @@ object Utils {
   val jvmMaxParamsCount = 253 // https://github.com/scala/bug/issues/7324
 
   implicit class TypeReferenceOps(typeRef: TypeReference) {
-    def asScalaType(asArgsType: Boolean = false)(implicit typeMapper: TypeMapper, logger: Logger): Type =
-      typeMapper.asScalaType(typeRef, asArgsType)
+    def asScalaType(asArgsType: Boolean = false)(implicit typeMapper: TypeMapper): Type =
+      try {
+        typeMapper.asScalaType(typeRef, asArgsType)
+      } catch {
+        case t: Throwable =>
+          throw TypeMapperError(s"Failed to map type: '${typeRef}', asArgsType: $asArgsType", t)
+      }
   }
 
   implicit class PulumiPackageOps(pulumiPackage: PulumiPackage) {
@@ -33,13 +39,13 @@ object Utils {
       if (pulumiPackage.language.java.packages.view.nonEmpty) {
         pulumiPackage.language.java.packages.view.mapValues { pkg =>
           pkg.split("\\.").filter(_.nonEmpty).toSeq
-        }.toMap
+        }.toMap.withDefault(slashModuleToPackageParts) // fallback to slash mapping
       } else {
         // use nodejs mapping as a fallback
         pulumiPackage.language.nodejs.moduleToPackage.view.mapValues { pkg =>
           pkg.split("/").filter(_.nonEmpty).toSeq
-        }.toMap
-      }.withDefault(slashModuleToPackageParts) // fallback to slash mapping
+        }.toMap.withDefault(slashModuleToPackageParts) // fallback to slash mapping
+      }
     }
 
     private def packageFormatModuleToPackageParts: String => Seq[String] = { module: String =>

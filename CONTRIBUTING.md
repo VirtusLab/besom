@@ -323,6 +323,13 @@ pulumi up --tracing=file:./up.trace
 PULUMI_DEBUG_COMMANDS=1 pulumi view-trace ./up.trace
 ```
 
+### Compilation issues
+
+To restart `bloop` compilation server:
+```bash
+scala-cli bloop exit
+```
+
 ## Getting Help
 
 We are sure there are rough edges, and we appreciate you helping out.

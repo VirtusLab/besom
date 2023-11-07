@@ -21,32 +21,29 @@ class CodegenTests extends munit.FunSuite {
   val testdata = os.pwd / "integration-tests" / "resources" / "testdata"
 
   val slowList = List(
-    "external-enum" // depends on google-native
+    "enum-reference", // depends on google-native
+    "external-enum", // depends on google-native
+    "hyphen-url", // depends on azure-native
+    "external-resource-schema", // depends on kubernetes, aws, random
   )
 
   // FIXME: broken - codegen error
   val ignoreList = List(
-    "secrets",
-    "simple-plain-schema",
-    "simple-plain-schema-with-root-package",
-    "simple-resource-schema",
-    "simple-enum-schema",
-    "simple-yaml-schema",
-    "external-enum", // depends on google-native, and the dep does not compile
-    "external-resource-schema",
-    "enum-reference",
-    "different-enum",
-    "embedded-crd-types",
-    "hyphen-url",
-    "naming-collisions",
-    "mini-azurenative",
-    "jumbo-resources",
-    "replace-on-change",
-    "resource-property-overlap",
-    "cyclic-types",
-    "plain-and-default",
-    "different-package-name-conflict",
-    "azure-native-nested-types"
+    "simple-resource-schema", // codec not found
+    "simple-enum-schema", // simple enum is not supported
+    "simple-yaml-schema", // YAML is not supported
+    "external-enum", // depends on google-native, TODO: check if this is still broken
+    "external-resource-schema", // codec not found
+    "enum-reference", // depends on google-native, TODO: check if this is still broken
+    "different-enum", // simple enum is not supported
+    "hyphen-url", // depends on azure-native,
+    "naming-collisions", // codec not found
+    "mini-azurenative", // simple enum is not supported
+    "replace-on-change", // codec not found
+    "resource-property-overlap", // codec not found
+    "cyclic-types", // YAML schema is not supported
+    "plain-and-default", // simple enum is not supported
+    "different-package-name-conflict", // deserialization issue
   )
 
   val tests =
@@ -76,6 +73,7 @@ class CodegenTests extends munit.FunSuite {
       case _                           => name
     }
     test(options) {
+      println(s"Test: $name")
       val result = codegen.generatePackageFromSchema(data.schema)
       if (result.dependencies.nonEmpty)
         println(s"\nCompiling dependencies for ${result.schemaName}...")

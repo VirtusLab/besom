@@ -10,15 +10,14 @@ class TypeMapper(
 )(implicit logger: Logger) {
   private def scalaTypeFromTypeUri(
     typeUri: String,
-    asArgsType: Boolean,
-    underlyingType: Option[AnonymousType]
+    asArgsType: Boolean
   ): Option[Type.Ref] = {
     // Example URIs available in TypeMapper.test.scala
 
-    val (fileUri, typePath) = typeUri.replace("%2F", "/").split("#") match {
+    val (fileUri, typePath) = typeUri.split("#") match {
       case Array(typePath)          => ("", typePath) // JSON Schema Pointer like reference
       case Array(fileUri, typePath) => (fileUri, typePath) // Reference to external schema
-      case _                        => throw new Exception(s"Unexpected type URI format: ${typeUri}")
+      case _                        => throw TypeMapperError(s"Unexpected type URI format: ${typeUri}")
     }
 
     val packageInfo = fileUri match {
@@ -33,31 +32,37 @@ class TypeMapper(
               .withUrl(s"${protocol}://${host}/${providerName}")
           )
           ._2
+      case _ =>
+        throw TypeMapperError(s"Unexpected file URI format: ${fileUri}")
     }
 
     val (escapedTypeToken, isFromTypeUri, isFromResourceUri) = typePath match {
+      case s"/provider"           => (packageInfo.providerTypeToken, false, true)
       case s"/types/${token}"     => (token, true, false)
       case s"/resources/${token}" => (token, false, true)
-      case s"/${rest}"            => throw new Exception(s"Invalid named type reference: ${typeUri}")
-      case token                  => (token, false, false)
+      case s"/${rest}" =>
+        throw TypeMapperError(
+          s"Invalid named type reference, fileUri:' ${fileUri}', typePath: '${typePath}', rest: '${rest}''"
+        )
+      case token => (token, false, false)
     }
 
-    val typeToken          = escapedTypeToken.replace("%2F", "/") // TODO: Proper URL unescaping ?
-    val uniformedTypeToken = typeToken.toLowerCase
+    val uniformedTypeToken = escapedTypeToken.toLowerCase
 
     val typeCoordinates =
       PulumiDefinitionCoordinates.fromRawToken(
-        typeToken,
+        escapedTypeToken,
         packageInfo.moduleToPackageParts,
         packageInfo.providerToPackageParts
       )
 
-    lazy val hasResourceDefinition  = packageInfo.resourceTypeTokens.contains(uniformedTypeToken)
-    lazy val hasObjectTypeDefintion = packageInfo.objectTypeTokens.contains(uniformedTypeToken)
-    lazy val hasEnumTypeDefintion   = packageInfo.enumTypeTokens.contains(uniformedTypeToken)
+    lazy val hasProviderDefinition   = packageInfo.providerTypeToken == uniformedTypeToken
+    lazy val hasResourceDefinition   = packageInfo.resourceTypeTokens.contains(uniformedTypeToken)
+    lazy val hasObjectTypeDefinition = packageInfo.objectTypeTokens.contains(uniformedTypeToken)
+    lazy val hasEnumTypeDefinition   = packageInfo.enumTypeTokens.contains(uniformedTypeToken)
 
     def resourceClassCoordinates: Option[ScalaDefinitionCoordinates] = {
-      if (hasResourceDefinition) {
+      if (hasResourceDefinition || hasProviderDefinition) {
         Some(typeCoordinates.asResourceClass(asArgsType = asArgsType))
       } else {
         None
@@ -65,9 +70,9 @@ class TypeMapper(
     }
 
     def objectClassCoordinates: Option[ScalaDefinitionCoordinates] = {
-      if (hasObjectTypeDefintion) {
+      if (hasObjectTypeDefinition) {
         Some(typeCoordinates.asObjectClass(asArgsType = asArgsType))
-      } else if (hasEnumTypeDefintion) {
+      } else if (hasEnumTypeDefinition) {
         Some(typeCoordinates.asEnumClass)
       } else {
         None
@@ -82,52 +87,76 @@ class TypeMapper(
       } else {
         (resourceClassCoordinates, objectClassCoordinates) match {
           case (Some(coordinates), None) =>
-            logger.warn(s"Assuming a '/resources/` prefix for type URI ${typeUri}")
+            logger.warn(
+              s"Assuming a '/resources/` prefix for type URI, fileUri: '${fileUri}', typePath: '${typePath}'"
+            )
             Some(coordinates)
           case (None, Some(coordinates)) =>
-            logger.warn(s"Assuming a '/types/` prefix for type URI ${typeUri}")
+            logger.warn(s"Assuming a '/types/` prefix for type URI, fileUri: '${fileUri}', typePath: '${typePath}'")
             Some(coordinates)
-          case (None, None) => None
-          case _ => throw TypeMapperError(s"Type URI ${typeUri} can refer to both a resource or an object type")
+          case (None, None) =>
+            logger.debug(s"Found no type definition for type URI, fileUri: '${fileUri}', typePath: '${typePath}'")
+            None
+          case _ =>
+            throw TypeMapperError(
+              s"Type URI can refer to both a resource or an object type, fileUri: '${fileUri}', typePath: '${typePath}'"
+            )
         }
       }
 
     classCoordinates.map(_.fullyQualifiedTypeRef)
   }
 
-  def asScalaType(typeRef: TypeReference, asArgsType: Boolean): Type = typeRef match {
-    case BooleanType         => t"Boolean"
-    case StringType          => t"String"
-    case IntegerType         => t"Int"
-    case NumberType          => t"Double"
-    case UrnType             => t"besom.types.URN"
-    case ResourceIdType      => t"besom.types.ResourceId"
-    case ArrayType(elemType) => t"scala.collection.immutable.List[${asScalaType(elemType, asArgsType)}]"
-    case MapType(elemType)   => t"scala.Predef.Map[String, ${asScalaType(elemType, asArgsType)}]"
-    case unionType: UnionType =>
-      unionType.oneOf.map(asScalaType(_, asArgsType)).reduce { (t1, t2) => t"$t1 | $t2" }
-    case namedType: NamedType =>
-      namedType.typeUri match {
-        case "pulumi.json#/Archive" =>
-          t"besom.types.Archive"
-        case "pulumi.json#/Asset" =>
-          t"besom.types.Asset"
-        case "pulumi.json#/Any" =>
-          t"besom.types.PulumiAny"
-        case "pulumi.json#/Json" =>
-          t"besom.types.PulumiJson"
+  def asScalaType(typeRef: TypeReference, asArgsType: Boolean, fallbackType: Option[AnonymousType] = None): Type =
+    typeRef match {
+      case BooleanType         => t"Boolean"
+      case StringType          => t"String"
+      case IntegerType         => t"Int"
+      case NumberType          => t"Double"
+      case UrnType             => t"besom.types.URN"
+      case ResourceIdType      => t"besom.types.ResourceId"
+      case ArrayType(elemType) => t"scala.collection.immutable.List[${asScalaType(elemType, asArgsType)}]"
+      case MapType(elemType)   => t"scala.Predef.Map[String, ${asScalaType(elemType, asArgsType)}]"
+      case unionType: UnionType =>
+        unionType.oneOf.map(asScalaType(_, asArgsType, unionType.`type`)).reduce { (t1, t2) =>
+          if (t1.syntax == t2.syntax) t"$t1" else t"$t1 | $t2"
+        }
+      case namedType: NamedType =>
+        unescape(namedType.typeUri) match {
+          case "pulumi.json#/Archive" =>
+            t"besom.types.Archive"
+          case "pulumi.json#/Asset" =>
+            t"besom.types.AssetOrArchive"
+          case "pulumi.json#/Any" =>
+            t"besom.types.PulumiAny"
+          case "pulumi.json#/Json" =>
+            t"besom.types.PulumiJson"
 
-        case typeUri =>
-          scalaTypeFromTypeUri(typeUri, asArgsType = asArgsType, underlyingType = namedType.`type`)
-            .getOrElse {
-              logger.warn(
-                s"Type URI ${typeUri} has no corresponding type definition - using its underlying type as fallback"
-              )
-              val underlyingType = namedType.`type`.getOrElse(
-                throw new Exception(s"Type with URI ${typeUri} has no underlying primitive type to be used as fallback")
-              )
-              asScalaType(underlyingType, asArgsType = asArgsType)
+          case typeUri =>
+            scalaTypeFromTypeUri(typeUri, asArgsType) match {
+              case Some(scalaType) => scalaType
+              case None            =>
+                // try a fallback type if specified, used by UnionType
+                fallbackType match {
+                  case Some(primitiveType) => asScalaType(primitiveType, asArgsType)
+                  case None                =>
+                    // we should ignore namedType.`type` because it is deprecated according to metaschema
+                    // but at least aws provider uses it in one weird place
+                    namedType.`type` match {
+                      case Some(deprecatedFallbackType) => asScalaType(deprecatedFallbackType, asArgsType)
+                      case None =>
+                        throw TypeMapperError(
+                          s"Unsupported type: '${typeRef}', no corresponding type definition and no fallback type"
+                        )
+                    }
+                }
             }
-      }
+        }
+      case _ =>
+        throw TypeMapperError(s"Unsupported type: '${typeRef}'")
+    }
+
+  private def unescape(value: String) = {
+    value.replace("%2F", "/") // TODO: Proper URL un-escaping
   }
 }
