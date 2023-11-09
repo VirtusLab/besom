@@ -1,5 +1,10 @@
 package besom.integration.common
 
+import besom.codegen.Config
+import besom.codegen.Config.CodegenConfig
+import besom.codegen.PackageMetadata
+import besom.codegen.PackageMetadata.{SchemaName, SchemaVersion}
+import besom.codegen.generator.Result
 import munit.{Tag, Test}
 import os.Shellable
 
@@ -7,15 +12,13 @@ import scala.util.{Failure, Success, Try}
 
 case object LocalOnly extends munit.Tag("LocalOnly")
 
-val javaVersion                 = "11"
-val scalaVersion                = "3.3.1"
+val javaVersion                 = Config.DefaultJavaVersion
+val scalaVersion                = Config.DefaultScalaVersion
 val coreVersion                 = os.read(os.pwd / "version.txt").trim
 val scalaPluginVersion          = coreVersion
 val providerRandomSchemaVersion = "4.13.2"
 val providerRandomVersion       = s"$providerRandomSchemaVersion-core.$coreVersion"
 
-val schemaDir         = os.pwd / ".out" / "schemas"
-val codegenDir        = os.pwd / ".out" / "codegen"
 val languagePluginDir = os.pwd / ".out" / "language-plugin"
 
 val defaultProjectFile =
@@ -142,35 +145,43 @@ object scalaCli {
 }
 
 object codegen {
-  import besom.codegen.Main.generatePackageSources
+  import besom.codegen.generator
+
+  def generateLocalPackage(
+    metadata: PackageMetadata
+  ): Unit = {
+    val result = codegen.generatePackage(metadata)
+    scalaCli.publishLocal(result.outputDir).call(check = false)
+    if (result.dependencies.nonEmpty)
+      println(s"\nCompiling dependencies for ${result.schemaName}:${result.packageVersion}...")
+    for (dep <- result.dependencies) {
+      generateLocalPackage(dep)
+    }
+  }
 
   def generatePackage(
-    providerName: String,
-    schemaVersion: String,
-    schemas: os.Path = schemaDir,
-    codegen: os.Path = codegenDir,
-    version: String = coreVersion
-  ): os.Path =
-    println(s"Generating package '$providerName' form schema")
-    generatePackageSources(schemas, codegen, providerName, schemaVersion, version)
+    schemaName: SchemaName,
+    schemaVersion: SchemaVersion
+  ): generator.Result =
+    generatePackage(PackageMetadata(schemaName, schemaVersion))
+
+  def generatePackage(
+    metadata: PackageMetadata,
+    outputDir: Option[os.RelPath] = None
+  ): generator.Result = {
+    // noinspection TypeAnnotation
+    implicit val config = CodegenConfig(outputDir = outputDir)
+    generator.generatePackageSources(Right(metadata))
+  }
 
   def generatePackageFromSchema(
     schema: os.Path,
-    providerName: String,
-    schemaVersion: String,
-    schemas: os.Path = schemaDir,
-    codegen: os.Path = codegenDir,
-    version: String = coreVersion
-  ): os.Path =
-    println(s"Generating test package '$providerName' form schema: ${schema.relativeTo(os.pwd)}")
-    generatePackageSources(
-      schemas,
-      codegen,
-      providerName,
-      schemaVersion,
-      version,
-      Map((providerName, schemaVersion) -> schema)
-    )
+    outputDir: Option[os.RelPath] = None,
+  ): generator.Result = {
+    // noinspection TypeAnnotation
+    implicit val config = CodegenConfig(outputDir = outputDir)
+    generator.generatePackageSources(Left(schema))
+  }
 }
 
 def pproc(command: Shellable*) = {

@@ -12,6 +12,9 @@ import besom.codegen.UpickleApi._
   *   - https://github.com/pulumi/pulumi/blob/master/pkg/codegen/schema/pulumi.json
   *   - https://github.com/pulumi/pulumi/blob/master/pkg/codegen/schema/schema.go
   *
+  * @see
+  *   also [[besom.codegen.Utils.PulumiPackageOps]]
+  *
   * @param name
   *   Name is the unqualified name of the package
   * @param version
@@ -61,6 +64,21 @@ object PulumiPackage {
     val input = os.exists(filePath) match {
       case false => throw GeneralCodegenException(s"File $filePath does not exist")
       case true  => os.read(filePath)
+    }
+    fromString(input)
+  }
+
+  /** Reads a Pulumi package from a Pulumi schema JSON string
+    *
+    * @param input
+    *   the Pulumi schema JSON string
+    * @return
+    *   the Pulumi package
+    */
+  // noinspection ScalaWeakerAccess
+  def fromString(input: String): PulumiPackage = {
+    if (input.isEmpty) {
+      throw GeneralCodegenException("Pulumi package input JSON string is empty")
     }
     val json = ujson.read(input)
     read[PulumiPackage](json)

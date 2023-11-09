@@ -12,7 +12,7 @@ import besom.codegen.UpickleApi._
 case class PulumiPluginJSON(resource: Boolean, name: Option[String], version: Option[String], server: Option[String])
 //noinspection ScalaUnusedSymbol
 object PulumiPluginJSON {
-  implicit val ownerRw: ReadWriter[PulumiPluginJSON] = macroRW
+  implicit val rw: ReadWriter[PulumiPluginJSON] = macroRW
 
   def listFrom(json: String): List[PulumiPluginJSON] = read[List[PulumiPluginJSON]](json)
 }

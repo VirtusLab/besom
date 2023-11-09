@@ -1,6 +1,7 @@
 package besom.codegen
 
 import besom.codegen.Config.ProviderConfig
+import besom.codegen.PackageMetadata.SchemaName
 
 //noinspection ScalaFileName,TypeAnnotation
 class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
@@ -12,14 +13,13 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
   val schemaDir = os.pwd / ".out" / "schemas"
 
   case class Data(
-    providerName: SchemaProvider.ProviderName,
+    schemaName: SchemaName,
     typeToken: String,
-    schemaVersion: SchemaProvider.SchemaVersion = "0.0.0",
     meta: Meta = Meta(),
     language: Language = Language(),
     tags: Set[munit.Tag] = Set()
   )(val expected: Expectations*) {
-    val pulumiPackage = PulumiPackage(name = providerName, meta = meta, language = language)
+    val pulumiPackage = PulumiPackage(name = schemaName, meta = meta, language = language)
   }
 
   sealed trait Expectations {
@@ -56,7 +56,7 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
 
   val tests = List(
     Data(
-      providerName = "digitalocean",
+      schemaName = "digitalocean",
       typeToken = "digitalocean:index:Domain",
       meta = Meta(
         moduleFormat = "(.*)(?:/[^/]*)"
@@ -69,7 +69,7 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
       )
     ),
     Data(
-      providerName = "kubernetes",
+      schemaName = "kubernetes",
       typeToken = "pulumi:providers:kubernetes",
       tags = Set(munit.Ignore) // TODO: Fix this test
     )(
@@ -80,7 +80,7 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
       )
     ),
     Data(
-      providerName = "digitalocean",
+      schemaName = "digitalocean",
       typeToken = "digitalocean:index/getProjectsProject:getProjectsProject",
       meta = Meta(
         moduleFormat = "(.*)(?:/[^/]*)"
@@ -93,7 +93,7 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
       )
     ),
     Data(
-      providerName = "foo-bar",
+      schemaName = "foo-bar",
       typeToken = "foo-bar:index:TopLevel"
     )(
       ResourceClassExpectations(
@@ -103,7 +103,7 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
       )
     ),
     Data(
-      providerName = "kubernetes",
+      schemaName = "kubernetes",
       typeToken = "kubernetes:meta/v1:APIVersions"
     )(
       ResourceClassExpectations(
@@ -113,7 +113,7 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
       )
     ),
     Data(
-      providerName = "kubernetes",
+      schemaName = "kubernetes",
       typeToken = "kubernetes:authentication.k8s.io/v1:TokenRequest",
       language = Language(
         java = Java(
@@ -130,7 +130,7 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
       )
     ),
     Data(
-      providerName = "kubernetes",
+      schemaName = "kubernetes",
       typeToken = "kubernetes:rbac.authorization.k8s.io/v1:ClusterRoleBinding",
       language = Language(
         java = Java(
@@ -150,7 +150,7 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
 
   tests.foreach { data =>
     test(s"Type: ${data.typeToken}".withTags(data.tags)) {
-      implicit val providerConfig: ProviderConfig = Config.providersConfigs(data.providerName)
+      implicit val providerConfig: ProviderConfig = Config.providersConfigs(data.schemaName)
 
       val coords = PulumiDefinitionCoordinates.fromRawToken(
         typeToken = data.typeToken,

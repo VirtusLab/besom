@@ -1,35 +1,34 @@
 package besom.codegen
 
+import besom.codegen.Config.{CodegenConfig, ProviderConfig}
+import besom.codegen.PackageVersion.PackageVersion
+
 import scala.meta._
 import scala.meta.dialects.Scala33
 import besom.codegen.metaschema._
 import besom.codegen.Utils._
 
-//noinspection ScalaWeakerAccess
-object CodeGen {
-  val javaVersion  = "11"
-  val scalaVersion = "3.3.1"
-}
-
 //noinspection ScalaWeakerAccess,TypeAnnotation
-class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMapper, logger: Logger) {
-
-  import CodeGen._
+class CodeGen(implicit
+  codegenConfig: CodegenConfig,
+  providerConfig: ProviderConfig,
+  typeMapper: TypeMapper,
+  schemaProvider: SchemaProvider,
+  logger: Logger
+) {
 
   def sourcesFromPulumiPackage(
     pulumiPackage: PulumiPackage,
-    schemaVersion: String,
-    besomVersion: String
+    packageInfo: PulumiPackageInfo
   ): Seq[SourceFile] =
     scalaFiles(pulumiPackage) ++ Seq(
       projectConfigFile(
-        pulumiPackageName = pulumiPackage.name,
-        schemaVersion = schemaVersion,
-        besomVersion = besomVersion
+        schemaName = packageInfo.name,
+        packageVersion = packageInfo.version
       ),
       resourcePluginMetadataFile(
-        pluginName = pulumiPackage.name,
-        pluginVersion = schemaVersion,
+        pluginName = packageInfo.name,
+        pluginVersion = packageInfo.version,
         pluginDownloadUrl = pulumiPackage.pluginDownloadURL
       )
     )
@@ -41,19 +40,31 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
       sourceFilesForFunctions(pulumiPackage) ++
       sourceFilesForConfig(pulumiPackage)
 
-  def projectConfigFile(pulumiPackageName: String, schemaVersion: String, besomVersion: String): SourceFile = {
+  def projectConfigFile(schemaName: String, packageVersion: PackageVersion): SourceFile = {
+    val besomVersion = codegenConfig.besomVersion
+    val scalaVersion = codegenConfig.scalaVersion
+    val javaVersion = codegenConfig.javaVersion
+
+    val dependencies = schemaProvider
+      .dependencies(schemaName, packageVersion)
+      .map { case (name, version) =>
+        s"""|//> using dep "org.virtuslab::besom-${name}:${version}-core.${besomVersion}"
+            |""".stripMargin
+      }
+      .mkString("\n")
+
     val fileContent =
       s"""|//> using scala $scalaVersion
           |//> using options "-java-output-version:$javaVersion"
           |//> using options "-skip-by-regex:.*"
           |
           |//> using dep "org.virtuslab::besom-core:${besomVersion}"
-          |
+          |${dependencies}
           |//> using resourceDir "resources"
           |
-          |//> using publish.name "besom-${pulumiPackageName}"
+          |//> using publish.name "besom-${schemaName}"
           |//> using publish.organization "org.virtuslab"
-          |//> using publish.version "${schemaVersion}-core.${besomVersion}"
+          |//> using publish.version "${packageVersion}-core.${besomVersion}"
           |//> using publish.url "https://github.com/VirtusLab/besom"
           |//> using publish.vcs "github:VirtusLab/besom"
           |//> using publish.license "Apache-2.0"
@@ -70,7 +81,7 @@ class CodeGen(implicit providerConfig: Config.ProviderConfig, typeMapper: TypeMa
 
   def resourcePluginMetadataFile(
     pluginName: String,
-    pluginVersion: String,
+    pluginVersion: PackageVersion,
     pluginDownloadUrl: Option[String]
   ): SourceFile = {
     val pluginDownloadUrlJsonValue = pluginDownloadUrl match {

@@ -21,10 +21,6 @@ class CodegenTests extends munit.FunSuite {
   val testdata = os.pwd / "integration-tests" / "resources" / "testdata"
 
   val slowList = List(
-    "kubernetes",
-    "docker",
-    "digitalocean",
-    "akamai",
     "external-enum" // depends on google-native
   )
 
@@ -50,8 +46,7 @@ class CodegenTests extends munit.FunSuite {
     "cyclic-types",
     "plain-and-default",
     "different-package-name-conflict",
-    "azure-native-nested-types",
-    "digitalocean"
+    "azure-native-nested-types"
   )
 
   val tests =
@@ -81,8 +76,14 @@ class CodegenTests extends munit.FunSuite {
       case _                           => name
     }
     test(options) {
-      val outputDir = codegen.generatePackageFromSchema(data.schema, data.name, "0.0.0")
-      val compiled  = scalaCli.compile(outputDir).call(check = false)
+      val result = codegen.generatePackageFromSchema(data.schema)
+      if (result.dependencies.nonEmpty)
+        println(s"\nCompiling dependencies for ${result.schemaName}...")
+      for (dep <- result.dependencies) {
+        codegen.generateLocalPackage(dep)
+      }
+      println(s"\nCompiling generated code for ${data.name}...")
+      val compiled = scalaCli.compile(result.outputDir).call(check = false)
       assert {
         clue(data)
         compiled.exitCode == 0
