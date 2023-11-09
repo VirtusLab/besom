@@ -38,7 +38,7 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
       val installCmd: List[String] =
         List("pulumi", "plugin", "install", "resource", metadata.name) ++ {
           // use version only if it is not the default, otherwise try to install the latest
-          if (metadata.version.isDefault) List(metadata.version) else List.empty
+          if (!metadata.version.isDefault) List(metadata.version) else List.empty
         } ++ {
           // use server only if it is defined
           metadata.server.map(url => List("--server", url)).getOrElse(List.empty)
