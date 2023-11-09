@@ -15,7 +15,7 @@ class TypeMapper(
   private def scalaTypeFromTypeUri(
     typeUri: String,
     asArgsType: Boolean,
-    underlyingType: Option[PrimitiveType]
+    underlyingType: Option[AnonymousType]
   ): Option[Type.Ref] = {
     // Example URIs:
     // "/provider/vX.Y.Z/schema.json#/types/pulumi:type:token"

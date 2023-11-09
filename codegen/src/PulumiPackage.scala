@@ -242,10 +242,7 @@ object Discriminator {
 /** @see
   *   [[TypeReference]] and [[TypeReferenceProto]]
   */
-trait TypeReferenceProtoLike {
-  def `type`: Option[String]
-  def additionalProperties: Option[TypeReference]
-  def items: Option[TypeReference]
+trait TypeReferenceProtoLike extends AnonymousTypeProtoLike {
   def oneOf: List[TypeReference]
   def discriminator: Option[Discriminator]
   @fieldKey("$ref")
@@ -253,30 +250,15 @@ trait TypeReferenceProtoLike {
 
   def maybeAsTypeReference: Option[TypeReference] = {
     if (oneOf.nonEmpty) {
-      val primitiveType = `type`.map(PrimitiveType.fromString)
-      Some(UnionType(oneOf = oneOf, `type` = primitiveType)) // TODO: Handle the discriminator
+      val underlyingType = this.maybeAsAnonymousType
+      Some(UnionType(oneOf = oneOf, `type` = underlyingType)) // TODO: Handle the discriminator
     } else {
       ref match {
         case Some(typeUri) =>
-          val primitiveType = `type`.map(PrimitiveType.fromString)
-          Some(NamedType(typeUri = typeUri, `type` = primitiveType))
+          val underlyingType = this.maybeAsAnonymousType
+          Some(NamedType(typeUri = typeUri, `type` = underlyingType))
         case None =>
-          `type`
-            .map {
-              case "string"  => StringType
-              case "integer" => IntegerType
-              case "number"  => NumberType
-              case "boolean" => BooleanType
-              case "array" =>
-                items match {
-                  case Some(itemsType) =>
-                    ArrayType(items = itemsType)
-                  case None =>
-                    throw new Exception(s"TypeReference $this lacks `items`")
-                }
-              case "object" =>
-                MapType(additionalProperties = additionalProperties.getOrElse(StringType))
-            }
+          this.maybeAsAnonymousType
       }
     }
   }
@@ -318,6 +300,34 @@ object TypeReference {
   }
 }
 
+trait AnonymousTypeProtoLike {
+  def `type`: Option[String]
+  def additionalProperties: Option[TypeReference]
+  def items: Option[TypeReference]
+
+  def maybeAsAnonymousType: Option[AnonymousType] = {
+    `type`.map {
+      case "string"  => StringType
+      case "integer" => IntegerType
+      case "number"  => NumberType
+      case "boolean" => BooleanType
+      case "array" =>
+        items match {
+          case Some(itemType) => ArrayType(itemType)
+          case None => throw new Exception(s"The array type $this lacks `items`")
+        }
+      case "object" =>
+        additionalProperties match {
+          case Some(propertyType) => MapType(propertyType)
+          case None => MapType(StringType)
+        }
+    }
+  }
+
+}
+
+sealed trait AnonymousType extends TypeReference
+
 /** A reference to a primitive type. A primitive type must have only the "type" property set.
   *
   * Can be one of: [[StringType]], [[IntegerType]], [[NumberType]], [[BooleanType]]
@@ -325,7 +335,7 @@ object TypeReference {
   * @see
   *   [[TypeReference]]
   */
-sealed trait PrimitiveType extends TypeReference
+sealed trait PrimitiveType extends AnonymousType
 object PrimitiveType {
   val fromString: String => PrimitiveType = {
     case "string"  => StringType
@@ -341,22 +351,22 @@ object IntegerType extends PrimitiveType
 object NumberType extends PrimitiveType
 object BooleanType extends PrimitiveType
 
-object UrnType extends TypeReference
-object ResourceIdType extends TypeReference
-
 /** A reference to an array type. The "type" property must be set to "array" and the "items" property must be present.
   * No other properties may be present.
   * @param items
   *   "The element type of the array"
   */
-case class ArrayType(items: TypeReference) extends TypeReference
+case class ArrayType(items: TypeReference) extends AnonymousType
 
 /** A reference to a map type. The "type" property must be set to "object" and the "additionalProperties" property may
   * be present. No other properties may be present.
   * @param additionalProperties
   *   The element type of the map. Defaults to "string" when omitted.
   */
-case class MapType(additionalProperties: TypeReference) extends TypeReference
+case class MapType(additionalProperties: TypeReference) extends AnonymousType
+
+object UrnType extends TypeReference
+object ResourceIdType extends TypeReference
 
 /** A reference to a type in this or another document. The "ref" property must be present. The "type" property is
   * ignored if it is present. No other properties may be present.
@@ -369,7 +379,7 @@ case class MapType(additionalProperties: TypeReference) extends TypeReference
   * @param `type`
   *   ignored; present for compatibility with existing schemas
   */
-case class NamedType(typeUri: String, `type`: Option[PrimitiveType] = None) extends TypeReference
+case class NamedType(typeUri: String, `type`: Option[AnonymousType] = None) extends TypeReference
 
 /** A reference to a union type. The "oneOf" property must be present. The union may additional specify an underlying
   * primitive type via the "type" property and a discriminator via the "discriminator" property. No other properties may
@@ -383,7 +393,7 @@ case class NamedType(typeUri: String, `type`: Option[PrimitiveType] = None) exte
   */
 case class UnionType(
   oneOf: List[TypeReference],
-  `type`: Option[PrimitiveType],
+  `type`: Option[AnonymousType],
   discriminator: Option[Discriminator] = None
 ) extends TypeReference
 
@@ -537,18 +547,22 @@ trait ObjectTypeDefinitionProtoLike {
   def isOverlay: Boolean
 
   def maybeAsObjectTypeDefinition: Option[ObjectTypeDefinition] =
-    `type` match {
-      case Some("object") =>
-        Some(
-          ObjectTypeDefinition(
-            properties = properties,
-            required = required,
-            description = description,
-            isOverlay = isOverlay
+    if (properties.nonEmpty) {
+      `type` match {
+        case None | Some("object") =>
+          Some(
+            ObjectTypeDefinition(
+              properties = properties,
+              required = required,
+              description = description,
+              isOverlay = isOverlay
+            )
           )
-        )
-      case _ =>
-        None
+        case Some(_) =>
+          throw new Exception(s"Cannot read ObjectTypeDefinition from prototype structure: ${this} (`type` was not `object`)")
+      }
+    } else {
+      None
     }
 }
 
