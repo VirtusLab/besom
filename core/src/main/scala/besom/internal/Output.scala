@@ -78,6 +78,7 @@ trait OutputFactory:
   )(
     f: A => Output[B]
   )(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] = sequence(coll.map(f).asInstanceOf[CC[Output[B]]])
+  def fail(t: Throwable)(using Context): Output[Nothing] = Output.fail(t)
 trait OutputExtensionsFactory:
   implicit final class OutputSequenceOps[A, CC[X] <: IterableOnce[X], To](coll: CC[Output[A]]):
     def sequence(using BuildFrom[CC[Output[A]], A, To], Context): Output[To] =
@@ -108,6 +109,9 @@ object Output:
   ): Output[A] =
     new Output[A](ctx.registerTask(Result.eval(value)).map(OutputData(_)))
 
+  def fail[A](t: Throwable)(using ctx: Context): Output[Nothing] =
+    new Output[Nothing](ctx.registerTask(Result.fail(t)))
+
   def apply[A](value: => Result[A])(using
     ctx: Context
   ): Output[A] =
@@ -124,8 +128,5 @@ object Output:
   def ofData[A](data: OutputData[A])(using ctx: Context): Output[A] =
     new Output[A](ctx.registerTask(Result.pure(data)))
 
-  def secret[A](using ctx: Context)(value: A): Output[A] =
-    new Output[A](ctx.registerTask(Result.pure(OutputData(value))))
-
-  def secret[A](using ctx: Context)(maybeValue: Option[A]): Output[A] =
-    new Output[A](ctx.registerTask(Result.pure(OutputData(Set.empty, maybeValue, isSecret = true))))
+  def secret[A](value: A)(using ctx: Context): Output[A] =
+    new Output[A](ctx.registerTask(Result.pure(OutputData(value, Set.empty, isSecret = true))))

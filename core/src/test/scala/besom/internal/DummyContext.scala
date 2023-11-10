@@ -5,6 +5,7 @@ import pulumirpc.provider.CallRequest
 import pulumirpc.provider.CallResponse
 import pulumirpc.provider.InvokeResponse
 import pulumirpc.engine.*
+import besom.NonEmptyString
 import besom.internal.logging.BesomLogger
 
 object DummyContext:
@@ -29,12 +30,14 @@ object DummyContext:
     runInfo: RunInfo = dummyRunInfo,
     featureSupport: FeatureSupport = dummyFeatureSupport,
     monitor: Monitor = dummyMonitor,
-    engine: Engine = dummyEngine
+    engine: Engine = dummyEngine,
+    configMap: Map[NonEmptyString, String] = Map.empty,
+    configSecretKeys: Set[NonEmptyString] = Set.empty
   ): Result[Context] =
     for
       taskTracker  <- TaskTracker()
       stackPromise <- Promise[Stack]()
       logger       <- BesomLogger.local()
-      config       <- Config(runInfo.project, isProjectName = true, Map.empty, Set.empty)
+      config       <- Config(runInfo.project, isProjectName = true, configMap = configMap, configSecretKeys = configSecretKeys)
       resources    <- Resources()
     yield Context(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, stackPromise)

@@ -3,15 +3,16 @@ package besom.util
 import scala.quoted.*
 import scala.language.implicitConversions
 
-extension (nes: NonEmptyString)
-  inline def +++(other: String): NonEmptyString = nes + other
-  inline def asString: String                   = nes
-
 opaque type NonEmptyString <: String = String
 
 object NonEmptyString:
   def apply(s: String): Option[NonEmptyString] =
     if s.isBlank then None else Some(s)
+
+  given nonEmptyStringOps: {} with
+    extension (nes: NonEmptyString)
+      inline def +++(other: String): NonEmptyString = nes + other
+      inline def asString: String                   = nes
 
   inline def from(inline s: String): NonEmptyString = ${ fromImpl('s) }
 
@@ -63,8 +64,3 @@ object NonEmptyString:
 trait NonEmptyStringFactory:
   def apply(s: String): Option[NonEmptyString] = NonEmptyString(s)
   inline def from(s: String): NonEmptyString   = NonEmptyString.from(s)
-
-trait NonEmptyStringExtensionsFactory:
-  implicit final class NonEmptyStringOps(nes: NonEmptyString):
-    inline def +++(other: String): NonEmptyString = nes +++ other
-    inline def asString: String                   = nes.asString
