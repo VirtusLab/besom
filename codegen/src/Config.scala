@@ -27,19 +27,12 @@ object Config {
     outputDir: Option[os.RelPath] = None,
     scalaVersion: String = DefaultScalaVersion,
     javaVersion: String = DefaultJavaVersion,
-    logLevel: Logger.Level = Logger.Level.Info,
+    logLevel: Logger.Level = Logger.Level.Info
   )
 
   case class ProviderConfig(
     noncompiledModules: Seq[String] = Seq.empty
   )
 
-  val providersConfigs: Map[String, ProviderConfig] = Map(
-    "aws" -> ProviderConfig(
-      noncompiledModules = Seq(
-        "quicksight", // Module too large
-        "wafv2" // Module too large
-      )
-    )
-  ).withDefaultValue(ProviderConfig())
+  val providersConfigs: Map[String, ProviderConfig] = Map().withDefaultValue(ProviderConfig())
 }

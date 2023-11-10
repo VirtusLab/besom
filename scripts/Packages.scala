@@ -75,7 +75,7 @@ import org.virtuslab.yaml.*
         Progress.report(label = s"$name:$version")
         try
           val logFile = logDir / s"${name}-${version}.log"
-          os.proc("time", "-h", "just", "publish-maven-provider-sdk", name, version)
+          os.proc("just", "publish-maven-provider-sdk", name, version)
             .call(stdout = logFile, stderr = logFile)
           println(new Date)
           println(s"Successfully published provider '${name}' version '${version}'")

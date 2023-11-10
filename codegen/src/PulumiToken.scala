@@ -12,11 +12,13 @@ object PulumiToken {
 
   private def enforceNonEmptyModule(module: String): String =
     module match {
-      case "" => "index"
+      case "" => Utils.indexModuleName
       case _  => module
     }
 
   def apply(token: String): PulumiToken = token match {
+    case tokenPattern("pulumi", "providers", providerName) =>
+      new PulumiToken(providerName, Utils.indexModuleName, Utils.providerTypeName)
     case tokenPattern(provider, module, name) =>
       new PulumiToken(
         provider = provider,

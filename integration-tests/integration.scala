@@ -130,6 +130,11 @@ object scalaCli {
     "compile",
     "--suppress-experimental-feature-warning",
     "--suppress-directives-in-multiple-files-warning",
+    "--jvm=17",
+    "--bloop-jvm=17",
+    "--bloop-java-opt=\"-XX:-UseZGC\"",
+    "--bloop-java-opt=\"-XX:+UseUseParallelGC\"",
+    "--bloop-java-opt=\"-XX:ParallelGCThreads=120\"",
     additional
   )
 
@@ -140,6 +145,11 @@ object scalaCli {
     "local",
     "--suppress-experimental-feature-warning",
     "--suppress-directives-in-multiple-files-warning",
+    "--jvm=17",
+    "--bloop-jvm=17",
+    "--bloop-java-opt=\"-XX:-UseZGC\"",
+    "--bloop-java-opt=\"-XX:+UseUseParallelGC\"",
+    "--bloop-java-opt=\"-XX:ParallelGCThreads=120\"",
     additional
   )
 }
@@ -151,7 +161,7 @@ object codegen {
     metadata: PackageMetadata
   ): Unit = {
     val result = codegen.generatePackage(metadata)
-    scalaCli.publishLocal(result.outputDir).call(check = false)
+    scalaCli.publishLocal(result.outputDir).call(check = false) // compilation will fail anyway
     if (result.dependencies.nonEmpty)
       println(s"\nCompiling dependencies for ${result.schemaName}:${result.packageVersion}...")
     for (dep <- result.dependencies) {
@@ -176,7 +186,7 @@ object codegen {
 
   def generatePackageFromSchema(
     schema: os.Path,
-    outputDir: Option[os.RelPath] = None,
+    outputDir: Option[os.RelPath] = None
   ): generator.Result = {
     // noinspection TypeAnnotation
     implicit val config = CodegenConfig(outputDir = outputDir)
