@@ -17,6 +17,8 @@ class CodeGen(implicit
   logger: Logger
 ) {
 
+  import CodeGen._
+
   def sourcesFromPulumiPackage(
     pulumiPackage: PulumiPackage,
     packageInfo: PulumiPackageInfo
@@ -106,12 +108,12 @@ class CodeGen(implicit
     val moduleToPackageParts   = pulumiPackage.moduleToPackageParts
     val providerToPackageParts = pulumiPackage.providerToPackageParts
 
-    val typeCoordinates =
-      PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts)
     sourceFilesForResource(
-      typeCoordinates = typeCoordinates,
+      typeToken = typeToken,
       resourceDefinition = pulumiPackage.provider,
-      typeToken = PulumiToken(pulumiPackage.providerTypeToken),
+      tokenToMethod = tokenToMethod(pulumiPackage),
+      moduleToPackageParts = moduleToPackageParts,
+      providerToPackageParts = providerToPackageParts,
       isProvider = true
     )
   }
@@ -238,10 +240,11 @@ class CodeGen(implicit
       .collect {
         case (typeToken, resourceDefinition) if !resourceDefinition.isOverlay =>
           sourceFilesForResource(
-            typeCoordinates =
-              PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts),
+            typeToken = typeToken,
             resourceDefinition = resourceDefinition,
-            typeToken = PulumiToken(typeToken),
+            tokenToMethod = tokenToMethod(pulumiPackage),
+            moduleToPackageParts = moduleToPackageParts,
+            providerToPackageParts = providerToPackageParts,
             isProvider = false
           )
       }
@@ -249,9 +252,28 @@ class CodeGen(implicit
       .flatten
   }
 
+  private def sourceFilesForResource(
+    typeToken: String,
+    resourceDefinition: ResourceDefinition,
+    tokenToMethod: String => FunctionDefinition,
+    moduleToPackageParts: String => Seq[String],
+    providerToPackageParts: String => Seq[String],
+    isProvider: Boolean
+  ): Seq[SourceFile] = {
+    sourceFilesForResource(
+      typeCoordinates =
+        PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts),
+      resourceDefinition = resourceDefinition,
+      tokenToMethod = tokenToMethod,
+      typeToken = PulumiToken(typeToken),
+      isProvider = isProvider
+    )
+  }
+
   def sourceFilesForResource(
     typeCoordinates: PulumiDefinitionCoordinates,
     resourceDefinition: ResourceDefinition,
+    tokenToMethod: String => FunctionDefinition,
     typeToken: PulumiToken,
     isProvider: Boolean
   ): Seq[SourceFile] = {
@@ -259,6 +281,10 @@ class CodeGen(implicit
     val argsClassCoordinates = typeCoordinates.asResourceClass(asArgsType = true)
     val baseClassName        = Type.Name(baseClassCoordinates.definitionName).syntax
     val argsClassName        = Type.Name(argsClassCoordinates.definitionName).syntax
+
+    if (resourceDefinition.aliases.nonEmpty) {
+      logger.warn(s"Aliases are not supported yet, ignoring ${resourceDefinition.aliases.size} aliases for ${typeToken.asString}")
+    }
 
     val resourceBaseProperties = Seq(
       "urn" -> PropertyDefinition(typeReference = UrnType),
@@ -286,6 +312,11 @@ class CodeGen(implicit
       }
     }
 
+    val resourceMethods: Seq[(String, FunctionDefinition)] = resourceDefinition.methods.toSeq.sortBy(_._1).map {
+      case (name, token) => (name, tokenToMethod(token))
+    }
+    resourceMethods.foreach(m => logger.warn(s"Resource methods are not supported yet, ignoring ${m._1}"))
+
     val requiredInputs = resourceDefinition.requiredInputs.toSet
 
     val inputProperties = {
@@ -306,6 +337,9 @@ class CodeGen(implicit
         )
       }
     }
+
+    val stateInputs = resourceDefinition.stateInputs.properties.toSeq.sortBy(_._1)
+    stateInputs.foreach(i => logger.warn(s"State inputs are not supported yet, ignoring ${i._1}"))
 
     val baseClassParams = resourceProperties.map { propertyInfo =>
       val innerType =
@@ -329,11 +363,15 @@ class CodeGen(implicit
 
     val hasOutputExtensions = baseOutputExtensionMethods.nonEmpty
 
-    // TODO: Should we show entire descriptions as comments? Formatting of comments should be preserved. Examples for other languages should probably be filtered out.
+    // TODO: Should we show entire descriptions as comments? Formatting of comments should be preserved.
+    //       Need to figure out how to get code snippets in scala like other implementations.
     // val baseClassComment = spec.description.fold("")(desc => s"/**\n${desc}\n*/\n") // TODO: Escape/sanitize comments
     val baseClassComment = ""
 
     val resourceBaseClass = if (isProvider) "besom.ProviderResource" else "besom.CustomResource"
+    if (resourceDefinition.isComponent) {
+      logger.warn(s"Component resources are not supported yet, generating incorrect resource ${typeToken.asString}")
+    }
 
     val baseClass =
       s"""|final case class $baseClassName private(
@@ -398,7 +436,7 @@ class CodeGen(implicit
 
     pulumiPackage.functions
       .collect {
-        case (functionToken, functionDefinition) if !functionDefinition.isOverlay =>
+        case (functionToken, functionDefinition) if !functionDefinition.isOverlay && !isMethod(functionDefinition) =>
           sourceFilesForFunction(
             functionCoordinates =
               PulumiDefinitionCoordinates.fromRawToken(functionToken, moduleToPackageParts, providerToPackageParts),
@@ -415,79 +453,73 @@ class CodeGen(implicit
     functionDefinition: FunctionDefinition,
     functionToken: PulumiToken
   ): Seq[SourceFile] = {
-    val isMethod = functionDefinition.inputs.properties.isDefinedAt(Utils.selfParameterName)
+    val methodCoordinates = functionCoordinates.topLevelMethod
 
-    if (isMethod) {
-      logger.warn(s"Function '${functionToken.asString}' was not generated - methods are not yet supported")
-      Seq.empty
-    } else {
-      val methodCoordinates = functionCoordinates.topLevelMethod
+    val methodName = methodCoordinates.definitionName
+    if (methodName.contains("/")) {
+      throw GeneralCodegenException(s"Top level function name ${methodName} containing a '/' is not allowed")
+    }
 
-      val methodName = methodCoordinates.definitionName
-      if (methodName.contains("/")) {
-        throw GeneralCodegenException(s"Top level function name ${methodName} containing a '/' is not allowed")
-      }
-
-      val requiredInputs = functionDefinition.inputs.required
-      val inputProperties =
-        functionDefinition.inputs.properties.toSeq.sortBy(_._1).collect { case (propertyName, propertyDefinition) =>
-          makePropertyInfo(
-            propertyName = propertyName,
-            propertyDefinition = propertyDefinition,
-            isPropertyRequired = requiredInputs.contains(propertyName)
-          )
-        }
-
-      val argsClassCoordinates = functionCoordinates.methodArgsClass
-
-      val argsClassSourceFile = makeArgsClassSourceFile(
-        classCoordinates = argsClassCoordinates,
-        properties = inputProperties,
-        isResource = false,
-        isProvider = false
-      )
-
-      val resultClassCoordinates = functionCoordinates.methodResultClass
-
-      val resultClassSourceFileOpt = functionDefinition.outputs.objectTypeDefinition.map { outputTypeDefinition =>
-        val requiredOutputs = outputTypeDefinition.required
-        val outputProperties =
-          outputTypeDefinition.properties.toSeq.sortBy(_._1).map { case (propertyName, propertyDefinition) =>
-            makePropertyInfo(
-              propertyName = propertyName,
-              propertyDefinition = propertyDefinition,
-              isPropertyRequired = requiredOutputs.contains(propertyName)
-            )
-          }
-
-        makeOutputClassSourceFile(
-          classCoordinates = resultClassCoordinates,
-          properties = outputProperties
+    val requiredInputs = functionDefinition.inputs.required
+    val inputProperties =
+      functionDefinition.inputs.properties.toSeq.sortBy(_._1).collect { case (propertyName, propertyDefinition) =>
+        makePropertyInfo(
+          propertyName = propertyName,
+          propertyDefinition = propertyDefinition,
+          isPropertyRequired = requiredInputs.contains(propertyName)
         )
       }
 
-      val argsClassRef = argsClassCoordinates.fullyQualifiedTypeRef
+    val argsClassCoordinates = functionCoordinates.methodArgsClass
 
-      val argsDefault =
-        if (inputProperties.isEmpty) {
-          s" = ${argsClassRef}()"
-        } else ""
+    val argsClassSourceFile = makeArgsClassSourceFile(
+      classCoordinates = argsClassCoordinates,
+      properties = inputProperties,
+      isResource = false,
+      isProvider = false
+    )
 
-      val resultTypeRef: Type =
-        (functionDefinition.outputs.objectTypeDefinition, functionDefinition.outputs.typeReference) match {
-          case (Some(_), _) =>
-            resultClassCoordinates.fullyQualifiedTypeRef
-          case (None, Some(ref)) =>
-            ref.asScalaType()
-          case (None, None) =>
-            t"scala.Unit"
+    val resultClassCoordinates = functionCoordinates.methodResultClass
+
+    val resultClassSourceFileOpt = functionDefinition.outputs.objectTypeDefinition.map { outputTypeDefinition =>
+      val requiredOutputs = outputTypeDefinition.required
+      val outputProperties =
+        outputTypeDefinition.properties.toSeq.sortBy(_._1).map { case (propertyName, propertyDefinition) =>
+          makePropertyInfo(
+            propertyName = propertyName,
+            propertyDefinition = propertyDefinition,
+            isPropertyRequired = requiredOutputs.contains(propertyName)
+          )
         }
 
-      val methodSourceFile = {
-        val token = Lit.String(functionToken.asString)
+      makeOutputClassSourceFile(
+        classCoordinates = resultClassCoordinates,
+        properties = outputProperties
+      )
+    }
 
-        val fileContent =
-          s"""|package ${methodCoordinates.fullPackageName}
+    val argsClassRef = argsClassCoordinates.fullyQualifiedTypeRef
+
+    val argsDefault =
+      if (inputProperties.isEmpty) {
+        s" = ${argsClassRef}()"
+      } else ""
+
+    val resultTypeRef: Type =
+      (functionDefinition.outputs.objectTypeDefinition, functionDefinition.outputs.typeReference) match {
+        case (Some(_), _) =>
+          resultClassCoordinates.fullyQualifiedTypeRef
+        case (None, Some(ref)) =>
+          ref.asScalaType()
+        case (None, None) =>
+          t"scala.Unit"
+      }
+
+    val methodSourceFile = {
+      val token = Lit.String(functionToken.asString)
+
+      val fileContent =
+        s"""|package ${methodCoordinates.fullPackageName}
               |
               |def ${Term.Name(methodName)}(using ctx: besom.types.Context)(
               |  args: ${argsClassRef}${argsDefault},
@@ -496,11 +528,10 @@ class CodeGen(implicit
               |   ctx.invoke[$argsClassRef, $resultTypeRef](${token}, args, opts)
               |""".stripMargin
 
-        SourceFile(filePath = methodCoordinates.filePath, sourceCode = fileContent)
-      }
-
-      Seq(argsClassSourceFile, methodSourceFile) ++ resultClassSourceFileOpt
+      SourceFile(filePath = methodCoordinates.filePath, sourceCode = fileContent)
     }
+
+    Seq(argsClassSourceFile, methodSourceFile) ++ resultClassSourceFileOpt
   }
 
   def sourceFilesForConfig(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
@@ -737,8 +768,6 @@ class CodeGen(implicit
       Lit.Double(value)
   }
 
-  private def decapitalize(s: String) = s(0).toLower.toString ++ s.substring(1, s.length)
-
   private val anyRefMethodNames = Set(
     "eq",
     "ne",
@@ -763,6 +792,25 @@ class CodeGen(implicit
       logger.warn(s"Mangled property name '$name' as '$mangledName'")
       mangledName
     } else name
+}
+
+object CodeGen {
+
+  private def tokenToMethod(pulumiPackage: PulumiPackage)(token: String): FunctionDefinition = {
+    pulumiPackage.functions
+      .filter { case (_, functionDefinition) =>
+        !functionDefinition.isOverlay && isMethod(functionDefinition)
+      }
+      .getOrElse(
+        token,
+        throw GeneralCodegenException(s"Function ${token} not found, but requested by a resource as method")
+      )
+  }
+
+  private def isMethod(functionDefinition: FunctionDefinition) =
+    functionDefinition.inputs.properties.isDefinedAt(Utils.selfParameterName)
+
+  private def decapitalize(s: String) = s(0).toLower.toString ++ s.substring(1, s.length)
 }
 
 case class FilePath private (pathParts: Seq[String]) {

@@ -98,6 +98,11 @@ object PulumiPackage {
   *   The description of the resource, if any. Interpreted as Markdown.
   * @param inputProperties
   *   A map from property name to propertySpec that describes the resource's input properties.
+  * @param stateInputs
+  *   An optional objectTypeSpec that describes additional inputs that may be necessary to get an existing resource. If
+  *   this is unset, only an ID is necessary.
+  * @param aliases
+  *   The list of aliases for the resource.
   * @param isComponent
   *   Indicates whether the resource is a component.
   * @param isOverlay
@@ -111,11 +116,12 @@ object PulumiPackage {
 case class ResourceDefinition(
   properties: Map[String, PropertyDefinition] = Map.empty,
   required: List[String] = Nil,
-
-  // aliases: List[AliasDefinition] = Nil,
   deprecationMessage: Option[String] = None,
   description: Option[String] = None,
   inputProperties: Map[String, PropertyDefinition] = Map.empty,
+  stateInputs: ObjectTypeDefinition = ObjectTypeDefinition(), // TODO: Handle stateInputs
+  aliases: List[AliasDefinition] = Nil, // TODO: Handle aliases
+
   isComponent: Boolean = false,
   isOverlay: Boolean = false,
   methods: Map[String, String] = Map.empty,
@@ -332,12 +338,12 @@ trait AnonymousTypeProtoLike {
       case "array" =>
         items match {
           case Some(itemType) => ArrayType(itemType)
-          case None => throw new Exception(s"The array type $this lacks `items`")
+          case None           => throw new Exception(s"The array type $this lacks `items`")
         }
       case "object" =>
         additionalProperties match {
           case Some(propertyType) => MapType(propertyType)
-          case None => MapType(StringType)
+          case None               => MapType(StringType)
         }
     }
   }
@@ -565,22 +571,20 @@ trait ObjectTypeDefinitionProtoLike {
   def isOverlay: Boolean
 
   def maybeAsObjectTypeDefinition: Option[ObjectTypeDefinition] =
-    if (properties.nonEmpty) {
-      `type` match {
-        case None | Some("object") =>
-          Some(
-            ObjectTypeDefinition(
-              properties = properties,
-              required = required,
-              description = description,
-              isOverlay = isOverlay
-            )
+    `type` match {
+      case None | Some("object") =>
+        Some(
+          ObjectTypeDefinition(
+            properties = properties,
+            required = required,
+            description = description,
+            isOverlay = isOverlay
           )
-        case Some(_) =>
-          throw new Exception(s"Cannot read ObjectTypeDefinition from prototype structure: ${this} (`type` was not `object`)")
-      }
-    } else {
-      None
+        )
+      case Some(_) =>
+        throw new Exception(
+          s"Cannot read ObjectTypeDefinition from prototype structure: ${this} (`type` was not `object`)"
+        )
     }
 }
 
@@ -652,7 +656,7 @@ object ObjectTypeDefinitionOrTypeReference {
         ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = None, typeReference = Some(typeReference))
       )
 
-      val deserialized = 
+      val deserialized =
         if (proto.properties.nonEmpty)
           proto.maybeAsObjectTypeDefinition.map(objectTypeDefinition =>
             ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = Some(objectTypeDefinition), typeReference = None)
@@ -668,4 +672,19 @@ object ObjectTypeDefinitionOrTypeReference {
     }
 
   def empty = ObjectTypeDefinitionOrTypeReference(None, None)
+}
+
+/**
+ * @param `type` The type of the alias, if any
+ * @param name The name portion of the alias, if any
+ * @param project The project portion of the alias, if any
+ */
+case class AliasDefinition(
+  `type`: Option[String] = None,
+//  name: Option[String],
+//  project: Option[String]
+)
+//noinspection ScalaUnusedSymbol
+object AliasDefinition {
+  implicit val reader: Reader[AliasDefinition] = macroR
 }
