@@ -5,7 +5,7 @@ import besom.codegen.{Config, DownloadingSchemaProvider, Logger, PackageMetadata
 
 //noinspection ScalaFileName,TypeAnnotation
 class PulumiPackageTest extends munit.FunSuite {
-  implicit val logger: Logger = new Logger
+  implicit val logger: Logger       = new Logger
   private val defaultTestSchemaName = "test-as-scala-type"
 
   test("TypeReference with nested union and named types") {
@@ -27,15 +27,15 @@ class PulumiPackageTest extends munit.FunSuite {
          |}
          |""".stripMargin
 
-    val propertyDefinition      = UpickleApi.read[PropertyDefinition](json)
+    val propertyDefinition = UpickleApi.read[PropertyDefinition](json)
 
     val schemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
     val (_, packageInfo) = schemaProvider.packageInfo(
-      PulumiPackage(defaultTestSchemaName),
-      PackageMetadata(defaultTestSchemaName, "0.0.0")
+      PackageMetadata(defaultTestSchemaName, "0.0.0"),
+      PulumiPackage(defaultTestSchemaName)
     )
     implicit val tm: TypeMapper = new TypeMapper(packageInfo, schemaProvider)
-    val typeReferenceScala = propertyDefinition.typeReference.asScalaType()
+    val typeReferenceScala      = propertyDefinition.typeReference.asScalaType()
     assertEquals(typeReferenceScala.toString(), "String | scala.collection.immutable.List[String]")
   }
 }

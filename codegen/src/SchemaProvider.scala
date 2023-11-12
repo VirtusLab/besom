@@ -8,11 +8,9 @@ import besom.codegen.Utils.PulumiPackageOps
 import besom.codegen.PackageVersion.PackageVersionOps
 
 trait SchemaProvider {
-
+  def packageInfo(metadata: PackageMetadata, schema: Option[SchemaFile] = None): (PulumiPackage, PulumiPackageInfo)
+  def packageInfo(packageMetadata: PackageMetadata, pulumiPackage: PulumiPackage): (PulumiPackage, PulumiPackageInfo)
   def dependencies(schemaName: SchemaName, packageVersion: PackageVersion): List[(SchemaName, PackageVersion)]
-
-  def packageInfo(schemaOrMetadata: Either[SchemaFile, PackageMetadata]): (PulumiPackage, PulumiPackageInfo)
-  def packageInfo(metadata: PackageMetadata): (PulumiPackage, PulumiPackageInfo)
 }
 
 class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Logger) extends SchemaProvider {
@@ -21,24 +19,24 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
   private val packageInfos: collection.mutable.Map[(SchemaName, PackageVersion), PulumiPackageInfo] =
     collection.mutable.Map.empty
 
-  private def pulumiPackage(metadata: PackageMetadata): (PulumiPackage, PackageMetadata) = {
-    val schemaFilePath = schemaCacheDirPath / metadata.name / metadata.version / schemaFileName
+  private def pulumiPackage(metadata: PackageMetadata): (PackageMetadata, PulumiPackage) = {
+    val schemaFilePath = schemaCacheDirPath / metadata.name / metadata.version.orDefault / schemaFileName
 
     if (!os.exists(schemaFilePath)) {
       logger.debug(
-        s"Downloading schema for '${metadata.name}:${metadata.version}' into '${schemaFilePath.relativeTo(os.pwd)}'"
+        s"Downloading schema for '${metadata.name}:${metadata.version.orDefault}' into '${schemaFilePath.relativeTo(os.pwd)}'"
       )
 
       val schemaSource =
         if (metadata.version.isDefault)
           metadata.name
         else
-          s"${metadata.name}@${metadata.version}"
+          s"${metadata.name}@${metadata.version.orDefault}"
 
       val installCmd: List[String] =
         List("pulumi", "plugin", "install", "resource", metadata.name) ++ {
           // use version only if it is not the default, otherwise try to install the latest
-          if (!metadata.version.isDefault) List(metadata.version) else List.empty
+          metadata.version.map(List(_)).getOrElse(List.empty)
         } ++ {
           // use server only if it is defined
           metadata.server.map(url => List("--server", url)).getOrElse(List.empty)
@@ -51,38 +49,35 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
         } catch {
           case e: os.SubprocessException =>
             val msg =
-              s"Failed to download schema for ${metadata.name}:${metadata.version}' into '${schemaFilePath.relativeTo(os.pwd)}'"
+              s"Failed to download schema for ${metadata.name}:${metadata.version.orDefault}' into '${schemaFilePath
+                  .relativeTo(os.pwd)}'"
             logger.error(msg)
             throw GeneralCodegenException(msg, e)
         }
 
       // parse and save the schema using path corrected for the actual name and version for the package
-      val pulumiPackage         = PulumiPackage.fromString(schema)
-      val reconciled            = pulumiPackage.toPackageMetadata(metadata.version)
-      val correctSchemaFilePath = schemaCacheDirPath / reconciled.name / reconciled.version / schemaFileName
-      os.write.over(correctSchemaFilePath, schema, createFolders = true)
-      (pulumiPackage, reconciled)
+      val pulumiPackage      = PulumiPackage.fromString(schema)
+      val reconciledMetadata = pulumiPackage.toPackageMetadata(metadata)
+      val reconciledSchemaFilePath =
+        schemaCacheDirPath / reconciledMetadata.name / reconciledMetadata.version.orDefault / schemaFileName
+      os.write.over(reconciledSchemaFilePath, schema, createFolders = true)
+      (reconciledMetadata, pulumiPackage)
     } else {
       logger.debug(
-        s"Using cached schema for ${metadata.name}:${metadata.version}' from '${schemaFilePath.relativeTo(os.pwd)}'"
+        s"Using cached schema for ${metadata.name}:${metadata.version.orDefault}' from '${schemaFilePath.relativeTo(os.pwd)}'"
       )
-      (PulumiPackage.fromFile(schemaFilePath), metadata)
+      (metadata, PulumiPackage.fromFile(schemaFilePath))
     }
   }
 
-  private def pulumiPackage(schema: SchemaFile): (PulumiPackage, PackageMetadata) = {
-    // try to get fallback version information from the schema file path
-    val pathVersion = {
-      val directory = (schema / os.up).last
-      PackageVersion.parse(directory).getOrElse(PackageVersion.default)
-    }
-
+  private def pulumiPackage(metadata: PackageMetadata, schema: SchemaFile): (PackageMetadata, PulumiPackage) = {
     // parse and save the schema using path corrected for the actual name and version for the package
-    val pulumiPackage         = PulumiPackage.fromFile(schema)
-    val metadata              = pulumiPackage.toPackageMetadata(pathVersion)
-    val correctSchemaFilePath = schemaCacheDirPath / metadata.name / metadata.version / schemaFileName
-    os.copy.over(schema, correctSchemaFilePath, replaceExisting = true, createFolders = true)
-    (pulumiPackage, metadata)
+    val pulumiPackage      = PulumiPackage.fromFile(schema)
+    val reconciledMetadata = pulumiPackage.toPackageMetadata(metadata)
+    val reconciledSchemaFilePath =
+      schemaCacheDirPath / reconciledMetadata.name / reconciledMetadata.version.orDefault / schemaFileName
+    os.copy.over(schema, reconciledSchemaFilePath, replaceExisting = true, createFolders = true)
+    (reconciledMetadata, pulumiPackage)
   }
 
   def dependencies(schemaName: SchemaName, packageVersion: PackageVersion): List[(SchemaName, PackageVersion)] =
@@ -90,35 +85,35 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
       name == schemaName && version == packageVersion
     }.toList
 
-  def packageInfo(metadata: PackageMetadata): (PulumiPackage, PulumiPackageInfo) = {
-    val (p, m) = pulumiPackage(metadata)
-    packageInfo(p, m)
-  }
-
-  def packageInfo(schemaOrMetadata: Either[SchemaFile, PackageMetadata]): (PulumiPackage, PulumiPackageInfo) = {
-    val (pulumiPackage, packageMetadata) = schemaOrMetadata match {
-      case Left(schema)              => this.pulumiPackage(schema)
-      case Right(m: PackageMetadata) => this.pulumiPackage(m)
+  def packageInfo(metadata: PackageMetadata, schema: Option[SchemaFile] = None): (PulumiPackage, PulumiPackageInfo) = {
+    val (packageMetadata, pulumiPackage) = (metadata, schema) match {
+      case (m, Some(schema))          => this.pulumiPackage(m, schema)
+      case (m: PackageMetadata, None) => this.pulumiPackage(m)
     }
-    packageInfo(pulumiPackage, packageMetadata)
+    packageInfo(packageMetadata, pulumiPackage)
   }
 
   def packageInfo(
-    pulumiPackage: PulumiPackage,
-    packageMetadata: PackageMetadata
+    packageMetadata: PackageMetadata,
+    pulumiPackage: PulumiPackage
   ): (PulumiPackage, PulumiPackageInfo) = {
     val info = packageInfos.getOrElseUpdate(
-      (packageMetadata.name, packageMetadata.version),
-      reconcilePackageInfo(pulumiPackage, packageMetadata)
+      (packageMetadata.name, packageMetadata.version.orDefault),
+      reconcilePackageInfo(packageMetadata, pulumiPackage)
     )
     (pulumiPackage, info)
   }
 
   private def reconcilePackageInfo(
-    pulumiPackage: PulumiPackage,
-    packageMetadata: PackageMetadata
+    packageMetadata: PackageMetadata,
+    pulumiPackage: PulumiPackage
   ): PulumiPackageInfo = {
-    require(pulumiPackage.name == packageMetadata.name, "Package name mismatch")
+    if (pulumiPackage.name != packageMetadata.name) {
+      logger.warn(
+        s"Package name mismatch for '${packageMetadata.name}' != '${pulumiPackage.name}', " +
+          s"will be reconciled - this is fine in tests"
+      )
+    }
 
     val enumTypeTokensBuffer   = ListBuffer.empty[String]
     val objectTypeTokensBuffer = ListBuffer.empty[String]
@@ -136,9 +131,10 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
         objectTypeTokensBuffer += typeToken.toLowerCase
     }
 
+    val reconciledMetadata = pulumiPackage.toPackageMetadata(packageMetadata)
     PulumiPackageInfo(
-      name = pulumiPackage.name,
-      version = pulumiPackage.reconcileVersion(packageMetadata.version),
+      name = reconciledMetadata.name,
+      version = reconciledMetadata.version.orDefault,
       enumTypeTokens = enumTypeTokensBuffer.toSet,
       objectTypeTokens = objectTypeTokensBuffer.toSet,
       providerTypeToken = pulumiPackage.providerTypeToken,

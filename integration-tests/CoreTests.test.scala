@@ -1,7 +1,8 @@
 package besom.integration.core
 
-import os.*
+import besom.codegen.PackageMetadata
 import besom.integration.common.*
+import os.*
 
 //noinspection ScalaWeakerAccess,TypeAnnotation,ScalaFileName
 class CoreTests extends munit.FunSuite {
@@ -22,7 +23,7 @@ class CoreTests extends munit.FunSuite {
   FunFixture[pulumi.FixtureContext](
     setup = {
       val schemaName = "random"
-      val result = codegen.generatePackage(schemaName, providerRandomSchemaVersion)
+      val result = codegen.generatePackage(PackageMetadata(schemaName, providerRandomSchemaVersion))
       scalaCli.publishLocal(result.outputDir).call()
       pulumi.fixture.setup(
         wd / "resources" / "random-example",

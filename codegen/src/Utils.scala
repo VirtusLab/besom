@@ -68,11 +68,15 @@ object Utils {
     def providerToPackageParts: String => Seq[String] = module => Seq(module)
 
     def providerTypeToken: String = s"pulumi:providers:${pulumiPackage.name}"
-    def reconcileVersion(packageVersion: PackageVersion)(implicit logger: Logger): PackageVersion = {
+
+    def toPackageMetadata(overrideMetadata: PackageMetadata): PackageMetadata =
+      toPackageMetadata(Some(overrideMetadata))
+    def toPackageMetadata(overrideMetadata: Option[PackageMetadata] = None): PackageMetadata = {
       import PackageVersion._
-      pulumiPackage.version.flatMap(PackageVersion.parse).getOrElse(PackageVersion.default).reconcile(packageVersion)
+      overrideMetadata match {
+        case Some(d) => PackageMetadata(d.name, PackageVersion.parse(pulumiPackage.version).reconcile(d.version))
+        case None => PackageMetadata(pulumiPackage.name, PackageVersion.parse(pulumiPackage.version))
+      }
     }
-    def toPackageMetadata(defaultVersion: PackageVersion = PackageVersion.default)(implicit logger: Logger): PackageMetadata =
-      PackageMetadata(pulumiPackage.name, pulumiPackage.reconcileVersion(defaultVersion))
   }
 }

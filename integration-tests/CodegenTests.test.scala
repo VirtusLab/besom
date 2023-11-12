@@ -1,5 +1,6 @@
 package besom.integration.codegen
 
+import besom.codegen.PackageMetadata
 import besom.integration.common.*
 import munit.{Slow, TestOptions}
 import os.*
@@ -24,7 +25,7 @@ class CodegenTests extends munit.FunSuite {
     "enum-reference", // depends on google-native
     "external-enum", // depends on google-native
     "hyphen-url", // depends on azure-native
-    "external-resource-schema", // depends on kubernetes, aws, random
+    "external-resource-schema" // depends on kubernetes, aws, random
   )
 
   // FIXME: broken - codegen error
@@ -43,7 +44,7 @@ class CodegenTests extends munit.FunSuite {
     "resource-property-overlap", // codec not found
     "cyclic-types", // YAML schema is not supported
     "plain-and-default", // simple enum is not supported
-    "different-package-name-conflict", // deserialization issue
+    "different-package-name-conflict" // deserialization issue
   )
 
   val tests =
@@ -74,7 +75,7 @@ class CodegenTests extends munit.FunSuite {
     }
     test(options) {
       println(s"Test: $name")
-      val result = codegen.generatePackageFromSchema(data.schema)
+      val result = codegen.generatePackageFromSchema(PackageMetadata(data.name), data.schema)
       if (result.dependencies.nonEmpty)
         println(s"\nCompiling dependencies for ${result.schemaName}...")
       for (dep <- result.dependencies) {
@@ -88,5 +89,9 @@ class CodegenTests extends munit.FunSuite {
       }
       println()
     }
+  }
+
+  override def beforeAll(): Unit = {
+    pproc("scala-cli", "bloop", "exit").call()
   }
 }

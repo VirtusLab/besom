@@ -170,27 +170,22 @@ object codegen {
   }
 
   def generatePackage(
-    schemaName: SchemaName,
-    schemaVersion: SchemaVersion
-  ): generator.Result =
-    generatePackage(PackageMetadata(schemaName, schemaVersion))
-
-  def generatePackage(
     metadata: PackageMetadata,
     outputDir: Option[os.RelPath] = None
   ): generator.Result = {
     // noinspection TypeAnnotation
     implicit val config = CodegenConfig(outputDir = outputDir)
-    generator.generatePackageSources(Right(metadata))
+    generator.generatePackageSources(metadata)
   }
 
   def generatePackageFromSchema(
+    metadata: PackageMetadata,
     schema: os.Path,
     outputDir: Option[os.RelPath] = None
   ): generator.Result = {
     // noinspection TypeAnnotation
     implicit val config = CodegenConfig(outputDir = outputDir)
-    generator.generatePackageSources(Left(schema))
+    generator.generatePackageSources(metadata, Some(schema))
   }
 }
 
