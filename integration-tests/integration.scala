@@ -132,9 +132,9 @@ object scalaCli {
     "--suppress-directives-in-multiple-files-warning",
     "--jvm=17",
     "--bloop-jvm=17",
-    "--bloop-java-opt=\"-XX:-UseZGC\"",
-    "--bloop-java-opt=\"-XX:+UseUseParallelGC\"",
-    "--bloop-java-opt=\"-XX:ParallelGCThreads=120\"",
+    "--bloop-java-opt=-XX:-UseZGC",
+    "--bloop-java-opt=-XX:+UseUseParallelGC",
+    "--bloop-java-opt=-XX:ParallelGCThreads=120",
     additional
   )
 
@@ -147,9 +147,9 @@ object scalaCli {
     "--suppress-directives-in-multiple-files-warning",
     "--jvm=17",
     "--bloop-jvm=17",
-    "--bloop-java-opt=\"-XX:-UseZGC\"",
-    "--bloop-java-opt=\"-XX:+UseUseParallelGC\"",
-    "--bloop-java-opt=\"-XX:ParallelGCThreads=120\"",
+    "--bloop-java-opt=-XX:-UseZGC",
+    "--bloop-java-opt=-XX:+UseUseParallelGC",
+    "--bloop-java-opt=-XX:ParallelGCThreads=120",
     additional
   )
 }
