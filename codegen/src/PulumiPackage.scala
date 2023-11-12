@@ -126,7 +126,6 @@ case class ResourceDefinition(
   isOverlay: Boolean = false,
   methods: Map[String, String] = Map.empty,
   requiredInputs: List[String] = Nil
-  // stateInputs: ,
 )
 object ResourceDefinition {
   implicit val reader: Reader[ResourceDefinition] = macroR

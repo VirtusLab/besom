@@ -35,12 +35,32 @@ case class PulumiDefinitionCoordinates private (
     )
   }
 
-  def topLevelMethod(implicit logger: Logger): ScalaDefinitionCoordinates =
-    ScalaDefinitionCoordinates(
+  def topLevelMethod(implicit logger: Logger): ScalaDefinitionCoordinates = {
+    val coordinates = ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
       definitionName = mangleMethodName(definitionName)
     )
+    if (coordinates.definitionName.contains("/")) {
+      throw GeneralCodegenException(s"Top level function name ${coordinates.definitionName} containing a '/' is not allowed")
+    }
+    coordinates
+  }
+
+  def resourceMethod(name: String)(implicit logger: Logger): ScalaDefinitionCoordinates = {
+    if (definitionName != name) {
+      logger.warn(s"Resource method name '$name' does not match definition name '$definitionName', using the former")
+    }
+    val coordinates = ScalaDefinitionCoordinates(
+      providerPackageParts = providerPackageParts,
+      modulePackageParts = modulePackageParts,
+      definitionName = mangleMethodName(name)
+    )
+    if (coordinates.definitionName.contains("/")) {
+      throw GeneralCodegenException(s"Resource method name ${coordinates.definitionName} containing a '/' is not allowed")
+    }
+    coordinates
+  }
 
   def methodArgsClass(implicit logger: Logger): ScalaDefinitionCoordinates =
     ScalaDefinitionCoordinates(
