@@ -35,4 +35,26 @@ object PulumiToken {
       name = name
     )
   }
+
+  implicit class PulumiTokenOps(token: PulumiToken) {
+    private def tokenToMethodName: String =
+      token.name.split("/").map(_.capitalize).mkString("")
+
+    def toFunctionCoordinates(
+      moduleToPackageParts: String => Seq[String],
+      providerToPackageParts: String => Seq[String],
+      isMethod: Boolean
+    ): PulumiDefinitionCoordinates = {
+      val methodToken = if (isMethod) {
+        token.copy(name = tokenToMethodName)
+      } else {
+        token
+      }
+      PulumiDefinitionCoordinates.fromToken(
+        typeToken = methodToken,
+        moduleToPackageParts = moduleToPackageParts,
+        providerToPackageParts = providerToPackageParts
+      )
+    }
+  }
 }

@@ -91,7 +91,8 @@ class CodegenTests extends munit.FunSuite {
     }
   }
 
-  override def beforeAll(): Unit = {
-    pproc("scala-cli", "bloop", "exit").call()
-  }
+  // FIXME: broken - bloop is not starting
+//  override def beforeAll(): Unit = {
+//    pproc("scala-cli", "bloop", "exit").call()
+//  }
 }

@@ -382,28 +382,32 @@ class CodeGen(implicit
           |) extends ${resourceBaseClass} derives besom.ResourceDecoder""".stripMargin
 
     val (methodFiles, baseClassMethods) =
-      resourceDefinition.methods.toSeq.sortBy(_._1).map { case (name, token) =>
-        val (functionToken, functionCoordinates, functionDefinition) = tokenToFunction(token)
-        if (!isMethod(functionDefinition)) {
-          throw GeneralCodegenException(
-            s"Function ${name} is not a method, but a was requested by Resource ${typeToken.asString}"
-          )
+      resourceDefinition.methods.toSeq
+        .sortBy(_._1)
+        .map { case (name, token) =>
+          val (functionToken, functionCoordinates, functionDefinition) = tokenToFunction(token)
+          if (!isMethod(functionDefinition)) {
+            throw GeneralCodegenException(
+              s"Function ${name} is not a method, but a was requested by Resource ${typeToken.asString}"
+            )
+          }
+          val methodCoordinates = functionCoordinates.resourceMethod
+          val (argsClassSourceFile, resultClassSourceFileOpt, argsClassRef, argsDefault, resultTypeRef) =
+            functionSupport(functionCoordinates, functionDefinition)
+          val files = Seq(argsClassSourceFile) ++ resultClassSourceFileOpt
+
+          val thisTypeRef = baseClassCoordinates.fullyQualifiedTypeRef
+          val tokenLiteral = Lit.String(functionToken.asString)
+          val code =
+            s"""|  def ${Term.Name(methodCoordinates.definitionName)}(using ctx: besom.types.Context)(
+                |    args: ${argsClassRef}${argsDefault},
+                |  ): besom.types.Output[${resultTypeRef}] =
+                |     ctx.call[$argsClassRef, $resultTypeRef, $thisTypeRef](${tokenLiteral}, args, this)
+                |""".stripMargin
+
+          (files, code)
         }
-        val methodCoordinates = functionCoordinates.resourceMethod(name)
-        val (argsClassSourceFile, resultClassSourceFileOpt, argsClassRef, argsDefault, resultTypeRef) =
-          functionSupport(functionCoordinates, functionDefinition)
-        val files = Seq(argsClassSourceFile) ++ resultClassSourceFileOpt
-
-        val tokenLiteral = Lit.String(functionToken.asString)
-        val code =
-          s"""|def ${Term.Name(methodCoordinates.definitionName)}(using ctx: besom.types.Context)(
-              |  args: ${argsClassRef}${argsDefault},
-              |): besom.types.Output[${resultTypeRef}] =
-              |   ctx.call[$argsClassRef, $resultTypeRef](${tokenLiteral}, args, this)
-              |""".stripMargin
-
-        (files, code)
-      }.unzip
+        .unzip
 
     val hasDefaultArgsConstructor = requiredInputs.forall { propertyName =>
       val propertyDefinition = resourceDefinition.inputProperties(propertyName)
@@ -438,7 +442,7 @@ class CodeGen(implicit
           |
           |${baseClassComment}
           |${baseClass}${if (baseClassMethods.nonEmpty) ":" else ""}
-          |${baseClassMethods.map(meth => s"  ${meth}").mkString("\n")}
+          |${baseClassMethods.mkString("\n")}
           |
           |${baseCompanion}
           |""".stripMargin
@@ -478,7 +482,7 @@ class CodeGen(implicit
     functionDefinition: FunctionDefinition,
     functionToken: PulumiToken
   ): Seq[SourceFile] = {
-    val methodCoordinates = functionCoordinates.topLevelMethod
+    val methodCoordinates = functionCoordinates.resourceMethod
 
     val (argsClassSourceFile, resultClassSourceFileOpt, argsClassRef, argsDefault, resultTypeRef) =
       functionSupport(functionCoordinates, functionDefinition)
@@ -839,15 +843,19 @@ object CodeGen {
       case Some(functionDefinition) =>
         val moduleToPackageParts   = pulumiPackage.moduleToPackageParts
         val providerToPackageParts = pulumiPackage.providerToPackageParts
-        val functionCoordinates =
-          PulumiDefinitionCoordinates.fromRawToken(functionToken, moduleToPackageParts, providerToPackageParts)
-        (PulumiToken(functionToken), functionCoordinates, functionDefinition)
+        val token                  = PulumiToken(functionToken)
+        val functionCoordinates = token.toFunctionCoordinates(
+          moduleToPackageParts,
+          providerToPackageParts,
+          isMethod = CodeGen.isMethod(functionDefinition)
+        )
+        (token, functionCoordinates, functionDefinition)
       case None =>
         throw GeneralCodegenException(s"Function ${functionToken} not found, but requested by a resource as method")
     }
   }
 
-  private def isMethod(functionDefinition: FunctionDefinition) =
+  def isMethod(functionDefinition: FunctionDefinition): Boolean =
     functionDefinition.inputs.properties.isDefinedAt(Utils.selfParameterName)
 
   private def decapitalize(s: String) = s(0).toLower.toString ++ s.substring(1, s.length)

@@ -69,6 +69,12 @@ trait Context extends TaskTracker:
     opts: InvokeOptions
   )(using Context): Output[R]
 
+  private[besom] def call[A: ArgsEncoder, D: Decoder, R <: Resource](
+    token: FunctionToken,
+    args: A,
+    resource: R
+  )(using Context): Output[D]
+
   private[besom] def close(): Result[Unit]
 
 class ComponentContext(private val globalContext: Context, private val componentURN: Result[URN]) extends Context:
@@ -177,6 +183,13 @@ class ContextImpl(
     opts: InvokeOptions
   )(using Context): Output[R] =
     ??? // TODO: ResourceOps().invoke[A, R](token, args, opts)
+
+  override private[besom] def call[A: ArgsEncoder, D: Decoder, R <: Resource](
+    token: FunctionToken,
+    args: A,
+    resource: R
+  )(using Context): Output[D] =
+    ???
 
 object Context:
 
