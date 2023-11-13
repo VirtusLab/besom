@@ -35,27 +35,37 @@ case class PulumiDefinitionCoordinates private (
     )
   }
 
-  def resourceMethod(implicit logger: Logger): ScalaDefinitionCoordinates = {
-    ScalaDefinitionCoordinates(
-      providerPackageParts = providerPackageParts,
-      modulePackageParts = modulePackageParts,
-      definitionName = mangleMethodName(definitionName)
-    )
+  private def splitMethodName(definitionName: String): (Seq[String], String) = {
+    val methodNameParts = definitionName.split("/")
+    val methodName = methodNameParts.last
+    val methodPrefix = methodNameParts.init.filterNot(_ == methodName) // filter out the function name duplication
+    (methodPrefix, methodName)
   }
 
-  def methodArgsClass(implicit logger: Logger): ScalaDefinitionCoordinates =
+  def resourceMethod(implicit logger: Logger): ScalaDefinitionCoordinates = {
+    val (methodPrefix, methodName) = splitMethodName(definitionName)
+    ScalaDefinitionCoordinates(
+      providerPackageParts = providerPackageParts,
+      modulePackageParts = modulePackageParts ++ methodPrefix,
+      definitionName = mangleMethodName(methodName)
+    )
+  }
+  def methodArgsClass(implicit logger: Logger): ScalaDefinitionCoordinates = {
+    val (methodPrefix, methodName) = splitMethodName(definitionName)
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
-      definitionName = mangleTypeName(capitalize(definitionName)) + "Args"
+      definitionName = (methodPrefix :+ mangleTypeName(methodName)).mkString("") + "Args"
     )
-
-  def methodResultClass(implicit logger: Logger): ScalaDefinitionCoordinates =
+  }
+  def methodResultClass(implicit logger: Logger): ScalaDefinitionCoordinates = {
+    val (methodPrefix, methodName) = splitMethodName(definitionName)
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
-      definitionName = mangleTypeName(capitalize(definitionName)) + "Result"
+      definitionName = (methodPrefix :+ mangleTypeName(methodName)).mkString("") + "Result"
     )
+  }
 }
 
 object PulumiDefinitionCoordinates {

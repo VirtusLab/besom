@@ -396,7 +396,7 @@ class CodeGen(implicit
             functionSupport(functionCoordinates, functionDefinition)
           val files = Seq(argsClassSourceFile) ++ resultClassSourceFileOpt
 
-          val thisTypeRef = baseClassCoordinates.fullyQualifiedTypeRef
+          val thisTypeRef  = baseClassCoordinates.fullyQualifiedTypeRef
           val tokenLiteral = Lit.String(functionToken.asString)
           val code =
             s"""|  def ${Term.Name(methodCoordinates.definitionName)}(using ctx: besom.types.Context)(
@@ -512,12 +512,13 @@ class CodeGen(implicit
   ) = {
     val requiredInputs = functionDefinition.inputs.required
     val inputProperties =
-      functionDefinition.inputs.properties.toSeq.sortBy(_._1).collect { case (propertyName, propertyDefinition) =>
-        makePropertyInfo(
-          propertyName = propertyName,
-          propertyDefinition = propertyDefinition,
-          isPropertyRequired = requiredInputs.contains(propertyName)
-        )
+      functionDefinition.inputs.properties.toSeq.sortBy(_._1).filterNot(_._1 == Utils.selfParameterName).collect {
+        case (propertyName, propertyDefinition) =>
+          makePropertyInfo(
+            propertyName = propertyName,
+            propertyDefinition = propertyDefinition,
+            isPropertyRequired = requiredInputs.contains(propertyName)
+          )
       }
 
     val argsClassCoordinates = functionCoordinates.methodArgsClass
@@ -844,11 +845,8 @@ object CodeGen {
         val moduleToPackageParts   = pulumiPackage.moduleToPackageParts
         val providerToPackageParts = pulumiPackage.providerToPackageParts
         val token                  = PulumiToken(functionToken)
-        val functionCoordinates = token.toFunctionCoordinates(
-          moduleToPackageParts,
-          providerToPackageParts,
-          isMethod = CodeGen.isMethod(functionDefinition)
-        )
+        val functionCoordinates =
+          PulumiDefinitionCoordinates.fromToken(token, moduleToPackageParts, providerToPackageParts)
         (token, functionCoordinates, functionDefinition)
       case None =>
         throw GeneralCodegenException(s"Function ${functionToken} not found, but requested by a resource as method")
@@ -857,8 +855,6 @@ object CodeGen {
 
   def isMethod(functionDefinition: FunctionDefinition): Boolean =
     functionDefinition.inputs.properties.isDefinedAt(Utils.selfParameterName)
-
-  private def decapitalize(s: String) = s(0).toLower.toString ++ s.substring(1, s.length)
 }
 
 case class FilePath private (pathParts: Seq[String]) {
