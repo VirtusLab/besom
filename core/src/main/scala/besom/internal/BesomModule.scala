@@ -3,11 +3,44 @@ package besom.internal
 import com.google.protobuf.struct.*
 import besom.internal.logging.{LocalBesomLogger => logger, BesomLogger}
 
+/** An abstract effect Besom module, which can be implemented for different effect types.
+  * @tparam Eff
+  *   the effect type
+  * @see
+  *   [[besom.Pulumi]]
+  * @see
+  *   [[besom.internal.BesomModule]]
+  * @see
+  *   [[besom.internal.BesomSyntax]]
+  */
 trait EffectBesomModule extends BesomSyntax:
   type Eff[+A]
 
   protected lazy val rt: Runtime[Eff]
 
+  /** Run a [[besom.Pulumi]] program in the Besom [[besom.Context]] and export Stack outputs.
+    *
+    * Inside `Pulumi.run` block you can use all methods without `Pulumi.` prefix. All functions that belong to Besom program but are defined
+    * outside the `Pulumi.run` block should have the following using clause: `(using Context)` or `(using besom.Context)` using a fully
+    * qualified name of the type.
+    *
+    * Example:
+    * {{{
+    * import besom.*
+    * import besom.api.aws
+    *
+    * @main def run = Pulumi.run {
+    *   for
+    *     bucket <- aws.s3.Bucket("my-bucket")
+    *   yield exports(
+    *     bucketUrl = bucket.websiteEndpoint
+    *   )
+    * }
+    * }}}
+    *
+    * @param program
+    *   the program to run
+    */
   def run(program: Context ?=> Output[Exports]): Unit =
     val everything: Result[Unit] = Result.scoped {
       for
@@ -36,6 +69,12 @@ trait EffectBesomModule extends BesomSyntax:
       case Right(_) =>
         sys.exit(0)
 
+/** The Besom module provides the core functionality of the Besom runtime.
+  * @see
+  *   [[besom.Pulumi]]
+  * @see
+  *   [[besom.internal.EffectBesomModule]]
+  */
 trait BesomModule extends EffectBesomModule {
   export besom.types.{*, given}
   export besom.util.interpolator.{*, given}

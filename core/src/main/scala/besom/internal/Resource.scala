@@ -8,13 +8,21 @@ import scala.deriving.Mirror
 import scala.annotation.implicitNotFound
 import besom.util.*
 
+/** An abstract representation of a Pulumi resource. It is used to register resources with the Pulumi engine.
+  */
 sealed trait Resource:
+  /** @return
+    *   the URN of the resource
+    */
   def urn: Output[URN]
   private[internal] def isCustom: Boolean = this match
     case _: CustomResource => true
     case _                 => false
 
 trait CustomResource extends Resource:
+  /** @return
+    *   the [[ResourceId]] of the resource
+    */
   def id: Output[ResourceId]
 
 trait ComponentResource(using
@@ -23,6 +31,9 @@ trait ComponentResource(using
   )
   base: ComponentBase
 ) extends Resource:
+  /** @return
+    *   the URN of the resource
+    */
   override def urn: Output[URN] = base.urn
 
 trait ProviderResource extends CustomResource:

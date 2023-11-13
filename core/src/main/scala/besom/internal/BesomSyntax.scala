@@ -1,28 +1,88 @@
 package besom.internal
 
-import besom.internal.logging.BesomLogger
 import scala.reflect.Typeable
 import besom.util.NonEmptyString
 import besom.types.ResourceType
 import besom.types.URN
 
-/*
- * This trait is the main export point that exposes Besom specific functions and types to the user.
- * The only exception is the Output object which is exposed in BesomModule which extends this trait.
- */
+/** This trait is the main export point that exposes Besom specific functions and types to the user. The only exception
+  * is the [[Output]] object which is exposed in [[BesomModule]] which extends this trait.
+  * @see
+  *   [[besom.Pulumi]]
+  * @see
+  *   [[besom.internal.BesomModule]]
+  * @see
+  *   [[besom.internal.EffectBesomModule]]
+  */
 trait BesomSyntax:
+
+  /** A dry run is a program evaluation for purposes of planning, instead of performing a true deployment.
+    * @param ctx
+    *   the Besom context
+    * @return
+    *   true if the current run is a dry run
+    */
   def isDryRun(using ctx: Context): Boolean = ctx.isDryRun
 
+  /** Returns the current project configuration.
+    * @param ctx
+    *   the Besom context
+    * @return
+    *   the current project [[Config]] instance
+    */
   def config(using ctx: Context): Config = ctx.config
 
+  /** Returns the current project logger.
+    * @param ctx
+    *   the Besom context
+    * @return
+    *   the current project [[besom.aliases.Logger]] instance
+    */
   def log(using ctx: Context): besom.aliases.Logger =
     besom.internal.logging.UserLoggerFactory(using ctx)
 
+  /** The current project [[besom.types.URN]]
+    * @param ctx
+    *   the Besom context
+    * @return
+    *   the current project [[besom.types.URN]] instance
+    */
   def urn(using ctx: Context): Output[URN] =
     Output.ofData(ctx.getParentURN.map(OutputData(_)))
 
+  /** The [[Export]] instance that exposes [[besom.aliases.Output]] instances as Pulumi Stack outputs.
+   * 
+   * All arguments of `exports(...)` must be explicitly named, because [[besom.internal.Exports]] are dynamic, e.g.:
+   *
+   * {{{
+   * import besom.*
+   * import besom.api.aws
+   *
+   * @main def run = Pulumi.run {
+   *   for
+   *     bucket <- aws.s3.Bucket("my-bucket")
+   *   yield exports(
+   *     bucketUrl = bucket.websiteEndpoint
+   *   )
+   * }
+   * }}}
+    */
   val exports: Export.type = Export
 
+  /** Creates a new component resource.
+    * @param name
+    *   a unique resource name for this component
+    * @param typ
+    *   the Pulumi [[ResourceType]] of the component resource
+    * @param f
+    *   the block of code that defines all the resources that should belong to the component
+    * @param ctx
+    *   the Besom context
+    * @tparam A
+    *   the type of the component resource
+    * @return
+    *   the component resource instance
+    */
   def component[A <: ComponentResource & Product: RegistersOutputs: Typeable](name: NonEmptyString, typ: ResourceType)(
     f: Context ?=> ComponentBase ?=> A | Output[A]
   )(using ctx: Context): Output[A] =

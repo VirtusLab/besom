@@ -8,9 +8,9 @@ import scala.collection.BuildFrom
   *
   * Invariant: dataResult has to be registered in TaskTracker by the time it reaches the constructor here!
   * @param dataResult
-  *   Effect of type Result[A]
+  *   Effect of type [[Result]][A]
   * @param ctx
-  *   Context
+  *   the Besom [[Context]]
   */
 class Output[+A] private[internal] (using private[besom] val ctx: Context)(
   private val dataResult: Result[OutputData[A]]
@@ -77,7 +77,9 @@ trait OutputFactory:
     coll: CC[A]
   )(
     f: A => Output[B]
-  )(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] = sequence(coll.map(f).asInstanceOf[CC[Output[B]]])
+  )(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] = sequence(
+    coll.iterator.map(f).asInstanceOf[CC[Output[B]]]
+  )
   def fail(t: Throwable)(using Context): Output[Nothing] = Output.fail(t)
 trait OutputExtensionsFactory:
   implicit final class OutputSequenceOps[A, CC[X] <: IterableOnce[X], To](coll: CC[Output[A]]):
@@ -85,7 +87,26 @@ trait OutputExtensionsFactory:
       Output.sequence(coll)
   implicit final class OutputTraverseOps[A, CC[X] <: IterableOnce[X]](coll: CC[A]):
     def traverse[B, To](f: A => Output[B])(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] =
-      coll.map(f).asInstanceOf[CC[Output[B]]].sequence
+      coll.iterator.map(f).asInstanceOf[CC[Output[B]]].sequence
+  implicit final class OutputOptionOps[A](output: Output[Option[A]]):
+    def getOrElse[B >: A](default: => B | Output[B])(using ctx: Context): Output[B] =
+      output.flatMap { opt =>
+        opt match
+          case Some(a) => Output(a)
+          case None =>
+            default match
+              case b: Output[B] => b
+              case b: B         => Output(b)
+      }
+    def orElse[B >: A](alternative: => Option[B] | Output[Option[B]])(using ctx: Context): Output[Option[B]] =
+      output.flatMap { opt =>
+        opt match
+          case some @ Some(_) => Output(some)
+          case None =>
+            alternative match
+              case b: Output[Option[B]] => b
+              case b: Option[B]         => Output(b)
+      }
 
 object Output:
   // should be NonEmptyString

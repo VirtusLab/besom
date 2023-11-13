@@ -66,6 +66,27 @@ object pulumi {
     additional
   )
 
+  def config(stackName: String, additional: os.Shellable*) = pproc(
+    "pulumi",
+    "--non-interactive",
+    "config",
+    "--stack",
+    stackName,
+    "set",
+    additional
+  )
+
+  def secret(stackName: String, additional: os.Shellable*) = pproc(
+    "pulumi",
+    "--non-interactive",
+    "config",
+    "--stack",
+    stackName,
+    "set",
+    "--secret",
+    additional
+  )
+
   def installScalaPlugin() =
     pproc(
       "pulumi",

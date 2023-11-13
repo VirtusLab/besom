@@ -3,6 +3,7 @@ package besom.internal
 import besom.util.NonEmptyString
 import scala.util.Try
 
+//noinspection TypeAnnotation
 object Env:
   // LB: copied verbatim from pulumi-go :P
 
