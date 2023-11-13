@@ -342,7 +342,9 @@ class CodeGen(implicit
     }
 
     val stateInputs = resourceDefinition.stateInputs.properties.toSeq.sortBy(_._1)
-    stateInputs.foreach(i => logger.warn(s"State inputs are not supported yet, ignoring ${i._1}"))
+    if (stateInputs.nonEmpty) {
+        logger.warn(s"State inputs are not supported yet, ignoring ${stateInputs.size} state inputs for ${typeToken.asString}")
+    }
 
     val baseClassParams = resourceProperties.map { propertyInfo =>
       val innerType =
@@ -731,7 +733,7 @@ class CodeGen(implicit
   ): String = {
     val derivedTypeclasses =
       if (isProvider) "besom.types.ProviderArgsEncoder"
-      else if (isResource) "besom.types.ArgsEncoder"
+      else if (isResource) "besom.types.Encoder, besom.types.ArgsEncoder"
       else "besom.types.Encoder, besom.types.ArgsEncoder"
     val argsClassParams = inputProperties.map { propertyInfo =>
       val fieldType =
