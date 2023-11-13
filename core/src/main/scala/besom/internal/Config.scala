@@ -6,117 +6,64 @@ import scala.util.Try
 
 class Config private (
   val namespace: NonEmptyString,
-  private val isProjectName: Boolean,
-  private val configMap: Map[String, String],
-  private val configSecretKeys: Set[String]
+  private[internal] val isProjectName: Boolean,
+  private[internal] val configMap: Map[NonEmptyString, String],
+  private[internal] val configSecretKeys: Set[NonEmptyString]
 ):
-  private def fullKey(key: String): String = namespace + ":" + key
+  private def fullKey(key: NonEmptyString): NonEmptyString = namespace +++ ":" +++ key
 
-  private def tryGet(key: String): Option[String] = configMap.get(fullKey(key)) match
+  private def tryGet(key: NonEmptyString): Option[String] = configMap.get(fullKey(key)) match
     case sme: Some[?] => sme
     case None if isProjectName => configMap.get(key)
     case None => None
 
-  private[besom] def unsafeGet(key: String): Option[String] = tryGet(key)
+  private[besom] def unsafeGet(key: NonEmptyString): Option[String] = tryGet(key)
 
-  /** This method differs in behavior from other Pulumi SDKs. In other SDKs, if you try to get a config key that is a
-    * secret, you will obtain it (due to https://github.com/pulumi/pulumi/issues/7127 you won't even get a warning). We
-    * choose to do the right thing here and not return the secret value as an unmarked plain string. For provider sdks
-    * we have the unsafeGet method should it be absolutely necessary in practice. We also return all configs as Outputs
-    * so that we can handle failure in pure, functional way.
-    */
-  def get(key: String)(using ctx: Context): Output[String] =
-    if configSecretKeys.contains(key) then
-      val result: Result[OutputData[String]] =
-        ctx.logger.warn(s"Config key $key is a secret, refusing to fetch it as a plain string!") *>
-          Result.pure(OutputData.empty())
+  private def getRawValue(key: NonEmptyString)(using ctx: Context): Output[Option[String]] =
+    if configSecretKeys.contains(key)
+      then Output.secret(tryGet(key))
+      else Output(tryGet(key))
 
-      Output.ofData(result)
-    else Output.ofData(OutputData(Set.empty, tryGet(key), isSecret = false))
-
-  def getSecret(key: String)(using ctx: Context): Output[String] =
-    if configSecretKeys.contains(key) then
-      Output.ofData(OutputData(Set.empty, tryGet(key), isSecret = true))
-    else
-      Output.ofData(
-        ctx.logger.warn(s"Config key $key is not a secret") *> Result.pure(OutputData.empty(isSecret = true))
-      )
-
-  def getDouble(key: String)(using Context): Output[Double] =
-    get(key).flatMap { value =>
+  private def readConfigValue[A : ConfigValueReader](key: NonEmptyString, rawValue: Output[Option[String]])(using Context): Output[Option[A]] =
+    rawValue.flatMap { valueOpt =>
       Output.ofData {
         Result
           .evalEither(
-            Try(value.toDouble).toEither.left.map(_ =>
-              RuntimeException(s"Config value $key is not a valid double: $value")
-            )
+            valueOpt.map(value => summon[ConfigValueReader[A]].read(key = key, rawValue = value)) match
+              case None => Right(None)
+              case Some(Right(value)) => Right(Some(value))
+              case Some(Left(error)) => Left(error)
           )
           .map(OutputData(_))
       }
     }
 
-  def getInt(key: String)(using Context): Output[Int] =
-    get(key).flatMap { value =>
-      Output.ofData {
-        Result
-          .evalEither(
-            Try(value.toInt).toEither.left.map(_ => RuntimeException(s"Config value $key is not a valid int: $value"))
-          )
-          .map(OutputData(_))
-      }
+  def get[A : ConfigValueReader](key: NonEmptyString)(using Context): Output[Option[A]] =
+    readConfigValue(key, getRawValue(key))
+
+  def require[A : ConfigValueReader](key: NonEmptyString)(using Context): Output[A] =
+    get[A](key).flatMap { valueOpt =>
+      valueOpt match
+        case Some(value) => Output(value)
+        case None => Output.fail {
+          val message =
+            s"""|Missing required configuration variable '${key}'
+                |Please set a value using the command `pulumi config set ${key} <value> [--secret]`""".stripMargin
+          new Exception(message)
+        }
     }
 
-  def getBoolean(key: String)(using Context): Output[Boolean] =
-    get(key).flatMap { value =>
-      Output.ofData {
-        Result
-          .evalEither(
-            Try(value.toBoolean).toEither.left.map(_ =>
-              RuntimeException(s"Config value $key is not a valid boolean: $value")
-            )
-          )
-          .map(OutputData(_))
-      }
-    }
-
-  def getSecretDouble(key: String)(using Context): Output[Double] =
-    getSecret(key).flatMap { value =>
-      Output.ofData {
-        Result
-          .evalEither(
-            Try(value.toDouble).toEither.left.map(_ =>
-              RuntimeException(s"Secret config value $key is not a valid double: $value")
-            )
-          )
-          .map(OutputData(_))
-      }
-    }
-
-  def getSecretInt(key: String)(using Context): Output[Int] =
-    getSecret(key).flatMap { value =>
-      Output.ofData {
-        Result
-          .evalEither(
-            Try(value.toInt).toEither.left.map(_ =>
-              RuntimeException(s"Secret config value $key is not a valid int: $value")
-            )
-          )
-          .map(OutputData(_))
-      }
-    }
-
-  def getSecretBoolean(key: String)(using Context): Output[Boolean] =
-    getSecret(key).flatMap { value =>
-      Output.ofData {
-        Result
-          .evalEither(
-            Try(value.toBoolean).toEither.left.map(_ =>
-              RuntimeException(s"Secret config value $key is not a valid boolean: $value")
-            )
-          )
-          .map(OutputData(_))
-      }
-    }
+  def getString(key: NonEmptyString)(using Context): Output[Option[String]] = get[String](key)
+  def requireString(key: NonEmptyString)(using Context): Output[String] = require[String](key)
+  
+  def getDouble(key: NonEmptyString)(using Context): Output[Option[Double]] = get[Double](key)
+  def requireDouble(key: NonEmptyString)(using Context): Output[Double] = require[Double](key)
+  
+  def getInt(key: NonEmptyString)(using Context): Output[Option[Int]] = get[Int](key)
+  def requireInt(key: NonEmptyString)(using Context): Output[Int] = require[Int](key)
+  
+  def getBoolean(key: NonEmptyString)(using Context): Output[Option[Boolean]] = get[Boolean](key)
+  def requireBoolean(key: NonEmptyString)(using Context): Output[Boolean] = require[Boolean](key)
 
 object Config:
   /** CleanKey takes a configuration key, and if it is of the form "(string):config:(string)" removes the ":config:"
@@ -125,7 +72,7 @@ object Config:
     * stop supporting older packages, we can change the language host to not add this :config: thing and remove this
     * function.
     */
-  def cleanKey(key: String): String =
+  private def cleanKey(key: String): String =
     val prefix = "config:"
     val idx    = key.indexOf(":")
 
@@ -133,7 +80,7 @@ object Config:
       key.substring(0, idx) + ":" + key.substring(idx + 1 + prefix.length)
     else key
 
-  def apply(
+  private[internal] def apply(
     namespace: NonEmptyString,
     isProjectName: Boolean,
     configMap: Map[NonEmptyString, String],
@@ -142,7 +89,12 @@ object Config:
     new Config(
       namespace = namespace,
       isProjectName = isProjectName,
-      configMap = configMap.map { case (k, v) => (cleanKey(k), v) },
+      configMap = configMap.map { case (k, v) =>
+        val cleanedKey = NonEmptyString(cleanKey(k)).getOrElse {
+          throw new Exception(s"The config key ${k} was empty after cleaning")
+        }
+        (cleanedKey, v)
+      },
       configSecretKeys = configSecretKeys.map(identity)
     )
   }
@@ -156,10 +108,14 @@ object Config:
       config           <- Config(namespace, isProjectName, configMap, configSecretKeys)
     yield config
 
-  def forNamespace(namespace: NonEmptyString): Result[Config] =
-    Config(namespace, isProjectName = false)
+  private[internal] def forNamespace(
+    namespace: NonEmptyString,
+    configMap: Map[NonEmptyString, String],
+    configSecretKeys: Set[NonEmptyString]
+  ): Result[Config] =
+    Config(namespace, isProjectName = false, configMap = configMap, configSecretKeys = configSecretKeys)
 
-  def forProject(projectName: NonEmptyString): Result[Config] =
+  private[internal] def forProject(projectName: NonEmptyString): Result[Config] =
     val cleanedProjectName =
       if projectName.endsWith(":config") then
         NonEmptyString(projectName.replaceAll(":config$", "")).getOrElse {
@@ -168,6 +124,25 @@ object Config:
       else projectName
     Config(projectName, isProjectName = true)
 
+  extension (output: Output[Config])
+    def get[A : ConfigValueReader](key: NonEmptyString)(using Context): Output[Option[A]] =
+      output.flatMap(_.get[A](key))
+    def require[A : ConfigValueReader](key: NonEmptyString)(using Context): Output[A] =
+      output.flatMap(_.require[A](key))
+
+    def getString(key: NonEmptyString)(using Context): Output[Option[String]] = output.flatMap(_.getString(key))
+    def requireString(key: NonEmptyString)(using Context): Output[String] = output.flatMap(_.requireString(key))
+
+    def getDouble(key: NonEmptyString)(using Context): Output[Option[Double]] = output.flatMap(_.getDouble(key))
+    def requireDouble(key: NonEmptyString)(using Context): Output[Double] = output.flatMap(_.requireDouble(key))
+    
+    def getInt(key: NonEmptyString)(using Context): Output[Option[Int]] = output.flatMap(_.getInt(key))
+    def requireInt(key: NonEmptyString)(using Context): Output[Int] = output.flatMap(_.requireInt(key))
+
+    def getBoolean(key: NonEmptyString)(using Context): Output[Option[Boolean]] = output.flatMap(_.getBoolean(key))
+    def requireBoolean(key: NonEmptyString)(using Context): Output[Boolean] = output.flatMap(_.requireBoolean(key))
+
 trait ConfigFactory:
   def apply(namespace: NonEmptyString)(using Context): Output[Config] =
-    Output(Config.forNamespace(namespace))
+    val projectConfig = summon[Context].config
+    Output(Config.forNamespace(namespace, projectConfig.configMap, projectConfig.configSecretKeys))

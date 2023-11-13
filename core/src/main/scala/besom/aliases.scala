@@ -15,8 +15,6 @@ object aliases:
   type Logger = besom.internal.logging.UserLoggerFactory
   type NonEmptyString = besom.util.NonEmptyString
   object NonEmptyString extends besom.util.NonEmptyStringFactory
-  object NonEmptyStringExtensions extends besom.util.NonEmptyStringExtensionsFactory
-  export NonEmptyStringExtensions.*
   type Decoder[A] = besom.internal.Decoder[A]
   type Encoder[A] = besom.internal.Encoder[A]
   type ArgsEncoder[A] = besom.internal.ArgsEncoder[A]
