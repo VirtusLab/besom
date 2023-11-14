@@ -107,6 +107,14 @@ The recommended practice is to **check stack files into source control** as a me
 Since secret values are encrypted, it is safe to check in these stack settings.
 :::
 
+##### Stack information from code
+
+You can access stack information from your [program](#programs) context using the `urn` method, e.g.:
+```scala
+urn.map(_.stack) // the stack name
+urn.map(_.project) // the stack name
+```
+
 ##### Stack Outputs
 
 Stacks can export values as [Stack Outputs](https://www.pulumi.com/docs/concepts/stack/#outputs).
@@ -136,6 +144,14 @@ Resources are defined using a [**resource constructor**](constructors.md). Each 
   The logical name establishes a notion of identity within Pulumi, and the physical name is used as identity by the provider
 - a [resource type](https://www.pulumi.com/docs/concepts/resources/names/#types), which identifies the provider and the kind of resource being created
 - [URN](https://www.pulumi.com/docs/concepts/resources/names/#types), which is an automatically constructed globally unique identifier for the resource.
+
+```scala
+val redisNamespace = Namespace(s"redis-cluster-namespace-$name")
+redisNamespace.id // the physical name
+redisNamespace.urn // the globally unique identifier
+redisNamespace.urn.map(_.resourceName) // the logical name
+redisNamespace.urn.map(_.resourceType) // the resource type
+```
 
 Each resource can also have:
 - a set of [arguments](https://www.pulumi.com/docs/concepts/resources/properties/) that define the behavior of the resulting infrastructure
