@@ -25,7 +25,6 @@ of execution that leverage the preferred datatype of the user. While this archit
 can be done currently in standalone Pulumi programs, in the future we are going to support Pulumi's Automation API 
 which allows users to directly embed Besom into their applications. 
 It is at that point when direct integration with all 3 technological stacks will be the most meaningful.
-​
 
 Besom stands alone in this choice and due to it **has some differences** in comparison to how other Pulumi SDKs operate. 
 
