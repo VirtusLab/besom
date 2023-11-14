@@ -69,8 +69,6 @@ trait Context extends TaskTracker:
     opts: InvokeOptions
   )(using Context): Output[R]
 
-  private[besom] def close(): Result[Unit]
-
 class ComponentContext(private val globalContext: Context, private val componentURN: Result[URN]) extends Context:
   export globalContext.{getParentURN => _, *}
 
@@ -153,12 +151,6 @@ class ContextImpl(
     BesomMDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
       ResourceOps().registerResourceOutputsInternal(urnResult, outputs)
     }
-
-  override private[besom] def close(): Result[Unit] =
-    for
-      _ <- monitor.close()
-      _ <- engine.close()
-    yield ()
 
   private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
     typ: ResourceType,

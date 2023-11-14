@@ -23,7 +23,7 @@ trait EffectBesomModule extends BesomSyntax:
         featureSupport <- FeatureSupport(monitor)
         _              <- logger.trace(s"Environment:\n${sys.env.toSeq.sortBy(_._1).map((k, v) => s"$k: $v").mkString("\n")}")
         _              <- logger.debug(s"Resolved feature support, spawning context and executing user program.")
-        ctx            <- Result.resource(Context(runInfo, taskTracker, monitor, engine, logger, featureSupport, config))(_.close())
+        ctx            <- Context(runInfo, taskTracker, monitor, engine, logger, featureSupport, config)
         userOutputs    <- program(using ctx).map(_.toResult).getValueOrElse(Result.pure(Struct()))
         _              <- Stack.registerStackOutputs(runInfo, userOutputs)(using ctx)
         _              <- ctx.waitForAllTasks
@@ -33,10 +33,10 @@ trait EffectBesomModule extends BesomSyntax:
     rt.unsafeRunSync(everything.run(using rt)) match
       case Left(err) =>
         throw err
-      case Right(_)  =>
+      case Right(_) =>
         sys.exit(0)
 
 trait BesomModule extends EffectBesomModule {
-  export besom.types.{ *, given }
-  export besom.util.interpolator.{ *, given }
+  export besom.types.{*, given}
+  export besom.util.interpolator.{*, given}
 }
