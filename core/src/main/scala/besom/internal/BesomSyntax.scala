@@ -21,6 +21,12 @@ trait BesomSyntax:
   def urn(using ctx: Context): Output[URN] =
     Output.ofData(ctx.getParentURN.map(OutputData(_)))
 
+  /**
+   * @param ctx the Besom context
+   * @return the organization of the current stack.
+   */
+  def organization(using ctx: Context): Option[NonEmptyString] = ctx.organization
+
   val exports: Export.type = Export
 
   def component[A <: ComponentResource & Product: RegistersOutputs: Typeable](name: NonEmptyString, typ: ResourceType)(

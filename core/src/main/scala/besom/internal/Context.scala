@@ -26,7 +26,7 @@ trait Context extends TaskTracker:
   private[besom] def monitor: Monitor
   private[besom] def getParentURN: Result[URN]
   private[besom] def config: Config
-
+  private[besom] def organization: Option[NonEmptyString]
   private[besom] def isDryRun: Boolean
   private[besom] def logger: BesomLogger
 
@@ -92,6 +92,8 @@ class ContextImpl(
   export taskTracker.{registerTask, waitForAllTasks, fail}
 
   override private[besom] def isDryRun: Boolean = runInfo.dryRun
+  
+  override private[besom] def organization: Option[NonEmptyString] = runInfo.organization
 
   override private[besom] def getParentURN: Result[URN] =
     stackPromise.get.flatMap(_.urn.getData).map(_.getValue).flatMap {

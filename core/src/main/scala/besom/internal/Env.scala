@@ -10,6 +10,8 @@ object Env:
   private[internal] final val EnvProject = "PULUMI_PROJECT"
   // EnvStack is the envvar used to read the current Pulumi stack name.
   private[internal] final val EnvStack = "PULUMI_STACK"
+  // EnvOrganization is the envvar used to read the current Pulumi organization name.
+  private[internal] final val EnvOrganization = "PULUMI_ORGANIZATION"
   // EnvConfig is the envvar used to read the current Pulumi configuration variables.
   private[internal] final val EnvConfig = "PULUMI_CONFIG"
   // EnvConfigSecretKeys is the envvar used to read the current Pulumi configuration keys that are secrets.
@@ -61,6 +63,7 @@ object Env:
   lazy val traceRunToFile  = getMaybe(EnvEnableTraceLoggingToFile).map(isTruthy).getOrElse(false)
   lazy val project         = getOrFail(EnvProject)
   lazy val stack           = getOrFail(EnvStack)
+  lazy val organization    = getMaybe(EnvOrganization)
   lazy val acceptResources = getMaybe(EnvDisableResourceReferences).map(isNotTruthy(_)).getOrElse(true)
   lazy val parallel        = getOrFail(EnvParallel).toInt
   lazy val dryRun          = getOrFail(EnvDryRun).toBoolean
