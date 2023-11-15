@@ -20,6 +20,22 @@ class CoreTests extends munit.FunSuite {
   }
 
   FunFixture[pulumi.FixtureContext](
+    setup = pulumi.fixture.setup(
+      wd / "resources" / "config-example"
+    ),
+    teardown = pulumi.fixture.teardown
+  ).test("SDK config and secrets should work with Pulumi CLI") { ctx =>
+    pulumi.config(ctx.stackName, "name", "config value").call(cwd = ctx.testDir, env = ctx.env)
+    pulumi.secret(ctx.stackName, "hush").call(cwd = ctx.testDir, env = ctx.env, stdin = "secret value\n")
+    val result = pulumi.up(ctx.stackName).call(cwd = ctx.testDir, env = ctx.env)
+    val output = result.out.text()
+    assert(output.contains("config value"), s"Output:\n$output\n")
+    assert(output.contains("[secret]"), s"Output:\n$output\n")
+    assert(output.contains("default value"), s"Output:\n$output\n")
+    assert(result.exitCode == 0)
+  }
+
+  FunFixture[pulumi.FixtureContext](
     setup = {
       val schemaName = "random"
       val result = codegen.generatePackage(schemaName, providerRandomSchemaVersion)

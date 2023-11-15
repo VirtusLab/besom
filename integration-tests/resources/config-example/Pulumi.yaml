@@ -1,5 +1,5 @@
-name: logging-besom-test
-description: Besom logging test
+name: config-besom-test
+description: Besom config test
 runtime:
   name: scala
   options:

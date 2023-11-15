@@ -24,15 +24,46 @@ object types:
 
   export Opaques.*
 
+  /** Pulumi type token, used to identify the type of a resource, provider, or function.
+    */
   opaque type PulumiToken <: String = String
 
+  /** Each resource is an instance of a specific Pulumi resource type. This type is specified by a type token in the
+    * format `<package>:<module>:<typename>`, where:
+    *   - The `<package>`` component of the type (e.g. aws, azure-native, kubernetes, random) specifies which Pulumi
+    *     Package defines the resource. This is mapped to the package in the Pulumi Registry and to the per-language
+    *     Pulumi SDK package.
+    *   - The `<module>` component of the type (e.g. s3/bucket, compute, apps/v1, index) is the module path where the
+    *     resource lives within the package. It is / delimited by component of the path. The name index indicates that
+    *     the resource is not nested, and is instead available at the top level of the package. Per-language Pulumi SDKs
+    *     use the module path to emit nested namespaces/modules in a language-specific way to organize all the types
+    *     defined in a package.
+    *   - The <typename> component of the type (e.g. Bucket, VirtualMachine, Deployment, RandomPassword) is the
+    *     identifier used to refer to the resource itself. It is mapped to the class or constructor name in the
+    *     per-language Pulumi SDK.
+    */
   opaque type ResourceType <: PulumiToken = String
 
   extension (rt: ResourceType)
-    def getPackage: String      = if isProviderType then rt.split(":").last else rt.split(":").head
+    /** @return
+      *   the Pulumi package name of the [[ResourceType]], for example: `aws`, `kubernetes`, `random`
+      */
+    def getPackage: String = if isProviderType then rt.split(":").last else rt.split(":").head
+
+    /** @return
+      *   true if the [[ResourceType]] is a provider, false otherwise
+      */
     def isProviderType: Boolean = rt.startsWith("pulumi:providers:")
 
+  /** See [[ResourceType]] type for more information.
+    */
   object ResourceType:
+    /** Parse a resource type string into a [[ResourceType]].
+      * @param s
+      *   a resource type string to parse
+      * @return
+      *   a [[ResourceType]] if the string is valid, otherwise an compile time error occurs
+      */
     // validate that resource type contains two colons between three identifiers, special characters are allowed, for instance:
     // pulumi:providers:kubernetes is a valid type
     // kubernetes:core/v1:ConfigMap is a valid type
@@ -50,12 +81,29 @@ object types:
 
   end ResourceType
 
+  /** A special [[ResourceType]] that identifies a Pulumi provider.
+    */
   opaque type ProviderType <: ResourceType = String
 
+  /** See [[ProviderType]] type for more information.
+    */
   object ProviderType:
 
+    /** Create a [[ProviderType]] with a provided `provider`` identifier, in format `pulumi:providers:${provider}`.
+      *
+      * @param provider
+      *   a provider identifier
+      * @return
+      *   a [[ProviderType]] with the provided identifier
+      */
     def apply(provider: NonEmptyString): ProviderType = s"pulumi:providers:${provider}"
 
+    /** Parse a provider type [[String]] into a [[ProviderType]].
+      * @param s
+      *   a provider type string to parse
+      * @return
+      *   a [[ProviderType]] if the string is valid, otherwise an compile time error occurs
+      */
     // validate that provider type contains a prefix of `pulumi:providers:` and the provider identifier
     inline def from(s: String): ProviderType =
       requireConst(s)
@@ -68,20 +116,31 @@ object types:
 
   end ProviderType
 
+  /** A special [[ResourceType]] that identifies a Pulumi provider function.
+    */
   opaque type FunctionToken <: PulumiToken = String
 
+  /** See [[FunctionToken]] type for more information.
+    */
   object FunctionToken:
+    /** Parse a function token [[String]] into a [[FunctionToken]].
+      * @param s
+      *   a function token string to parse
+      * @return
+      *   a [[FunctionToken]] if the string is valid, otherwise an compile time error occurs
+      */
     // validate that function token contains two colons between three identifiers, see @ResourceType
     inline def from(s: String): FunctionToken =
       requireConst(s)
-      inline if !constValue[Matches[s.type, ".+:.+:.+"]] then
-        error("Invalid function token")
+      inline if !constValue[Matches[s.type, ".+:.+:.+"]] then error("Invalid function token")
       else s
 
     implicit inline def str2FunctionToken(inline s: String): FunctionToken = FunctionToken.from(s)
 
   end FunctionToken
 
+  /** A logger label.
+    */
   opaque type Label <: String = String
 
   extension (label: Label)
@@ -91,8 +150,15 @@ object types:
   object Label:
     def fromNameAndType(name: NonEmptyString, rt: ResourceType): Label = s"$name[$rt]"
 
+  /** URN is an automatically constructed globally unique identifier for the resource
+    */
   opaque type URN = String
+
+  /** URN is and automatically constructed globally unique identifier for the resource
+    */
   object URN:
+    /** The instance of [[URN]] that represents an empty URN
+      */
     val empty: URN = ""
 
     // This is implemented according to https://www.pulumi.com/docs/concepts/resources/names/#urns
@@ -124,25 +190,59 @@ object types:
     //   }
 
     extension (urn: URN)
-      def asString: String   = urn
-      def stack: String      = URN.UrnRegex.findFirstMatchIn(urn).get.group("stack")
-      def project: String    = URN.UrnRegex.findFirstMatchIn(urn).get.group("project")
+      /** @return
+        *   the [[URN]] as a [[String]]
+        */
+      def asString: String = urn
+
+      /** @return
+        *   the Pulumi stack name
+        */
+      def stack: String = URN.UrnRegex.findFirstMatchIn(urn).get.group("stack")
+
+      /** @return
+        *   the Pulumi project name
+        */
+      def project: String = URN.UrnRegex.findFirstMatchIn(urn).get.group("project")
+
+      /** @return
+        *   the type of the parent [[Resource]]
+        */
       def parentType: String = URN.UrnRegex.findFirstMatchIn(urn).get.group("parentType")
+
+      /** @return
+        *   the type of this [[Resource]]
+        */
       def resourceType: Option[String] =
         URN.UrnRegex.findFirstMatchIn(urn).map(_.group("resourceType")).flatMap(Option(_))
+
+      /** @return
+        *   the logical name of this [[Resource]]
+        */
       def resourceName: String = URN.UrnRegex.findFirstMatchIn(urn).get.group("resourceName")
 
   // TODO This should not be a subtype of string, user's access to underlying string has no meaning
   // TODO User should never modify Resource Ids, they should be opaque but they should also be
   // TODO parameterized with their resource type, ie.: ResourceId[aws.s3.Bucket]
+  /** A resource’s physical name, known to the outside world.
+    */
   opaque type ResourceId <: String = String
+
+  /** A resource’s physical name, known to the outside world.
+    */
   object ResourceId:
+    /** The instance of [[ResourceId]] that represents an empty resource ID
+      */
     val empty: ResourceId = ""
 
     // this should be only usable in Decoder and RawResourceResult.fromResponse
     private[besom] def apply(s: String): ResourceId = s
 
-    extension (id: ResourceId) def asString: String = id
+    extension (id: ResourceId)
+      /** @return
+        *   the [[ResourceId]] as a [[String]]
+        */
+      def asString: String = id
 
   sealed trait AssetOrArchive
 
@@ -180,10 +280,10 @@ object types:
 
     extension [A](a: A)
       def asValueAny: Value = a match
-        case a: Int => a.asValue
-        case a: Double => a.asValue
+        case a: Int     => a.asValue
+        case a: Double  => a.asValue
         case a: Boolean => a.asValue
-        case a: String => a.asValue
+        case a: String  => a.asValue
 
     given Encoder[E] = (a: E) => Result.pure(Set.empty -> a.value.asValueAny)
     given (using decV: Decoder[V]): Decoder[E] =

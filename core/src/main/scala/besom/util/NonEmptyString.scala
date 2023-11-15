@@ -3,20 +3,42 @@ package besom.util
 import scala.quoted.*
 import scala.language.implicitConversions
 
+/**
+ * A [[String]] that is not empty or blank.
+ */
 opaque type NonEmptyString <: String = String
 
+/**
+ * A [[String]] that is not empty or blank.
+ */
 object NonEmptyString:
+  /** @param s
+   * a [[String]] to be converted to a [[NonEmptyString]].
+   * @return
+   * an optional [[NonEmptyString]] if the given [[String]] is not empty or blank, otherwise [[None]].
+   */
   def apply(s: String): Option[NonEmptyString] =
     if s.isBlank then None else Some(s)
 
   given nonEmptyStringOps: {} with
     extension (nes: NonEmptyString)
+      /** Concatenates this [[NonEmptyString]] with the given [[String]].
+        */
       inline def +++(other: String): NonEmptyString = nes + other
-      inline def asString: String                   = nes
 
+      /** @return
+        *   this [[NonEmptyString]] as a [[String]].
+        */
+      inline def asString: String = nes
+
+  /** @param s
+   * a [[String]] to be converted to a [[NonEmptyString]].
+   * @return
+   * a [[NonEmptyString]] if the given [[String]] is not empty or blank.
+   */
   inline def from(inline s: String): NonEmptyString = ${ fromImpl('s) }
 
-  def fromImpl(expr: Expr[String])(using quotes: Quotes): Expr[NonEmptyString] =
+  private def fromImpl(expr: Expr[String])(using quotes: Quotes): Expr[NonEmptyString] =
     import quotes.reflect.*
 
     expr match
@@ -59,8 +81,21 @@ object NonEmptyString:
   implicit inline def str2NonEmptyString(inline s: String): NonEmptyString = NonEmptyString.from(s)
 
   extension (s: String)
+    /** Returns `true` if the `String` is empty or contains only "white space" characters, otherwise `false`.
+      */
     private def isBlank = s.trim.isEmpty
 
 trait NonEmptyStringFactory:
+  /** @param s
+    *   a [[String]] to be converted to a [[NonEmptyString]].
+    * @return
+    *   an optional [[NonEmptyString]] if the given [[String]] is not empty or blank, otherwise [[None]].
+    */
   def apply(s: String): Option[NonEmptyString] = NonEmptyString(s)
-  inline def from(s: String): NonEmptyString   = NonEmptyString.from(s)
+
+  /** @param s
+    *   a [[String]] to be converted to a [[NonEmptyString]].
+    * @return
+    *   a [[NonEmptyString]] if the given [[String]] is not empty or blank.
+    */
+  inline def from(s: String): NonEmptyString = NonEmptyString.from(s)
