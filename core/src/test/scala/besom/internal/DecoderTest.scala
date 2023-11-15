@@ -60,6 +60,16 @@ class DecoderTest extends munit.FunSuite:
       case Validated.Valid(_) => throw Exception("Unexpected unknown!")
   }
 
+  test("decode case class from null value") {
+    val v = Null
+    val d = summon[Decoder[TestCaseClass]]
+    d.decode(v, dummyLabel) match
+      case Validated.Invalid(es) => es.head match
+        case DecodingError(m, _, _) =>
+          assertEquals(m, "dummy[dummy:pkg:Dummy]: Expected a struct to deserialize Product[TestCaseClass], got: 'NullValue(NULL_VALUE)'")
+      case Validated.Valid(_) => throw Exception("Unexpected, valid")
+  }
+
   test("decode enum") {
     val v = "A value".asValue
     val d = summon[Decoder[TestEnum]]
