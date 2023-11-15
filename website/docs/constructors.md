@@ -160,3 +160,10 @@ yield ()
 A good observer will notice that all these forks have to be awaited somehow and that is true. Besom
 does await for all spawned Outputs to be resolved before finishing the run.
 :::
+
+### Compile time checking
+
+Besom tries to catch as many errors as possible at compile time, examples of our compile time checks are:
+- A component resource must register a correct type name with the base constructor in format: `<package>:<module>:<type>`
+- A component resource class should have a `(using ComponentBase)` parameter clause at the end of its constructor
+
