@@ -120,11 +120,13 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
   ): PulumiPackageInfo = {
     require(pulumiPackage.name == packageMetadata.name, "Package name mismatch")
 
-    val enumTypeTokensBuffer   = ListBuffer.empty[String]
-    val objectTypeTokensBuffer = ListBuffer.empty[String]
+    // pre-process the package to gather information about types, that are used later during various parts of codegen
+    // most notable place is TypeMapper.scalaTypeFromTypeUri
+    val enumTypeTokensBuffer             = ListBuffer.empty[String]
+    val objectTypeTokensBuffer           = ListBuffer.empty[String]
 
-    // Post-process the package to improve its quality
-    // Unifying to lower case to circumvent inconsistencies in low quality schemas (e.g. aws)
+    // Post-process the tokens to unify them to lower case to circumvent inconsistencies in low quality schemas (e.g. aws)
+    // This allows us to use case-insensitive matching when looking up tokens
     pulumiPackage.types.foreach {
       case (typeToken, _: EnumTypeDefinition) =>
         if (enumTypeTokensBuffer.contains(typeToken.toLowerCase))

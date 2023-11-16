@@ -24,7 +24,7 @@ class CodegenTests extends munit.FunSuite {
     "enum-reference", // depends on google-native
     "external-enum", // depends on google-native
     "hyphen-url", // depends on azure-native
-    "external-resource-schema", // depends on kubernetes, aws, random
+    "external-resource-schema" // depends on kubernetes, aws, random
   )
 
   // FIXME: broken - codegen error
@@ -43,7 +43,7 @@ class CodegenTests extends munit.FunSuite {
     "resource-property-overlap", // codec not found
     "cyclic-types", // YAML schema is not supported
     "plain-and-default", // simple enum is not supported
-    "different-package-name-conflict", // deserialization issue
+    "different-package-name-conflict" // duplicate issue
   )
 
   val tests =
@@ -88,5 +88,9 @@ class CodegenTests extends munit.FunSuite {
       }
       println()
     }
+  }
+
+  override def beforeAll(): Unit = {
+    pproc("scala-cli", "bloop", "exit").call()
   }
 }

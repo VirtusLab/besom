@@ -261,4 +261,18 @@ class ConfigTest extends munit.FunSuite {
     clue(outputData2)
     assertEquals(outputData2, OutputData(Some("bar")))
   }
+
+  testConfig("Codegen.config") (
+    configMap = Map("prov:names" -> """["a","b","c","super secret name"]"""),
+    configSecretKeys = Set.empty,
+    tested = Codegen.config[List[String]]("prov")(
+      key = "names",
+      isSecret = true,
+      environment = Nil,
+      default = None
+    )
+  ) { actual =>
+      val expected     = OutputData(Some(List("a", "b", "c", "super secret name")), isSecret = true)
+      assertEquals(actual, expected)
+  }
 }

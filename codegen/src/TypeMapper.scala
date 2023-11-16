@@ -9,15 +9,28 @@ class TypeMapper(
   schemaProvider: SchemaProvider
 )(implicit logger: Logger) {
   private def scalaTypeFromTypeUri(
-    typeUri: String,
+    typeRefUri: String,
     asArgsType: Boolean
   ): Option[Type.Ref] = {
+    /*
+     * Pulumi Type Ref URI is a reference to a type in this or another document.
+     * Not to be confused with Scala Type Ref.
+     *
+     * A type from this document is referenced as "#/types/pulumi:type:token".
+     * A type from another document is referenced as "path#/types/pulumi:type:token",
+     * where path is of the form: "/provider/vX.Y.Z/schema.json" or "pulumi.json" or "http[s]://example.com /provider/vX.Y.Z/schema.json".
+     *
+     * A resource from this document is referenced as “#/resources/pulumi:type:token”.
+     * A resource from another document is referenced as "path#/resources/pulumi:type:token",
+     * where path is of the form: "/provider/vX.Y.Z/schema.json" or "pulumi.json" or "http[s]://example.com /provider/vX.Y.Z/schema.json".
+     */
+
     // Example URIs available in TypeMapper.test.scala
 
-    val (fileUri, typePath) = typeUri.split("#") match {
+    val (fileUri, typePath) = typeRefUri.split("#") match {
       case Array(typePath)          => ("", typePath) // JSON Schema Pointer like reference
       case Array(fileUri, typePath) => (fileUri, typePath) // Reference to external schema
-      case _                        => throw TypeMapperError(s"Unexpected type URI format: ${typeUri}")
+      case _                        => throw TypeMapperError(s"Unexpected type URI format: ${typeRefUri}")
     }
 
     val packageInfo = fileUri match {
@@ -47,15 +60,17 @@ class TypeMapper(
       case token => (token, false, false)
     }
 
-    val uniformedTypeToken = escapedTypeToken.toLowerCase
-
+    val pulumiToken = PulumiToken(escapedTypeToken)
     val typeCoordinates =
-      PulumiDefinitionCoordinates.fromRawToken(
-        escapedTypeToken,
+      PulumiDefinitionCoordinates.fromToken(
+        pulumiToken,
         packageInfo.moduleToPackageParts,
         packageInfo.providerToPackageParts
       )
 
+    // this has to be original not normalized token from schema otherwise it will break the codegen
+    // it is not ideal, and we might look into normalizing the token in the future, but for not it is what it is
+    val uniformedTypeToken           = escapedTypeToken.toLowerCase
     lazy val hasProviderDefinition   = packageInfo.providerTypeToken == uniformedTypeToken
     lazy val hasResourceDefinition   = packageInfo.resourceTypeTokens.contains(uniformedTypeToken)
     lazy val hasObjectTypeDefinition = packageInfo.objectTypeTokens.contains(uniformedTypeToken)

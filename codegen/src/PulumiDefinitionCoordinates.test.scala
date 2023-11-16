@@ -51,8 +51,22 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
   case class FunctionClassExpectations(
     fullPackageName: String,
     fullyQualifiedTypeRef: String,
-    filePath: String
+    filePath: String,
+    args: FunctionClassExpectations.FunctionClassExpectationsArgs,
+    result: FunctionClassExpectations.FunctionClassExpectationsResult
   ) extends Expectations
+  object FunctionClassExpectations {
+    case class FunctionClassExpectationsArgs(
+      fullPackageName: String,
+      fullyQualifiedTypeRef: String,
+      filePath: String
+    )
+    case class FunctionClassExpectationsResult(
+      fullPackageName: String,
+      fullyQualifiedTypeRef: String,
+      filePath: String
+    )
+  }
 
   val tests = List(
     Data(
@@ -144,7 +158,30 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
         fullyQualifiedTypeRef = "besom.api.kubernetes.rbac.authorization.v1.ClusterRoleBinding",
         filePath = "src/rbac/authorization/v1/ClusterRoleBinding.scala"
       )
-    )
+    ),
+    Data(
+      schemaName = "aws",
+      typeToken = "aws:ec2/getAmi:getAmi",
+      meta = Meta(
+        moduleFormat = "(.*)(?:/[^/]*)"
+      )
+    )(
+      FunctionClassExpectations(
+        fullPackageName = "besom.api.aws.ec2",
+        fullyQualifiedTypeRef = "besom.api.aws.ec2.getAmi",
+        filePath = "src/ec2/getAmi.scala",
+        args = FunctionClassExpectations.FunctionClassExpectationsArgs(
+          fullPackageName = "besom.api.aws.ec2",
+          fullyQualifiedTypeRef = "besom.api.aws.ec2.GetAmiArgs",
+          filePath = "src/ec2/GetAmiArgs.scala"
+        ),
+        result = FunctionClassExpectations.FunctionClassExpectationsResult(
+          fullPackageName = "besom.api.aws.ec2",
+          fullyQualifiedTypeRef = "besom.api.aws.ec2.GetAmiResult",
+          filePath = "src/ec2/GetAmiResult.scala"
+        )
+      )
+    ),
   )
 
   tests.foreach { data =>
@@ -173,7 +210,19 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
           assertEquals(ec.fullPackageName, fullPackageName)
           assertEquals(ec.fullyQualifiedTypeRef.toString, fullyQualifiedTypeRef)
           assertEquals(ec.filePath.osSubPath.toString(), filePath)
-        case FunctionClassExpectations(fullPackageName, fullyQualifiedTypeRef, filePath) => ??? // TODO
+        case FunctionClassExpectations(fullPackageName, fullyQualifiedTypeRef, filePath, args, result) =>
+          val m = coords.topLevelMethod
+          assertEquals(m.fullPackageName, fullPackageName)
+          assertEquals(m.fullyQualifiedTypeRef.toString, fullyQualifiedTypeRef)
+          assertEquals(m.filePath.osSubPath.toString(), filePath)
+          val ac = coords.methodArgsClass
+          assertEquals(ac.fullPackageName, args.fullPackageName)
+          assertEquals(ac.fullyQualifiedTypeRef.toString, args.fullyQualifiedTypeRef)
+          assertEquals(ac.filePath.osSubPath.toString(), args.filePath)
+          val rc = coords.methodResultClass
+          assertEquals(rc.fullPackageName, result.fullPackageName)
+          assertEquals(rc.fullyQualifiedTypeRef.toString, result.fullyQualifiedTypeRef)
+          assertEquals(rc.filePath.osSubPath.toString(), result.filePath)
       }
     }
   }

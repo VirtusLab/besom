@@ -21,7 +21,7 @@ class CodeGen(implicit
     pulumiPackage: PulumiPackage,
     packageInfo: PulumiPackageInfo
   ): Seq[SourceFile] =
-    scalaFiles(pulumiPackage) ++ Seq(
+    scalaFiles(pulumiPackage, packageInfo) ++ Seq(
       projectConfigFile(
         schemaName = packageInfo.name,
         packageVersion = packageInfo.version
@@ -33,12 +33,15 @@ class CodeGen(implicit
       )
     )
 
-  def scalaFiles(pulumiPackage: PulumiPackage): Seq[SourceFile] =
+  def scalaFiles(
+    pulumiPackage: PulumiPackage,
+    packageInfo: PulumiPackageInfo
+  ): Seq[SourceFile] =
     sourceFilesForProviderResource(pulumiPackage) ++
       sourceFilesForNonResourceTypes(pulumiPackage) ++
       sourceFilesForResources(pulumiPackage) ++
       sourceFilesForFunctions(pulumiPackage) ++
-      sourceFilesForConfig(pulumiPackage)
+      sourceFilesForConfig(pulumiPackage, packageInfo)
 
   def projectConfigFile(schemaName: String, packageVersion: PackageVersion): SourceFile = {
     val besomVersion = codegenConfig.besomVersion
@@ -157,7 +160,7 @@ class CodeGen(implicit
       val caseRawName = valueDefinition.name.getOrElse {
         valueDefinition.value match {
           case StringConstValue(value) => value
-          case const => throw GeneralCodegenException(s"The name of enum cannot be derived from value ${const}")
+          case const                   => throw GeneralCodegenException(s"The name of enum cannot be derived from value ${const}")
         }
       }
       val caseName       = Term.Name(caseRawName).syntax
@@ -218,7 +221,11 @@ class CodeGen(implicit
       }
     }
 
-    val baseClassSourceFile = makeOutputClassSourceFile(baseClassCoordinates, objectProperties)
+    val baseClassSourceFile = makeOutputClassSourceFile(
+      baseClassCoordinates,
+      objectProperties,
+      requiresJsonFormat = typeToken.module == Utils.configModuleName // Config types need to be serialized to JSON for structured configs
+    )
 
     val argsClassSourceFile = makeArgsClassSourceFile(
       classCoordinates = argsClassCoordinates,
@@ -238,8 +245,7 @@ class CodeGen(implicit
       .collect {
         case (typeToken, resourceDefinition) if !resourceDefinition.isOverlay =>
           sourceFilesForResource(
-            typeCoordinates =
-              PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts),
+            typeCoordinates = PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts),
             resourceDefinition = resourceDefinition,
             typeToken = PulumiToken(typeToken),
             isProvider = false
@@ -259,6 +265,12 @@ class CodeGen(implicit
     val argsClassCoordinates = typeCoordinates.asResourceClass(asArgsType = true)
     val baseClassName        = Type.Name(baseClassCoordinates.definitionName).syntax
     val argsClassName        = Type.Name(argsClassCoordinates.definitionName).syntax
+
+    if (resourceDefinition.aliases.nonEmpty) {
+      logger.warn(
+        s"Aliases are not supported yet, ignoring ${resourceDefinition.aliases.size} aliases for ${typeToken.asString}"
+      )
+    }
 
     val resourceBaseProperties = Seq(
       "urn" -> PropertyDefinition(typeReference = UrnType),
@@ -307,6 +319,11 @@ class CodeGen(implicit
       }
     }
 
+    val stateInputs = resourceDefinition.stateInputs.properties.toSeq.sortBy(_._1)
+    if (stateInputs.nonEmpty) {
+      logger.warn(s"State inputs are not supported yet, ignoring ${stateInputs.size} state inputs for ${typeToken.asString}")
+    }
+
     val baseClassParams = resourceProperties.map { propertyInfo =>
       val innerType =
         if (propertyInfo.isOptional) t"""scala.Option[${propertyInfo.baseType}]""" else propertyInfo.baseType
@@ -320,7 +337,7 @@ class CodeGen(implicit
         .syntax
     }
 
-    val baseOutputExtensionMethods = resourceProperties.map { propertyInfo =>
+    val baseOutputExtensionMethods: Seq[String] = resourceProperties.map { propertyInfo =>
       val innerType =
         if (propertyInfo.isOptional) t"""scala.Option[${propertyInfo.baseType}]""" else propertyInfo.baseType
       val resultType = t"besom.types.Output[${innerType}]"
@@ -334,6 +351,9 @@ class CodeGen(implicit
     val baseClassComment = ""
 
     val resourceBaseClass = if (isProvider) "besom.ProviderResource" else "besom.CustomResource"
+    if (resourceDefinition.isComponent) {
+      logger.warn(s"Component resources are not supported yet, generating incorrect resource ${typeToken.asString}")
+    }
 
     val baseClass =
       s"""|final case class $baseClassName private(
@@ -400,8 +420,7 @@ class CodeGen(implicit
       .collect {
         case (functionToken, functionDefinition) if !functionDefinition.isOverlay =>
           sourceFilesForFunction(
-            functionCoordinates =
-              PulumiDefinitionCoordinates.fromRawToken(functionToken, moduleToPackageParts, providerToPackageParts),
+            functionCoordinates = PulumiDefinitionCoordinates.fromRawToken(functionToken, moduleToPackageParts, providerToPackageParts),
             functionDefinition = functionDefinition,
             functionToken = PulumiToken(functionToken)
           )
@@ -462,7 +481,8 @@ class CodeGen(implicit
 
         makeOutputClassSourceFile(
           classCoordinates = resultClassCoordinates,
-          properties = outputProperties
+          properties = outputProperties,
+          requiresJsonFormat = false
         )
       }
 
@@ -503,14 +523,71 @@ class CodeGen(implicit
     }
   }
 
-  def sourceFilesForConfig(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
-    pulumiPackage.config.variables
-      .collect { case (prop, propDefinition) =>
-        logger.warn(s"Config '${prop}' was not generated")
-        Seq() // TODO: implement
+  def sourceFilesForConfig(pulumiPackage: PulumiPackage, packageInfo: PulumiPackageInfo): Seq[SourceFile] = {
+    if (pulumiPackage.config.variables.isEmpty) {
+      return Seq.empty
+    }
+
+    val PulumiToken(_, _, providerName) = PulumiToken(packageInfo.providerTypeToken)
+    val coordinates = PulumiDefinitionCoordinates(
+      providerPackageParts = providerName :: Nil,
+      modulePackageParts = Utils.configModuleName :: Nil,
+      definitionName = Utils.configTypeName
+    ).asConfigClass
+
+    val configsWithDefault = pulumiPackage.config.defaults
+    val configs = pulumiPackage.config.variables.toSeq
+      .sortBy(_._1)
+      .collect { case (configName, configDefinition) =>
+        val get      = s"get${configName.capitalize}"
+        val propType = configDefinition.typeReference.asScalaType()
+        val isSecret = configDefinition.secret
+        val defaultValue = configDefinition.default.map(constValueAsCode).filter {
+          case Lit.String(v) if v.isBlank => false
+          case _                          => true
+        }
+        val default = defaultValue match {
+          case Some(value) => s"scala.Some($value)"
+          case None        => "scala.None"
+        }
+        val environmentValues = configDefinition.defaultInfo.toList.flatMap(_.environment)
+        val environment       = environmentValues.map(Lit.String(_)).mkString("scala.List(", ",", ")")
+        if (configsWithDefault.contains(configName) && environmentValues.isEmpty && defaultValue.isEmpty) {
+          logger.warn(
+            s"Config '${configName}' should have defaults but none were found."
+          )
+        }
+        val description = configDefinition.description.getOrElse("")
+        val deprecationCode = configDefinition.deprecationMessage match {
+          case Some(message) => s"""\n  @deprecated("$message")"""
+          case None          => ""
+        }
+        val deprecationDocs = configDefinition.deprecationMessage match {
+          case Some(message) => s"""\n   * @deprecated $message"""
+          case None          => ""
+        }
+        val returnsDoc = s"@returns the value of the `$providerName:$configName` configuration property" +
+          s"${if (configsWithDefault.contains(configName)) " or a default value if present" else ""}."
+
+        s"""|/**
+            | * ${description}${deprecationDocs}
+            | * ${returnsDoc}
+            | */${deprecationCode}
+            |def ${get}(using besom.types.Context): besom.types.Output[scala.Option[${propType}]] =
+            |  besom.internal.Codegen.config[${propType}]("${providerName}")(key = "${configName}", isSecret = ${isSecret}, default = ${default}, environment = ${environment})
+            |""".stripMargin
       }
-      .toSeq
-      .flatten
+
+    val code =
+      s"""|package ${coordinates.fullPackageName}
+          |
+          |import besom.internal.CodegenProtocol._
+          |
+          |${configs.mkString("\n")}
+          |
+          |""".stripMargin
+
+    Seq(SourceFile(FilePath(Seq("src", Utils.configModuleName, "config.scala")), code))
   }
 
   private def makePropertyInfo(
@@ -557,8 +634,10 @@ class CodeGen(implicit
 
   private def makeOutputClassSourceFile(
     classCoordinates: ScalaDefinitionCoordinates,
-    properties: Seq[PropertyInfo]
+    properties: Seq[PropertyInfo],
+    requiresJsonFormat: Boolean
   ) = {
+    val className = classCoordinates.definitionName
     val classParams = properties.map { propertyInfo =>
       val fieldType =
         if (propertyInfo.isOptional) t"""scala.Option[${propertyInfo.baseType}]""" else propertyInfo.baseType
@@ -571,6 +650,12 @@ class CodeGen(implicit
         )
         .syntax
     }
+    val jsonFormatExtensionMethod = if (requiresJsonFormat) {
+      s"""given spray.json.JsonFormat[${className}] = besom.internal.CodegenProtocol.jsonFormat${properties.size}(${className}.apply)"""
+    } else {
+      ""
+    }
+
     val outputExtensionMethods = properties.map { propertyInfo =>
       val innerType =
         if (propertyInfo.isOptional) t"""scala.Option[${propertyInfo.baseType}]""" else propertyInfo.baseType
@@ -587,8 +672,6 @@ class CodeGen(implicit
     // val classComment = spec.description.fold("")(desc => s"/**\n${desc}\n*/\n") // TODO: Escape/sanitize comments
     val classComment = ""
 
-    val className = classCoordinates.definitionName
-
     val classDef =
       s"""|final case class $className private(
           |${classParams.map(arg => s"  ${arg}").mkString(",\n")}
@@ -600,6 +683,7 @@ class CodeGen(implicit
           if (className.endsWith("_")) " " else "" // colon after underscore would be treated as a part of the name
 
         s"""|object ${className}${classNameTerminator}:
+            |  ${jsonFormatExtensionMethod}
             |  given outputOps: {} with
             |    extension(output: besom.types.Output[$className])
             |${outputExtensionMethods.map(meth => s"      ${meth}").mkString("\n")}
@@ -736,8 +820,6 @@ class CodeGen(implicit
     case DoubleConstValue(value) =>
       Lit.Double(value)
   }
-
-  private def decapitalize(s: String) = s(0).toLower.toString ++ s.substring(1, s.length)
 
   private val anyRefMethodNames = Set(
     "eq",

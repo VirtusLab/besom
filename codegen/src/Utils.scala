@@ -13,7 +13,9 @@ object Utils {
   // Needs to be used in Pulumi types, but should NOT be translated to Scala code
   // Placeholder module for classes that should be in the root package (according to pulumi's convention)
   val indexModuleName = "index"
+  val configModuleName = "config"
   val providerTypeName = "Provider"
+  val configTypeName = "Config"
 
   // Name of the self parameter of resource methods
   val selfParameterName = "__self__"
