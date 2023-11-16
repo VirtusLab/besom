@@ -6,6 +6,7 @@ import scala.util.Try
 import besom.util.*
 
 case class RunInfo(
+  organization: Option[NonEmptyString],
   project: NonEmptyString,
   stack: NonEmptyString,
   acceptResources: Boolean,
@@ -24,6 +25,7 @@ object RunInfo:
         RunInfo(
           project = Env.project,
           stack = Env.stack,
+          organization = Env.organization,
           acceptResources = Env.acceptResources,
           parallel = Env.parallel, // TODO we don't use this, should we?
           dryRun = Env.dryRun,

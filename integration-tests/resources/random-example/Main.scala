@@ -15,6 +15,10 @@ def main(): Unit = Pulumi.run {
     str  <- strOutput
     str2 <- strOutput // checks memoization too
   yield exports(
-    randomString = str.result
+    randomString = str.result,
+    resourceName = str.pulumiResourceName,
+    org = Pulumi.pulumiOrganization,
+    proj = Pulumi.pulumiProject,
+    stack = Pulumi.pulumiStack
   )
 }

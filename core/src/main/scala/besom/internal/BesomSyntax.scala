@@ -5,8 +5,8 @@ import besom.util.NonEmptyString
 import besom.types.ResourceType
 import besom.types.URN
 
-/** This trait is the main export point that exposes Besom specific functions and types to the user. The only exception
-  * is the [[Output]] object which is exposed in [[BesomModule]] which extends this trait.
+/** This trait is the main export point that exposes Besom specific functions and types to the user. The only exception is the [[Output]]
+  * object which is exposed in [[BesomModule]] which extends this trait.
   * @see
   *   [[besom.Pulumi]]
   * @see
@@ -50,22 +50,43 @@ trait BesomSyntax:
   def urn(using ctx: Context): Output[URN] =
     Output.ofData(ctx.getParentURN.map(OutputData(_)))
 
+  /** @param ctx
+    *   the Besom context
+    * @return
+    *   the organization of the current Pulumi stack.
+    */
+  def pulumiOrganization(using ctx: Context): Option[NonEmptyString] = ctx.pulumiOrganization
+
+  /** @param ctx
+    *   the Besom context
+    * @return
+    *   the project name of the current Pulumi stack.
+    */
+  def pulumiProject(using ctx: Context): NonEmptyString = ctx.pulumiProject
+
+  /** @param ctx
+    *   the Besom context
+    * @return
+    *   the stack name of the current Pulumi stack.
+    */
+  def pulumiStack(using ctx: Context): NonEmptyString = ctx.pulumiStack
+
   /** The [[Export]] instance that exposes [[besom.aliases.Output]] instances as Pulumi Stack outputs.
-   * 
-   * All arguments of `exports(...)` must be explicitly named, because [[besom.internal.Exports]] are dynamic, e.g.:
-   *
-   * {{{
-   * import besom.*
-   * import besom.api.aws
-   *
-   * @main def run = Pulumi.run {
-   *   for
-   *     bucket <- aws.s3.Bucket("my-bucket")
-   *   yield exports(
-   *     bucketUrl = bucket.websiteEndpoint
-   *   )
-   * }
-   * }}}
+    *
+    * All arguments of `exports(...)` must be explicitly named, because [[besom.internal.Exports]] are dynamic, e.g.:
+    *
+    * {{{
+    * import besom.*
+    * import besom.api.aws
+    *
+    * @main def run = Pulumi.run {
+    *   for
+    *     bucket <- aws.s3.Bucket("my-bucket")
+    *   yield exports(
+    *     bucketUrl = bucket.websiteEndpoint
+    *   )
+    * }
+    * }}}
     */
   val exports: Export.type = Export
 
