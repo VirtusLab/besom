@@ -1,7 +1,7 @@
 package besom.internal
 
-import scala.util.{NotGiven => Not}
 import scala.collection.BuildFrom
+import scala.reflect.Typeable
 
 /** Output is a wrapper for a monadic effect used to model async execution that allows Pulumi to track information about
   * dependencies between resources and properties of data (whether it's known or a secret for instance).
@@ -89,13 +89,13 @@ trait OutputExtensionsFactory:
     def traverse[B, To](f: A => Output[B])(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] =
       coll.iterator.map(f).asInstanceOf[CC[Output[B]]].sequence
   implicit final class OutputOptionOps[A](output: Output[Option[A]]):
-    def getOrElse[B >: A](default: => B | Output[B])(using ctx: Context): Output[B] =
+    def getOrElse[B >: A: Typeable](default: => B | Output[B])(using ctx: Context): Output[B] =
       output.flatMap { opt =>
         opt match
           case Some(a) => Output(a)
           case None =>
             default match
-              case b: Output[B] => b
+              case b: Output[_] => b.asInstanceOf[Output[B]]
               case b: B         => Output(b)
       }
     def orElse[B >: A](alternative: => Option[B] | Output[Option[B]])(using ctx: Context): Output[Option[B]] =
@@ -143,7 +143,7 @@ object Output:
     new Output[A](ctx.registerTask(Result.pure(OutputData(value))))
 
   def ofData[A](value: => Result[OutputData[A]])(using ctx: Context): Output[A] =
-    new Output[A](ctx.registerTask((value)))
+    new Output[A](ctx.registerTask(value))
 
   // TODO could this be pure without implicit Context? it's not async in any way so? only test when all tests are written
   def ofData[A](data: OutputData[A])(using ctx: Context): Output[A] =

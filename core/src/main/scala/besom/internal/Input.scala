@@ -34,7 +34,7 @@ object Input:
 
   given mapInputOps: {} with
     private def inputMapToMapOutput[A](inputMap: Map[String, Input[A]], isSecret: Boolean)(using ctx: Context): Output[Map[String, A]] =
-      val outputMap = inputMap.mapValues(_.asOutput(isSecret)).toMap
+      val outputMap = inputMap.view.mapValues(_.asOutput(isSecret)).toMap
       Output.traverseMap(outputMap)
 
     extension [A](input: Input[Map[String, Input[A]]])
