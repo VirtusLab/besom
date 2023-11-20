@@ -9,7 +9,7 @@ import besom.NonEmptyString
 import besom.internal.logging.BesomLogger
 
 object DummyContext:
-  val dummyRunInfo        = RunInfo("test-project", "test-stack", true, 4, false, "dummy", "dummy")
+  val dummyRunInfo        = RunInfo(Some("test-organization"), "test-project", "test-stack", true, 4, false, "dummy", "dummy")
   val dummyFeatureSupport = FeatureSupport(true, true, true, true)
   val dummyMonitor = new Monitor:
     def call(callRequest: CallRequest): Result[CallResponse]                                                  = ???

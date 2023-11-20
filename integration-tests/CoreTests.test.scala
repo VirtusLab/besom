@@ -38,7 +38,7 @@ class CoreTests extends munit.FunSuite {
   FunFixture[pulumi.FixtureContext](
     setup = {
       val schemaName = "random"
-      val result = codegen.generatePackage(schemaName, providerRandomSchemaVersion)
+      val result     = codegen.generatePackage(schemaName, providerRandomSchemaVersion)
       scalaCli.publishLocal(result.outputDir).call()
       pulumi.fixture.setup(
         wd / "resources" / "random-example",
@@ -52,7 +52,8 @@ class CoreTests extends munit.FunSuite {
   ).test("random provider and memoization should work") { ctx =>
     val result = pulumi.up(ctx.stackName).call(cwd = ctx.testDir, env = ctx.env)
     val output = result.out.text()
-    assert(output.contains("randomString:"), s"Output:\n$output\n")
     assert(result.exitCode == 0)
+    assert(output.contains("randomString:"), s"Output:\n$output\n")
+    assert(output.contains("\"random-string\""), s"Output:\n$output\n")
   }
 }
