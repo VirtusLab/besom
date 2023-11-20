@@ -179,19 +179,3 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
   }
 }
 
-//noinspection ScalaFileName,TypeAnnotation
-class TypeTokenTest extends munit.FunSuite {
-  test("must provide string representation") {
-    val t1 = PulumiToken("provider", "index", "SomeType")
-    assertEquals(t1.asString, "provider:index:SomeType")
-    val t2 = PulumiToken("provider:index:SomeType")
-    assertEquals(t2.asString, "provider:index:SomeType")
-  }
-
-  test("must provide the missing module") {
-    val t1 = PulumiToken("provider", "", "SomeType")
-    assertEquals(t1.asString, "provider:index:SomeType")
-    val t2 = PulumiToken("provider::SomeType")
-    assertEquals(t2.asString, "provider:index:SomeType")
-  }
-}
