@@ -2,7 +2,7 @@ package besom.internal
 
 import besom.*
 import spray.json.*
-import spray.json.DefaultJsonProtocol._
+import spray.json.DefaultJsonProtocol.*
 import RunResult.{given, *}
 
 class ConfigTest extends munit.FunSuite {
