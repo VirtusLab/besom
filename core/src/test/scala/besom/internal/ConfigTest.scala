@@ -1,6 +1,6 @@
 package besom.internal
 
-import besom._
+import besom.*
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 import RunResult.{given, *}
