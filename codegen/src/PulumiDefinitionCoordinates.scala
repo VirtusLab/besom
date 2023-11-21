@@ -63,12 +63,32 @@ object PulumiDefinitionCoordinates {
     moduleToPackageParts: String => Seq[String],
     providerToPackageParts: String => Seq[String]
   ): PulumiDefinitionCoordinates = {
-    val PulumiToken(providerName, modulePortion, definitionName) = PulumiToken(typeToken)
-    PulumiDefinitionCoordinates(
-      providerPackageParts = providerToPackageParts(providerName),
-      modulePackageParts = moduleToPackageParts(modulePortion),
-      definitionName = definitionName
+    fromToken(
+      typeToken = PulumiToken(typeToken),
+      moduleToPackageParts = moduleToPackageParts,
+      providerToPackageParts = providerToPackageParts
     )
+  }
+
+  def fromToken(
+    typeToken: PulumiToken,
+    moduleToPackageParts: String => Seq[String],
+    providerToPackageParts: String => Seq[String]
+  ): PulumiDefinitionCoordinates = {
+    typeToken match {
+      case PulumiToken("pulumi", "providers", providerName) =>
+        PulumiDefinitionCoordinates(
+          providerPackageParts = providerName :: Nil,
+          modulePackageParts = Utils.indexModuleName :: Nil,
+          definitionName = Utils.providerTypeName
+        )
+      case PulumiToken(providerName, moduleName, definitionName) =>
+        PulumiDefinitionCoordinates(
+          providerPackageParts = providerToPackageParts(providerName),
+          modulePackageParts = moduleToPackageParts(moduleName),
+          definitionName = definitionName
+        )
+    }
   }
 
   private def inputsPackage  = "inputs"
