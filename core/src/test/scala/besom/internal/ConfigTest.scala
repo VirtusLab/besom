@@ -1,7 +1,7 @@
 package besom.internal
 
 import besom.*
-import spray.json._
+import spray.json.*
 import spray.json.DefaultJsonProtocol._
 import RunResult.{given, *}
 
