@@ -1,6 +1,6 @@
 package besom.internal
 
-import spray.json._
+import spray.json.*
 
 import scala.util.Try
 
