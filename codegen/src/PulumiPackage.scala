@@ -1,7 +1,7 @@
 package besom.codegen.metaschema
 
 import upickle.implicits.{key => fieldKey}
-import besom.codegen.{GeneralCodegenException, UpickleApi}
+import besom.codegen.{GeneralCodegenError, UpickleApi}
 import besom.codegen.UpickleApi._
 
 /** PulumiPackage describes a Pulumi package.
@@ -61,7 +61,7 @@ object PulumiPackage {
   def fromFile(filePath: os.Path): PulumiPackage = {
     // noinspection SimplifyBooleanMatch
     val input = os.exists(filePath) match {
-      case false => throw GeneralCodegenException(s"File $filePath does not exist")
+      case false => throw GeneralCodegenError(s"File $filePath does not exist")
       case true  => os.read(filePath)
     }
     fromString(input)
@@ -77,7 +77,7 @@ object PulumiPackage {
   // noinspection ScalaWeakerAccess
   def fromString(input: String): PulumiPackage = {
     if (input.isEmpty) {
-      throw GeneralCodegenException("Pulumi package input JSON string is empty")
+      throw GeneralCodegenError("Pulumi package input JSON string is empty")
     }
     val json = ujson.read(input)
     read[PulumiPackage](json)
@@ -303,7 +303,7 @@ object TypeReferenceProto {
 /** A reference to a type. The particular kind of type referenced is determined based on the contents of the "type" property and the
   * presence or absence of the "additionalProperties", "items", "oneOf", and "ref" properties.
   * @see
-  *   [[TypeReferenceProto]], [[TypeReferenceProtoLike]] and [[besom.codegen.Utils.TypeReferenceOps]]
+  *   [[TypeReferenceProto]], [[TypeReferenceProtoLike]] and [[besom.codegen.PulumiTypeReference.TypeReferenceOps]]
   */
 sealed trait TypeReference {
 
@@ -386,8 +386,8 @@ case class ArrayType(items: TypeReference) extends AnonymousType
   */
 case class MapType(additionalProperties: TypeReference) extends AnonymousType
 
-object UrnType extends TypeReference
-object ResourceIdType extends TypeReference
+object UrnType extends AnonymousType
+object ResourceIdType extends AnonymousType
 
 /** A reference to a type in this or another document. The "ref" property must be present. The "type" property is ignored if it is present.
   * No other properties may be present.
@@ -414,7 +414,7 @@ case class UnionType(
   oneOf: List[TypeReference],
   `type`: Option[AnonymousType],
   discriminator: Option[Discriminator] = None
-) extends TypeReference
+) extends AnonymousType
 
 /** @see
   *   [[PropertyDefinition]]

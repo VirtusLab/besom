@@ -1,9 +1,7 @@
 package besom.codegen
 
 import besom.codegen.PackageVersion.PackageVersion
-
-import scala.meta.Type
-import besom.codegen.metaschema.{PulumiPackage, TypeReference}
+import besom.codegen.metaschema.PulumiPackage
 
 import scala.util.matching.Regex
 
@@ -22,16 +20,6 @@ object Utils {
 
   // TODO: Find some workaround to enable passing the remaining arguments
   val jvmMaxParamsCount = 253 // https://github.com/scala/bug/issues/7324
-
-  implicit class TypeReferenceOps(typeRef: TypeReference) {
-    def asScalaType(asArgsType: Boolean = false)(implicit typeMapper: TypeMapper): Type =
-      try {
-        typeMapper.asScalaType(typeRef, asArgsType)
-      } catch {
-        case t: Throwable =>
-          throw TypeMapperError(s"Failed to map type: '${typeRef}', asArgsType: $asArgsType", t)
-      }
-  }
 
   implicit class PulumiPackageOps(pulumiPackage: PulumiPackage) {
     private def slashModuleToPackageParts: String => Seq[String] =
@@ -54,11 +42,11 @@ object Utils {
       val moduleFormat: Regex = pulumiPackage.meta.moduleFormat.r
       module match {
         case _ if module.isEmpty =>
-          throw TypeMapperError("Module cannot be empty")
+          throw TypeError("Module cannot be empty")
         case _ if module == indexModuleName => Seq(indexModuleName)
         case moduleFormat(name)             => languageModuleToPackageParts(name)
         case _ =>
-          throw TypeMapperError(
+          throw TypeError(
             s"Cannot parse module portion '$module' with moduleFormat: $moduleFormat"
           )
       }

@@ -1,25 +1,26 @@
 package besom.codegen
 
 case class PulumiDefinitionCoordinates private (
+  token: PulumiToken,
   private val providerPackageParts: Seq[String],
   private val modulePackageParts: Seq[String],
   private val definitionName: String
-) {
+)(implicit logger: Logger) {
   import PulumiDefinitionCoordinates._
 
-  def className(asArgsType: Boolean)(implicit logger: Logger): String = {
+  def className(asArgsType: Boolean): String = {
     val classNameSuffix = if (asArgsType) "Args" else ""
     mangleTypeName(definitionName) ++ classNameSuffix
   }
 
-  def asResourceClass(asArgsType: Boolean)(implicit logger: Logger): ScalaDefinitionCoordinates = {
+  def asResourceClass(asArgsType: Boolean): ScalaDefinitionCoordinates = {
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
       definitionName = className(asArgsType)
     )
   }
-  def asObjectClass(asArgsType: Boolean)(implicit logger: Logger): ScalaDefinitionCoordinates = {
+  def asObjectClass(asArgsType: Boolean): ScalaDefinitionCoordinates = {
     val packageSuffix = if (asArgsType) inputsPackage else outputsPackage
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
@@ -70,7 +71,7 @@ object PulumiDefinitionCoordinates {
     typeToken: String,
     moduleToPackageParts: String => Seq[String],
     providerToPackageParts: String => Seq[String]
-  ): PulumiDefinitionCoordinates = {
+  )(implicit logger: Logger): PulumiDefinitionCoordinates = {
     fromToken(
       typeToken = PulumiToken(typeToken),
       moduleToPackageParts = moduleToPackageParts,
@@ -82,20 +83,23 @@ object PulumiDefinitionCoordinates {
     typeToken: PulumiToken,
     moduleToPackageParts: String => Seq[String],
     providerToPackageParts: String => Seq[String]
-  ): PulumiDefinitionCoordinates = {
+  )(implicit logger: Logger): PulumiDefinitionCoordinates = {
     typeToken match {
       case PulumiToken("pulumi", "providers", providerName) =>
         PulumiDefinitionCoordinates(
+          token = typeToken,
           providerPackageParts = providerName :: Nil,
           modulePackageParts = Utils.indexModuleName :: Nil,
           definitionName = Utils.providerTypeName
         )
       case PulumiToken(providerName, moduleName, definitionName) =>
         PulumiDefinitionCoordinates(
+          token = typeToken,
           providerPackageParts = providerToPackageParts(providerName),
           modulePackageParts = moduleToPackageParts(moduleName),
           definitionName = definitionName
         )
+      case _ => throw TypeError(s"Cannot match PulumiToken: $typeToken")
     }
   }
 
@@ -141,12 +145,13 @@ object PulumiDefinitionCoordinates {
 
   @throws[PulumiDefinitionCoordinatesError]("if 'definitionName' is empty")
   def apply(
+    token: PulumiToken,
     providerPackageParts: Seq[String],
     modulePackageParts: Seq[String],
     definitionName: String
-  ): PulumiDefinitionCoordinates = {
+  )(implicit logger: Logger): PulumiDefinitionCoordinates = {
     if (definitionName.isBlank)
       throw PulumiDefinitionCoordinatesError("Unexpected empty 'definitionName' parameter")
-    new PulumiDefinitionCoordinates(providerPackageParts, modulePackageParts, definitionName)
+    new PulumiDefinitionCoordinates(token, providerPackageParts, modulePackageParts, definitionName)
   }
 }

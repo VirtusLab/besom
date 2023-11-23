@@ -11,7 +11,7 @@ object Config {
       os.read(os.pwd / "version.txt").trim
     } catch {
       case ex: java.nio.file.NoSuchFileException =>
-        throw GeneralCodegenException(
+        throw GeneralCodegenError(
           "Expected './version.txt' file or explicit 'besom.codegen.Config.CodegenConfig(besomVersion = \"1.2.3\")",
           ex
         )

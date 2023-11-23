@@ -124,7 +124,7 @@ object generator {
           |""".stripMargin
     }
 
-    implicit val typeMapper: TypeMapper = new TypeMapper(packageInfo, schemaProvider)
+    implicit val thisPackageInfo: ThisPackageInfo = ThisPackageInfo(packageInfo)
 
     // make sure we don't have a dirty state
     os.remove.all(outputDir)

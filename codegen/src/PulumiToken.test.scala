@@ -11,8 +11,8 @@ class PulumiTokenTest extends munit.FunSuite {
     assertEquals(PulumiToken("aws:ec2:Instance").asString, "aws:ec2:Instance")
     assertEquals(PulumiToken("provider", "index", "SomeType").asString, "provider:index:SomeType")
   }
-  test("uniformed") {
-    assertEquals(PulumiToken("aws:ec2:Instance").uniformed, "aws:ec2:instance")
+  test("asLookupKey") {
+    assertEquals(PulumiToken("aws:ec2:Instance").asLookupKey, "aws:ec2:instance")
   }
 
   test("enforce non-empty module") {

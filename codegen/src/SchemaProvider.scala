@@ -53,7 +53,7 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
             val msg =
               s"Failed to download schema for ${metadata.name}:${metadata.version}' into '${schemaFilePath.relativeTo(os.pwd)}'"
             logger.error(msg)
-            throw GeneralCodegenException(msg, e)
+            throw GeneralCodegenError(msg, e)
         }
 
       // parse and save the schema using path corrected for the actual name and version for the package

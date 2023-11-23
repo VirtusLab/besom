@@ -2,7 +2,7 @@ package besom.codegen
 
 import besom.codegen.UpickleApi._
 
-case class PackageMetadata private (
+case class PackageMetadata private[codegen] (
   name: PackageMetadata.SchemaName,
   version: PackageVersion.PackageVersion,
   server: Option[String] = None
@@ -11,7 +11,7 @@ case class PackageMetadata private (
     val server = url match {
       case s"https://github.com/pulumi/pulumi-${_}" => None // use default
       case s"https://github.com/$org/$name"         => Some(s"github://api.github.com/$org/$name")
-      case _                                        => throw GeneralCodegenException(s"Unknown repo url format: ${url}")
+      case _                                        => throw GeneralCodegenError(s"Unknown repo url format: ${url}")
     }
     PackageMetadata(name, version, server)
   }
@@ -55,7 +55,7 @@ object PackageVersion {
     """^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$""".r
 
   def apply(version: String): PackageVersion = parse(version).getOrElse(
-    throw GeneralCodegenException(s"Invalid version format: '$version'")
+    throw GeneralCodegenError(s"Invalid version format: '$version'")
   )
 
   def parse(version: String): Option[PackageVersion] = version.trim.stripPrefix("v") match {

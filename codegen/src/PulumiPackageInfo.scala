@@ -12,4 +12,8 @@ case class PulumiPackageInfo(
   resourceTypeTokens: Set[String],
   moduleToPackageParts: String => Seq[String],
   providerToPackageParts: String => Seq[String]
-)
+) {
+  def asPackageMetadata: PackageMetadata = PackageMetadata(name, version)
+}
+
+case class ThisPackageInfo(instance: PulumiPackageInfo)
