@@ -1,6 +1,7 @@
 package besom.codegen
 
 import besom.codegen.PulumiTypeReference.TypeReferenceOps
+import scala.meta.*
 
 //noinspection TypeAnnotation,ScalaFileName
 class PulumiTypeReferenceTest extends munit.FunSuite {
@@ -8,7 +9,7 @@ class PulumiTypeReferenceTest extends munit.FunSuite {
 
   implicit val logger: Logger = new Logger
 
-  object TestPackageMetadata extends PackageMetadata("test-as-scala-type", PackageVersion.default)
+  object TestPackageMetadata extends PackageMetadata("test-as-scala-type", Some(PackageVersion.default))
 
   case class Data(
     `type`: TypeReference,
@@ -113,9 +114,9 @@ class PulumiTypeReferenceTest extends munit.FunSuite {
 
   tests.foreach { data =>
     test(s"${data.`type`.asString}".withTags(data.tags)) {
-      implicit val schemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
+      implicit val schemaProvider: DownloadingSchemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
       val (_, packageInfo) = data.metadata match {
-        case m @ TestPackageMetadata => schemaProvider.packageInfo(PulumiPackage(name = m.name), m)
+        case m @ TestPackageMetadata => schemaProvider.packageInfo(m, PulumiPackage(name = m.name))
         case _                       => schemaProvider.packageInfo(data.metadata)
       }
       implicit val thisPackageInfo: ThisPackageInfo = ThisPackageInfo(packageInfo)

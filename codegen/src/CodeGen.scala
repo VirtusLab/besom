@@ -1,12 +1,13 @@
 package besom.codegen
 
 import besom.codegen.Config.{CodegenConfig, ProviderConfig}
-import besom.codegen.PackageVersion.PackageVersion
+import besom.codegen.PackageVersion
 import besom.codegen.PulumiTypeReference.TypeReferenceOps
-import besom.codegen.Utils._
-import besom.codegen.metaschema._
+import besom.codegen.Utils.*
+import besom.codegen.metaschema.*
 
-import scala.meta._
+import scala.annotation.unused
+import scala.meta.*
 import scala.meta.dialects.Scala33
 
 //noinspection ScalaWeakerAccess,TypeAnnotation
@@ -136,32 +137,34 @@ class CodeGen(implicit
   def sourceFilesForEnum(
     typeCoordinates: PulumiDefinitionCoordinates,
     enumDefinition: EnumTypeDefinition
-  ): Seq[SourceFile] = {
+  )(implicit config: CodegenConfig): Seq[SourceFile] = {
     val classCoordinates = typeCoordinates.asEnumClass
 
-    val enumClassName       = Type.Name(classCoordinates.definitionName).syntax
-    val enumClassStringName = Lit.String(classCoordinates.definitionName).syntax
+    val enumClassName       = Type.Name(classCoordinates.definitionName)
+    val enumClassStringName = Lit.String(classCoordinates.definitionName)
 
     val (superclass, valueType) = enumDefinition.`type` match {
-      case BooleanType => ("besom.types.BooleanEnum", "Boolean")
-      case IntegerType => ("besom.types.IntegerEnum", "Int")
-      case NumberType  => ("besom.types.NumberEnum", "Double")
-      case StringType  => ("besom.types.StringEnum", "String")
+      case BooleanType => (scalameta.types.besom.types.BooleanEnum, scalameta.types.Boolean)
+      case IntegerType => (scalameta.types.besom.types.IntegerEnum, scalameta.types.Int)
+      case NumberType  => (scalameta.types.besom.types.NumberEnum, scalameta.types.Double)
+      case StringType  => (scalameta.types.besom.types.StringEnum, scalameta.types.String)
     }
 
-    val instances: Seq[(String, String)] = enumDefinition.`enum`.map { valueDefinition =>
+    val instances: Seq[(Stat, Term.Name)] = enumDefinition.`enum`.map { (valueDefinition: EnumValueDefinition) =>
       val caseRawName = valueDefinition.name.getOrElse {
         valueDefinition.value match {
           case StringConstValue(value) => value
           case const                   => throw GeneralCodegenError(s"The name of enum cannot be derived from value ${const}")
         }
       }
-      val caseName       = Term.Name(caseRawName).syntax
-      val caseStringName = Lit.String(caseRawName).syntax
-      val caseValue      = valueDefinition.value.asScala.syntax
+      val caseName       = Term.Name(caseRawName)
+      val caseStringName = Lit.String(caseRawName)
+      val caseValue      = valueDefinition.value.asScala
 
-      val definition = s"""object ${caseName} extends ${enumClassName}(${caseStringName}, ${caseValue})"""
-      val reference  = caseName
+      val definition = scalameta.parse(
+        s"""object ${caseName.syntax} extends ${enumClassName.syntax}(${caseStringName.syntax}, ${caseValue.syntax})"""
+      )
+      val reference = caseName
       (definition, reference)
     }
 
@@ -177,6 +180,9 @@ class CodeGen(implicit
           |${instances.map(instance => s"    ${instance._2}").mkString(",\n")}
           |  )
           |""".stripMargin
+
+    if config.parseAST then
+      val _ = scalameta.parse(fileContent)
 
     Seq(
       SourceFile(
@@ -257,7 +263,7 @@ class CodeGen(implicit
     typeCoordinates: PulumiDefinitionCoordinates,
     resourceDefinition: ResourceDefinition,
     isProvider: Boolean
-  ): Seq[SourceFile] = {
+  )(implicit config: CodegenConfig): Seq[SourceFile] = {
     val typeToken            = typeCoordinates.token
     val baseClassCoordinates = typeCoordinates.asResourceClass(asArgsType = false)
     val argsClassCoordinates = typeCoordinates.asResourceClass(asArgsType = true)
@@ -347,6 +353,9 @@ class CodeGen(implicit
           |${baseClassParams.map(param => s"  ${param}").mkString(",\n")}
           |) extends ${resourceBaseClass} derives besom.ResourceDecoder""".stripMargin
 
+    if config.parseAST then
+      val _ = scalameta.parse(baseClass)
+
     val hasDefaultArgsConstructor = requiredInputs.forall { propertyName =>
       val propertyDefinition = resourceDefinition.inputProperties(propertyName)
       propertyDefinition.default.nonEmpty || propertyDefinition.const.nonEmpty
@@ -375,6 +384,9 @@ class CodeGen(implicit
         s"""object $baseClassName"""
       }
 
+    if config.parseAST then
+      val _ = scalameta.parse(baseCompanion)
+
     val baseClassFileContent =
       s"""|package ${baseClassCoordinates.packageRef}
           |
@@ -384,19 +396,22 @@ class CodeGen(implicit
           |${baseCompanion}
           |""".stripMargin
 
-      val baseClassSourceFile = SourceFile(
-        baseClassCoordinates.filePath,
-        baseClassFileContent
-      )
+    if config.parseAST then
+      val _ = scalameta.parse(baseClassFileContent)
 
-      val argsClassSourceFile = makeArgsClassSourceFile(
-        classCoordinates = argsClassCoordinates,
-        properties = inputProperties,
-        isResource = true,
-        isProvider = isProvider
-      )
+    val baseClassSourceFile = SourceFile(
+      baseClassCoordinates.filePath,
+      baseClassFileContent
+    )
 
-      Seq(baseClassSourceFile, argsClassSourceFile)
+    val argsClassSourceFile = makeArgsClassSourceFile(
+      classCoordinates = argsClassCoordinates,
+      properties = inputProperties,
+      isResource = true,
+      isProvider = isProvider
+    )
+
+    Seq(baseClassSourceFile, argsClassSourceFile)
   }
 
   def sourceFilesForFunctions(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
@@ -420,7 +435,7 @@ class CodeGen(implicit
     functionCoordinates: PulumiDefinitionCoordinates,
     functionDefinition: FunctionDefinition,
     functionToken: PulumiToken
-  ): Seq[SourceFile] = {
+  )(implicit config: CodegenConfig): Seq[SourceFile] = {
     val isMethod = functionDefinition.inputs.properties.isDefinedAt(Utils.selfParameterName)
 
     if (isMethod) {
@@ -479,15 +494,15 @@ class CodeGen(implicit
         )
       }
 
-      val argsClassRef: Type.Ref = argsClassCoordinates.typeRef
-      val argsClassParamName = Term.Name("args")
+      val argsClassRef: Type.Ref     = argsClassCoordinates.typeRef
+      val argsClassParamName         = Term.Name("args")
       val argsClassParam: Term.Param = argsClassCoordinates.asNamedParam(argsClassParamName)(withDefault = inputProperties.isEmpty)
 
       val resultTypeRef: Type =
         (functionDefinition.outputs.objectTypeDefinition, functionDefinition.outputs.typeReference) match {
-          case (Some(_), _) => resultClassCoordinates.typeRef
+          case (Some(_), _)      => resultClassCoordinates.typeRef
           case (None, Some(ref)) => ref.asScalaType().toTry.get
-          case (None, None) => scalameta.types.Unit
+          case (None, None)      => scalameta.types.Unit
         }
 
       val methodSourceFile = {
@@ -503,6 +518,9 @@ class CodeGen(implicit
               |   ctx.invoke[${argsClassRef.syntax}, ${resultTypeRef.syntax}](${token.syntax}, ${argsClassParamName.syntax}, opts)
               |""".stripMargin
 
+        if config.parseAST then
+          val _ = scalameta.parse(fileContent)
+
         SourceFile(
           filePath = methodCoordinates.filePath,
           sourceCode = fileContent
@@ -513,7 +531,10 @@ class CodeGen(implicit
     }
   }
 
-  def sourceFilesForConfig(pulumiPackage: PulumiPackage, packageInfo: PulumiPackageInfo): (Seq[SourceFile], Seq[ConfigDependency]) = {
+  def sourceFilesForConfig(
+    pulumiPackage: PulumiPackage,
+    packageInfo: PulumiPackageInfo
+  )(implicit config: CodegenConfig): (Seq[SourceFile], Seq[ConfigDependency]) = {
     val PulumiToken(_, _, providerName) = PulumiToken(packageInfo.providerTypeToken)
     val coordinates = PulumiToken(providerName, Utils.configModuleName, Utils.configTypeName)
       .toCoordinates(pulumiPackage)
@@ -552,17 +573,21 @@ class CodeGen(implicit
       val returnsDoc = s"@returns the value of the `$providerName:$configName` configuration property" +
         s"${if (configsWithDefault.contains(configName)) " or a default value if present" else ""}."
 
-      s"""|/**
+      val code = s"""|/**
           | * ${description}${deprecationDocs}
           | * ${returnsDoc}
           | */${deprecationCode}
           |def ${Term.Name(get)}(using ${scalameta.types.besom.types.Context}): ${scalameta.types.besom.types.Output(
-           scalameta.types.Option(propType)
-         )} =
+                      scalameta.types.Option(propType)
+                    )} =
           |  besom.internal.Codegen.config[${propType.syntax}](${Lit.String(providerName)})(key = ${Lit.String(
-           configName
-         )}, isSecret = ${Lit.Boolean(isSecret)}, default = ${default.syntax}, environment = ${environment.syntax})
+                      configName
+                    )}, isSecret = ${Lit.Boolean(isSecret)}, default = ${default.syntax}, environment = ${environment.syntax})
           |""".stripMargin
+
+      if config.parseAST then
+        val _ = scalameta.parse(code)
+      code
     }
 
     val code =
@@ -570,6 +595,9 @@ class CodeGen(implicit
           |${scalameta.importAll(scalameta.besom.internal.CodegenProtocol())}
           |${configs.mkString("\n")}
           |""".stripMargin
+
+    if config.parseAST then
+      val _ = scalameta.parse(code)
 
     if (pulumiPackage.config.variables.isEmpty) {
       (Seq.empty, Seq.empty)
@@ -594,7 +622,7 @@ class CodeGen(implicit
     classCoordinates: ScalaDefinitionCoordinates,
     properties: Seq[PropertyInfo],
     requiresJsonFormat: Boolean
-  ): SourceFile = {
+  )(implicit config: CodegenConfig): SourceFile = {
     val className   = classCoordinates.definitionName
     val typeName    = classCoordinates.typeName
     val classParams = properties.map(_.asScalaParam)
@@ -610,15 +638,18 @@ class CodeGen(implicit
     val hasOutputExtensions = outputExtensionMethods.nonEmpty
 
     // TODO: Add comments
+    val classComment = ""
 
-    val classDef = scalameta.parse(
+    val classDef =
       s"""|final case class $className private(
           |${classParams.map(arg => s"  ${arg}").mkString(",\n")}
           |) derives besom.types.Decoder
           |""".stripMargin
-    )
 
-    val baseCompanionDef = scalameta.parse(
+    if config.parseAST then
+      val _ = scalameta.parse(classDef)
+
+    val baseCompanionDef =
       if (hasOutputExtensions) {
         val classNameTerminator =
           if (className.endsWith("_")) " " else "" // colon after underscore would be treated as a part of the name
@@ -636,7 +667,6 @@ class CodeGen(implicit
       } else {
         s"""object $className"""
       }
-    )
 
     val imports: List[Import] = if (requiresJsonFormat) {
       scalameta.importAll(scalameta.besom.internal.CodegenProtocol()) :: Nil
@@ -644,13 +674,19 @@ class CodeGen(implicit
       Nil
     }
 
-    val fileContent = scalameta.package_(classCoordinates.packageRef) {
-        imports ++ (classDef :: baseCompanionDef :: Nil)
-    }
+    val fileContent =
+      s"""|package ${classCoordinates.packageRef}
+          |${imports.mkString("\n")}
+          |${classComment}
+          |${classDef}
+          |
+          |${baseCompanionDef}
+          |
+          |""".stripMargin
 
     SourceFile(
       classCoordinates.filePath,
-      fileContent.syntax
+      fileContent
     )
   }
 
@@ -697,10 +733,11 @@ class CodeGen(implicit
           |${argsClassParams.map(arg => s"  ${arg}").mkString(",\n")}
           |) derives ${derivedTypeclasses}
           |""".stripMargin
+
     scalameta.parse(code)
   }
 
-  private def makeArgsCompanion(argsClassName: String, inputProperties: Seq[PropertyInfo], isResource: Boolean): Stat = {
+  private def makeArgsCompanion(argsClassName: String, inputProperties: Seq[PropertyInfo], @unused isResource: Boolean): Stat = {
     val argsCompanionApplyParams   = inputProperties.filter(_.constValue.isEmpty).map(_.asScalaParam)
     val argsCompanionApplyBodyArgs = inputProperties.map(_.asScalaNamedArg)
     val code =
@@ -712,11 +749,12 @@ class CodeGen(implicit
           |${argsCompanionApplyBodyArgs.map(arg => s"      ${arg}").mkString(",\n")}
           |    )
           |""".stripMargin
+
     scalameta.parse(code)
   }
 }
 
-case class FilePath private (pathParts: Seq[String]) {
+case class FilePath(pathParts: Seq[String]) {
   require(
     pathParts.forall(!_.contains('/')),
     s"Path parts cannot contain '/', got: ${pathParts.mkString("[", ",", "]")}"

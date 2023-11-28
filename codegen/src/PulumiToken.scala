@@ -79,7 +79,7 @@ object PulumiToken {
     )
   }
 
-  def unapply(token: PulumiToken): Option[(String, String, String)] = Some((token.provider, token.module, token.name))
+  def unapply(token: PulumiToken): Some[(String, String, String)] = Some((token.provider, token.module, token.name))
 
   /** The raw, non-uniform Pulumi token from Pulumi schema, it represents "dirty state"
     */

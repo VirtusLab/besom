@@ -15,11 +15,11 @@ class ScalametaTest extends munit.FunSuite {
   }
 
   test("apply_") {
-    assertEquals(scalameta.apply_(scalameta.List).syntax, "scala.List.apply")
+    assertEquals(scalameta.apply_(scalameta.List).syntax, "scala.collection.immutable.List.apply")
   }
 
   test("method") {
-    assertEquals(scalameta.method(scalameta.List, "apply").syntax, "scala.List.apply")
+    assertEquals(scalameta.method(scalameta.List, "apply").syntax, "scala.collection.immutable.List.apply")
   }
 
   test("Unit") {
@@ -35,17 +35,17 @@ class ScalametaTest extends munit.FunSuite {
   }
 
   test("List size 1") {
-    assertEquals(scalameta.List(Lit.String("test")).syntax, "scala.List(\"test\")")
+    assertEquals(scalameta.List(Lit.String("test")).syntax, "scala.collection.immutable.List(\"test\")")
   }
 
   test("List empty") {
-    assertEquals(scalameta.List().syntax, "scala.List()")
+    assertEquals(scalameta.List().syntax, "scala.collection.immutable.List()")
   }
 
   test("besom.internal.CodegenProtocol.jsonFormatN") {
     assertEquals(
       scalameta.besom.internal.CodegenProtocol.jsonFormatN(1)(scalameta.apply_(scalameta.List)).syntax,
-      "besom.internal.CodegenProtocol.jsonFormat1(scala.List.apply)"
+      "besom.internal.CodegenProtocol.jsonFormat1(scala.collection.immutable.List.apply)"
     )
   }
 
@@ -62,7 +62,7 @@ class ScalametaTest extends munit.FunSuite {
   }
 
   test("types.List[String]") {
-    assertEquals(scalameta.types.List(Type.Name("String")).syntax, "scala.List[String]")
+    assertEquals(scalameta.types.List(Type.Name("String")).syntax, "scala.collection.immutable.List[String]")
   }
 
   test("types.Map[String, String]") {

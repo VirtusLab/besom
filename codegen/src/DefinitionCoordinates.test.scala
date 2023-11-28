@@ -1,5 +1,6 @@
 package besom.codegen
 
+import scala.meta.*
 import besom.codegen.metaschema.PulumiPackage
 
 //noinspection ScalaFileName,TypeAnnotation

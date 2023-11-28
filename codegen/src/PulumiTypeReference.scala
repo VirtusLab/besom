@@ -295,10 +295,10 @@ object InternalTypeReference extends PulumiTypeTokenReferenceParser {
 case class BuiltinTypeReference(`type`: BuiltinTypeReference.Builtin) extends PulumiTypeReference {
   override def asScalaType(@unused unused: Boolean = false): Either[Exception, Type] =
     `type` match {
-      case "Archive" => Right(t"besom.types.Archive")
-      case "Asset"   => Right(t"besom.types.AssetOrArchive")
-      case "Any"     => Right(t"besom.types.PulumiAny")
-      case "Json"    => Right(t"besom.types.PulumiJson")
+      case "Archive" => Right(scalameta.types.besom.types.Archive)
+      case "Asset"   => Right(scalameta.types.besom.types.AssetOrArchive)
+      case "Any"     => Right(scalameta.types.besom.types.PulumiAny)
+      case "Json"    => Right(scalameta.types.besom.types.PulumiJson)
       case _         => Left(TypeError(s"Unexpected builtin type: '${`type`}'"))
     }
 }
@@ -324,14 +324,14 @@ case class AnonymousTypeReference(
 
   override def asScalaType(asArgsType: Boolean = false): Either[Exception, Type] = {
     typeRef match {
-      case BooleanType         => Right(t"Boolean")
-      case StringType          => Right(t"String")
-      case IntegerType         => Right(t"Int")
-      case NumberType          => Right(t"Double")
-      case UrnType             => Right(t"besom.types.URN")
-      case ResourceIdType      => Right(t"besom.types.ResourceId")
-      case ArrayType(elemType) => elemType.asScalaType(asArgsType).map(t => t"scala.collection.immutable.List[${t}]")
-      case MapType(elemType)   => elemType.asScalaType(asArgsType).map(t => t"scala.Predef.Map[String, ${t}]")
+      case BooleanType         => Right(scalameta.types.Boolean)
+      case StringType          => Right(scalameta.types.String)
+      case IntegerType         => Right(scalameta.types.Int)
+      case NumberType          => Right(scalameta.types.Double)
+      case UrnType             => Right(scalameta.types.besom.types.URN)
+      case ResourceIdType      => Right(scalameta.types.besom.types.ResourceId)
+      case ArrayType(elemType) => elemType.asScalaType(asArgsType).map(t => scalameta.types.List(t))
+      case MapType(elemType)   => elemType.asScalaType(asArgsType).map(t => scalameta.types.Map(t))
       case unionType: UnionType => {
         val (errs, refs) = unionType.oneOf
           .map {
@@ -361,11 +361,6 @@ case class AnonymousTypeReference(
             }
         }
       }
-      case _ =>
-        fallbackType match {
-          case Some(ref) => ref.asScalaType(asArgsType)
-          case None      => Left(TypeError(s"Unexpected anonymous type and no fallback: '${typeRef}'"))
-        }
     }
   }
 }

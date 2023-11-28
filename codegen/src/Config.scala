@@ -27,7 +27,8 @@ object Config {
     outputDir: Option[os.RelPath] = None,
     scalaVersion: String = DefaultScalaVersion,
     javaVersion: String = DefaultJavaVersion,
-    logLevel: Logger.Level = Logger.Level.Info
+    logLevel: Logger.Level = Logger.Level.Info,
+    parseAST: Boolean = true,
   )
 
   case class ProviderConfig(

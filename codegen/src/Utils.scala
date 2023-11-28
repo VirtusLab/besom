@@ -1,7 +1,7 @@
 package besom.codegen
 
-import besom.codegen.PackageVersion.PackageVersion
-import besom.codegen.metaschema._
+import besom.codegen.PackageVersion
+import besom.codegen.metaschema.*
 
 import scala.meta.Lit
 import scala.util.matching.Regex
@@ -54,7 +54,7 @@ object Utils {
       }
     }
 
-    private def packageFormatModuleToPackageParts: String => Seq[String] = { module: String =>
+    private def packageFormatModuleToPackageParts: String => Seq[String] = { (module: String) =>
       val moduleFormat: Regex = pulumiPackage.meta.moduleFormat.r
       module match {
         case _ if module.isEmpty =>
@@ -74,11 +74,15 @@ object Utils {
     def providerToPackageParts: String => Seq[String] = module => Seq(module)
 
     def providerTypeToken: String = s"pulumi:providers:${pulumiPackage.name}"
-    def reconcileVersion(packageVersion: PackageVersion)(implicit logger: Logger): PackageVersion = {
+
+    def toPackageMetadata(overrideMetadata: PackageMetadata): PackageMetadata =
+      toPackageMetadata(Some(overrideMetadata))
+    def toPackageMetadata(overrideMetadata: Option[PackageMetadata] = None): PackageMetadata = {
       import PackageVersion._
-      pulumiPackage.version.flatMap(PackageVersion.parse).getOrElse(PackageVersion.default).reconcile(packageVersion)
+      overrideMetadata match {
+        case Some(d) => PackageMetadata(d.name, PackageVersion(pulumiPackage.version).reconcile(d.version))
+        case None    => PackageMetadata(pulumiPackage.name, PackageVersion(pulumiPackage.version))
+      }
     }
-    def toPackageMetadata(defaultVersion: PackageVersion = PackageVersion.default)(implicit logger: Logger): PackageMetadata =
-      PackageMetadata(pulumiPackage.name, pulumiPackage.reconcileVersion(defaultVersion))
   }
 }

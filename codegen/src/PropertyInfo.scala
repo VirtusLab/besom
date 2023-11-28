@@ -4,6 +4,7 @@ import besom.codegen.PulumiTypeReference.TypeReferenceOps
 import besom.codegen.Utils.ConstValueOps
 
 import scala.meta._
+import scala.meta.dialects.Scala33
 import besom.codegen.metaschema._
 
 case class PropertyInfo(

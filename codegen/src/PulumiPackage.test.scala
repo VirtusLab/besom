@@ -2,6 +2,7 @@ package besom.codegen.metaschema
 
 import besom.codegen.PulumiTypeReference.TypeReferenceOps
 import besom.codegen.{Config, DownloadingSchemaProvider, Logger, PackageMetadata, ThisPackageInfo, UpickleApi, PropertyInfo}
+import scala.meta.*
 
 //noinspection ScalaFileName,TypeAnnotation
 class PulumiPackageTest extends munit.FunSuite {
@@ -48,10 +49,10 @@ class PulumiPackageTest extends munit.FunSuite {
     test(data.name) {
       val propertyDefinition = UpickleApi.read[PropertyDefinition](data.json)
 
-      implicit val schemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
+      implicit val schemaProvider: DownloadingSchemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
       val (_, packageInfo) = schemaProvider.packageInfo(
-        PulumiPackage(defaultTestSchemaName),
-        PackageMetadata(defaultTestSchemaName, "0.0.0")
+        PackageMetadata(defaultTestSchemaName, "0.0.0"),
+        PulumiPackage(defaultTestSchemaName)
       )
       implicit val thisPackageInfo: ThisPackageInfo = ThisPackageInfo(packageInfo)
       val typeReferenceScala                        = propertyDefinition.typeReference.asScalaType().toTry.get

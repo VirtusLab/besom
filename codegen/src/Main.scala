@@ -2,50 +2,43 @@ package besom.codegen
 
 import besom.codegen.Config.{CodegenConfig, ProviderConfig}
 import besom.codegen.PackageMetadata.{SchemaFile, SchemaName}
-import besom.codegen.PackageVersion.PackageVersion
+import besom.codegen.PackageVersion
 import besom.codegen.metaschema.PulumiPackage
 
 object Main {
   def main(args: Array[String]): Unit = {
-    args.toList match {
+    val result = args.toList match {
       case "named" :: name :: version :: Nil =>
         implicit val codegenConfig: CodegenConfig = CodegenConfig()
-        generator.generatePackageSources(
-          schemaOrMetadata = Right(PackageMetadata(name, version))
-        )
+        generator.generatePackageSources(metadata = PackageMetadata(name, version))
       case "named" :: name :: version :: outputDir :: Nil =>
         implicit val codegenConfig: CodegenConfig = CodegenConfig(outputDir = Some(os.rel / outputDir))
-        generator.generatePackageSources(
-          schemaOrMetadata = Right(PackageMetadata(name, version))
-        )
+        generator.generatePackageSources(metadata = PackageMetadata(name, version))
       case "metadata" :: metadataPath :: Nil =>
         implicit val codegenConfig: CodegenConfig = CodegenConfig()
-        generator.generatePackageSources(Right(PackageMetadata.fromJsonFile(os.Path(metadataPath))))
+        generator.generatePackageSources(metadata = PackageMetadata.fromJsonFile(os.Path(metadataPath)))
       case "metadata" :: metadataPath :: outputDir :: Nil =>
         implicit val codegenConfig: CodegenConfig = CodegenConfig(outputDir = Some(os.rel / outputDir))
-        generator.generatePackageSources(Right(PackageMetadata.fromJsonFile(os.Path(metadataPath))))
-      case "schema" :: providerName :: schemaVersion :: Nil =>
+        generator.generatePackageSources(metadata = PackageMetadata.fromJsonFile(os.Path(metadataPath)))
+      case "schema" :: name :: version :: schemaPath :: Nil =>
         implicit val codegenConfig: CodegenConfig = CodegenConfig()
         generator.generatePackageSources(
-          schemaOrMetadata = Right(PackageMetadata(providerName, schemaVersion))
-        )
-      case "schema" :: schemaPath :: Nil =>
-        implicit val codegenConfig: CodegenConfig = CodegenConfig()
-        generator.generatePackageSources(
-          schemaOrMetadata = Left(os.Path(schemaPath))
+          metadata = PackageMetadata(name, version),
+          schema = Some(os.Path(schemaPath))
         )
       case _ =>
         System.err.println(
           s"""|Unknown arguments: '${args.mkString(" ")}'
               |
               |Usage:
-              |  named <name> <version> [outputDir]   - Generate package from name and version
-              |  metadata <metadataPath> [outputDir]  - Generate package from metadata file
-              |  schema <schemaPath> [outputDir]      - Generate package from schema file
+              |  named <name> <version> [outputDir]               - Generate package from name and version
+              |  metadata <metadataPath> [outputDir]              - Generate package from metadata file
+              |  schema <name> <version> <schemaPath> [outputDir] - Generate package from schema file
               |""".stripMargin
         )
         sys.exit(1)
     }
+    System.out.println(result)
   }
 }
 
@@ -59,7 +52,8 @@ object generator {
 
   // noinspection ScalaWeakerAccess
   def generatePackageSources(
-    schemaOrMetadata: Either[SchemaFile, PackageMetadata]
+    metadata: PackageMetadata,
+    schema: Option[SchemaFile] = None
   )(implicit config: CodegenConfig): Result = {
     implicit val logger: Logger = new Logger(config.logLevel)
     implicit val schemaProvider: DownloadingSchemaProvider = new DownloadingSchemaProvider(
@@ -67,25 +61,24 @@ object generator {
     )
 
     // detect possible problems with GH API throttling
-    sys.env.getOrElse(
-      "GITHUB_TOKEN",
+    //noinspection ScalaUnusedSymbol
+    if !sys.env.contains("GITHUB_TOKEN") then
       logger.warn("Setting GITHUB_TOKEN environment variable might solve some problems")
-    )
 
-    val (pulumiPackage, packageInfo) = schemaProvider.packageInfo(schemaOrMetadata)
+    val (pulumiPackage, packageInfo) = schemaProvider.packageInfo(metadata, schema)
     val packageName                  = packageInfo.name
     val packageVersion               = packageInfo.version
 
     implicit val providerConfig: ProviderConfig = Config.providersConfigs(packageName)
 
     val outputDir: os.Path =
-      config.outputDir.getOrElse(os.rel / packageName / packageVersion).resolveFrom(config.codegenDir)
+      config.outputDir.getOrElse(os.rel / packageName / packageVersion.asString).resolveFrom(config.codegenDir)
 
     generatePackageSources(pulumiPackage, packageInfo, outputDir)
     logger.info(s"Finished generating package '$packageName:$packageVersion' codebase")
 
     val dependencies = schemaProvider.dependencies(packageName, packageVersion).map { case (name, version) =>
-      PackageMetadata(name, version)
+      PackageMetadata(name, Some(version))
     }
     logger.debug(
       s"Dependencies: \n${dependencies.map { case PackageMetadata(name, version, _) => s"- $name:$version\n" }}"

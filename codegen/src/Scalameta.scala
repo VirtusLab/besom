@@ -1,6 +1,7 @@
 package besom.codegen
 
 import scala.meta._
+import scala.meta.dialects.Scala33
 
 //noinspection ScalaFileName, TypeAnnotation
 object scalameta {
@@ -9,8 +10,9 @@ object scalameta {
     case Right(term) => term
   }
 
-  private def refPair(a: String, b: Term.Ref): Term.Ref = Term.Select(b, Term.Name(a))
-  def ref(parts: List[String]): Term.Ref = parts.tail.reverse.foldRight(Term.Name(parts.head).asInstanceOf[Term.Ref])(refPair)
+  def ref(parts: String*): Term.Ref = ref(parts.toList)
+  def ref(parts: List[String]): Term.Ref = 
+    parts.tail.foldLeft[Term.Ref](Term.Name(parts.head))((acc, name) => Term.Select(acc, Term.Name(name)))
 
   def package_(ref: Term.Ref)(body: List[scala.meta.Stat] = Nil): Pkg = Pkg(ref, body)
   def import_(ref: Term.Ref, importees: Importee*): Import = {
@@ -37,7 +39,7 @@ object scalameta {
   val Unit: Term.Ref                        = Term.Select(Term.Name("scala"), Term.Name("Unit"))
   val None: Term.Ref                        = Term.Select(Term.Name("scala"), Term.Name("None"))
   val Some: Term.Ref                        = Term.Select(Term.Name("scala"), Term.Name("Some"))
-  val List: Term.Ref                        = Term.Select(Term.Name("scala"), Term.Name("List"))
+  val List: Term.Ref                        = Term.Select(ref("scala", "collection", "immutable"), Term.Name("List"))
   def Some(value: Lit): Term.Apply          = Term.Apply(Some, Term.ArgClause(value :: Nil))
   def List(elements: List[Lit]): Term.Apply = Term.Apply(List, Term.ArgClause(elements))
   def List(elements: Lit*): Term.Apply      = List(elements.toList)
@@ -65,10 +67,13 @@ object scalameta {
   object types {
     private val Predef: Term.Ref = Term.Select(Term.Name("scala"), Term.Name("Predef"))
 
+    val Boolean: Type.Ref = Type.Name("Boolean")
     val String: Type.Ref = Type.Name("String")
+    val Int: Type.Ref    = Type.Name("Int")
+    val Double: Type.Ref = Type.Name("Double")
     val Unit: Type.Ref   = Type.Select(Term.Name("scala"), Type.Name("Unit"))
     val Option: Type.Ref = Type.Select(Term.Name("scala"), Type.Name("Option"))
-    val List: Type.Ref   = Type.Select(Term.Name("scala"), Type.Name("List"))
+    val List: Type.Ref   = Type.Select(ref("scala", "collection", "immutable"), Type.Name("List"))
     val Map: Type.Ref    = Type.Select(Predef, Type.Name("Map"))
 
     def Option(a: Type): Type.Apply       = Type.Apply(Option, Type.ArgClause(a :: Nil))
@@ -83,6 +88,17 @@ object scalameta {
           Type.Apply(Type.Select(Term.Select(Term.Name("besom"), Term.Name("types")), Type.Name("Output")), Type.ArgClause(a :: Nil))
         def Input(a: Type): Type =
           Type.Apply(Type.Select(Term.Select(Term.Name("besom"), Term.Name("types")), Type.Name("Input")), Type.ArgClause(a :: Nil))
+          
+        val Archive = Type.Select(Term.Select(Term.Name("besom"), Term.Name("types")), Type.Name("Archive"))
+        val AssetOrArchive = Type.Select(Term.Select(Term.Name("besom"), Term.Name("types")), Type.Name("AssetOrArchive"))
+        val PulumiAny = Type.Select(Term.Select(Term.Name("besom"), Term.Name("types")), Type.Name("PulumiAny"))
+        val PulumiJson = Type.Select(Term.Select(Term.Name("besom"), Term.Name("types")), Type.Name("PulumiJson"))
+        val URN = Type.Select(Term.Select(Term.Name("besom"), Term.Name("types")), Type.Name("URN"))
+        val ResourceId = Type.Select(Term.Select(Term.Name("besom"), Term.Name("types")), Type.Name("ResourceId"))
+        val BooleanEnum = Type.Select(Term.Select(Term.Name("besom"), Term.Name("types")), Type.Name("BooleanEnum"))
+        val IntegerEnum = Type.Select(Term.Select(Term.Name("besom"), Term.Name("types")), Type.Name("IntegerEnum"))
+        val NumberEnum = Type.Select(Term.Select(Term.Name("besom"), Term.Name("types")), Type.Name("NumberEnum"))
+        val StringEnum = Type.Select(Term.Select(Term.Name("besom"), Term.Name("types")), Type.Name("StringEnum"))
       }
     }
 

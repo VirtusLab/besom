@@ -656,13 +656,6 @@ case class ObjectTypeDefinitionOrTypeReference(
 object ObjectTypeDefinitionOrTypeReference {
   implicit val reader: Reader[ObjectTypeDefinitionOrTypeReference] =
     ObjectTypeDefinitionOrTypeReferenceProto.reader.map { proto =>
-      def objectTypeDefinitionOpt = proto.maybeAsObjectTypeDefinition.map(objectTypeDefinition =>
-        ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = Some(objectTypeDefinition), typeReference = None)
-      )
-      def typeReferenceOpt = proto.maybeAsTypeReference.map(typeReference =>
-        ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = None, typeReference = Some(typeReference))
-      )
-
       val deserialized =
         if (proto.properties.nonEmpty)
           proto.maybeAsObjectTypeDefinition.map(objectTypeDefinition =>
@@ -678,7 +671,7 @@ object ObjectTypeDefinitionOrTypeReference {
       )
     }
 
-  def empty = ObjectTypeDefinitionOrTypeReference(None, None)
+  def empty: ObjectTypeDefinitionOrTypeReference = ObjectTypeDefinitionOrTypeReference(None, None)
 }
 
 /** @param `type`

@@ -1,7 +1,7 @@
 package besom.codegen
 
 import besom.codegen.PackageMetadata.SchemaName
-import besom.codegen.PackageVersion.PackageVersion
+import besom.codegen.PackageVersion
 
 case class PulumiPackageInfo(
   name: SchemaName,
@@ -13,7 +13,7 @@ case class PulumiPackageInfo(
   moduleToPackageParts: String => Seq[String],
   providerToPackageParts: String => Seq[String]
 ) {
-  def asPackageMetadata: PackageMetadata = PackageMetadata(name, version)
+  def asPackageMetadata: PackageMetadata = PackageMetadata(name, Some(version))
 }
 
 case class ThisPackageInfo(instance: PulumiPackageInfo)

@@ -2,6 +2,7 @@ package besom.codegen
 
 import besom.codegen.Config.ProviderConfig
 import besom.codegen.PackageMetadata.SchemaName
+import scala.meta.*
 
 //noinspection ScalaFileName,TypeAnnotation
 class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
@@ -181,7 +182,7 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
           filePath = "src/ec2/GetAmiResult.scala"
         )
       )
-    ),
+    )
   )
 
   tests.foreach { data =>
@@ -227,4 +228,3 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
     }
   }
 }
-

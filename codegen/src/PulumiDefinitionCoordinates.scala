@@ -99,7 +99,6 @@ object PulumiDefinitionCoordinates {
           modulePackageParts = moduleToPackageParts(moduleName),
           definitionName = definitionName
         )
-      case _ => throw TypeError(s"Cannot match PulumiToken: $typeToken")
     }
   }
 

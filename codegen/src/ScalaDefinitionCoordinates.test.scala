@@ -1,5 +1,7 @@
 package besom.codegen
 
+import scala.meta.*
+
 //noinspection ScalaFileName,TypeAnnotation
 class ScalaDefinitionCoordinatesTest extends munit.FunSuite {
   implicit val providerConfig: Config.ProviderConfig = Config.ProviderConfig()

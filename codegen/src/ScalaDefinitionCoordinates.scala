@@ -1,7 +1,6 @@
 package besom.codegen
 
 import scala.meta._
-import scala.meta.dialects.Scala33
 
 case class ScalaDefinitionCoordinates private (
   private val providerPackageParts: Seq[String],
@@ -25,8 +24,7 @@ case class ScalaDefinitionCoordinates private (
         case head :: tail if head == Utils.indexModuleName => tail
         case p                                             => p
       }
-      val partsHead :: partsTail = sanitizeParts(baseApiPackagePrefixParts ++ providerPackageParts ++ moduleParts)
-      partsTail.foldLeft[Term.Ref](Term.Name(partsHead))((acc, name) => Term.Select(acc, Term.Name(name)))
+      scalameta.ref(sanitizeParts(baseApiPackagePrefixParts ++ providerPackageParts ++ moduleParts))
     } catch {
       case e: org.scalameta.invariants.InvariantFailedException =>
         throw ScalaDefinitionCoordinatesError(
@@ -40,8 +38,8 @@ case class ScalaDefinitionCoordinates private (
 
   def termName: Term.Name = Term.Name(definitionName)
   def typeName: Type.Name = Type.Name(definitionName)
-  def termRef: Term.Ref = Term.Select(packageRef, termName)
-  def typeRef: Type.Ref = Type.Select(packageRef, typeName)
+  def termRef: Term.Ref   = Term.Select(packageRef, termName)
+  def typeRef: Type.Ref   = Type.Select(packageRef, typeName)
 
   def asNamedParam(name: Term.Name)(withDefault: Boolean = false): Term.Param = Term.Param(
     mods = Nil,
@@ -62,7 +60,6 @@ case class ScalaDefinitionCoordinates private (
           moduleName :: tail
         }
       case Nil => Utils.indexModuleName :: Nil
-      case p   => p
     }
     FilePath("src" +: moduleParts :+ s"${definitionName}.scala")
   }
