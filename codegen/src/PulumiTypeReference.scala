@@ -191,7 +191,7 @@ sealed trait PulumiTypeTokenReference extends PulumiTypeReference {
           }
       }
 
-    classCoordinates.map(_.fullyQualifiedTypeRef) match {
+    classCoordinates.map(_.typeRef) match {
       case Some(ref) => Right(ref)
       case None =>
         fallback.map(_.asScalaType(asArgsType)) match {

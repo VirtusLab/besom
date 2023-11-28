@@ -1,8 +1,9 @@
 package besom.codegen
 
 import besom.codegen.PackageVersion.PackageVersion
-import besom.codegen.metaschema.PulumiPackage
+import besom.codegen.metaschema._
 
+import scala.meta.Lit
 import scala.util.matching.Regex
 
 object Utils {
@@ -10,10 +11,10 @@ object Utils {
   // the root package (according to pulumi's convention)
   // Needs to be used in Pulumi types, but should NOT be translated to Scala code
   // Placeholder module for classes that should be in the root package (according to pulumi's convention)
-  val indexModuleName = "index"
+  val indexModuleName  = "index"
   val configModuleName = "config"
   val providerTypeName = "Provider"
-  val configTypeName = "Config"
+  val configTypeName   = "Config"
 
   // Name of the self parameter of resource methods
   val selfParameterName = "__self__"
@@ -21,20 +22,35 @@ object Utils {
   // TODO: Find some workaround to enable passing the remaining arguments
   val jvmMaxParamsCount = 253 // https://github.com/scala/bug/issues/7324
 
+  implicit class ConstValueOps(constValue: ConstValue) {
+    def asScala: Lit = constValue match {
+      case StringConstValue(value)  => Lit.String(value)
+      case BooleanConstValue(value) => Lit.Boolean(value)
+      case IntConstValue(value)     => Lit.Int(value)
+      case DoubleConstValue(value)  => Lit.Double(value)
+    }
+  }
+
   implicit class PulumiPackageOps(pulumiPackage: PulumiPackage) {
     private def slashModuleToPackageParts: String => Seq[String] =
       pkg => pkg.split("/").filter(_.nonEmpty).toSeq
 
     private def languageModuleToPackageParts: String => Seq[String] = {
       if (pulumiPackage.language.java.packages.view.nonEmpty) {
-        pulumiPackage.language.java.packages.view.mapValues { pkg =>
-          pkg.split("\\.").filter(_.nonEmpty).toSeq
-        }.toMap.withDefault(slashModuleToPackageParts) // fallback to slash mapping
+        pulumiPackage.language.java.packages.view
+          .mapValues { pkg =>
+            pkg.split("\\.").filter(_.nonEmpty).toSeq
+          }
+          .toMap
+          .withDefault(slashModuleToPackageParts) // fallback to slash mapping
       } else {
         // use nodejs mapping as a fallback
-        pulumiPackage.language.nodejs.moduleToPackage.view.mapValues { pkg =>
-          pkg.split("/").filter(_.nonEmpty).toSeq
-        }.toMap.withDefault(slashModuleToPackageParts) // fallback to slash mapping
+        pulumiPackage.language.nodejs.moduleToPackage.view
+          .mapValues { pkg =>
+            pkg.split("/").filter(_.nonEmpty).toSeq
+          }
+          .toMap
+          .withDefault(slashModuleToPackageParts) // fallback to slash mapping
       }
     }
 

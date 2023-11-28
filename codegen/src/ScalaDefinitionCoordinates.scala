@@ -18,7 +18,7 @@ case class ScalaDefinitionCoordinates private (
       .map(_.replace("-", ""))
   }
 
-  private def packageRef: Term.Ref = {
+  def packageRef: Term.Ref = {
     try {
       // we remove index from the package, if necessary
       val moduleParts = modulePackageParts.toList match {
@@ -38,13 +38,17 @@ case class ScalaDefinitionCoordinates private (
     }
   }
 
-  def fullyQualifiedTypeRef: Type.Ref = {
-    Type.Select(packageRef, Type.Name(definitionName))
-  }
+  def termName: Term.Name = Term.Name(definitionName)
+  def typeName: Type.Name = Type.Name(definitionName)
+  def termRef: Term.Ref = Term.Select(packageRef, termName)
+  def typeRef: Type.Ref = Type.Select(packageRef, typeName)
 
-  def fullPackageName: String = {
-    packageRef.syntax
-  }
+  def asNamedParam(name: Term.Name)(withDefault: Boolean = false): Term.Param = Term.Param(
+    mods = Nil,
+    name = name,
+    decltpe = Some(typeRef),
+    default = if (withDefault) Some(Term.Apply(termRef, Term.ArgClause(Nil, None))) else None
+  )
 
   def filePath(implicit providerConfig: Config.ProviderConfig): FilePath = {
     // we DO NOT remove index from the file path, we add it if necessary
@@ -60,7 +64,7 @@ case class ScalaDefinitionCoordinates private (
       case Nil => Utils.indexModuleName :: Nil
       case p   => p
     }
-    FilePath(Seq("src") ++ moduleParts ++ Seq(s"${definitionName}.scala"))
+    FilePath("src" +: moduleParts :+ s"${definitionName}.scala")
   }
 }
 

@@ -197,31 +197,31 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
       data.expected.foreach {
         case ResourceClassExpectations(fullPackageName, fullyQualifiedTypeRef, filePath, asArgsType) =>
           val rc = coords.asResourceClass(asArgsType = asArgsType)
-          assertEquals(rc.fullPackageName, fullPackageName)
-          assertEquals(rc.fullyQualifiedTypeRef.toString, fullyQualifiedTypeRef)
+          assertEquals(rc.packageRef.syntax, fullPackageName)
+          assertEquals(rc.typeRef.syntax, fullyQualifiedTypeRef)
           assertEquals(rc.filePath.osSubPath.toString(), filePath)
         case ObjectClassExpectations(fullPackageName, fullyQualifiedTypeRef, filePath, asArgsType) =>
           val oc = coords.asObjectClass(asArgsType = asArgsType)
-          assertEquals(oc.fullPackageName, fullPackageName)
-          assertEquals(oc.fullyQualifiedTypeRef.toString, fullyQualifiedTypeRef)
+          assertEquals(oc.packageRef.syntax, fullPackageName)
+          assertEquals(oc.typeRef.syntax, fullyQualifiedTypeRef)
           assertEquals(oc.filePath.osSubPath.toString(), filePath)
         case EnumClassExpectations(fullPackageName, fullyQualifiedTypeRef, filePath) =>
           val ec = coords.asEnumClass
-          assertEquals(ec.fullPackageName, fullPackageName)
-          assertEquals(ec.fullyQualifiedTypeRef.toString, fullyQualifiedTypeRef)
+          assertEquals(ec.packageRef.syntax, fullPackageName)
+          assertEquals(ec.typeRef.syntax, fullyQualifiedTypeRef)
           assertEquals(ec.filePath.osSubPath.toString(), filePath)
         case FunctionClassExpectations(fullPackageName, fullyQualifiedTypeRef, filePath, args, result) =>
           val m = coords.topLevelMethod
-          assertEquals(m.fullPackageName, fullPackageName)
-          assertEquals(m.fullyQualifiedTypeRef.toString, fullyQualifiedTypeRef)
+          assertEquals(m.packageRef.syntax, fullPackageName)
+          assertEquals(m.typeRef.syntax, fullyQualifiedTypeRef)
           assertEquals(m.filePath.osSubPath.toString(), filePath)
           val ac = coords.methodArgsClass
-          assertEquals(ac.fullPackageName, args.fullPackageName)
-          assertEquals(ac.fullyQualifiedTypeRef.toString, args.fullyQualifiedTypeRef)
+          assertEquals(ac.packageRef.syntax, args.fullPackageName)
+          assertEquals(ac.typeRef.syntax, args.fullyQualifiedTypeRef)
           assertEquals(ac.filePath.osSubPath.toString(), args.filePath)
           val rc = coords.methodResultClass
-          assertEquals(rc.fullPackageName, result.fullPackageName)
-          assertEquals(rc.fullyQualifiedTypeRef.toString, result.fullyQualifiedTypeRef)
+          assertEquals(rc.packageRef.syntax, result.fullPackageName)
+          assertEquals(rc.typeRef.syntax, result.fullyQualifiedTypeRef)
           assertEquals(rc.filePath.osSubPath.toString(), result.filePath)
       }
     }

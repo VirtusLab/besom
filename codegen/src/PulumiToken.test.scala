@@ -9,15 +9,15 @@ class PulumiTokenTest extends munit.FunSuite {
   }
   test("asString") {
     assertEquals(PulumiToken("aws:ec2:Instance").asString, "aws:ec2:Instance")
-    assertEquals(PulumiToken("provider", "index", "SomeType").asString, "provider:index:SomeType")
+    assertEquals(PulumiToken("example", "index", "SomeType").asString, "example:index:SomeType")
   }
   test("asLookupKey") {
     assertEquals(PulumiToken("aws:ec2:Instance").asLookupKey, "aws:ec2:instance")
   }
 
   test("enforce non-empty module") {
-    assertEquals(PulumiToken("provider", "", "SomeType").asString, "provider:index:SomeType")
-    assertEquals(PulumiToken("provider::SomeType").asString, "provider:index:SomeType")
-    assertEquals(PulumiToken("provider:SomeType").asString, "provider:index:SomeType")
+    assertEquals(PulumiToken("example", "", "SomeType").asString, "example:index:SomeType")
+    assertEquals(PulumiToken("example::SomeType").asString, "example:index:SomeType")
+    assertEquals(PulumiToken("example:SomeType").asString, "example:index:SomeType")
   }
 }

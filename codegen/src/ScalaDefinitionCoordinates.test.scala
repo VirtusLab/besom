@@ -18,10 +18,10 @@ class ScalaDefinitionCoordinatesTest extends munit.FunSuite {
 
   val tests = List(
     Data(
-      providerPackageParts = Seq("example"),
-      modulePackageParts = Seq(),
+      providerPackageParts = "example" :: Nil,
+      modulePackageParts = Nil,
       definitionName = "Provider"
-    )(expected =
+    )(
       Expectations(
         fullPackageName = "besom.api.example",
         fullyQualifiedTypeRef = "besom.api.example.Provider",
@@ -29,14 +29,25 @@ class ScalaDefinitionCoordinatesTest extends munit.FunSuite {
       )
     ),
     Data(
-      providerPackageParts = Seq("foo-bar"),
-      modulePackageParts = Seq(),
+      providerPackageParts = "foo-bar" :: Nil,
+      modulePackageParts = Nil,
       definitionName = "DashNamedProvider"
-    )(expected =
+    )(
       Expectations(
         fullPackageName = "besom.api.foobar",
         fullyQualifiedTypeRef = "besom.api.foobar.DashNamedProvider",
         filePath = "src/index/DashNamedProvider.scala"
+      )
+    ),
+    Data(
+      providerPackageParts = "aws-native" :: Nil,
+      modulePackageParts = "index" :: "region" :: Nil,
+      definitionName = "Region"
+    )(
+      Expectations(
+        fullPackageName = "besom.api.awsnative.region",
+        fullyQualifiedTypeRef = "besom.api.awsnative.region.Region",
+        filePath = "src/index/region/Region.scala"
       )
     )
   )
@@ -49,8 +60,8 @@ class ScalaDefinitionCoordinatesTest extends munit.FunSuite {
         definitionName = data.definitionName
       )
 
-      assertEquals(coords.fullPackageName, data.expected.fullPackageName)
-      assertEquals(coords.fullyQualifiedTypeRef.toString, data.expected.fullyQualifiedTypeRef)
+      assertEquals(coords.packageRef.syntax, data.expected.fullPackageName)
+      assertEquals(coords.typeRef.syntax, data.expected.fullyQualifiedTypeRef)
       assertEquals(coords.filePath.osSubPath.toString(), data.expected.filePath)
     }
   }
