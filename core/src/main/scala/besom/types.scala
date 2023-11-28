@@ -30,7 +30,7 @@ object types:
 
   /** Each resource is an instance of a specific Pulumi resource type. This type is specified by a type token in the
     * format `<package>:<module>:<typename>`, where:
-    *   - The `<package>`` component of the type (e.g. aws, azure-native, kubernetes, random) specifies which Pulumi
+    *   - The `<package>` component of the type (e.g. aws, azure-native, kubernetes, random) specifies which Pulumi
     *     Package defines the resource. This is mapped to the package in the Pulumi Registry and to the per-language
     *     Pulumi SDK package.
     *   - The `<module>` component of the type (e.g. s3/bucket, compute, apps/v1, index) is the module path where the
@@ -38,7 +38,7 @@ object types:
     *     the resource is not nested, and is instead available at the top level of the package. Per-language Pulumi SDKs
     *     use the module path to emit nested namespaces/modules in a language-specific way to organize all the types
     *     defined in a package.
-    *   - The <typename> component of the type (e.g. Bucket, VirtualMachine, Deployment, RandomPassword) is the
+    *   - The `<typename>` component of the type (e.g. Bucket, VirtualMachine, Deployment, RandomPassword) is the
     *     identifier used to refer to the resource itself. It is mapped to the class or constructor name in the
     *     per-language Pulumi SDK.
     */
@@ -206,18 +206,18 @@ object types:
       def project: String = URN.UrnRegex.findFirstMatchIn(urn).get.group("project")
 
       /** @return
-        *   the type of the parent [[Resource]]
+        *   the type of the parent [[besom.internal.Resource]]
         */
       def parentType: String = URN.UrnRegex.findFirstMatchIn(urn).get.group("parentType")
 
       /** @return
-        *   the type of this [[Resource]]
+        *   the type of this [[besom.internal.Resource]]
         */
       def resourceType: Option[String] =
         URN.UrnRegex.findFirstMatchIn(urn).map(_.group("resourceType")).flatMap(Option(_))
 
       /** @return
-        *   the logical name of this [[Resource]]
+        *   the logical name of this [[besom.internal.Resource]]
         */
       def resourceName: String = URN.UrnRegex.findFirstMatchIn(urn).get.group("resourceName")
 

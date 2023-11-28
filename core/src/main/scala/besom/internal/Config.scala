@@ -1,14 +1,15 @@
 package besom.internal
 
 import besom.util.NonEmptyString
+import spray.json.{JsValue, JsonReader}
 
 import scala.util.Try
 
-/** Config is a bag of related configuration state. Each bag contains any number of configuration variables, indexed by
-  * simple keys, and each has a name that uniquely identifies it; two bags with different names do not share values for
-  * variables that otherwise share the same key. For example, a bag whose name is `pulumi:foo`, with keys `a`, `b`, and
-  * `c`, is entirely separate from a bag whose name is `pulumi:bar` with the same simple key names. Each key has a fully
-  * qualified names, such as `pulumi:foo:a`, ..., and `pulumi:bar:a`, respectively.
+/** Config is a bag of related configuration state. Each bag contains any number of configuration variables, indexed by simple keys, and
+  * each has a name that uniquely identifies it; two bags with different names do not share values for variables that otherwise share the
+  * same key. For example, a bag whose name is `pulumi:foo`, with keys `a`, `b`, and `c`, is entirely separate from a bag whose name is
+  * `pulumi:bar` with the same simple key names. Each key has a fully qualified names, such as `pulumi:foo:a`, ..., and `pulumi:bar:a`,
+  * respectively.
   */
 //noinspection ScalaWeakerAccess
 class Config private (
@@ -26,20 +27,19 @@ class Config private (
 
   /** This method is unsafe because it will return a secret value as a plain string. This is useful for provider SDKs.
     * @param key
-    *   the requested configuration key
+    *   the requested configuration or secret key
     * @return
     *   the configuration value of the requested type
     */
   // noinspection ScalaUnusedSymbol
   private[besom] def unsafeGet(key: NonEmptyString) = tryGet(key)
 
-  /** This method differs in behavior from other Pulumi SDKs. In other SDKs, if you try to get a config key that is a
-    * secret, you will obtain it (due to https://github.com/pulumi/pulumi/issues/7127 you won't even get a warning). We
-    * choose to do the right thing here and not return the secret value as an unmarked plain string. For provider SDKs
-    * we have the unsafeGet method should it be absolutely necessary in practice. We also return all configs as Outputs
-    * so that we can handle failure in pure, functional way.
+  /** This method differs in behavior from other Pulumi SDKs. In other SDKs, if you try to get a config key that is a secret, you will
+    * obtain it (due to https://github.com/pulumi/pulumi/issues/7127 you won't even get a warning). We choose to do the right thing here and
+    * not return the secret value as an unmarked plain string. For provider SDKs we have the unsafeGet method should it be absolutely
+    * necessary in practice. We also return all configs as Outputs so that we can handle failure in pure, functional way.
     * @param key
-    *   the requested configuration key
+    *   the requested configuration or secret key
     * @return
     *   the configuration value of the requested type
     */
@@ -65,31 +65,31 @@ class Config private (
       }
     }
 
-  /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the
-    * configuration value is a secret, it will be marked internally as such and redacted in console outputs.
+  /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
+    * secret, it will be marked internally as such and redacted in console outputs.
     * @param key
-    *   the requested configuration key
+    *   the requested configuration or secret key
     * @param Context
     *   the Besom context
     * @tparam A
-    *   the type of the configuration value
+    *   the type of the configuration or secret value
     * @return
-    *   an optional configuration value of the requested type
+    *   an optional configuration or secret value of the requested type
     */
   def get[A: ConfigValueReader](key: NonEmptyString)(using Context): Output[Option[A]] =
     readConfigValue(key, getRawValue(key))
 
-  /** Loads a configuration or secret value by its key, or throws if it doesn't exist. If the configuration value is a
-    * secret, it will be marked internally as such and redacted in console outputs.
+  /** Loads a configuration or secret value by its key, or throws if it doesn't exist. If the configuration value is a secret, it will be
+    * marked internally as such and redacted in console outputs.
     *
     * @param key
-    *   the requested configuration key
+    *   the requested configuration or secret key
     * @param Context
     *   the Besom context
     * @tparam A
-    *   the type of the configuration value
+    *   the type of the configuration or secret value
     * @return
-    *   the configuration value of the requested type or [[ConfigError]]
+    *   the configuration or secret value of the requested type or [[ConfigError]]
     */
   def require[A: ConfigValueReader](key: NonEmptyString)(using Context): Output[A] = {
     def secretOption = if configSecretKeys.contains(key) then "[--secret]" else ""
@@ -106,116 +106,163 @@ class Config private (
     }
   }
 
-  /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the
-    * configuration value is a secret, it will be marked internally as such and redacted in console outputs.
+  /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
+    * secret, it will be marked internally as such and redacted in console outputs.
     *
     * @param key
-    *   the requested configuration key
+    *   the requested configuration or secret key
     * @param Context
     *   the Besom context
     * @return
-    *   an optional configuration [[String]] value
+    *   an optional configuration or secret [[String]] value
     */
   def getString(key: NonEmptyString)(using Context): Output[Option[String]] = get[String](key)
 
-  /** Loads a configuration or secret value by its key, or throws if it doesn't exist. If the configuration value is a
-    * secret, it will be marked internally as such and redacted in console outputs.
+  /** Loads a configuration or secret value by its key, or throws if it doesn't exist. If the configuration value is a secret, it will be
+    * marked internally as such and redacted in console outputs.
     *
     * @param key
-    *   the requested configuration key
+    *   the requested configuration or secret key
     * @param Context
     *   the Besom context
     * @return
-    *   the configuration [[String]] value or [[ConfigError]]
+    *   the configuration or secret [[String]] value or [[ConfigError]]
     */
   def requireString(key: NonEmptyString)(using Context): Output[String] = require[String](key)
 
-  /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the
-    * configuration value is a secret, it will be marked internally as such and redacted in console outputs.
+  /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
+    * secret, it will be marked internally as such and redacted in console outputs.
     *
     * @param key
-    *   the requested configuration key
+    *   the requested configuration or secret key
     * @param Context
     *   the Besom context
     * @return
-    *   an optional configuration [[Double]] value
+    *   an optional configuration or secret [[Double]] value
     */
   def getDouble(key: NonEmptyString)(using Context): Output[Option[Double]] = get[Double](key)
 
-  /** Loads a configuration or secret value by its key, or throws if it doesn't exist. If the configuration value is a
-    * secret, it will be marked internally as such and redacted in console outputs.
+  /** Loads a configuration or secret value by its key, or throws if it doesn't exist. If the configuration value is a secret, it will be
+    * marked internally as such and redacted in console outputs.
     *
     * @param key
-    *   the requested configuration key
+    *   the requested configuration or secret key
     * @param Context
     *   the Besom context
     * @return
-    *   the configuration [[Double]] value or [[ConfigError]]
+    *   the configuration or secret [[Double]] value or [[ConfigError]]
     */
   def requireDouble(key: NonEmptyString)(using Context): Output[Double] = require[Double](key)
 
-  /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the
-    * configuration value is a secret, it will be marked internally as such and redacted in console outputs.
+  /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
+    * secret, it will be marked internally as such and redacted in console outputs.
     *
     * @param key
-    *   the requested configuration key
+    *   the requested configuration or secret key
     * @param Context
     *   the Besom context
     * @return
-    *   an optional configuration [[Int]] value
+    *   an optional configuration or secret [[Int]] value
     */
   def getInt(key: NonEmptyString)(using Context): Output[Option[Int]] = get[Int](key)
 
-  /** Loads a configuration or secret value by its key, or throws if it doesn't exist. If the configuration value is a
-    * secret, it will be marked internally as such and redacted in console outputs.
+  /** Loads a configuration or secret value by its key, or throws if it doesn't exist. If the configuration value is a secret, it will be
+    * marked internally as such and redacted in console outputs.
     *
     * @param key
-    *   the requested configuration key
+    *   the requested configuration or secret key
     * @param Context
     *   the Besom context
     * @return
-    *   the configuration [[Int]] value or [[ConfigError]]
+    *   the configuration or secret [[Int]] value or [[ConfigError]]
     */
   def requireInt(key: NonEmptyString)(using Context): Output[Int] = require[Int](key)
 
-  /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the
-    * configuration value is a secret, it will be marked internally as such and redacted in console outputs.
-    *
-    * @param key
-    *   the requested configuration key
-    * @param Context
-    *   the Besom context
-    * @return
-    *   an optional configuration [[Boolean]] value
-    */
-  def getBoolean(key: NonEmptyString)(using Context): Output[Option[Boolean]] = get[Boolean](key)
-
-  /** Loads a configuration or secret value by its key, or throws if it doesn't exist. If the configuration value is a
+  /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
     * secret, it will be marked internally as such and redacted in console outputs.
     *
     * @param key
-    *   the requested configuration key
+    *   the requested configuration or secret key
     * @param Context
     *   the Besom context
     * @return
-    *   the configuration [[Boolean]] value or [[ConfigError]]
+    *   an optional configuration or secret [[Boolean]] value
+    */
+  def getBoolean(key: NonEmptyString)(using Context): Output[Option[Boolean]] = get[Boolean](key)
+
+  /** Loads a configuration or secret value by its key, or throws if it doesn't exist. If the configuration value is a secret, it will be
+    * marked internally as such and redacted in console outputs.
+    *
+    * @param key
+    *   the requested configuration or secret key
+    * @param Context
+    *   the Besom context
+    * @return
+    *   the configuration or secret [[Boolean]] value or [[ConfigError]]
     */
   def requireBoolean(key: NonEmptyString)(using Context): Output[Boolean] = require[Boolean](key)
 
+  /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
+    * secret, it will be marked internally as such and redacted in console outputs.
+    * @param key
+    *   the requested configuration or secret key
+    * @param Context
+    *   the Besom context
+    * @return
+    *   an optional configuration or secret [[spray.json.JsValue]] value
+    */
+  def getJson(key: NonEmptyString)(using Context): Output[Option[JsValue]] = get[JsValue](key)
+
+  /** Loads a configuration or secret value by its key, or throws if it doesn't exist. If the configuration value is a secret, it will be
+    * marked internally as such and redacted in console outputs.
+    * @param key
+    *   the requested configuration or secret key
+    * @param Context
+    *   the Besom context
+    * @return
+    *   the configuration or secret [[spray.json.JsValue]] value or [[ConfigError]]
+    */
+  def requireJson(key: NonEmptyString)(using Context): Output[JsValue] = require[JsValue](key)
+
+  /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
+    * secret, it will be marked internally as such and redacted in console outputs.
+    * @param key
+    *   the requested configuration or secret key
+    * @param Context
+    *   the Besom context
+    * @tparam A
+    *   the type to deserialize configuration or secret JSON value into
+    * @return
+    *   an optional configuration or secret deserialized JSON value of the requested type
+    */
+  def getObject[A: ConfigValueReader: JsonReader](key: NonEmptyString)(using Context): Output[Option[A]] = get[A](key)
+
+  /** Loads a configuration or secret value by its key, or Output.fail it doesn't exist. If the configuration value is a secret, it will be
+    * marked internally as such and redacted in console outputs.
+    *
+    * @param key
+    *   the requested configuration or secret key
+    * @param Context
+    *   the Besom context
+    * @tparam A
+    *   the type to deserialize configuration or secret JSON value into
+    * @return
+    *   the configuration or secret deserialized JSON value of the requested type or [[ConfigError]]
+    */
+  def requireObject[A: ConfigValueReader: JsonReader](key: NonEmptyString)(using Context): Output[A] = require[A](key)
+
 //noinspection ScalaUnusedSymbol
 object Config:
-  /** CleanKey takes a configuration key, and if it is of the form `"(string):config:(string)"` removes the `":config:"`
-    * portion. Previously, our keys always had the string `":config:"` in them, and we'd like to remove it. However, the
-    * language host needs to continue to set it so we can be compatible with older versions of our packages. Once we
-    * stop supporting older packages, we can change the language host to not add this `:config:` thing and remove this
-    * function.
+  /** CleanKey takes a configuration key, and if it is of the form `"(string):config:(string)"` removes the `":config:"` portion.
+    * Previously, our keys always had the string `":config:"` in them, and we'd like to remove it. However, the language host needs to
+    * continue to set it so we can be compatible with older versions of our packages. Once we stop supporting older packages, we can change
+    * the language host to not add this `:config:` thing and remove this function.
     */
   private def cleanKey(key: String): String =
     val prefix = "config:"
     val idx    = key.indexOf(":")
 
-    if idx > 0 && key.substring(idx + 1).startsWith(prefix) then
-      key.substring(0, idx) + ":" + key.substring(idx + 1 + prefix.length)
+    if idx > 0 && key.substring(idx + 1).startsWith(prefix) then key.substring(0, idx) + ":" + key.substring(idx + 1 + prefix.length)
     else key
 
   private[internal] def apply(
@@ -271,131 +318,191 @@ object Config:
     cleanedProjectName.flatMap(name => Config(name, isProjectName = true))
 
   extension (output: Output[Config])
-    /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the
-      * configuration value is a secret, it will be marked internally as such and redacted in console outputs.
+    /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
+      * secret, it will be marked internally as such and redacted in console outputs.
+      *
+      * Requires `ConfigValueReader[A]` to be in scope.
       *
       * @param key
-      *   the requested configuration key
+      *   the requested configuration or secret key
       * @param Context
       *   the Besom context
       * @tparam A
       *   the type of the configuration value
       * @return
-      *   an optional configuration value of the requested type
+      *   an optional configuration or secret value of the requested type
       */
     def get[A: ConfigValueReader](key: NonEmptyString)(using Context): Output[Option[A]] =
       output.flatMap(_.get[A](key))
 
-    /** Loads a configuration or secret value by its key, or throws if it doesn't exist. If the configuration value is a
-      * secret, it will be marked internally as such and redacted in console outputs.
+    /** Loads a configuration or secret value by its key, or Output.fail it doesn't exist. If the configuration value is a secret, it will
+      * be marked internally as such and redacted in console outputs.
+      *
+      * Requires `ConfigValueReader[A]` to be in scope.
       *
       * @param key
-      *   the requested configuration key
+      *   the requested configuration or secret key
       * @param Context
       *   the Besom context
       * @tparam A
       *   the type of the configuration value
       * @return
-      *   the configuration value of the requested type or [[ConfigError]]
+      *   the configuration or secret value of the requested type or [[ConfigError]]
       */
     def require[A: ConfigValueReader](key: NonEmptyString)(using Context): Output[A] =
       output.flatMap(_.require[A](key))
 
-    /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the
-      * configuration value is a secret, it will be marked internally as such and redacted in console outputs.
+    /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
+      * secret, it will be marked internally as such and redacted in console outputs.
       *
       * @param key
-      *   the requested configuration key
+      *   the requested configuration or secret key
       * @param Context
       *   the Besom context
       * @return
-      *   an optional configuration [[String]] value
+      *   an optional configuration or secret [[String]] value
       */
     def getString(key: NonEmptyString)(using Context): Output[Option[String]] = output.flatMap(_.getString(key))
 
-    /** Loads a configuration or secret value by its key, or throws if it doesn't exist. If the configuration value is a
-      * secret, it will be marked internally as such and redacted in console outputs.
+    /** Loads a configuration or secret value by its key, or Output.fail it doesn't exist. If the configuration value is a secret, it will
+      * be marked internally as such and redacted in console outputs.
       *
       * @param key
-      *   the requested configuration key
+      *   the requested configuration or secret key
       * @param Context
       *   the Besom context
       * @return
-      *   the configuration [[String]] value or [[ConfigError]]
+      *   the configuration or secret [[String]] value or [[ConfigError]]
       */
     def requireString(key: NonEmptyString)(using Context): Output[String] = output.flatMap(_.requireString(key))
 
-    /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the
-      * configuration value is a secret, it will be marked internally as such and redacted in console outputs.
+    /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
+      * secret, it will be marked internally as such and redacted in console outputs.
       *
       * @param key
-      *   the requested configuration key
+      *   the requested configuration or secret key
       * @param Context
       *   the Besom context
       * @return
-      *   an optional configuration [[Double]] value
+      *   an optional configuration or secret [[Double]] value
       */
     def getDouble(key: NonEmptyString)(using Context): Output[Option[Double]] = output.flatMap(_.getDouble(key))
 
-    /** Loads a configuration or secret value by its key, or throws if it doesn't exist. If the configuration value is a
-      * secret, it will be marked internally as such and redacted in console outputs.
+    /** Loads a configuration or secret value by its key, or Output.fail it doesn't exist. If the configuration value is a secret, it will
+      * be marked internally as such and redacted in console outputs.
       *
       * @param key
-      *   the requested configuration key
+      *   the requested configuration or secret key
       * @param Context
       *   the Besom context
       * @return
-      *   the configuration [[Double]] value or [[ConfigError]]
+      *   the configuration or secret [[Double]] value or [[ConfigError]]
       */
     def requireDouble(key: NonEmptyString)(using Context): Output[Double] = output.flatMap(_.requireDouble(key))
 
-    /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the
-      * configuration value is a secret, it will be marked internally as such and redacted in console outputs.
+    /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
+      * secret, it will be marked internally as such and redacted in console outputs.
       *
       * @param key
-      *   the requested configuration key
+      *   the requested configuration or secret key
       * @param Context
       *   the Besom context
       * @return
-      *   an optional configuration [[Int]] value
+      *   an optional configuration or secret [[Int]] value
       */
     def getInt(key: NonEmptyString)(using Context): Output[Option[Int]] = output.flatMap(_.getInt(key))
 
-    /** Loads a configuration or secret value by its key, or throws if it doesn't exist. If the configuration value is a
-      * secret, it will be marked internally as such and redacted in console outputs.
+    /** Loads a configuration or secret value by its key, or Output.fail it doesn't exist. If the configuration value is a secret, it will
+      * be marked internally as such and redacted in console outputs.
       *
       * @param key
-      *   the requested configuration key
+      *   the requested configuration or secret key
       * @param Context
       *   the Besom context
       * @return
-      *   the configuration [[Int]] value or [[ConfigError]]
+      *   the configuration or secret [[Int]] value or [[ConfigError]]
       */
     def requireInt(key: NonEmptyString)(using Context): Output[Int] = output.flatMap(_.requireInt(key))
 
-    /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the
-      * configuration value is a secret, it will be marked internally as such and redacted in console outputs.
-      *
-      * @param key
-      *   the requested configuration key
-      * @param Context
-      *   the Besom context
-      * @return
-      *   an optional configuration [[Boolean]] value
-      */
-    def getBoolean(key: NonEmptyString)(using Context): Output[Option[Boolean]] = output.flatMap(_.getBoolean(key))
-
-    /** Loads a configuration or secret value by its key, or throws if it doesn't exist. If the configuration value is a
+    /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
       * secret, it will be marked internally as such and redacted in console outputs.
       *
       * @param key
-      *   the requested configuration key
+      *   the requested configuration or secret key
       * @param Context
       *   the Besom context
       * @return
-      *   the configuration [[Boolean]] value or [[ConfigError]]
+      *   an optional configuration or secret [[Boolean]] value
+      */
+    def getBoolean(key: NonEmptyString)(using Context): Output[Option[Boolean]] = output.flatMap(_.getBoolean(key))
+
+    /** Loads a configuration or secret value by its key, or Output.fail it doesn't exist. If the configuration value is a secret, it will
+      * be marked internally as such and redacted in console outputs.
+      *
+      * @param key
+      *   the requested configuration or secret key
+      * @param Context
+      *   the Besom context
+      * @return
+      *   the configuration or secret [[Boolean]] value or [[ConfigError]]
       */
     def requireBoolean(key: NonEmptyString)(using Context): Output[Boolean] = output.flatMap(_.requireBoolean(key))
+
+    /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
+      * secret, it will be marked internally as such and redacted in console outputs.
+      * @param key
+      *   the requested configuration or secret key
+      * @param Context
+      *   the Besom context
+      * @return
+      *   an optional configuration or secret [[spray.json.JsValue]] value
+      */
+    def getJson(key: NonEmptyString)(using Context): Output[Option[JsValue]] = output.flatMap(_.getJson(key))
+
+    /** Loads a configuration or secret value by its key, or Output.fail it doesn't exist. If the configuration value is a secret, it will
+      * be marked internally as such and redacted in console outputs.
+      *
+      * @param key
+      *   the requested configuration or secret key
+      * @param Context
+      *   the Besom context
+      * @return
+      *   the configuration or secret [[spray.json.JsValue]] value or [[ConfigError]]
+      */
+    def requireJson(key: NonEmptyString)(using Context): Output[JsValue] = output.flatMap(_.requireJson(key))
+
+    /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
+      * secret, it will be marked internally as such and redacted in console outputs.
+      *
+      * Requires `JsonReader[A]` or `ConfigValueReader[A]` to be in scope.
+      * @param key
+      *   the requested configuration or secret key
+      * @param Context
+      *   the Besom context
+      * @tparam A
+      *   the type to deserialize configuration or secret JSON value into
+      * @return
+      *   an optional configuration or secret deserialized JSON value of the requested type
+      */
+    def getObject[A: ConfigValueReader: JsonReader](key: NonEmptyString)(using Context): Output[Option[A]] =
+      output.flatMap(_.getObject[A](key))
+
+    /** Loads a configuration or secret value by its key, or Output.fail it doesn't exist. If the configuration value is a secret, it will
+      * be marked internally as such and redacted in console outputs.
+      *
+      * Requires `JsonReader[A]` or `ConfigValueReader[A]` to be in scope.
+      *
+      * @param key
+      *   the requested configuration or secret key
+      * @param Context
+      *   the Besom context
+      * @tparam A
+      *   the type to deserialize configuration or secret JSON value into
+      * @return
+      *   the configuration or secret deserialized JSON value of the requested type or [[ConfigError]]
+      */
+    def requireObject[A: ConfigValueReader: JsonReader](key: NonEmptyString)(using Context): Output[A] =
+      output.flatMap(_.requireObject[A](key))
 
 trait ConfigFactory:
   /** Creates a new Config with the given namespace.
