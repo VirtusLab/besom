@@ -4,7 +4,7 @@ import scala.compiletime.*
 import scala.compiletime.ops.string.*
 import scala.language.implicitConversions
 import scala.util.Try
-import com.google.protobuf.struct.*, Value.Kind
+import com.google.protobuf.struct.*
 import besom.internal.ProtobufUtil.*
 import besom.util.*
 import besom.internal.*
@@ -28,32 +28,29 @@ object types:
     */
   opaque type PulumiToken <: String = String
 
-  /** Each resource is an instance of a specific Pulumi resource type. This type is specified by a type token in the
-    * format `<package>:<module>:<typename>`, where:
-    *   - The `<package>` component of the type (e.g. aws, azure-native, kubernetes, random) specifies which Pulumi
-    *     Package defines the resource. This is mapped to the package in the Pulumi Registry and to the per-language
-    *     Pulumi SDK package.
-    *   - The `<module>` component of the type (e.g. s3/bucket, compute, apps/v1, index) is the module path where the
-    *     resource lives within the package. It is / delimited by component of the path. The name index indicates that
-    *     the resource is not nested, and is instead available at the top level of the package. Per-language Pulumi SDKs
-    *     use the module path to emit nested namespaces/modules in a language-specific way to organize all the types
-    *     defined in a package.
-    *   - The `<typename>` component of the type (e.g. Bucket, VirtualMachine, Deployment, RandomPassword) is the
-    *     identifier used to refer to the resource itself. It is mapped to the class or constructor name in the
-    *     per-language Pulumi SDK.
-    */
-  opaque type ResourceType <: PulumiToken = String
-
-  extension (rt: ResourceType)
+  extension (pt: PulumiToken)
     /** @return
       *   the Pulumi package name of the [[ResourceType]], for example: `aws`, `kubernetes`, `random`
       */
-    def getPackage: String = if isProviderType then rt.split(":").last else rt.split(":").head
+    def getPackage: String = if isProviderType then pt.split(":").last else pt.split(":").head
 
     /** @return
       *   true if the [[ResourceType]] is a provider, false otherwise
       */
-    def isProviderType: Boolean = rt.startsWith("pulumi:providers:")
+    def isProviderType: Boolean = pt.startsWith("pulumi:providers:")
+
+  /** Each resource is an instance of a specific Pulumi resource type. This type is specified by a type token in the format
+    * `<package>:<module>:<typename>`, where:
+    *   - The `<package>` component of the type (e.g. aws, azure-native, kubernetes, random) specifies which Pulumi Package defines the
+    *     resource. This is mapped to the package in the Pulumi Registry and to the per-language Pulumi SDK package.
+    *   - The `<module>` component of the type (e.g. s3/bucket, compute, apps/v1, index) is the module path where the resource lives within
+    *     the package. It is / delimited by component of the path. The name index indicates that the resource is not nested, and is instead
+    *     available at the top level of the package. Per-language Pulumi SDKs use the module path to emit nested namespaces/modules in a
+    *     language-specific way to organize all the types defined in a package.
+    *   - The `<typename>` component of the type (e.g. Bucket, VirtualMachine, Deployment, RandomPassword) is the identifier used to refer
+    *     to the resource itself. It is mapped to the class or constructor name in the per-language Pulumi SDK.
+    */
+  opaque type ResourceType <: PulumiToken = String
 
   /** See [[ResourceType]] type for more information.
     */
@@ -149,6 +146,7 @@ object types:
 
   object Label:
     def fromNameAndType(name: NonEmptyString, rt: ResourceType): Label = s"$name[$rt]"
+    def fromFunctionToken(ft: FunctionToken): Label                    = s"$ft()"
 
   /** URN is an automatically constructed globally unique identifier for the resource
     */
@@ -220,6 +218,7 @@ object types:
         *   the logical name of this [[besom.internal.Resource]]
         */
       def resourceName: String = URN.UrnRegex.findFirstMatchIn(urn).get.group("resourceName")
+  end URN
 
   // TODO This should not be a subtype of string, user's access to underlying string has no meaning
   // TODO User should never modify Resource Ids, they should be opaque but they should also be
@@ -294,3 +293,4 @@ object types:
       }
 
   export besom.aliases.{*, given}
+end types

@@ -20,7 +20,7 @@ class LoggingTest extends munit.FunSuite:
   given Context = DummyContext().unsafeRunSync()
 
   test("plain logging works") {
-    val urn = URN("urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource")
+    val urn      = URN("urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource")
     val logger   = BesomLogger.local().unsafeRunSync()
     val res      = TestResource(Output(urn), Output(ResourceId("bar")), Output("url"))
     val messages = mutable.ArrayBuffer.empty[LogRecord]
@@ -36,13 +36,15 @@ class LoggingTest extends munit.FunSuite:
       )
       .replace()
 
+    import scala.language.implicitConversions // for structural logging
+
     val loggingResult =
       for
         _ <- logger.info("hello")
         _ <- logger.warn("world")
         _ <- logger.debug(StructuralLog(23, "foo", true))
         _ <- logger.error("oh no")
-        _ <- logger.trace("traced")
+        _ <- logger.trace("traced", Some(res))
         _ <- logger.close()
       yield ()
 
@@ -67,3 +69,4 @@ class LoggingTest extends munit.FunSuite:
     val name = traceFileName(LocalDateTime.parse("2007-12-03T10:15:30"))
     assertEquals(name, "besom-run-2007-12-03T10-15-30.log")
   }
+end LoggingTest

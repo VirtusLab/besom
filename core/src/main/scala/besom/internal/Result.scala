@@ -354,7 +354,7 @@ object Result:
     for
       a             <- acquire
       finalizersRef <- getFinalizers
-      _ <- finalizersRef.update(_.updatedWith(scope)(finalizers => Some(release(a) :: finalizers.toList.flatten)))
+      _             <- finalizersRef.update(_.updatedWith(scope)(finalizers => Some(release(a) :: finalizers.toList.flatten)))
     yield a
 
   trait ToFuture[F[_]]:

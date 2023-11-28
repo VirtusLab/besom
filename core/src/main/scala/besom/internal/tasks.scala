@@ -1,7 +1,5 @@
 package besom.internal
 
-import besom.internal.logging.BesomLogger
-
 trait TaskTracker:
   private[besom] def registerTask[A](fa: => Result[A]): Result[A]
   private[besom] def waitForAllTasks: Result[Unit]

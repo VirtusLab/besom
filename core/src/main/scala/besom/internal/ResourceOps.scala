@@ -3,11 +3,15 @@ package besom.internal
 import com.google.protobuf.struct.*
 import pulumirpc.resource.*
 import pulumirpc.resource.RegisterResourceRequest.PropertyDependencies
-
 import besom.util.*
 import besom.types.*
 import besom.internal.logging.*
-import fansi.Str
+import pulumirpc.provider.InvokeResponse
+
+// TODO remove
+import scala.annotation.unused
+
+type Providers = Map[String, ProviderResource]
 
 class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
 
@@ -26,7 +30,90 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       }
     }
 
-  private[besom] def resolveProviderReferences(state: ResourceState): Result[Map[String, String]] =
+  private[besom] def registerResourceInternal[R <: Resource: ResourceDecoder, A: ArgsEncoder](
+    typ: ResourceType,
+    name: NonEmptyString,
+    args: A,
+    options: ResourceOptions
+  ): Result[R] =
+    summon[ResourceDecoder[R]].makeResolver.flatMap { (resource, resolver) =>
+      log.debug(s"registering resource, trying to add to cache...") *>
+        ctx.resources.cacheResource(typ, name, args, options, resource).flatMap { addedToCache =>
+          if addedToCache then
+            for
+              _      <- log.debug(s"Registering resource, added to cache...")
+              state  <- createResourceState(typ, name, resource, options)
+              _      <- log.debug(s"Created resource state")
+              _      <- ctx.resources.add(resource, state)
+              _      <- log.debug(s"Added resource to resources")
+              inputs <- prepareResourceInputs(resource, state, args, options)
+              _      <- log.debug(s"Prepared inputs for resource")
+              _      <- addChildToParentResource(resource, options.parent)
+              _      <- log.debug(s"Added child to parent (isDefined: ${options.parent.isDefined})")
+              _      <- executeRegisterResourceRequest(resource, state, resolver, inputs)
+              _      <- log.debug(s"executed RegisterResourceRequest in background")
+            yield resource
+          else ctx.resources.getCachedResource(typ, name, args, options).map(_.asInstanceOf[R])
+        }
+    }
+
+  private[besom] def invoke[A: ArgsEncoder, R: Decoder](tok: FunctionToken, args: A, opts: InvokeOptions): Output[R] =
+    def buildInvokeRequest(args: Struct, provider: Option[String], version: Option[String]): Result[ResourceInvokeRequest] =
+      Result {
+        ResourceInvokeRequest(
+          tok = tok,
+          args = Some(args),
+          provider = provider.getOrElse(""),
+          version = version.getOrElse(""),
+          acceptResources = ctx.runInfo.acceptResources
+        )
+      }
+
+    def parseInvokeResponse(response: InvokeResponse, props: Map[String, Set[Resource]]): Result[OutputData[R]] =
+      if response.failures.nonEmpty then
+        val failures = response.failures
+          .map { failure =>
+            s"${failure.reason} (${failure.property})"
+          }
+          .mkString(", ")
+
+        Result.fail(new Exception(s"Invoke of $tok failed: $failures"))
+      else if response.`return`.isEmpty then Result.fail(new Exception(s"Invoke of $tok returned empty result"))
+      else
+        val result        = response.`return`.get
+        val resultAsValue = Value(Value.Kind.StructValue(result))
+        val resourceLabel = mdc.get(Key.LabelKey)
+        val decoded       = summon[Decoder[R]].decode(resultAsValue, resourceLabel)
+        decoded match
+          case Validated.Invalid(errs) =>
+            Result.fail(new AggregatedDecodingError(errs))
+          case Validated.Valid(value) =>
+            Result.pure(value.withDependencies(props.values.flatten.toSet))
+
+    val result = PropertiesSerializer.serializeFilteredProperties(args, _ => false).flatMap { invokeArgs =>
+      if invokeArgs.containsUnknowns then Result(OutputData.unknown())
+      else
+        val maybeProviderResult = opts.getNestedProvider(tok)
+        val maybeProviderIdResult = maybeProviderResult.flatMap {
+          case Some(value) => value.registrationId.map(Some(_))
+          case None        => Result(None)
+        }
+        val version = opts.version
+
+        for
+          maybeProviderId <- maybeProviderIdResult
+          req             <- buildInvokeRequest(invokeArgs.serialized, maybeProviderId, version)
+          _               <- log.debug(s"Invoke RPC prepared, req=${pprint(req)}")
+          res             <- ctx.monitor.invoke(req)
+          _               <- log.debug(s"Invoke RPC executed, res=${pprint(res)}")
+          finalRes        <- parseInvokeResponse(res, invokeArgs.propertyToDependentResources)
+        yield finalRes
+    }
+
+    besom.internal.Output.ofData(result) // TODO why the hell compiler assumes it's besom.aliases.Output?
+  end invoke
+
+  private def resolveProviderReferences(state: ResourceState): Result[Map[String, String]] =
     Result
       .sequence(
         state.providers.map { case (pkg, provider) =>
@@ -35,7 +122,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       )
       .map(_.toMap)
 
-  private[besom] def resolveTransitivelyReferencedComponentResourceUrns(
+  private def resolveTransitivelyReferencedComponentResourceUrns(
     resources: Set[Resource]
   ): Result[Set[URN]] =
     def findAllReachableResources(left: Set[Resource], acc: Set[Resource]): Result[Set[Resource]] =
@@ -79,7 +166,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     options: ResourceOptions
   )
 
-  private[besom] def aggregateDependencyUrns(
+  private def aggregateDependencyUrns(
     directDeps: Set[Resource],
     propertyDeps: Map[String, Set[Resource]]
   ): Result[AggregatedDependencyUrns] =
@@ -96,13 +183,10 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       }
     }
 
-  private[besom] def resolveAliases(resource: Resource): Result[List[String]] =
+  private def resolveAliases(@unused resource: Resource): Result[List[String]] =
     Result.pure(List.empty) // TODO aliases
 
-  private[besom] def invoke[A: ArgsEncoder, R: Decoder](typ: ResourceType, args: A, opts: InvokeOptions): Result[R] =
-    Result(???)
-
-  private[besom] def resolveProviderRegistrationId(state: ResourceState): Result[Option[String]] =
+  private def resolveProviderRegistrationId(state: ResourceState): Result[Option[String]] =
     state match
       case prs: ProviderResourceState =>
         prs.custom.common.provider match
@@ -116,7 +200,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
 
       case _ => Result.pure(None)
 
-  private[besom] def prepareResourceInputs[A: ArgsEncoder](
+  private def prepareResourceInputs[A: ArgsEncoder](
     resource: Resource,
     state: ResourceState,
     args: A,
@@ -140,7 +224,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       _            <- log.trace(s"Preparing inputs: resolved aliases, done")
     yield PreparedInputs(serResult.serialized, parentUrnOpt, provIdOpt, providerRefs, depUrns, aliases, options)
 
-  private[besom] def executeRegisterResourceRequest[R <: Resource](
+  private def executeRegisterResourceRequest[R <: Resource](
     resource: Resource,
     state: ResourceState,
     resolver: ResourceResolver[R],
@@ -260,35 +344,6 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       case None         => Result.unit
       case Some(parent) => ctx.resources.updateStateFor(parent)(_.addChild(resource))
 
-  private[besom] def registerResourceInternal[R <: Resource: ResourceDecoder, A: ArgsEncoder](
-    typ: ResourceType,
-    name: NonEmptyString,
-    args: A,
-    options: ResourceOptions
-  ): Result[R] =
-    summon[ResourceDecoder[R]].makeResolver.flatMap { (resource, resolver) =>
-      log.debug(s"registering resource, trying to add to cache...") *>
-        ctx.resources.cacheResource(typ, name, args, options, resource).flatMap { addedToCache =>
-          if addedToCache then
-            for
-              _      <- log.debug(s"Registering resource, added to cache...")
-              tuple  <- summon[ArgsEncoder[A]].encode(args, _ => false)
-              _      <- log.debug(s"Encoded args")
-              state  <- createResourceState(typ, name, resource, options)
-              _      <- log.debug(s"Created resource state")
-              _      <- ctx.resources.add(resource, state)
-              _      <- log.debug(s"Added resource to resources")
-              inputs <- prepareResourceInputs(resource, state, args, options)
-              _      <- log.debug(s"Prepared inputs for resource")
-              _      <- addChildToParentResource(resource, options.parent)
-              _      <- log.debug(s"Added child to parent (isDefined: ${options.parent.isDefined})")
-              _      <- executeRegisterResourceRequest(resource, state, resolver, inputs)
-              _      <- log.debug(s"executed RegisterResourceRequest in background")
-            yield resource
-          else ctx.resources.getCachedResource(typ, name, args, options).map(_.asInstanceOf[R])
-        }
-    }
-
   // This method returns an Option of Resource because for Stack there is no parent resource,
   // for any other resource the parent is either explicitly set in ResourceOptions or the stack is the parent.
   private def resolveParentUrn(typ: ResourceType, resourceOptions: ResourceOptions): Result[Option[URN]] =
@@ -304,16 +359,16 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
             _         <- log.trace(s"resolveParent - parent not found in ResourceOptions, from Context: $parentUrn")
           yield Some(parentUrn)
 
-  private def resolveParentTransformations(typ: ResourceType, resourceOptions: ResourceOptions): Result[List[Unit]] =
+  private def resolveParentTransformations(@unused typ: ResourceType, @unused resourceOptions: ResourceOptions): Result[List[Unit]] =
     Result.pure(List.empty) // TODO parent transformations
 
   private def applyTransformations(
     resourceOptions: ResourceOptions,
-    parentTransformations: List[Unit] // TODO this needs transformations from ResourceState, not Resource
+    @unused parentTransformations: List[Unit] // TODO this needs transformations from ResourceState, not Resource
   ): Result[ResourceOptions] =
     Result.pure(resourceOptions) // TODO resource transformations
 
-  private def collapseAliases(opts: ResourceOptions): Result[List[Output[String]]] =
+  private def collapseAliases(@unused opts: ResourceOptions): Result[List[Output[String]]] =
     Result.pure(List.empty) // TODO aliases
 
   private def mergeProviders(typ: String, opts: ResourceOptions): Result[Providers] =
@@ -377,7 +432,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
           case None           => Result.pure(None)
           case Some(provider) => Result.pure(Some(provider))
 
-  private[besom] def createResourceState(
+  private def createResourceState(
     typ: ResourceType,
     name: NonEmptyString,
     resource: Resource,
@@ -422,3 +477,16 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         case ComponentBase(urn) =>
           ComponentResourceState(common = commonRS) // TODO: ComponentBase should not be registered"
     }
+
+  extension (invokeOpts: InvokeOptions)
+    def getNestedProvider(token: FunctionToken)(using Context): Result[Option[ProviderResource]] =
+      invokeOpts.provider match
+        case Some(passedProvider) => Result(Some(passedProvider))
+        case None =>
+          invokeOpts.parent match
+            case Some(explicitParent) =>
+              summon[Context].resources.getStateFor(explicitParent).map { parentState =>
+                parentState.providers.get(token.getPackage)
+              }
+            case None => Result(None)
+end ResourceOps
