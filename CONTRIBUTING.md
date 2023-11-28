@@ -151,14 +151,14 @@ Every example is a valid Pulumi program that can be tested by manually
 doing `pulumi up` in the right folder.
 
 ```bash
-cd exmaples/<example-name>
+cd examples/<example-name>
 pulumi up
 ```
 
 Here is a Just helper to run the automated testing:
 
 ```bash
-just test-example aws-scala-webserver
+just test-example aws-webserver
 ```
 
 ### Testing templates locally

@@ -8,10 +8,16 @@ logger by writing `log` with a following severity level used as a logging method
 ```scala
 @main def run = Pulumi.run {
   for 
-    _ <- log.warning("Nothing to do.")
+    _ <- log.warn("Nothing to do.")
   yield Pulumi.exports()
 }
 ```
 
 Logging is an asynchronous operation and returns an `Output`. This means that all logging statements need to be composed
 into the flow of your program. This is similar to how logging frameworks for `cats` or `ZIO` behave (eg.: [log4cats](https://github.com/typelevel/log4cats)).
+
+### Why not simply `println`?
+
+Given that you're working with CLI you might be tempted to just `println` some value, but that will have no visible effect.
+That's because Besom's Scala code is being executed in a different process than Pulumi. It's Pulumi that drives the 
+process by calling Besom. Therefore, you have to use functions provided by Besom for your code to have any effect.  
