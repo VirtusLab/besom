@@ -23,7 +23,7 @@ extension [F[+_]: Monad, A](fa: F[A])
   def flatMap[B](f: A => F[B]): F[B] = Monad[F].flatMap(fa)(f)
   def fork: F[A]                     = Monad[F].fork(fa)
 
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{ExecutionContext, Future}
 
 class FutureMonad(implicit val ec: ExecutionContext) extends Monad[Future]:
 

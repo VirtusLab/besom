@@ -17,6 +17,7 @@
 //> using dep "com.lihaoyi::pprint:0.6.6" // TODO BALEET
 
 //> using options "-java-output-version:11", "-Ysafe-init"
+//> using options -Werror -Wunused:all -deprecation -feature
 
 //#> using options "-Xmax-inlines:64"
 

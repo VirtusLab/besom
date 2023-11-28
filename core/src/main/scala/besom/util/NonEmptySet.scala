@@ -1,8 +1,5 @@
 package besom.util
 
-import scala.compiletime.error
-import scala.language.implicitConversions
-
 opaque type NonEmptySet[A] <: Set[A] = Set[A]
 
 object NonEmptySet:

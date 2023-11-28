@@ -2,7 +2,6 @@ package besom.internal
 
 import scribe.*, LoggerSupport.{apply => makeLogRecord}
 import scribe.message.LoggableMessage
-import scribe.output.LogOutput
 import scribe.data.{MDC => ScribeMDC}
 import sourcecode.{FileName, Line, Name, Pkg}
 import scala.util.{NotGiven => Not}

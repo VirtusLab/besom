@@ -3,7 +3,6 @@ package besom.internal
 import besom.util.NonEmptyString
 import besom.types.*
 import com.google.protobuf.struct.*
-import scala.quoted.*
 import scala.deriving.Mirror
 import scala.annotation.implicitNotFound
 import besom.util.*

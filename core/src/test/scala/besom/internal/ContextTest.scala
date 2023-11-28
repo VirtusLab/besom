@@ -2,7 +2,7 @@ package besom.internal
 
 import RunResult.{given, *}
 import com.google.protobuf.struct.*
-import besom.types.{ Output => _, * }
+import besom.types.{Output => _, *}
 
 sealed abstract class TestEnum(val name: String, val value: String) extends StringEnum
 
@@ -74,8 +74,6 @@ class ContextTest extends munit.FunSuite:
   }
 
   test("quick dirty Encoder test - enums") {
-    given Context = DummyContext().unsafeRunSync()
-
     val (res, value) = encode[TestEnum](
       TestEnum.`weird-test`
     )
@@ -84,3 +82,4 @@ class ContextTest extends munit.FunSuite:
     assert(value.kind.isStringValue)
     assertEquals(value.getStringValue, "weird-test value")
   }
+end ContextTest

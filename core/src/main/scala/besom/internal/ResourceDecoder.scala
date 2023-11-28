@@ -1,9 +1,8 @@
 package besom.internal
 
-import com.google.protobuf.struct.{Struct, Value}
+import com.google.protobuf.struct.Value
 import scala.quoted.*
 import scala.deriving.Mirror
-import scala.util.chaining.*
 import besom.util.*
 import besom.internal.logging.*
 import besom.types.{Label, URN, ResourceId}
@@ -31,13 +30,13 @@ object ResourceDecoder:
         fields
           .get(NameUnmangler.unmanglePropertyName(propertyName))
           .map { value =>
-            log.trace(s"extracting custom property $propertyName from $value using decoder $decoder")
+            scribe.debug(s"extracting custom property $propertyName from $value using decoder $decoder") // TODO
             decoder.decode(value, propertyLabel).map(_.withDependency(resource)) match
               case Validated.Invalid(err) =>
-                log.trace(s"failed to extract custom property $propertyName from $value: $err")
+                scribe.debug(s"failed to extract custom property $propertyName from $value: $err") // TODO
                 Validated.Invalid(err)
               case Validated.Valid(value) =>
-                log.trace(s"extracted custom property $propertyName from $value")
+                scribe.debug(s"extracted custom property $propertyName from $value") // TODO
                 Validated.Valid(value)
           }
           .getOrElse {
@@ -119,6 +118,7 @@ object ResourceDecoder:
 
         (resource, resolver)
     }
+  end makeResolver
 
   inline def derived[A <: Resource]: ResourceDecoder[A] = ${ derivedImpl[A] }
 
@@ -156,3 +156,4 @@ object ResourceDecoder:
                 customPropertyExtractors = ${ customPropertyExtractorsExpr }.toVector
               )
         }
+end ResourceDecoder

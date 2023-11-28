@@ -6,7 +6,6 @@ object CodecMacros:
   inline def summonLabels[A] = ${ summonLabelsImpl[A] }
 
   private def summonLabelsImpl[A: Type](using Quotes): Expr[List[String]] =
-    import quotes.reflect.*
     Expr(recSummonLabelsImpl(Type.of[A]))
 
   private def recSummonLabelsImpl(t: Type[?])(using Quotes): List[String] =
@@ -22,8 +21,6 @@ object CodecMacros:
   inline def summonDecoders[A]: List[Decoder[?]] = ${ summonDecodersImpl[A] }
 
   private def summonDecodersImpl[A: Type](using Quotes): Expr[List[Decoder[?]]] =
-    import quotes.reflect.*
-    // report.info(s"Deriving for ${Type.show[A]}")
     Expr.ofList(recSummonDecodersImpl(Type.of[A]))
 
   private def recSummonDecodersImpl(t: Type[?])(using Quotes): List[Expr[Decoder[?]]] =
@@ -40,7 +37,6 @@ object CodecMacros:
   inline def summonEncoders[A]: List[Encoder[?]] = ${ summonEncodersImpl[A] }
 
   private def summonEncodersImpl[A: Type](using Quotes): Expr[List[Encoder[?]]] =
-    import quotes.reflect.*
     Expr.ofList(recSummonEncodersImpl(Type.of[A]))
 
   private def recSummonEncodersImpl(t: Type[?])(using Quotes): List[Expr[Encoder[?]]] =
@@ -57,7 +53,6 @@ object CodecMacros:
   inline def summonJsonEncoders[A]: List[JsonEncoder[?]] = ${ summonJsonEncodersImpl[A] }
 
   private def summonJsonEncodersImpl[A: Type](using Quotes): Expr[List[JsonEncoder[?]]] =
-    import quotes.reflect.*
     Expr.ofList(recSummonJsonEncodersImpl(Type.of[A]))
 
   private def recSummonJsonEncodersImpl(t: Type[?])(using Quotes): List[Expr[JsonEncoder[?]]] =
@@ -77,3 +72,4 @@ object CodecMacros:
   //   import quotes.reflect.*
 
   //   '{ List.empty[TC[Any]] }
+end CodecMacros

@@ -2,11 +2,8 @@ package besom.internal
 
 import scala.util.Try
 import scala.concurrent.*
-import scala.util.Failure
-import scala.util.Success
 import scala.concurrent.duration.Duration
 
-import logging.{LocalBesomLogger => logger}
 import scala.annotation.implicitNotFound
 
 trait Fiber[+A]:
@@ -30,7 +27,7 @@ object Queue:
     new Queue:
       private val internal = ArrayBlockingQueue[A](capacity)
 
-      override def offer(a: A): Result[Unit] = Result.blocking(internal.offer(a))
+      override def offer(a: A): Result[Unit] = Result.blocking(internal.put(a))
 
       override def take: Result[A] = Result.blocking(internal.take)
   }
@@ -222,63 +219,64 @@ enum Result[+A]:
 
   private def runF[F[+_]](using F: Runtime[F]): F[A] = this match
     case Suspend(thunk, debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting Suspend from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting Suspend from $debug")
       F.fromFuture(thunk())
     case Pure(value, debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting Pure from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting Pure from $debug")
       F.pure(value)
     case Fail(err, debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting Fail from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting Fail from $debug")
       F.fail(err).asInstanceOf[F[A]]
     // TODO test that Defer catches for all implementations always
     case Defer(thunk, debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting Defer from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting Defer from $debug")
       F.defer(thunk())
     case Blocking(thunk, debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting Blocking from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting Blocking from $debug")
       F.blocking(thunk())
     case BiFlatMap(fa, f, debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting BiFlatMap from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting BiFlatMap from $debug")
       F.flatMapBoth(fa.runF[F])(either => f(either).runF[F].asInstanceOf[F[A]])
     case Fork(fa, debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting Fork from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting Fork from $debug")
       F.fork(fa.runF[F]).asInstanceOf[F[A]]
     case Sleep(fa, duration, debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting Sleep from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting Sleep from $debug")
       F.sleep(fa().runF[F], duration)
     case GetFinalizers(debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting GetFinalizers from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting GetFinalizers from $debug")
       F.fail(new RuntimeException("Panic: GetFinalizers should not be called on base monad F")).asInstanceOf[F[A]]
 
   private def runM[F[+_]](using F: Runtime[F]): F.M[A] = this match
     case Suspend(thunk, debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting Suspend from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting Suspend from $debug")
       F.fromFutureM(thunk())
     case Pure(value, debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting Pure from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting Pure from $debug")
       F.pureM(value)
     case Fail(err, debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting Fail from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting Fail from $debug")
       F.failM(err).asInstanceOf[F.M[A]]
     // TODO test that Defer catches for all implementations always
     case Defer(thunk, debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting Defer from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting Defer from $debug")
       F.deferM(thunk())
     case Blocking(thunk, debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting Blocking from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting Blocking from $debug")
       F.blockingM(thunk())
     case BiFlatMap(fa, f, debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting BiFlatMap from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting BiFlatMap from $debug")
       F.flatMapBothM(fa.runM[F])(either => f(either).runM[F].asInstanceOf[F.M[A]])
     case Fork(fa, debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting Fork from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting Fork from $debug")
       F.forkM(fa.runM[F]).asInstanceOf[F.M[A]]
     case Sleep(fa, duration, debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting Sleep from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting Sleep from $debug")
       F.sleepM(fa().runM[F], duration)
     case GetFinalizers(debug) =>
-      if (F.debugEnabled) logger.trace(s"interpreting GetFinalizers from $debug")
+      if (F.debugEnabled) scribe.trace(s"interpreting GetFinalizers from $debug")
       F.getFinalizersM
+end Result
 
 object Result:
   import scala.collection.BuildFrom
@@ -350,11 +348,12 @@ object Result:
     for
       a             <- acquire
       finalizersRef <- getFinalizers
-      _ <- finalizersRef.update(_.updatedWith(scope)(finalizers => Some(release(a) :: finalizers.toList.flatten)))
+      _             <- finalizersRef.update(_.updatedWith(scope)(finalizers => Some(release(a) :: finalizers.toList.flatten)))
     yield a
 
   trait ToFuture[F[_]]:
     def eval[A](fa: => F[A]): () => Future[A]
+end Result
 
 class FutureRuntime(val debugEnabled: Boolean = false)(using ExecutionContext) extends Runtime[Future]:
 

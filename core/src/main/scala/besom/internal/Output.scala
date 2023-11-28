@@ -1,10 +1,10 @@
 package besom.internal
 
-import scala.util.{NotGiven => Not}
+import scala.reflect.Typeable
 import scala.collection.BuildFrom
 
-/** Output is a wrapper for a monadic effect used to model async execution that allows Pulumi to track information about
-  * dependencies between resources and properties of data (whether it's known or a secret for instance).
+/** Output is a wrapper for a monadic effect used to model async execution that allows Pulumi to track information about dependencies
+  * between resources and properties of data (whether it's known or a secret for instance).
   *
   * Invariant: dataResult has to be registered in TaskTracker by the time it reaches the constructor here!
   * @param dataResult
@@ -63,6 +63,7 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
         o      <- dataResult
       yield o.withIsSecret(secret)
     )
+end Output
 
 /** These factory methods should be the only way to create Output instances in user code!
   */
@@ -89,14 +90,14 @@ trait OutputExtensionsFactory:
     def traverse[B, To](f: A => Output[B])(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] =
       coll.iterator.map(f).asInstanceOf[CC[Output[B]]].sequence
   implicit final class OutputOptionOps[A](output: Output[Option[A]]):
-    def getOrElse[B >: A](default: => B | Output[B])(using ctx: Context): Output[B] =
+    def getOrElse[B >: A: Typeable](default: => B | Output[B])(using ctx: Context): Output[B] =
       output.flatMap { opt =>
         opt match
           case Some(a) => Output(a)
           case None =>
             default match
-              case b: Output[B] => b
-              case b: B         => Output(b)
+              case b: Output[B @unchecked] => b
+              case b: B                    => Output(b)
       }
     def orElse[B >: A](alternative: => Option[B] | Output[Option[B]])(using ctx: Context): Output[Option[B]] =
       output.flatMap { opt =>
@@ -151,3 +152,4 @@ object Output:
 
   def secret[A](value: A)(using ctx: Context): Output[A] =
     new Output[A](ctx.registerTask(Result.pure(OutputData(value, Set.empty, isSecret = true))))
+end Output

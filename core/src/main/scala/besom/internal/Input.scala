@@ -8,15 +8,15 @@ object Input:
   extension [A](optional: A | Option[A])
     private def asOption: Option[A] =
       optional match
-        case option: Option[A @ unchecked] => option
-        case a: A @unchecked => Option(a)
+        case option: Option[A @unchecked] => option
+        case a: A @unchecked              => Option(a)
 
   given simpleInputOps: {} with
     extension [A](input: Input[A])
       private[Input] def wrappedAsOutput(isSecret: Boolean = false)(using ctx: Context): Output[A] =
         input match
           case output: Output[_] => output.asInstanceOf[Output[A]]
-          case a: A @unchecked => if isSecret then Output.secret(a) else Output(a)
+          case a: A @unchecked   => if isSecret then Output.secret(a) else Output(a)
 
     extension [A](input: Input[A])
       def asOutput(isSecret: Boolean = false)(using ctx: Context): Output[A] =
@@ -25,7 +25,7 @@ object Input:
     extension [A](input: Input.Optional[A])
       private[Input] def wrappedAsOptionOutput(isSecret: Boolean = false)(using ctx: Context): Output[Option[A]] =
         val output = input match
-          case output: Output[_] => output.asInstanceOf[Output[A | Option[A]]]
+          case output: Output[_]                  => output.asInstanceOf[Output[A | Option[A]]]
           case maybeA: (A | Option[A]) @unchecked => if isSecret then Output.secret(maybeA) else Output(maybeA)
         output.map(_.asOption)
 
@@ -34,19 +34,18 @@ object Input:
 
   given mapInputOps: {} with
     private def inputMapToMapOutput[A](inputMap: Map[String, Input[A]], isSecret: Boolean)(using ctx: Context): Output[Map[String, A]] =
-      val outputMap = inputMap.mapValues(_.asOutput(isSecret)).toMap
+      val outputMap = inputMap.view.mapValues(_.asOutput(isSecret)).toMap
       Output.traverseMap(outputMap)
 
     extension [A](input: Input[Map[String, Input[A]]])
       def asOutput(isSecret: Boolean = false)(using ctx: Context): Output[Map[String, A]] =
         input.wrappedAsOutput(isSecret).flatMap(inputMapToMapOutput(_, isSecret = isSecret))
 
-
     extension [A](input: Input.Optional[Map[String, Input[A]]])
       def asOptionOutput(isSecret: Boolean = false)(using ctx: Context): Output[Option[Map[String, A]]] =
-        input.wrappedAsOptionOutput(isSecret).flatMap { 
+        input.wrappedAsOptionOutput(isSecret).flatMap {
           case Some(map) => inputMapToMapOutput(map, isSecret = isSecret).map(Option(_))
-          case None => Output(None)
+          case None      => Output(None)
         }
 
   given listInputOps: {} with
@@ -60,8 +59,8 @@ object Input:
 
     extension [A](input: Input.Optional[List[Input[A]]])
       def asOptionOutput(isSecret: Boolean = false)(using ctx: Context): Output[Option[List[A]]] =
-        input.wrappedAsOptionOutput(isSecret).flatMap { 
+        input.wrappedAsOptionOutput(isSecret).flatMap {
           case Some(map) => inputListToListOutput(map, isSecret = isSecret).map(Option(_))
-          case None => Output(None)
+          case None      => Output(None)
         }
-  
+end Input

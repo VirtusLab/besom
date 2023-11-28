@@ -1,6 +1,5 @@
 package besom.internal
 
-import scala.concurrent.{Promise => stdPromise, *}, ExecutionContext.Implicits.global, duration.*
 import scala.util.Try
 import RunResult.*
 
@@ -133,7 +132,7 @@ trait ResultSpec[F[+_]: RunResult] extends munit.FunSuite:
       for
         ref <- Ref[String]("")
         append = (s: String) => ref.update(_ + s)
-        _  <- Result.bracket(append("1a"))(_ => append("1r")) { _ =>
+        _ <- Result.bracket(append("1a"))(_ => append("1r")) { _ =>
           Result.bracket(append("2a"))(_ => append("2r")) { _ =>
             Result.bracket(append("3a"))(_ => append("3r"))(_ => append("use"))
           }
@@ -151,12 +150,14 @@ trait ResultSpec[F[+_]: RunResult] extends munit.FunSuite:
       for
         ref <- Ref[String]("")
         append = (s: String) => ref.update(_ + s)
-        _ <- Result.bracket(append("a"))(_ => append("r")) { _ =>
-          Result.fail(new RuntimeException("Oopsy daisy"))
-        }.either
+        _ <- Result
+          .bracket(append("a"))(_ => append("r")) { _ =>
+            Result.fail(new RuntimeException("Oopsy daisy"))
+          }
+          .either
         res <- ref.get
       yield res
-    
+
     val lhs = program.unsafeRunSync()
 
     assertEquals(lhs, "ar")
@@ -175,7 +176,7 @@ trait ResultSpec[F[+_]: RunResult] extends munit.FunSuite:
         }
         res <- ref.get
       yield res
-    
+
     val lhs = program.unsafeRunSync()
 
     assertEquals(lhs, "auser")
@@ -196,7 +197,7 @@ trait ResultSpec[F[+_]: RunResult] extends munit.FunSuite:
         }
         res <- ref.get
       yield res
-    
+
     val lhs = program.unsafeRunSync()
 
     assertEquals(lhs, "1a2a3ause3r2r1r")
@@ -215,11 +216,12 @@ trait ResultSpec[F[+_]: RunResult] extends munit.FunSuite:
         }.either
         res <- ref.get
       yield res
-    
+
     val lhs = program.unsafeRunSync()
 
     assertEquals(lhs, "ar")
   }
+end ResultSpec
 
 // TODO test laziness of operators (for Future mostly) somehow
 // TODO zip should be probably parallelised
