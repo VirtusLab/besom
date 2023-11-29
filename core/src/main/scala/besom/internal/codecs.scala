@@ -885,6 +885,7 @@ object ProviderArgsEncoder:
               serializedMap.foldLeft[(Map[String, Set[Resource]], Map[String, Value])](Map.empty -> Map.empty) {
                 case ((mapOfResources, mapOfValues), (label, (resources, value))) =>
                   if filterOut(label) then (mapOfResources, mapOfValues)
+                  else if value.kind.isNullValue then (mapOfResources, mapOfValues)
                   else (mapOfResources + (label -> resources), mapOfValues + (label -> value))
               }
 
@@ -908,10 +909,13 @@ object JsonEncoder:
 
   given jsonEncoder[A](using enc: Encoder[A]): JsonEncoder[A] =
     new JsonEncoder[A]:
-      def encode(a: A): Result[(Set[Resource], Value)] = enc.encode(a).flatMap { case (resources, value) =>
-        Result.evalEither(value.asJsonString).transform {
-          case Left(ex) =>
-            Left(Exception("Encountered a malformed protobuf Value that could not be serialized to JSON", ex))
-          case Right(jsonString) => Right(resources -> jsonString.asValue)
-        }
+      def encode(a: A): Result[(Set[Resource], Value)] = enc.encode(a).flatMap {
+        case (resources, v @ Value(Kind.NullValue(_), _)) => Result.pure(resources -> v)
+        case (resources, s @ Value(Kind.StringValue(_), _)) => Result.pure(resources -> s)
+        case (resources, value) =>
+          Result.evalEither(value.asJsonString).transform {
+            case Left(ex) =>
+              Left(Exception("Encountered a malformed protobuf Value that could not be serialized to JSON", ex))
+            case Right(jsonString) => Right(resources -> jsonString.asValue)
+          }
       }

@@ -291,7 +291,8 @@ Pulumi has a few options that can help with debugging.
 You can pass [debug options](https://www.pulumi.com/docs/support/troubleshooting/#verbose-logging) 
 to any `pulumi` CLI command, e.g.:
 ```bash
-pulumi up -v5 --logtostderr
+pulumi up -v9 --logtostderr 2> log.txt
+less -R log.txt
 ```
 
 Use the flag `--logflow` to apply the same log level to resource providers (but not a language provider).

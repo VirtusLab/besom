@@ -93,7 +93,7 @@ test-zio: publish-local-core
 test-sdk: compile-sdk test-core test-cats test-zio
 
 # Publishes locally core besom SDK
-publish-local-core:
+publish-local-core: test-core
 	scala-cli --power publish local core --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes locally besom cats-effect extension

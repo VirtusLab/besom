@@ -54,6 +54,13 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
     assertEqualsValue(encodedB, "B value".asValue)
   }
 
+  test("encode null") {
+    given Context = DummyContext().unsafeRunSync()
+    val e = summon[Encoder[Option[String]]]
+    val (_, encoded) = e.encode(None).unsafeRunSync()
+    assertEqualsValue(encoded, Null)
+  }
+
   test("encode special case class with unmangling") {
     val e = summon[Encoder[SpecialCaseClass]]
     val expected = Map(
