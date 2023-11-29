@@ -79,8 +79,43 @@ object PulumiPackage {
     if (input.isEmpty) {
       throw GeneralCodegenError("Pulumi package input JSON string is empty")
     }
-    val json = ujson.read(input)
-    read[PulumiPackage](json)
+    val json = try
+      ujson.read(input)
+    catch
+      case e: ujson.ParseException =>
+        val offset = 10
+        val indexStart = e.index - offset
+        val indexEnd   = e.index + offset
+        throw GeneralCodegenError(
+          s"""|Cannot parse Pulumi package JSON schema: ${e.getMessage}
+              |JSON fragment [$indexStart, $indexEnd]]:
+              |...
+              |${input.slice(indexStart, indexEnd).stripLineEnd}
+              |...""".stripMargin, e)
+      case e: ujson.IncompleteParseException =>
+        throw GeneralCodegenError(s"Cannot parse Pulumi package JSON schema, it appears incomplete or corrupted: ${e.getMessage}", e)
+      case e: Throwable =>
+        throw GeneralCodegenError(s"Unexpected error while parsing Pulumi package JSON schema: ${e.getMessage}", e)
+
+    try {
+      read[PulumiPackage](json)
+    } catch {
+      case e: upickle.core.Abort =>
+        throw GeneralCodegenError(s"Cannot deserialize Pulumi package JSON schema: ${e.getMessage}", e)
+      case e: upickle.core.AbortException =>
+        val offset = 10
+        val indexStart = e.index - offset
+        val indexEnd   = e.index + offset
+        throw GeneralCodegenError(
+          s"""|Cannot deserialize Pulumi package JSON schema: ${e.getMessage}
+              |JSON fragment [$indexStart, $indexEnd]]:
+              |...
+              |${input.slice(indexStart, indexEnd).stripLineEnd}
+              |...
+              |""".stripMargin, e)
+      case e: Throwable =>
+        throw GeneralCodegenError(s"Unexpected error while deserializing Pulumi package JSON schema: ${e.getMessage}", e)
+    }
   }
 }
 

@@ -9,7 +9,7 @@ import besom.codegen.PackageVersion.PackageVersionOps
 
 trait SchemaProvider {
   def packageInfo(metadata: PackageMetadata, schema: Option[SchemaFile] = None): (PulumiPackage, PulumiPackageInfo)
-  def packageInfo(packageMetadata: PackageMetadata, pulumiPackage: PulumiPackage): (PulumiPackage, PulumiPackageInfo)
+  def packageInfo(metadata: PackageMetadata, pulumiPackage: PulumiPackage): (PulumiPackage, PulumiPackageInfo)
   def dependencies(schemaName: SchemaName, packageVersion: PackageVersion): List[(SchemaName, PackageVersion)]
 }
 
@@ -99,12 +99,12 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
   }
 
   def packageInfo(
-    packageMetadata: PackageMetadata,
+    metadata: PackageMetadata,
     pulumiPackage: PulumiPackage
   ): (PulumiPackage, PulumiPackageInfo) = {
     val info = packageInfos.getOrElseUpdate(
-      (packageMetadata.name, packageMetadata.version.orDefault),
-      reconcilePackageInfo(packageMetadata, pulumiPackage)
+      (metadata.name, metadata.version.orDefault),
+      reconcilePackageInfo(metadata, pulumiPackage)
     )
     (pulumiPackage, info)
   }

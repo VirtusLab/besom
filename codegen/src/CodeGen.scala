@@ -694,13 +694,13 @@ class CodeGen(implicit
     isProvider: Boolean
   )(implicit config: CodegenConfig): SourceFile = {
     val argsClass = makeArgsClass(
-      argsClassName = classCoordinates.definitionName,
+      classCoordinates = classCoordinates,
       inputProperties = properties,
       isResource = isResource,
       isProvider = isProvider
     )
     val argsCompanion = makeArgsCompanion(
-      argsClassName = classCoordinates.definitionName,
+      classCoordinates = classCoordinates,
       inputProperties = properties
     )
 
@@ -722,12 +722,12 @@ class CodeGen(implicit
   }
 
   private def makeArgsClass(
-    argsClassName: String,
+    classCoordinates: ScalaDefinitionCoordinates,
     inputProperties: Seq[PropertyInfo],
     isResource: Boolean,
     isProvider: Boolean
   ): Stat = {
-    val argsTypeName = Type.Name(argsClassName)
+    val argsTypeName = classCoordinates.typeName
     val derivedTypeclasses =
       if (isProvider) "besom.types.ProviderArgsEncoder"
       else if (isResource) "besom.types.ArgsEncoder"
@@ -742,10 +742,13 @@ class CodeGen(implicit
     scalameta.parseStatement(code)
   }
 
-  private def makeArgsCompanion(argsClassName: String, inputProperties: Seq[PropertyInfo]): Stat = {
-    val argsTypeName               = Type.Name(argsClassName)
+  private def makeArgsCompanion(
+    classCoordinates: ScalaDefinitionCoordinates,
+    inputProperties: Seq[PropertyInfo]
+  ): Stat = {
+    val argsTypeName               = classCoordinates.typeName
     val argsCompanionApplyParams   = inputProperties.filter(_.constValue.isEmpty).map(_.asInputParam)
-    val argsCompanionApplyBodyArgs = inputProperties.map(_.asScalaNamedArg)
+    val argsCompanionApplyBodyArgs = inputProperties.filter(_.constValue.isEmpty).map(_.asScalaNamedArg)
     val code =
       s"""|object ${argsTypeName.syntax}:
           |  def apply(
@@ -767,6 +770,10 @@ case class FilePath(pathParts: Seq[String]) {
   )
 
   def osSubPath: os.SubPath = pathParts.foldLeft(os.sub)(_ / _)
+}
+object FilePath {
+  def apply(path: String): FilePath               = new FilePath(os.SubPath(path).segments)
+  def unapply(filePath: FilePath): Option[String] = Some(filePath.pathParts.mkString("/"))
 }
 
 case class SourceFile(
