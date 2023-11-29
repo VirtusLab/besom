@@ -12,7 +12,7 @@ object Utils {
   // the root package (according to pulumi's convention)
   // Needs to be used in Pulumi types, but should NOT be translated to Scala code
   // Placeholder module for classes that should be in the root package (according to pulumi's convention)
-  val indexModuleName = "index"
+  val indexModuleName  = "index"
   val providerTypeName = "Provider"
 
   // Name of the self parameter of resource methods
@@ -37,14 +37,20 @@ object Utils {
 
     private def languageModuleToPackageParts: String => Seq[String] = {
       if (pulumiPackage.language.java.packages.view.nonEmpty) {
-        pulumiPackage.language.java.packages.view.mapValues { pkg =>
-          pkg.split("\\.").filter(_.nonEmpty).toSeq
-        }.toMap.withDefault(slashModuleToPackageParts) // fallback to slash mapping
+        pulumiPackage.language.java.packages.view
+          .mapValues { pkg =>
+            pkg.split("\\.").filter(_.nonEmpty).toSeq
+          }
+          .toMap
+          .withDefault(slashModuleToPackageParts) // fallback to slash mapping
       } else {
         // use nodejs mapping as a fallback
-        pulumiPackage.language.nodejs.moduleToPackage.view.mapValues { pkg =>
-          pkg.split("/").filter(_.nonEmpty).toSeq
-        }.toMap.withDefault(slashModuleToPackageParts) // fallback to slash mapping
+        pulumiPackage.language.nodejs.moduleToPackage.view
+          .mapValues { pkg =>
+            pkg.split("/").filter(_.nonEmpty).toSeq
+          }
+          .toMap
+          .withDefault(slashModuleToPackageParts) // fallback to slash mapping
       }
     }
 
@@ -68,11 +74,15 @@ object Utils {
     def providerToPackageParts: String => Seq[String] = module => Seq(module)
 
     def providerTypeToken: String = s"pulumi:providers:${pulumiPackage.name}"
-    def reconcileVersion(packageVersion: PackageVersion)(implicit logger: Logger): PackageVersion = {
+
+    def toPackageMetadata(overrideMetadata: PackageMetadata): PackageMetadata =
+      toPackageMetadata(Some(overrideMetadata))
+    def toPackageMetadata(overrideMetadata: Option[PackageMetadata] = None): PackageMetadata = {
       import PackageVersion._
-      pulumiPackage.version.flatMap(PackageVersion.parse).getOrElse(PackageVersion.default).reconcile(packageVersion)
+      overrideMetadata match {
+        case Some(d) => PackageMetadata(d.name, PackageVersion.parse(pulumiPackage.version).reconcile(d.version))
+        case None => PackageMetadata(pulumiPackage.name, PackageVersion.parse(pulumiPackage.version))
+      }
     }
-    def toPackageMetadata(defaultVersion: PackageVersion = PackageVersion.default)(implicit logger: Logger): PackageMetadata =
-      PackageMetadata(pulumiPackage.name, pulumiPackage.reconcileVersion(defaultVersion))
   }
 }

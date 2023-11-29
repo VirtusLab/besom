@@ -31,8 +31,8 @@ class PulumiPackageTest extends munit.FunSuite {
 
     val schemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
     val (_, packageInfo) = schemaProvider.packageInfo(
-      PulumiPackage(defaultTestSchemaName),
-      PackageMetadata(defaultTestSchemaName, "0.0.0")
+      PackageMetadata(defaultTestSchemaName, "0.0.0"),
+      PulumiPackage(defaultTestSchemaName)
     )
     implicit val tm: TypeMapper = new TypeMapper(packageInfo, schemaProvider)
     val typeReferenceScala = propertyDefinition.typeReference.asScalaType()

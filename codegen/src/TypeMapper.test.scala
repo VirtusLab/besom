@@ -116,7 +116,7 @@ class TypeMapperTest extends munit.FunSuite {
       val schemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
       val (_, packageInfo) = data.pulumiPackage
         .map { p =>
-          schemaProvider.packageInfo(p, p.toPackageMetadata())
+          schemaProvider.packageInfo(p.toPackageMetadata(), p)
         }
         .getOrElse {
           (data.schemaName, data.schemaVersion) match {
@@ -124,8 +124,8 @@ class TypeMapperTest extends munit.FunSuite {
               schemaProvider.packageInfo(PackageMetadata(schemaName, schemaVersion))
             case _ =>
               schemaProvider.packageInfo(
-                PulumiPackage(defaultTestSchemaName),
-                PackageMetadata(defaultTestSchemaName, "0.0.0")
+                PackageMetadata(defaultTestSchemaName, "0.0.0"),
+                PulumiPackage(defaultTestSchemaName)
               )
           }
         }
