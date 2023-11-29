@@ -5,7 +5,7 @@ import scala.meta.*
 
 //noinspection TypeAnnotation,ScalaFileName
 class PulumiTypeReferenceTest extends munit.FunSuite {
-  import besom.codegen.metaschema._
+  import besom.codegen.metaschema.*
 
   implicit val logger: Logger = new Logger
 

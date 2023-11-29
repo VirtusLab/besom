@@ -3,9 +3,9 @@ package besom.codegen
 import besom.codegen.PulumiTypeReference.TypeReferenceOps
 import besom.codegen.Utils.ConstValueOps
 
-import scala.meta._
+import scala.meta.*
 import scala.meta.dialects.Scala33
-import besom.codegen.metaschema._
+import besom.codegen.metaschema.*
 
 case class PropertyInfo(
   name: Term.Name,
@@ -17,8 +17,10 @@ case class PropertyInfo(
   constValue: Option[Term],
   isSecret: Boolean
 ) {
-  def asScalaParam: Term.Param = {
-    val paramType = if (this.isOptional) scalameta.types.Option(this.baseType) else this.baseType
+  def asParam: Term.Param = {
+    val paramType = 
+      if this.isOptional then scalameta.types.Option(this.baseType) 
+      else this.baseType
     Term
       .Param(
         mods = List.empty,
@@ -28,8 +30,23 @@ case class PropertyInfo(
       )
   }
 
+  def asInputParam: Term.Param = {
+    val paramType =
+      if this.isOptional then scalameta.types.besom.types.InputOptional(this.inputArgType)
+      else scalameta.types.besom.types.Input(this.inputArgType)
+    Term
+      .Param(
+        mods = List.empty,
+        name = this.name,
+        decltpe = Some(paramType),
+        default = this.defaultValue
+      )
+  }
+
   def asOutputParam: Term.Param = {
-    val paramType = if (this.isOptional) scalameta.types.Option(this.baseType) else this.baseType
+    val paramType =
+      if this.isOptional then scalameta.types.Option(this.baseType)
+      else this.baseType
     Term
       .Param(
         mods = List.empty,
@@ -39,16 +56,27 @@ case class PropertyInfo(
       )
   }
 
+  def asOutputDef: Stat = {
+    val paramType  = 
+      if this.isOptional then scalameta.types.Option(this.baseType) 
+      else this.baseType
+    val resultType = scalameta.types.besom.types.Output(paramType)
+    val code       = s"""def ${this.name.syntax}: ${resultType.syntax} = output.flatMap(_.${this.name.syntax})"""
+    scalameta.parseStatement(code)
+  }
+
   def asScalaGetter: Stat = {
     val innerType = if (this.isOptional) scalameta.types.Option(this.baseType) else this.baseType
-    val code = s"""def ${this.name.syntax}: ${scalameta.types.besom.types.Output(innerType)} = output.map(_.${this.name.syntax})"""
-    scalameta.parse(code)
+    val code = s"""def ${this.name.syntax}: ${scalameta.types.besom.types.Output(innerType).syntax} = output.map(_.${this.name.syntax})"""
+    scalameta.parseStatement(code)
   }
 
   def asScalaOptionGetter: Stat = {
     val mapOrFlatmap = if (this.isOptional) Term.Name("flatMap") else Term.Name("map")
-    val code = s"""def ${this.name.syntax}: ${scalameta.types.besom.types.Output(scalameta.types.Option(this.baseType))} = output.map(_.${mapOrFlatmap.syntax}(_.${this.name.syntax}))"""
-    scalameta.parse(code)
+    val code = s"""def ${this.name.syntax}: ${scalameta.types.besom.types
+        .Output(scalameta.types.Option(this.baseType))
+        .syntax} = output.map(_.${mapOrFlatmap.syntax}(_.${this.name.syntax}))"""
+    scalameta.parseStatement(code)
   }
 
   val asScalaNamedArg: Term.Assign = {
@@ -56,7 +84,8 @@ case class PropertyInfo(
     val argValue = this.constValue match {
       case Some(constValue) => scalameta.besom.types.Output(constValue)
       case None =>
-        if (this.isOptional) Term.Apply(scalameta.method(this.name, "asOptionOutput"), Term.ArgClause(Term.Assign(Term.Name("isSecret"), isSecret) :: Nil))
+        if this.isOptional then
+          Term.Apply(scalameta.method(this.name, "asOptionOutput"), Term.ArgClause(Term.Assign(Term.Name("isSecret"), isSecret) :: Nil))
         else Term.Apply(scalameta.method(this.name, "asOutput"), Term.ArgClause(Term.Assign(Term.Name("isSecret"), isSecret) :: Nil))
     }
     Term.Assign(this.name, argValue)
@@ -93,7 +122,7 @@ object PropertyInfo {
         .orElse(propertyDefinition.const)
         .map { value => value.asScala }
         .orElse {
-          if (isPropertyRequired) None else Some(scalameta.None)
+          if isPropertyRequired then None else Some(scalameta.None)
         }
     val constValue = propertyDefinition.const.map(_.asScala)
 

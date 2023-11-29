@@ -6,7 +6,7 @@ case class PulumiDefinitionCoordinates private (
   private val modulePackageParts: Seq[String],
   private val definitionName: String
 )(implicit logger: Logger) {
-  import PulumiDefinitionCoordinates._
+  import PulumiDefinitionCoordinates.*
 
   def className(asArgsType: Boolean): String = {
     val classNameSuffix = if (asArgsType) "Args" else ""

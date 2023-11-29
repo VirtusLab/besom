@@ -78,7 +78,7 @@ object Utils {
     def toPackageMetadata(overrideMetadata: PackageMetadata): PackageMetadata =
       toPackageMetadata(Some(overrideMetadata))
     def toPackageMetadata(overrideMetadata: Option[PackageMetadata] = None): PackageMetadata = {
-      import PackageVersion._
+      import PackageVersion.*
       overrideMetadata match {
         case Some(d) => PackageMetadata(d.name, PackageVersion(pulumiPackage.version).reconcile(d.version))
         case None    => PackageMetadata(pulumiPackage.name, PackageVersion(pulumiPackage.version))

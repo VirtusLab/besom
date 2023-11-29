@@ -1,8 +1,8 @@
 package besom.codegen
 
-import scala.meta._
+import scala.meta.*
 import scala.meta.dialects.Scala33
-import besom.codegen.metaschema._
+import besom.codegen.metaschema.*
 
 import scala.annotation.unused
 
@@ -113,7 +113,7 @@ object PulumiTypeReference {
 
 sealed trait PulumiTypeTokenReference extends PulumiTypeReference {
 
-  import PulumiTypeTokenReference._
+  import PulumiTypeTokenReference.*
 
   def token: PulumiToken
   def path: Path

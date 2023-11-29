@@ -1,6 +1,6 @@
 package besom.codegen
 
-import besom.codegen.UpickleApi._
+import besom.codegen.UpickleApi.*
 
 private case class PackageMetadataProtocol(
   name: PackageMetadata.SchemaName,

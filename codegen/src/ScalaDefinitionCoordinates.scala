@@ -1,13 +1,13 @@
 package besom.codegen
 
-import scala.meta._
+import scala.meta.*
 
 case class ScalaDefinitionCoordinates private (
   private val providerPackageParts: Seq[String],
   private val modulePackageParts: Seq[String],
   definitionName: String
 ) {
-  import ScalaDefinitionCoordinates._
+  import ScalaDefinitionCoordinates.*
 
   // only used for package parts sanitization
   // DO NOT use for splitting the package parts

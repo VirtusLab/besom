@@ -3,7 +3,7 @@ package besom.codegen
 import scala.collection.mutable.ListBuffer
 
 class Logger(val printLevel: Logger.Level = Logger.Level.Info) {
-  import Logger.Level._
+  import Logger.Level.*
 
   private val buffer     = ListBuffer.empty[String]
   private var errorCount = 0

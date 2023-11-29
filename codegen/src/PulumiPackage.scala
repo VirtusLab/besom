@@ -2,7 +2,7 @@ package besom.codegen.metaschema
 
 import upickle.implicits.{key => fieldKey}
 import besom.codegen.{GeneralCodegenError, UpickleApi}
-import besom.codegen.UpickleApi._
+import besom.codegen.UpickleApi.*
 
 /** PulumiPackage describes a Pulumi package.
   *
@@ -275,9 +275,9 @@ trait TypeReferenceProtoLike extends AnonymousTypeProtoLike {
       Some(UnionType(oneOf = oneOf, `type` = underlyingType)) // TODO: Handle the discriminator
     } else {
       ref match {
-        case Some(typeUri) =>
+        case Some(typeRefUri) =>
           val underlyingType = this.maybeAsAnonymousType
-          Some(NamedType(typeUri = typeUri, `type` = underlyingType))
+          Some(NamedType(typeUri = typeRefUri, `type` = underlyingType))
         case None =>
           this.maybeAsAnonymousType
       }

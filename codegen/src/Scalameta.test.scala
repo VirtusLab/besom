@@ -1,17 +1,12 @@
 package besom.codegen
 
-import scala.meta._
+import scala.meta.*
 
 //noinspection ScalaFileName
 class ScalametaTest extends munit.FunSuite {
-  test("package_") {
+  test("ref") {
     val pkg = "besom.api.aws.config.endpoints.outputs"
-    assertEquals(scalameta.package_(scalameta.ref(pkg.split('.').toList))().syntax, s"package $pkg")
-  }
-
-  test("import_") {
-    val pkg = "besom.internal.CodegenProtocol"
-    assertEquals(scalameta.importAll(scalameta.ref(pkg.split('.').toList)).syntax, s"import ${pkg}._")
+    assertEquals(scalameta.ref(pkg.split('.').toList).syntax, pkg)
   }
 
   test("apply_") {

@@ -2,7 +2,7 @@ package besom.codegen
 
 //noinspection ScalaFileName,TypeAnnotation
 class PackageMetadataTest extends munit.FunSuite {
-  import besom.codegen.PackageVersion._
+  import besom.codegen.PackageVersion.*
 
   test("fromJson") {
     val json = """{"name":"aws","version":"v6.7.0"}"""
@@ -72,7 +72,7 @@ class PackageVersionTest extends munit.FunSuite {
   }
 
   test("reconcile") {
-    import PackageVersion._
+    import PackageVersion.*
 
     assertEquals(PackageVersion("v6.7.0").reconcile(PackageVersion("6.7.0")).map(_.asString), Some("6.7.0"))
     assertEquals(PackageVersion("v6.7.0").reconcile(PackageVersion("1.2.0")).map(_.asString), Some("6.7.0"))

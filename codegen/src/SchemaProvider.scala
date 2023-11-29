@@ -1,7 +1,7 @@
 package besom.codegen
 
 import scala.collection.mutable.ListBuffer
-import besom.codegen.metaschema._
+import besom.codegen.metaschema.*
 import besom.codegen.PackageMetadata.{SchemaFile, SchemaName}
 import besom.codegen.PackageVersion
 import besom.codegen.Utils.PulumiPackageOps

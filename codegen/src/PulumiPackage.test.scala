@@ -66,7 +66,7 @@ class PulumiPackageTest extends munit.FunSuite {
         )
         .toTry
         .get
-      assertEquals(info.asScalaParam.syntax, s"test: ${data.expectedType}")
+      assertEquals(info.asParam.syntax, s"test: ${data.expectedType}")
       assertEquals(info.asOutputParam.syntax, s"test: besom.types.Output[${data.expectedType}]")
       assertEquals(info.asScalaGetter.syntax, s"def test: besom.types.Output[${data.expectedType}] = output.map(_.test)")
       assertEquals(info.asScalaOptionGetter.syntax, s"def test: besom.types.Output[scala.Option[${data.expectedType}]] = output.map(_.map(_.test))")

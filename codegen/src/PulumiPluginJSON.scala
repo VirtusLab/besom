@@ -1,6 +1,6 @@
 package besom.codegen
 
-import besom.codegen.UpickleApi._
+import besom.codegen.UpickleApi.*
 
 /** Provides additional information about a package's associated Pulumi plugin.
   *

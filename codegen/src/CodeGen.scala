@@ -6,7 +6,6 @@ import besom.codegen.PulumiTypeReference.TypeReferenceOps
 import besom.codegen.Utils.*
 import besom.codegen.metaschema.*
 
-import scala.annotation.unused
 import scala.meta.*
 import scala.meta.dialects.Scala33
 
@@ -103,6 +102,7 @@ class CodeGen(implicit
           |  "server": ${pluginDownloadUrlJsonValue}
           |}
           |""".stripMargin
+
     val filePath = FilePath(Seq("resources", "besom", "api", pluginName, "plugin.json"))
 
     SourceFile(filePath = filePath, sourceCode = fileContent)
@@ -138,9 +138,8 @@ class CodeGen(implicit
     typeCoordinates: PulumiDefinitionCoordinates,
     enumDefinition: EnumTypeDefinition
   )(implicit config: CodegenConfig): Seq[SourceFile] = {
-    val classCoordinates = typeCoordinates.asEnumClass
-
-    val enumClassName       = Type.Name(classCoordinates.definitionName)
+    val classCoordinates    = typeCoordinates.asEnumClass
+    val enumClassName       = classCoordinates.typeName
     val enumClassStringName = Lit.String(classCoordinates.definitionName)
 
     val (superclass, valueType) = enumDefinition.`type` match {
@@ -161,7 +160,7 @@ class CodeGen(implicit
       val caseStringName = Lit.String(caseRawName)
       val caseValue      = valueDefinition.value.asScala
 
-      val definition = scalameta.parse(
+      val definition = scalameta.parseStatement(
         s"""object ${caseName.syntax} extends ${enumClassName.syntax}(${caseStringName.syntax}, ${caseValue.syntax})"""
       )
       val reference = caseName
@@ -171,18 +170,18 @@ class CodeGen(implicit
     val fileContent =
       s"""|package ${classCoordinates.packageRef.syntax}
           |
-          |sealed abstract class ${enumClassName}(val name: String, val value: ${valueType}) extends ${superclass}
+          |sealed abstract class ${enumClassName.syntax}(val name: String, val value: ${valueType.syntax}) extends ${superclass.name}
           |
-          |object ${enumClassName} extends besom.types.EnumCompanion[${valueType}, ${enumClassName}](${enumClassStringName}):
-          |${instances.map(instance => s"  ${instance._1}").mkString("\n")}
+          |object ${enumClassName.syntax} extends besom.types.EnumCompanion[${valueType.syntax}, ${enumClassName.syntax}](${enumClassStringName.syntax}):
+          |${instances.map(instance => s"  ${instance._1.syntax}").mkString("\n")}
           |
           |  override val allInstances: Seq[${enumClassName}] = Seq(
-          |${instances.map(instance => s"    ${instance._2}").mkString(",\n")}
+          |${instances.map(instance => s"    ${instance._2.syntax}").mkString(",\n")}
           |  )
           |""".stripMargin
 
     if config.parseAST then
-      val _ = scalameta.parse(fileContent)
+      val _ = scalameta.parseSource(fileContent)
 
     Seq(
       SourceFile(
@@ -234,7 +233,6 @@ class CodeGen(implicit
       objectProperties,
       requiresJsonFormat = outputRequiresJsonFormat
     )
-
     val argsClassSourceFile = makeArgsClassSourceFile(
       classCoordinates = argsClassCoordinates,
       properties = objectProperties,
@@ -284,7 +282,7 @@ class CodeGen(implicit
     val requiredOutputs = (resourceDefinition.required ++ List("urn", "id")).toSet
 
     val resourceProperties = {
-      val allProperties = (resourceBaseProperties ++ resourceDefinition.properties.toSeq.sortBy(_._1))
+      val allProperties = resourceBaseProperties ++ resourceDefinition.properties.toSeq.sortBy(_._1)
       val truncatedProperties =
         if (allProperties.size <= jvmMaxParamsCount) allProperties
         else {
@@ -335,12 +333,10 @@ class CodeGen(implicit
     }
 
     val baseClassParams            = resourceProperties.map(_.asOutputParam)
-    val baseOutputExtensionMethods = resourceProperties.map(_.asScalaParam)
+    val baseOutputExtensionMethods = resourceProperties.map(_.asOutputDef)
+    val hasOutputExtensions        = baseOutputExtensionMethods.nonEmpty
 
-    val hasOutputExtensions = baseOutputExtensionMethods.nonEmpty
-
-    // TODO: Should we show entire descriptions as comments? Formatting of comments should be preserved. Examples for other languages should probably be filtered out.
-    // val baseClassComment = spec.description.fold("")(desc => s"/**\n${desc}\n*/\n") // TODO: Escape/sanitize comments
+    // TODO: Implement comments
     val baseClassComment = ""
 
     val resourceBaseClass = if (isProvider) "besom.ProviderResource" else "besom.CustomResource"
@@ -350,11 +346,12 @@ class CodeGen(implicit
 
     val baseClass =
       s"""|final case class $baseClassName private(
-          |${baseClassParams.map(param => s"  ${param}").mkString(",\n")}
-          |) extends ${resourceBaseClass} derives besom.ResourceDecoder""".stripMargin
+          |${baseClassParams.map(param => s"  ${param.syntax}").mkString(",\n")}
+          |) extends ${resourceBaseClass} derives besom.ResourceDecoder
+          |""".stripMargin
 
     if config.parseAST then
-      val _ = scalameta.parse(baseClass)
+      val _ = scalameta.parseSource(baseClass)
 
     val hasDefaultArgsConstructor = requiredInputs.forall { propertyName =>
       val propertyDefinition = resourceDefinition.inputProperties(propertyName)
@@ -375,29 +372,28 @@ class CodeGen(implicit
             |    args: ${argsClassName}${argsDefault},
             |    opts: besom.CustomResourceOptions = besom.CustomResourceOptions()
             |  ): besom.types.Output[$baseClassName] =
-            |    ctx.registerResource[$baseClassName, $argsClassName](${token}, name, args, opts)
+            |    ctx.registerResource[$baseClassName, $argsClassName](${token.syntax}, name, args, opts)
             |
             |  given outputOps: {} with
             |    extension(output: besom.types.Output[$baseClassName])
-            |${baseOutputExtensionMethods.map(meth => s"      ${meth.syntax}").mkString("\n")}""".stripMargin
+            |${baseOutputExtensionMethods.map(meth => s"      ${meth.syntax}").mkString("\n")}
+            |""".stripMargin
       } else {
         s"""object $baseClassName"""
       }
 
     if config.parseAST then
-      val _ = scalameta.parse(baseCompanion)
+      val _ = scalameta.parseSource(baseCompanion)
 
     val baseClassFileContent =
-      s"""|package ${baseClassCoordinates.packageRef}
-          |
+      s"""|package ${baseClassCoordinates.packageRef.syntax}
           |${baseClassComment}
           |${baseClass}
-          |
           |${baseCompanion}
           |""".stripMargin
 
     if config.parseAST then
-      val _ = scalameta.parse(baseClassFileContent)
+      val _ = scalameta.parseSource(baseClassFileContent)
 
     val baseClassSourceFile = SourceFile(
       baseClassCoordinates.filePath,
@@ -511,15 +507,15 @@ class CodeGen(implicit
         val fileContent =
           s"""|package ${methodCoordinates.packageRef.syntax}
               |
-              |def ${Term.Name(methodName)}(using ctx: besom.types.Context)(
+              |def ${Term.Name(methodName).syntax}(using ctx: ${scalameta.types.besom.types.Context.syntax})(
               |  ${argsClassParam.syntax},
               |  opts: besom.InvokeOptions = besom.InvokeOptions()
-              |): ${scalameta.types.besom.types.Output(resultTypeRef)} =
+              |): ${scalameta.types.besom.types.Output(resultTypeRef).syntax} =
               |   ctx.invoke[${argsClassRef.syntax}, ${resultTypeRef.syntax}](${token.syntax}, ${argsClassParamName.syntax}, opts)
               |""".stripMargin
 
         if config.parseAST then
-          val _ = scalameta.parse(fileContent)
+          val _ = scalameta.parseSource(fileContent)
 
         SourceFile(
           filePath = methodCoordinates.filePath,
@@ -543,9 +539,9 @@ class CodeGen(implicit
     val configsWithDefault = pulumiPackage.config.defaults
     val configVariables    = pulumiPackage.config.variables.toSeq.sortBy(_._1)
     val configs = configVariables.collect { case (configName, configDefinition) =>
-      val get      = s"get${configName.capitalize}"
+      val get      = Term.Name(s"get${configName.capitalize}")
       val propType = configDefinition.typeReference.asScalaType().toTry.get
-      val isSecret = configDefinition.secret
+      val isSecret = Lit.Boolean(configDefinition.secret)
       val defaultValue = configDefinition.default.map(_.asScala).filter {
         case Lit.String(v) if v.isBlank => false
         case _                          => true
@@ -572,36 +568,38 @@ class CodeGen(implicit
       }
       val returnsDoc = s"@returns the value of the `$providerName:$configName` configuration property" +
         s"${if (configsWithDefault.contains(configName)) " or a default value if present" else ""}."
-
-      val code = s"""|/**
-          | * ${description}${deprecationDocs}
-          | * ${returnsDoc}
-          | */${deprecationCode}
-          |def ${Term.Name(get)}(using ${scalameta.types.besom.types.Context}): ${scalameta.types.besom.types.Output(
-                      scalameta.types.Option(propType)
-                    )} =
-          |  besom.internal.Codegen.config[${propType.syntax}](${Lit.String(providerName)})(key = ${Lit.String(
-                      configName
-                    )}, isSecret = ${Lit.Boolean(isSecret)}, default = ${default.syntax}, environment = ${environment.syntax})
-          |""".stripMargin
+      val providerNameLit = Lit.String(providerName)
+      val configNameLit   = Lit.String(configName)
+      val code =
+        s"""|/**
+            | * ${description}${deprecationDocs}
+            | * ${returnsDoc}
+            | */${deprecationCode}
+            |def ${get.syntax}(using ${scalameta.types.besom.types.Context.syntax}): ${scalameta.types.besom.types
+             .Output(
+               scalameta.types.Option(propType)
+             )
+             .syntax} =
+            |  besom.internal.Codegen.config[${propType.syntax}](${providerNameLit.syntax})(key = ${configNameLit.syntax}, isSecret = ${isSecret.syntax}, default = ${default.syntax}, environment = ${environment.syntax})
+            |""".stripMargin
 
       if config.parseAST then
-        val _ = scalameta.parse(code)
+        val _ = scalameta.parseStatement(code)
       code
     }
 
     val code =
-      s"""|${scalameta.package_(coordinates.packageRef)()}
-          |${scalameta.importAll(scalameta.besom.internal.CodegenProtocol())}
+      s"""|package ${coordinates.packageRef.syntax}
+          |import ${scalameta.besom.internal.CodegenProtocol().syntax}.*
           |${configs.mkString("\n")}
           |""".stripMargin
-
-    if config.parseAST then
-      val _ = scalameta.parse(code)
 
     if (pulumiPackage.config.variables.isEmpty) {
       (Seq.empty, Seq.empty)
     } else {
+      if config.parseAST then
+        val _ = scalameta.parseSource(code)
+
       val file    = FilePath(Seq("src", Utils.configModuleName, "config.scala"))
       val sources = Seq(SourceFile(file, code))
       val dependencies = configVariables
@@ -625,7 +623,7 @@ class CodeGen(implicit
   )(implicit config: CodegenConfig): SourceFile = {
     val className   = classCoordinates.definitionName
     val typeName    = classCoordinates.typeName
-    val classParams = properties.map(_.asScalaParam)
+    val classParams = properties.map(_.asParam)
     val jsonFormatExtensionMethod = Option.when(requiresJsonFormat) {
       scalameta.given_(scalameta.types.spray.json.JsonFormat(typeName)) {
         scalameta.besom.internal.CodegenProtocol.jsonFormatN(properties.size)(scalameta.apply_(typeName))
@@ -641,48 +639,47 @@ class CodeGen(implicit
     val classComment = ""
 
     val classDef =
-      s"""|final case class $className private(
-          |${classParams.map(arg => s"  ${arg}").mkString(",\n")}
+      s"""|final case class ${typeName.syntax} private(
+          |${classParams.map(arg => s"  ${arg.syntax}").mkString(",\n")}
           |) derives besom.types.Decoder
           |""".stripMargin
 
     if config.parseAST then
-      val _ = scalameta.parse(classDef)
+      val _ = scalameta.parseStatement(classDef)
 
     val baseCompanionDef =
       if (hasOutputExtensions) {
         val classNameTerminator =
           if (className.endsWith("_")) " " else "" // colon after underscore would be treated as a part of the name
 
-        s"""|object ${className}${classNameTerminator}:
-            |  ${jsonFormatExtensionMethod.getOrElse("")}
+        s"""|object ${{ typeName.syntax }}${classNameTerminator}:
+            |  ${jsonFormatExtensionMethod.map(_.syntax).getOrElse("")}
             |  given outputOps: {} with
-            |    extension(output: ${scalameta.types.besom.types.Output(typeName)})
-            |${outputExtensionMethods.map(meth => s"      ${meth}").mkString("\n")}
+            |    extension(output: ${scalameta.types.besom.types.Output(typeName).syntax})
+            |${outputExtensionMethods.map(meth => s"      ${meth.syntax}").mkString("\n")}
             |
             |  given optionOutputOps: {} with
-            |    extension(output: ${scalameta.types.besom.types.Output(scalameta.types.Option(typeName))})
-            |${optionOutputExtensionMethods.map(meth => s"      ${meth}").mkString("\n")}
+            |    extension(output: ${scalameta.types.besom.types.Output(scalameta.types.Option(typeName)).syntax})
+            |${optionOutputExtensionMethods.map(meth => s"      ${meth.syntax}").mkString("\n")}
             |""".stripMargin
       } else {
-        s"""object $className"""
+        s"""object ${typeName.syntax}"""
       }
 
-    val imports: List[Import] = if (requiresJsonFormat) {
-      scalameta.importAll(scalameta.besom.internal.CodegenProtocol()) :: Nil
-    } else {
-      Nil
-    }
+    val imports =
+      if requiresJsonFormat then s"import ${scalameta.besom.internal.CodegenProtocol().syntax}.*" :: Nil
+      else Nil
 
     val fileContent =
-      s"""|package ${classCoordinates.packageRef}
+      s"""|package ${classCoordinates.packageRef.syntax}
           |${imports.mkString("\n")}
           |${classComment}
           |${classDef}
-          |
           |${baseCompanionDef}
-          |
           |""".stripMargin
+
+    if config.parseAST then
+      val _ = scalameta.parseSource(fileContent)
 
     SourceFile(
       classCoordinates.filePath,
@@ -695,7 +692,7 @@ class CodeGen(implicit
     properties: Seq[PropertyInfo],
     isResource: Boolean,
     isProvider: Boolean
-  ): SourceFile = {
+  )(implicit config: CodegenConfig): SourceFile = {
     val argsClass = makeArgsClass(
       argsClassName = classCoordinates.definitionName,
       inputProperties = properties,
@@ -704,16 +701,23 @@ class CodeGen(implicit
     )
     val argsCompanion = makeArgsCompanion(
       argsClassName = classCoordinates.definitionName,
-      inputProperties = properties,
-      isResource = isResource
+      inputProperties = properties
     )
-    val fileContent = scalameta.package_(classCoordinates.packageRef) {
-      argsClass :: argsCompanion :: Nil
-    }
+
+    val fileContent =
+      s"""|package ${classCoordinates.packageRef.toString()}
+          |
+          |${argsClass}
+          |
+          |${argsCompanion}
+          |""".stripMargin
+
+    if config.parseAST then
+      val _ = scalameta.parseSource(fileContent)
 
     SourceFile(
       classCoordinates.filePath,
-      fileContent.syntax
+      fileContent
     )
   }
 
@@ -723,34 +727,36 @@ class CodeGen(implicit
     isResource: Boolean,
     isProvider: Boolean
   ): Stat = {
+    val argsTypeName = Type.Name(argsClassName)
     val derivedTypeclasses =
       if (isProvider) "besom.types.ProviderArgsEncoder"
       else if (isResource) "besom.types.ArgsEncoder"
       else "besom.types.Encoder, besom.types.ArgsEncoder"
     val argsClassParams = inputProperties.map(_.asOutputParam)
     val code =
-      s"""|final case class $argsClassName private(
-          |${argsClassParams.map(arg => s"  ${arg}").mkString(",\n")}
+      s"""|final case class ${argsTypeName.syntax} private(
+          |${argsClassParams.map(arg => s"  ${arg.syntax}").mkString(",\n")}
           |) derives ${derivedTypeclasses}
           |""".stripMargin
 
-    scalameta.parse(code)
+    scalameta.parseStatement(code)
   }
 
-  private def makeArgsCompanion(argsClassName: String, inputProperties: Seq[PropertyInfo], @unused isResource: Boolean): Stat = {
-    val argsCompanionApplyParams   = inputProperties.filter(_.constValue.isEmpty).map(_.asScalaParam)
+  private def makeArgsCompanion(argsClassName: String, inputProperties: Seq[PropertyInfo]): Stat = {
+    val argsTypeName               = Type.Name(argsClassName)
+    val argsCompanionApplyParams   = inputProperties.filter(_.constValue.isEmpty).map(_.asInputParam)
     val argsCompanionApplyBodyArgs = inputProperties.map(_.asScalaNamedArg)
     val code =
-      s"""|object $argsClassName:
+      s"""|object ${argsTypeName.syntax}:
           |  def apply(
-          |${argsCompanionApplyParams.map(arg => s"    ${arg}").mkString(",\n")}
-          |  )(using besom.types.Context): $argsClassName =
-          |    new $argsClassName(
-          |${argsCompanionApplyBodyArgs.map(arg => s"      ${arg}").mkString(",\n")}
+          |${argsCompanionApplyParams.map(arg => s"    ${arg.syntax}").mkString(",\n")}
+          |  )(using besom.types.Context): ${argsTypeName.syntax} =
+          |    new ${argsTypeName.syntax}(
+          |${argsCompanionApplyBodyArgs.map(arg => s"      ${arg.syntax}").mkString(",\n")}
           |    )
           |""".stripMargin
 
-    scalameta.parse(code)
+    scalameta.parseStatement(code)
   }
 }
 
