@@ -9,7 +9,6 @@ import com.google.protobuf.struct.*
 class ReSerializerTest extends munit.FunSuite:
 
   test("serialize-deserialize common types") {
-    given Context = DummyContext().unsafeRunSync()
     assertEquals(reSerialize(Option.empty[String]).unsafeRunSync(), Option.empty[String])
     assertEquals(reSerialize("asdf").unsafeRunSync(), "asdf")
     assertEquals(reSerialize(123).unsafeRunSync(), 123)
@@ -30,8 +29,6 @@ class ReSerializerTest extends munit.FunSuite:
   }
 
   test("serialize-deserialize JSON") {
-    given Context = DummyContext().unsafeRunSync()
-
     val e: Encoder[spray.json.JsValue] = summon[Encoder[spray.json.JsValue]]
     val d: Decoder[spray.json.JsValue] = summon[Decoder[spray.json.JsValue]]
 
