@@ -737,8 +737,6 @@ class CodeGen(implicit
       Lit.Double(value)
   }
 
-  private def decapitalize(s: String) = s(0).toLower.toString ++ s.substring(1, s.length)
-
   private val anyRefMethodNames = Set(
     "eq",
     "ne",
@@ -772,6 +770,10 @@ case class FilePath private (pathParts: Seq[String]) {
   )
 
   def osSubPath: os.SubPath = pathParts.foldLeft(os.sub)(_ / _)
+}
+object FilePath {
+  def apply(path: String): FilePath               = new FilePath(os.SubPath(path).segments)
+  def unapply(filePath: FilePath): Option[String] = Some(filePath.pathParts.mkString("/"))
 }
 
 case class SourceFile(

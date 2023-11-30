@@ -49,6 +49,9 @@ import org.virtuslab.yaml.*
     os.remove.all(logDir)
     os.makeDir.all(logDir)
 
+    // make sure bloop is running with our custom options
+    os.proc("scala-cli", "bloop", "exit").call()
+
     val metadata = readAllPackagesMetadata(targetPath)
     withProgress("Publishing packages locally", metadata.size) {
       metadata.foreach { case (PackageMetadata(name, version, _), _: os.Path) =>

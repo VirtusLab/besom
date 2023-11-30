@@ -24,8 +24,7 @@ import besom.codegen.UpickleApi._
   * @param pluginDownloadURL
   *   The URL to use when downloading the provider plugin binary
   * @param types
-  *   A map from type token to complexTypeSpec that describes the set of complex types (i.e. object, enum) defined by
-  *   this package.
+  *   A map from type token to complexTypeSpec that describes the set of complex types (i.e. object, enum) defined by this package.
   * @param config
   *   The package's configuration variables
   * @param provider
@@ -80,8 +79,48 @@ object PulumiPackage {
     if (input.isEmpty) {
       throw GeneralCodegenException("Pulumi package input JSON string is empty")
     }
-    val json = ujson.read(input)
-    read[PulumiPackage](json)
+    val json =
+      try {
+        ujson.read(input)
+      } catch {
+        case e: ujson.ParseException =>
+          val offset     = 10
+          val indexStart = e.index - offset
+          val indexEnd   = e.index + offset
+          throw GeneralCodegenException(
+            s"""|Cannot parse Pulumi package JSON schema: ${e.getMessage}
+              |JSON fragment [$indexStart, $indexEnd]]:
+              |...
+              |${input.slice(indexStart, indexEnd).stripLineEnd}
+              |...""".stripMargin,
+            e
+          )
+        case e: ujson.IncompleteParseException =>
+          throw GeneralCodegenException(s"Cannot parse Pulumi package JSON schema, it appears incomplete or corrupted: ${e.getMessage}", e)
+        case e: Throwable =>
+          throw GeneralCodegenException(s"Unexpected error while parsing Pulumi package JSON schema: ${e.getMessage}", e)
+      }
+    try {
+      read[PulumiPackage](json)
+    } catch {
+      case e: upickle.core.Abort =>
+        throw GeneralCodegenException(s"Cannot deserialize Pulumi package JSON schema: ${e.getMessage}", e)
+      case e: upickle.core.AbortException =>
+        val offset     = 10
+        val indexStart = e.index - offset
+        val indexEnd   = e.index + offset
+        throw GeneralCodegenException(
+          s"""|Cannot deserialize Pulumi package JSON schema: ${e.getMessage}
+              |JSON fragment [$indexStart, $indexEnd]]:
+              |...
+              |${input.slice(indexStart, indexEnd).stripLineEnd}
+              |...
+              |""".stripMargin,
+          e
+        )
+      case e: Throwable =>
+        throw GeneralCodegenException(s"Unexpected error while deserializing Pulumi package JSON schema: ${e.getMessage}", e)
+    }
   }
 }
 
@@ -90,19 +129,24 @@ object PulumiPackage {
   * @param properties
   *   A map from property name to propertySpec that describes the object's properties.
   * @param required
-  *   A list of the names of an object type's required properties. These properties must be set for inputs and will
-  *   always be set for outputs.
+  *   A list of the names of an object type's required properties. These properties must be set for inputs and will always be set for
+  *   outputs.
   * @param deprecationMessage
   *   Indicates whether the resource is deprecated
   * @param description
   *   The description of the resource, if any. Interpreted as Markdown.
   * @param inputProperties
   *   A map from property name to propertySpec that describes the resource's input properties.
+  * @param stateInputs
+  *   An optional objectTypeSpec that describes additional inputs that may be necessary to get an existing resource. If this is unset, only
+  *   an ID is necessary.
+  * @param aliases
+  *   The list of aliases for the resource.
   * @param isComponent
   *   Indicates whether the resource is a component.
   * @param isOverlay
-  *   Indicates that the implementation of the resource should not be generated from the schema, and is instead provided
-  *   out-of-band by the package author
+  *   Indicates that the implementation of the resource should not be generated from the schema, and is instead provided out-of-band by the
+  *   package author
   * @param methods
   *   A map from method name to function token that describes the resource's method set.
   * @param requiredInputs
@@ -111,16 +155,16 @@ object PulumiPackage {
 case class ResourceDefinition(
   properties: Map[String, PropertyDefinition] = Map.empty,
   required: List[String] = Nil,
-
-  // aliases: List[AliasDefinition] = Nil,
   deprecationMessage: Option[String] = None,
   description: Option[String] = None,
   inputProperties: Map[String, PropertyDefinition] = Map.empty,
+  stateInputs: ObjectTypeDefinition = ObjectTypeDefinition(), // TODO: Handle stateInputs
+  aliases: List[AliasDefinition] = Nil, // TODO: Handle aliases
+
   isComponent: Boolean = false,
   isOverlay: Boolean = false,
   methods: Map[String, String] = Map.empty,
   requiredInputs: List[String] = Nil
-  // stateInputs: ,
 )
 object ResourceDefinition {
   implicit val reader: Reader[ResourceDefinition] = macroR
@@ -136,11 +180,11 @@ object ResourceDefinition {
   * @param outputs
   *   Specifies the return type of the function definition.
   * @param multiArgumentInputs
-  *   A list of parameter names that determines whether the input bag should be treated as a single argument or as
-  *   multiple arguments. The list corresponds to the order in which the parameters should be passed to the function.
+  *   A list of parameter names that determines whether the input bag should be treated as a single argument or as multiple arguments. The
+  *   list corresponds to the order in which the parameters should be passed to the function.
   * @param isOverlay
-  *   Indicates that the implementation of the function should not be generated from the schema, and is instead provided
-  *   out-of-band by the package author.
+  *   Indicates that the implementation of the function should not be generated from the schema, and is instead provided out-of-band by the
+  *   package author.
   */
 case class FunctionDefinition(
   description: Option[String] = None,
@@ -194,10 +238,9 @@ object NodeJs {
 /** Format metadata about this package.
   *
   * @param moduleFormat
-  *   A regex that is used by the importer to extract a module name from the module portion of a type token. Packages
-  *   that use the module format "namespace1/namespace2/.../namespaceN" do not need to specify a format. The regex must
-  *   define one capturing group that contains the module name, which must be formatted as
-  *   "namespace1/namespace2/...namespaceN".
+  *   A regex that is used by the importer to extract a module name from the module portion of a type token. Packages that use the module
+  *   format "namespace1/namespace2/.../namespaceN" do not need to specify a format. The regex must define one capturing group that contains
+  *   the module name, which must be formatted as "namespace1/namespace2/...namespaceN".
   */
 case class Meta(moduleFormat: String = Meta.defaultModuleFormat)
 //noinspection ScalaWeakerAccess
@@ -272,9 +315,9 @@ trait TypeReferenceProtoLike extends AnonymousTypeProtoLike {
       Some(UnionType(oneOf = oneOf, `type` = underlyingType)) // TODO: Handle the discriminator
     } else {
       ref match {
-        case Some(typeUri) =>
+        case Some(typeRefUri) =>
           val underlyingType = this.maybeAsAnonymousType
-          Some(NamedType(typeUri = typeUri, `type` = underlyingType))
+          Some(NamedType(typeUri = typeRefUri, `type` = underlyingType))
         case None =>
           this.maybeAsAnonymousType
       }
@@ -297,8 +340,8 @@ object TypeReferenceProto {
   implicit val reader: Reader[TypeReferenceProto] = macroR
 }
 
-/** A reference to a type. The particular kind of type referenced is determined based on the contents of the "type"
-  * property and the presence or absence of the "additionalProperties", "items", "oneOf", and "ref" properties.
+/** A reference to a type. The particular kind of type referenced is determined based on the contents of the "type" property and the
+  * presence or absence of the "additionalProperties", "items", "oneOf", and "ref" properties.
   * @see
   *   [[TypeReferenceProto]], [[TypeReferenceProtoLike]] and [[besom.codegen.Utils.TypeReferenceOps]]
   */
@@ -332,12 +375,12 @@ trait AnonymousTypeProtoLike {
       case "array" =>
         items match {
           case Some(itemType) => ArrayType(itemType)
-          case None => throw new Exception(s"The array type $this lacks `items`")
+          case None           => throw new Exception(s"The array type $this lacks `items`")
         }
       case "object" =>
         additionalProperties match {
           case Some(propertyType) => MapType(propertyType)
-          case None => MapType(StringType)
+          case None               => MapType(StringType)
         }
     }
   }
@@ -369,39 +412,37 @@ object IntegerType extends PrimitiveType
 object NumberType extends PrimitiveType
 object BooleanType extends PrimitiveType
 
-/** A reference to an array type. The "type" property must be set to "array" and the "items" property must be present.
-  * No other properties may be present.
+/** A reference to an array type. The "type" property must be set to "array" and the "items" property must be present. No other properties
+  * may be present.
   * @param items
   *   "The element type of the array"
   */
 case class ArrayType(items: TypeReference) extends AnonymousType
 
-/** A reference to a map type. The "type" property must be set to "object" and the "additionalProperties" property may
-  * be present. No other properties may be present.
+/** A reference to a map type. The "type" property must be set to "object" and the "additionalProperties" property may be present. No other
+  * properties may be present.
   * @param additionalProperties
   *   The element type of the map. Defaults to "string" when omitted.
   */
 case class MapType(additionalProperties: TypeReference) extends AnonymousType
 
-object UrnType extends TypeReference
-object ResourceIdType extends TypeReference
+object UrnType extends AnonymousType
+object ResourceIdType extends AnonymousType
 
-/** A reference to a type in this or another document. The "ref" property must be present. The "type" property is
-  * ignored if it is present. No other properties may be present.
+/** A reference to a type in this or another document. The "ref" property must be present. The "type" property is ignored if it is present.
+  * No other properties may be present.
   * @param typeUri
-  *   The URI of the referenced type. For example, the built-in Archive, Asset, and Any types are referenced as
-  *   "pulumi.json#/Archive", "pulumi.json#/Asset", and "pulumi.json#/Any", respectively. A type from this document is
-  *   referenced as "#/types/pulumi:type:token". A type from another document is referenced as
-  *   "path#/types/pulumi:type:token", where path is of the form: "/provider/vX.Y.Z/schema.json" or "pulumi.json" or
-  *   "http[s]://example.com/provider/vX.Y.Z/schema.json".
+  *   The URI of the referenced type. For example, the built-in Archive, Asset, and Any types are referenced as "pulumi.json#/Archive",
+  *   "pulumi.json#/Asset", and "pulumi.json#/Any", respectively. A type from this document is referenced as "#/types/pulumi:type:token". A
+  *   type from another document is referenced as "path#/types/pulumi:type:token", where path is of the form: "/provider/vX.Y.Z/schema.json"
+  *   or "pulumi.json" or "http[s]://example.com/provider/vX.Y.Z/schema.json".
   * @param `type`
   *   ignored; present for compatibility with existing schemas
   */
 case class NamedType(typeUri: String, `type`: Option[AnonymousType] = None) extends TypeReference
 
-/** A reference to a union type. The "oneOf" property must be present. The union may additional specify an underlying
-  * primitive type via the "type" property and a discriminator via the "discriminator" property. No other properties may
-  * be present.
+/** A reference to a union type. The "oneOf" property must be present. The union may additional specify an underlying primitive type via the
+  * "type" property and a discriminator via the "discriminator" property. No other properties may be present.
   * @param oneOf
   *   If present, indicates that values of the type may be one of any of the listed types
   * @param `type`
@@ -413,7 +454,7 @@ case class UnionType(
   oneOf: List[TypeReference],
   `type`: Option[AnonymousType],
   discriminator: Option[Discriminator] = None
-) extends TypeReference
+) extends AnonymousType
 
 /** @see
   *   [[PropertyDefinition]]
@@ -427,10 +468,9 @@ case class PropertyDefinitionProto(
   @fieldKey("$ref") ref: Option[String] = None,
   const: Option[ConstValue] = None,
   default: Option[ConstValue] = None,
-  /* defaultInfo */
+  defaultInfo: Option[DefaultInfo] = None,
   deprecationMessage: Option[String] = None,
   description: Option[String] = None,
-  // language: ,
   replaceOnChanges: Boolean = false,
   willReplaceOnChanges: Boolean = false,
   secret: Boolean = false
@@ -449,13 +489,14 @@ object PropertyDefinitionProto {
   *   The constant value for the property, if any. The type of the value must be assignable to the type of the property.
   * @param default
   *   The default value for the property, if any. The type of the value must be assignable to the type of the property.
+  * @param defaultInfo
+  *   "Additional information about the property's default value, if any."
   * @param deprecationMessage
   *   Indicates whether the property is deprecated
   * @param description
   *   The description of the property, if any. Interpreted as Markdown.
   * @param replaceOnChanges
-  *   Specifies whether a change to the property causes its containing resource to be replaced instead of updated
-  *   (default false).
+  *   Specifies whether a change to the property causes its containing resource to be replaced instead of updated (default false).
   * @param willReplaceOnChanges
   *   Indicates that the provider will replace the resource when this property is changed.
   * @param secret
@@ -465,6 +506,7 @@ case class PropertyDefinition(
   typeReference: TypeReference,
   const: Option[ConstValue] = None,
   default: Option[ConstValue] = None,
+  defaultInfo: Option[DefaultInfo] = None,
   deprecationMessage: Option[String] = None,
   description: Option[String] = None,
   replaceOnChanges: Boolean = false,
@@ -479,6 +521,7 @@ object PropertyDefinition {
       ),
       const = proto.const,
       default = proto.default,
+      defaultInfo = proto.defaultInfo,
       deprecationMessage = proto.deprecationMessage,
       description = proto.description,
       replaceOnChanges = proto.replaceOnChanges,
@@ -486,6 +529,16 @@ object PropertyDefinition {
       secret = proto.secret
     )
   }
+}
+
+/** Additional information about the property's default value, if any.
+  * @param environment
+  *   A set of environment variables to probe for a default value.
+  */
+case class DefaultInfo(environment: List[String])
+//noinspection ScalaUnusedSymbol
+object DefaultInfo {
+  implicit val reader: Reader[DefaultInfo] = macroR
 }
 
 // TODO Handle `value`s of other primitive types
@@ -518,8 +571,8 @@ object EnumValueDefinition {
   * @param description
   *   The description of the type, if any. Interpreted as Markdown.
   * @param isOverlay
-  *   Indicates that the implementation of the type should not be generated from the schema, and is instead provided
-  *   out-of-band by the package author
+  *   Indicates that the implementation of the type should not be generated from the schema, and is instead provided out-of-band by the
+  *   package author
   */
 sealed trait TypeDefinition {
   def description: Option[String]
@@ -565,22 +618,20 @@ trait ObjectTypeDefinitionProtoLike {
   def isOverlay: Boolean
 
   def maybeAsObjectTypeDefinition: Option[ObjectTypeDefinition] =
-    if (properties.nonEmpty) {
-      `type` match {
-        case None | Some("object") =>
-          Some(
-            ObjectTypeDefinition(
-              properties = properties,
-              required = required,
-              description = description,
-              isOverlay = isOverlay
-            )
+    `type` match {
+      case None | Some("object") =>
+        Some(
+          ObjectTypeDefinition(
+            properties = properties,
+            required = required,
+            description = description,
+            isOverlay = isOverlay
           )
-        case Some(_) =>
-          throw new Exception(s"Cannot read ObjectTypeDefinition from prototype structure: ${this} (`type` was not `object`)")
-      }
-    } else {
-      None
+        )
+      case Some(_) =>
+        throw new Exception(
+          s"Cannot read ObjectTypeDefinition from prototype structure: ${this} (`type` was not `object`)"
+        )
     }
 }
 
@@ -600,8 +651,8 @@ object ObjectTypeDefinitionProto {
   * @param properties
   *   A map from property name to propertySpec that describes the object's properties
   * @param required
-  *   A list of the names of an object type's required properties. These properties must be set for inputs and will
-  *   always be set for outputs
+  *   A list of the names of an object type's required properties. These properties must be set for inputs and will always be set for
+  *   outputs
   */
 case class ObjectTypeDefinition(
   properties: Map[String, PropertyDefinition] = Map.empty,
@@ -645,14 +696,7 @@ case class ObjectTypeDefinitionOrTypeReference(
 object ObjectTypeDefinitionOrTypeReference {
   implicit val reader: Reader[ObjectTypeDefinitionOrTypeReference] =
     ObjectTypeDefinitionOrTypeReferenceProto.reader.map { proto =>
-      def objectTypeDefinitionOpt = proto.maybeAsObjectTypeDefinition.map(objectTypeDefinition =>
-        ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = Some(objectTypeDefinition), typeReference = None)
-      )
-      def typeReferenceOpt = proto.maybeAsTypeReference.map(typeReference =>
-        ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = None, typeReference = Some(typeReference))
-      )
-
-      val deserialized = 
+      val deserialized =
         if (proto.properties.nonEmpty)
           proto.maybeAsObjectTypeDefinition.map(objectTypeDefinition =>
             ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = Some(objectTypeDefinition), typeReference = None)
@@ -667,5 +711,22 @@ object ObjectTypeDefinitionOrTypeReference {
       )
     }
 
-  def empty = ObjectTypeDefinitionOrTypeReference(None, None)
+  def empty: ObjectTypeDefinitionOrTypeReference = ObjectTypeDefinitionOrTypeReference(None, None)
+}
+
+/** @param `type`
+  *   The type of the alias, if any
+  * @param name
+  *   The name portion of the alias, if any
+  * @param project
+  *   The project portion of the alias, if any
+  */
+case class AliasDefinition(
+  `type`: Option[String] = None
+//  name: Option[String],
+//  project: Option[String]
+)
+//noinspection ScalaUnusedSymbol
+object AliasDefinition {
+  implicit val reader: Reader[AliasDefinition] = macroR
 }
