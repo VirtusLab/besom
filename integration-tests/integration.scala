@@ -16,8 +16,10 @@ val javaVersion                 = Config.DefaultJavaVersion
 val scalaVersion                = Config.DefaultScalaVersion
 val coreVersion                 = os.read(os.pwd / "version.txt").trim
 val scalaPluginVersion          = coreVersion
-val providerRandomSchemaVersion = "4.13.2"
+val providerRandomSchemaVersion = "4.14.0"
+val providerTlsSchemaVersion    = "4.11.1"
 val providerRandomVersion       = s"$providerRandomSchemaVersion-core.$coreVersion"
+val providerTlsVersion          = s"$providerTlsSchemaVersion-core.$coreVersion"
 
 val languagePluginDir = os.pwd / ".out" / "language-plugin"
 
