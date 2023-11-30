@@ -373,6 +373,7 @@ clean-test-markdown:
 ####################
 
 power-wash: clean-all
+	rm -rf ~/.ivy2/local/org.virtuslab/
 	git clean -i -d -x
 	killall -9 java
 

@@ -164,9 +164,9 @@ object scalaCli {
     "--suppress-directives-in-multiple-files-warning",
     "--jvm=17",
     "--bloop-jvm=17",
-    "--bloop-java-opt=\"-XX:-UseZGC\"",
-    "--bloop-java-opt=\"-XX:+UseUseParallelGC\"",
-    "--bloop-java-opt=\"-XX:ParallelGCThreads=120\"",
+    "--bloop-java-opt=-XX:-UseZGC",
+    "--bloop-java-opt=-XX:+UseUseParallelGC",
+    "--bloop-java-opt=-XX:ParallelGCThreads=120",
     additional
   )
 
@@ -179,9 +179,9 @@ object scalaCli {
     "--suppress-directives-in-multiple-files-warning",
     "--jvm=17",
     "--bloop-jvm=17",
-    "--bloop-java-opt=\"-XX:-UseZGC\"",
-    "--bloop-java-opt=\"-XX:+UseUseParallelGC\"",
-    "--bloop-java-opt=\"-XX:ParallelGCThreads=120\"",
+    "--bloop-java-opt=-XX:-UseZGC",
+    "--bloop-java-opt=-XX:+UseUseParallelGC",
+    "--bloop-java-opt=-XX:ParallelGCThreads=120",
     additional
   )
 }
@@ -202,27 +202,22 @@ object codegen {
   }
 
   def generatePackage(
-    schemaName: SchemaName,
-    schemaVersion: SchemaVersion
-  ): generator.Result =
-    generatePackage(PackageMetadata(schemaName, schemaVersion))
-
-  def generatePackage(
     metadata: PackageMetadata,
     outputDir: Option[os.RelPath] = None
   ): generator.Result = {
     // noinspection TypeAnnotation
     implicit val config = CodegenConfig(outputDir = outputDir)
-    generator.generatePackageSources(Right(metadata))
+    generator.generatePackageSources(metadata)
   }
 
   def generatePackageFromSchema(
+    metadata: PackageMetadata,
     schema: os.Path,
     outputDir: Option[os.RelPath] = None
   ): generator.Result = {
     // noinspection TypeAnnotation
     implicit val config = CodegenConfig(outputDir = outputDir)
-    generator.generatePackageSources(Left(schema))
+    generator.generatePackageSources(metadata, Some(schema))
   }
 }
 

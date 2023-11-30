@@ -1,5 +1,7 @@
 package besom.integration.codegen
 
+import besom.codegen.PackageMetadata
+import besom.codegen.PackageVersion
 import besom.integration.common.*
 import munit.{Slow, TestOptions}
 import os.*
@@ -24,26 +26,26 @@ class CodegenTests extends munit.FunSuite {
     "enum-reference", // depends on google-native
     "external-enum", // depends on google-native
     "hyphen-url", // depends on azure-native
-    "external-resource-schema", // depends on kubernetes, aws, random
+    "external-resource-schema" // depends on kubernetes, aws, random
   )
 
   // FIXME: broken - codegen error
   val ignoreList = List(
-    "simple-resource-schema", // codec not found
+    "simple-resource-schema", // resource decoder issue
     "simple-enum-schema", // simple enum is not supported
     "simple-yaml-schema", // YAML is not supported
     "external-enum", // depends on google-native, TODO: check if this is still broken
-    "external-resource-schema", // codec not found
+    "external-resource-schema", // resource decoder issue
     "enum-reference", // depends on google-native, TODO: check if this is still broken
     "different-enum", // simple enum is not supported
     "hyphen-url", // depends on azure-native,
     "naming-collisions", // codec not found
     "mini-azurenative", // simple enum is not supported
-    "replace-on-change", // codec not found
-    "resource-property-overlap", // codec not found
+    "replace-on-change", // resource decoder issue
+    "resource-property-overlap", // resource decoder issue
     "cyclic-types", // YAML schema is not supported
     "plain-and-default", // simple enum is not supported
-    "different-package-name-conflict", // deserialization issue
+    "different-package-name-conflict" // duplicate issue
   )
 
   val tests =
@@ -74,7 +76,7 @@ class CodegenTests extends munit.FunSuite {
     }
     test(options) {
       println(s"Test: $name")
-      val result = codegen.generatePackageFromSchema(data.schema)
+      val result = codegen.generatePackageFromSchema(PackageMetadata(data.name), data.schema)
       if (result.dependencies.nonEmpty)
         println(s"\nCompiling dependencies for ${result.schemaName}...")
       for (dep <- result.dependencies) {
@@ -88,5 +90,9 @@ class CodegenTests extends munit.FunSuite {
       }
       println()
     }
+  }
+
+  override def beforeAll(): Unit = {
+    pproc("scala-cli", "bloop", "exit").call()
   }
 }
