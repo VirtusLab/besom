@@ -6,7 +6,7 @@ import besom.types.{ResourceType, FunctionToken, URN, Label, ProviderType}
 import besom.internal.logging.*
 import scala.annotation.implicitNotFound
 
-case class InvokeOptions(parent: Option[Resource], provider: Option[ProviderResource], version: Option[String])
+case class InvokeOptions(parent: Option[Resource] = None, provider: Option[ProviderResource] = None, version: Option[String] = None)
 
 @implicitNotFound(s"""|Pulumi code has to be written with a Context in scope.
                       |
