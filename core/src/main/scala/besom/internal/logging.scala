@@ -17,9 +17,9 @@ object logging:
   class Key[A](val value: String)
   object Key:
     val LabelKey = Key[Label]("resource")
-    
+
   class BesomMDC[A](private[logging] val inner: ScribeMDC) extends ScribeMDC:
-    private[besom] def get[B](key: Key[B])(using ev: A <:< B): B = 
+    private[besom] def get[B](key: Key[B])(using ev: A <:< B): B =
       val opt = inner.get(key.value)
 
       opt
@@ -106,8 +106,7 @@ object logging:
     def log(record: LogRecord): Result[Unit]
     def log(record: LogRecord, urn: URN, streamId: Int, ephemeral: Boolean): Result[Unit]
 
-    def log(level: Level, mdc: BesomMDC[_], urn: URN, streamId: Int, ephemeral: Boolean, messages: LoggableMessage*)(
-      using
+    def log(level: Level, mdc: BesomMDC[_], urn: URN, streamId: Int, ephemeral: Boolean, messages: LoggableMessage*)(using
       pkg: Pkg,
       fileName: FileName,
       name: Name,
@@ -115,8 +114,7 @@ object logging:
     ): Result[Unit] =
       log(makeLogRecord(level, messages.toList, pkg, fileName, name, line, mdc), urn, streamId, ephemeral)
 
-    def trace(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
-      using
+    def trace(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(using
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
@@ -128,8 +126,7 @@ object logging:
           r.urn.getValueOrElse(URN.empty).flatMap(urn => log(Level.Trace, mdc, urn, streamId, ephemeral, message))
         case None => log(Level.Trace, mdc, URN.empty, streamId, ephemeral, message)
 
-    def debug(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
-      using
+    def debug(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(using
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
@@ -141,8 +138,7 @@ object logging:
           r.urn.getValueOrElse(URN.empty).flatMap(urn => log(Level.Debug, mdc, urn, streamId, ephemeral, message))
         case None => log(Level.Debug, mdc, URN.empty, streamId, ephemeral, message)
 
-    def info(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
-      using
+    def info(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(using
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
@@ -154,8 +150,7 @@ object logging:
           r.urn.getValueOrElse(URN.empty).flatMap(urn => log(Level.Info, mdc, urn, streamId, ephemeral, message))
         case None => log(Level.Info, mdc, URN.empty, streamId, ephemeral, message)
 
-    def warn(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
-      using
+    def warn(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(using
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
@@ -167,8 +162,7 @@ object logging:
           r.urn.getValueOrElse(URN.empty).flatMap(urn => log(Level.Warn, mdc, urn, streamId, ephemeral, message))
         case None => log(Level.Warn, mdc, URN.empty, streamId, ephemeral, message)
 
-    def error(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
-      using
+    def error(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(using
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
@@ -179,6 +173,7 @@ object logging:
         case Some(r) =>
           r.urn.getValueOrElse(URN.empty).flatMap(urn => log(Level.Error, mdc, urn, streamId, ephemeral, message))
         case None => log(Level.Error, mdc, URN.empty, streamId, ephemeral, message)
+  end BesomLogger
 
   object LocalBesomLogger extends BesomLogger with LoggerSupport[Result[Unit]]:
     override def close(): Result[Unit]                = Result.unit
@@ -187,8 +182,7 @@ object logging:
       log(record)
 
   class UserLoggerFactory(using ctx: Context):
-    def trace(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
-      using
+    def trace(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(using
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
@@ -203,8 +197,7 @@ object logging:
         case None => ctx.logger.log(Level.Trace, mdc.inner, URN.empty, streamId, ephemeral, message)
     }
 
-    def debug(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
-      using
+    def debug(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(using
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
@@ -219,8 +212,7 @@ object logging:
         case None => ctx.logger.log(Level.Debug, mdc.inner, URN.empty, streamId, ephemeral, message)
     }
 
-    def info(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
-      using
+    def info(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(using
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
@@ -235,8 +227,7 @@ object logging:
         case None => ctx.logger.log(Level.Info, mdc.inner, URN.empty, streamId, ephemeral, message)
     }
 
-    def warn(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
-      using
+    def warn(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(using
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
@@ -251,8 +242,7 @@ object logging:
         case None => ctx.logger.log(Level.Warn, mdc.inner, URN.empty, streamId, ephemeral, message)
     }
 
-    def error(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(
-      using
+    def error(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(using
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
@@ -266,6 +256,7 @@ object logging:
             .flatMap(urn => ctx.logger.log(Level.Error, mdc.inner, urn, streamId, ephemeral, message))
         case None => ctx.logger.log(Level.Error, mdc.inner, URN.empty, streamId, ephemeral, message)
     }
+  end UserLoggerFactory
 
   class DualBesomLogger private[logging] (
     private val queue: Queue[LogRequest | Queue.Stop],
@@ -379,3 +370,4 @@ object logging:
     val format = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH-mm-ss")
     "besom-run-" + format.format(t) + ".log"
   }
+end logging

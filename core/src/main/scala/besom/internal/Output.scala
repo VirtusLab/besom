@@ -116,11 +116,17 @@ object Output:
   def sequence[A, CC[X] <: IterableOnce[X], To](
     coll: CC[Output[A]]
   )(using bf: BuildFrom[CC[Output[A]], A, To], ctx: Context): Output[To] =
-    coll.iterator
-      .foldLeft(Output(bf.newBuilder(coll))) { (acc, curr) =>
-        acc.zip(curr).map { case (b, r) => b += r }
+    Output {
+      Result.defer {
+        coll.iterator
+          .foldLeft(Output(bf.newBuilder(coll))) { (acc, curr) =>
+            acc.zip(curr).map { case (b, r) =>
+              b += r
+            }
+          }
+          .map(_.result())
       }
-      .map(_.result())
+    }.flatten
 
   def empty(isSecret: Boolean = false)(using ctx: Context): Output[Nothing] =
     new Output(ctx.registerTask(Result.pure(OutputData.empty[Nothing](isSecret = isSecret))))
@@ -151,3 +157,5 @@ object Output:
 
   def secret[A](value: A)(using ctx: Context): Output[A] =
     new Output[A](ctx.registerTask(Result.pure(OutputData(value, Set.empty, isSecret = true))))
+
+end Output
