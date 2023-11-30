@@ -1,0 +1,5 @@
+name: tls-besom-test
+description: Besom tls test
+runtime:
+  name: scala
+
