@@ -1,2 +1,1 @@
-//> using file "../core/src/test/scala/besom/internal/ResultSpec.scala"
-//> using file "../core/src/test/scala/besom/internal/RunResult.scala"
+//> using test.dep "org.scalameta::munit:1.0.0-M10"

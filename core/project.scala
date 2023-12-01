@@ -16,7 +16,7 @@
 //> using dep "com.outr::scribe-file:3.11.3"
 //> using dep "com.lihaoyi::pprint:0.6.6" // TODO BALEET
 
-//> using test.dep "org.scalameta::munit:1.0.0-M10" // FIXME: should be test.dep
+//> using test.dep "org.scalameta::munit:1.0.0-M10"
 
 //> using publish.name "besom-core"
 //> using publish.organization "org.virtuslab"

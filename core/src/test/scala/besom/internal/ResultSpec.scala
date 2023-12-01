@@ -221,7 +221,6 @@ trait ResultSpec[F[+_]: RunResult] extends munit.FunSuite:
 
     assertEquals(lhs, "ar")
   }
-end ResultSpec
 
   test("multiple evaluations of sequence work correctly") {
     val seq        = Result.sequence(List(Result("value"), Result("value2")))
