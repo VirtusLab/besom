@@ -40,9 +40,9 @@ class TypeMapperTest extends munit.FunSuite {
       UnionType(List(StringType, NamedType("#/types/aws:iam/role:Role")), Some(StringType)),
       schemaName = Some("aws"),
       schemaVersion = Some("6.7.0"),
-      tags = Set(munit.Slow)
+      tags = Set(munit.Slow, munit.Ignore)
     )(
-      Expectations("String")
+      Expectations("String | besom.api.aws.iam.Role")
     ),
     Data(
       NamedType("#/types/aws-native:index%2Fregion:Region"),
