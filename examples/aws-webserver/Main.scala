@@ -7,6 +7,20 @@ import besom.api.tls
   val myIp = getExternalIp
   val port = 80
 
+  // Get the id for the latest Amazon Linux AMI
+  val ami = ec2.getAmi(
+    ec2.GetAmiArgs(
+      filters = List(
+        GetAmiFilterArgs(
+          name = "name",
+          values = List("amzn2-ami-hvm-*-x86_64-ebs")
+        )
+      ),
+      owners = List("137112412989"), // Amazon
+      mostRecent = true
+    )
+  )
+
   // Create a new security group for port 80.
   val securityGroup = ec2.SecurityGroup(
     "web-secgrp",
@@ -71,14 +85,14 @@ import besom.api.tls
         |rpm --import https://yum.corretto.aws/corretto.key
         |yum install -y java-21-amazon-corretto-devel
         |echo "Hello, World!" > /srv/index.html
-        |nohup jwebserver -d /srv -b 0.0.0.0 -p $port &
+        |nohup /usr/lib/jvm/java-21-amazon-corretto/bin/jwebserver -d /srv -b 0.0.0.0 -p $port &
         |""".stripMargin
 
   // Create a server instance
   val server = ec2.Instance(
     "web-server-www",
     ec2.InstanceArgs(
-      ami = "ami-01342111f883d5e4e",
+      ami = ami.id,
       instanceType = ec2.enums.InstanceType.T2_Micro.value, // t2.micro is available in the AWS free tier
       vpcSecurityGroupIds = List(securityGroup.id), // reference the group object above
       keyName = keyPair.keyName,
@@ -91,14 +105,17 @@ import besom.api.tls
     server: ec2.Instance <- server
     _                    <- sshKey
     _                    <- keyPair
-    _                    <- p"Connect to SSH the first time: pulumi stack output privateKey --show-secrets > key_rsa && chmod 400 key_rsa && ssh -i key_rsa ${userName}@${server.publicIp}".map(log.info(_))
-    _                    <- log.info("Connect to SSH: ssh -i key_rsa ec2-user@$(pulumi stack output publicIp)")
-    _                    <- log.info("Connect to HTTP: open http://$(pulumi stack output publicHostName)")
+    _ <-
+      p"Connect to SSH the first time: pulumi stack output privateKey --show-secrets > key_rsa && chmod 400 key_rsa && ssh -i key_rsa ${userName}@${server.publicIp}"
+        .flatMap(log.info(_))
+    _ <- log.info("Connect to SSH: ssh -i key_rsa ec2-user@$(pulumi stack output publicIp)")
+    _ <- log.info("Connect to HTTP: open http://$(pulumi stack output publicHostName)")
   } yield Pulumi.exports(
     publicKey = publicKey,
     privateKey = privateKey,
     publicIp = server.publicIp,
     publicHostName = server.publicDns,
+    ami = ami.id
   )
 }
 
