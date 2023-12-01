@@ -17,6 +17,7 @@ class CoreTests extends munit.FunSuite {
     val result = pulumi.up(ctx.stackName).call(cwd = ctx.testDir, env = ctx.env)
     val output = result.out.text()
     assert(output.contains("Nothing here yet. It's waiting for you!"), s"Output:\n$output\n")
+    assert(output.contains("Interpolated value"), s"Output:\n$output\n")
     assert(result.exitCode == 0)
   }
 
