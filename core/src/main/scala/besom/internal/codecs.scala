@@ -544,7 +544,9 @@ object Encoder:
             val (resources, labelsToValuesMap) =
               lst.foldLeft[(Set[Resource], Map[String, Value])](Set.empty -> Map.empty) {
                 case ((allResources, props), (label, (fieldResources, value))) =>
-                  (allResources ++ fieldResources) -> (props + (label -> value))
+                  val concatResources = allResources ++ fieldResources
+                  if value.kind.isNullValue then (concatResources, props)
+                  else concatResources -> (props + (label -> value))
               }
 
             resources -> labelsToValuesMap.asValue
@@ -771,7 +773,9 @@ object Encoder:
         .map { lst =>
           val (resources, map) = lst.foldLeft(Set.empty[Resource] -> Map.empty[String, Value]) {
             case ((allResources, map), (key, (resources, value))) =>
-              (allResources ++ resources) -> (map + (key -> value))
+              val concatResources = allResources ++ resources
+              if value.kind.isNullValue then (concatResources, map)
+              else concatResources -> (map + (key -> value))
           }
 
           resources -> map.asValue
@@ -840,6 +844,7 @@ object ArgsEncoder:
               serializedMap.foldLeft[(Map[String, Set[Resource]], Map[String, Value])](Map.empty -> Map.empty) {
                 case ((mapOfResources, mapOfValues), (label, (resources, value))) =>
                   if filterOut(label) then (mapOfResources, mapOfValues) // skip filtered
+                  else if value.kind.isNullValue then (mapOfResources, mapOfValues)
                   else (mapOfResources + (label -> resources), mapOfValues + (label -> value))
               }
 
@@ -880,6 +885,7 @@ object ProviderArgsEncoder:
               serializedMap.foldLeft[(Map[String, Set[Resource]], Map[String, Value])](Map.empty -> Map.empty) {
                 case ((mapOfResources, mapOfValues), (label, (resources, value))) =>
                   if filterOut(label) then (mapOfResources, mapOfValues)
+                  else if value.kind.isNullValue then (mapOfResources, mapOfValues)
                   else (mapOfResources + (label -> resources), mapOfValues + (label -> value))
               }
 
@@ -903,10 +909,13 @@ object JsonEncoder:
 
   given jsonEncoder[A](using enc: Encoder[A]): JsonEncoder[A] =
     new JsonEncoder[A]:
-      def encode(a: A): Result[(Set[Resource], Value)] = enc.encode(a).flatMap { case (resources, value) =>
-        Result.evalEither(value.asJsonString).transform {
-          case Left(ex) =>
-            Left(Exception("Encountered a malformed protobuf Value that could not be serialized to JSON", ex))
-          case Right(jsonString) => Right(resources -> jsonString.asValue)
-        }
+      def encode(a: A): Result[(Set[Resource], Value)] = enc.encode(a).flatMap {
+        case (resources, v @ Value(Kind.NullValue(_), _)) => Result.pure(resources -> v)
+        case (resources, s @ Value(Kind.StringValue(_), _)) => Result.pure(resources -> s)
+        case (resources, value) =>
+          Result.evalEither(value.asJsonString).transform {
+            case Left(ex) =>
+              Left(Exception("Encountered a malformed protobuf Value that could not be serialized to JSON", ex))
+            case Right(jsonString) => Right(resources -> jsonString.asValue)
+          }
       }

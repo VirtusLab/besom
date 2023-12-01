@@ -7,7 +7,8 @@ import scala.util.*
 object ProtobufUtil:
   private val printer = JsonFormat.printer().omittingInsignificantWhitespace()
 
-  extension (v: Value) def asJsonString: Either[Throwable, String] = Try(printer.print(Value.toJavaProto(v))).toEither
+  extension (v: Value)
+    def asJsonString: Either[Throwable, String] = Try(printer.print(Value.toJavaProto(v))).toEither
 
   extension (s: String) def asValue: Value = Value(Kind.StringValue(s))
   extension (s: Option[String])
