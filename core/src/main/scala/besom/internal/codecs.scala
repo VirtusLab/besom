@@ -8,8 +8,6 @@ import besom.util.*
 import besom.types.*
 import Asset.*
 import Archive.*
-import org.checkerframework.checker.units.qual.s
-import org.checkerframework.checker.units.qual.m
 
 object Constants:
   final val UnknownValue           = "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
@@ -31,8 +29,7 @@ object Constants:
   final val StatePropertyName      = "state"
 
 case class DecodingError(message: String, cause: Throwable = null, label: Label) extends Exception(message, cause)
-case class AggregatedDecodingError(errors: NonEmptyVector[DecodingError])
-    extends Exception(errors.map(_.message).toVector.mkString("\n"))
+case class AggregatedDecodingError(errors: NonEmptyVector[DecodingError]) extends Exception(errors.map(_.message).toVector.mkString("\n"))
 /*
  * Would be awesome to make error reporting better, ie:
  *  - make DecodingError work with any arity of errors and return aggregates
@@ -191,9 +188,7 @@ object Decoder extends DecoderInstancesLowPrio1:
               .map(OutputData.sequence)
           }
           .map(_.flatten)
-          .lmap(exception =>
-            DecodingError(s"$label: Encountered an error when deserializing a list", label = label, cause = exception)
-          )
+          .lmap(exception => DecodingError(s"$label: Encountered an error when deserializing a list", label = label, cause = exception))
       }
 
     def mapping(value: Value, label: Label): List[A] = List.empty
@@ -219,9 +214,7 @@ object Decoder extends DecoderInstancesLowPrio1:
               .map(_.map(_.toMap))
           }
           .map(_.flatten)
-          .lmap(exception =>
-            DecodingError(s"$label: Encountered an error when deserializing a map", label = label, cause = exception)
-          )
+          .lmap(exception => DecodingError(s"$label: Encountered an error when deserializing a map", label = label, cause = exception))
       }
     def mapping(value: Value, label: Label): Map[String, A] = Map.empty
 
@@ -234,8 +227,7 @@ object Decoder extends DecoderInstancesLowPrio1:
             extractSpecialStructSignature(innerValue) match
               case None => error(s"$label: Expected a special struct signature!", label)
               case Some(specialSig) =>
-                if specialSig != Constants.SpecialSecretSig then
-                  errorInvalid(s"$label: Expected a special resource signature!", label)
+                if specialSig != Constants.SpecialSecretSig then errorInvalid(s"$label: Expected a special resource signature!", label)
                 else
                   val structValue = innerValue.getStructValue
                   structValue.fields
@@ -268,16 +260,13 @@ object Decoder extends DecoderInstancesLowPrio1:
             extractSpecialStructSignature(innerValue) match
               case None => errorInvalid(s"$label: Expected a special struct signature!", label)
               case Some(extractedSpecialSig) =>
-                if extractedSpecialSig != specialSig then
-                  errorInvalid(s"$label: Expected a special asset signature!", label)
+                if extractedSpecialSig != specialSig then errorInvalid(s"$label: Expected a special asset signature!", label)
                 else
                   val structValue = innerValue.getStructValue
                   handle(label, structValue)
           }
           .map(_.flatten)
-          .lmap(exception =>
-            DecodingError(s"$label: Encountered an error when deserializing an asset", label = label, cause = exception)
-          )
+          .lmap(exception => DecodingError(s"$label: Encountered an error when deserializing an asset", label = label, cause = exception))
       }
 
     override def mapping(value: Value, label: Label): A = ???
@@ -386,6 +375,7 @@ object Decoder extends DecoderInstancesLowPrio1:
         .orElse(archiveDecoder.decode(value, label))
         .orElse(errorInvalid(s"$label: Found value is neither an Asset nor an Archive", label))
     override def mapping(value: Value, label: Label): AssetOrArchive = ???
+end Decoder
 
 trait DecoderInstancesLowPrio1 extends DecoderInstancesLowPrio2:
   import spray.json.JsValue
@@ -493,7 +483,7 @@ trait DecoderHelpers:
     Iterator(value)
       .filter(_.kind.isStructValue)
       .flatMap(_.getStructValue.fields)
-      .filter((k, v) => k == SpecialSigKey)
+      .filter((k, _) => k == SpecialSigKey)
       .flatMap((_, v) => v.kind.stringValue)
       .nextOption
 
@@ -512,11 +502,12 @@ trait DecoderHelpers:
     ) { (acc, elementOutputData) =>
       acc :+ elementOutputData
     }
+end DecoderHelpers
 
 /** ArgsEncoder - this is a separate typeclass required for serialization of top-level *Args classes
   *
-  * ProviderArgsEncoder - this is a separate typeclass required for serialization of top-level ProviderArgs classes that
-  * have all fields serialized as JSON strings
+  * ProviderArgsEncoder - this is a separate typeclass required for serialization of top-level ProviderArgs classes that have all fields
+  * serialized as JSON strings
   *
   * JsonEncoder - this is a separate typeclass required for json-serialized fields of ProviderArgs
   */
@@ -532,7 +523,8 @@ object Encoder:
 
   def encoderSum[A](mirror: Mirror.SumOf[A], nameEncoderPairs: List[(String, Encoder[?])]): Encoder[A] =
     new Encoder[A]:
-      private val encoderMap                                    = nameEncoderPairs.toMap
+      // TODO We only serialize dumb enums!!
+      // private val encoderMap                                    = nameEncoderPairs.toMap 
       override def encode(a: A): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> a.toString.asValue)
 
   def encoderProduct[A](nameEncoderPairs: List[(String, Encoder[?])]): Encoder[A] =
@@ -818,6 +810,7 @@ object Encoder:
         optA match
           case Left(a)  => innerA.encode(a)
           case Right(b) => innerB.encode(b)
+end Encoder
 
 // ArgsEncoder and ProviderArgsEncoder are nearly the same with the small difference of
 // ProviderArgsEncoder summoning JsonEncoder instances instead of Encoder (because all

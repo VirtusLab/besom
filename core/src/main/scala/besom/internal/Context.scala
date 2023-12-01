@@ -5,11 +5,8 @@ import besom.util.*
 import besom.types.{ResourceType, FunctionToken, URN, Label, ProviderType}
 import besom.internal.logging.*
 import scala.annotation.implicitNotFound
-import besom.internal.ComponentResource
 
-case class InvokeOptions()
-
-type Providers = Map[String, ProviderResource]
+case class InvokeOptions(parent: Option[Resource] = None, provider: Option[ProviderResource] = None, version: Option[String] = None)
 
 @implicitNotFound(s"""|Pulumi code has to be written with a Context in scope.
                       |
@@ -70,6 +67,7 @@ trait Context extends TaskTracker:
     args: A,
     opts: InvokeOptions
   )(using Context): Output[R]
+end Context
 
 class ComponentContext(private val globalContext: Context, private val componentURN: Result[URN]) extends Context:
   export globalContext.{getParentURN => _, *}
@@ -94,8 +92,8 @@ class ContextImpl(
   override private[besom] def isDryRun: Boolean = runInfo.dryRun
 
   override private[besom] def pulumiOrganization: Option[NonEmptyString] = runInfo.organization
-  override private[besom] def pulumiProject: NonEmptyString = runInfo.project
-  override private[besom] def pulumiStack: NonEmptyString = runInfo.stack
+  override private[besom] def pulumiProject: NonEmptyString              = runInfo.project
+  override private[besom] def pulumiStack: NonEmptyString                = runInfo.stack
 
   override private[besom] def getParentURN: Result[URN] =
     stackPromise.get.flatMap(_.urn.getData).map(_.getValue).flatMap {
@@ -158,23 +156,15 @@ class ContextImpl(
       ResourceOps().registerResourceOutputsInternal(urnResult, outputs)
     }
 
-  private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
-    typ: ResourceType,
-    name: NonEmptyString,
-    args: A,
-    options: ResourceOptions
-  ): Output[R] =
-    // val effect: Output[R] = ???
-    // registerResourceCreation(typ, name, effect) // put into ConcurrentHashMap eagerly!
-    // effect
-    ???
-
   override private[besom] def invoke[A: ArgsEncoder, R: Decoder](
     token: FunctionToken,
     args: A,
     opts: InvokeOptions
   )(using Context): Output[R] =
-    ??? // TODO: ResourceOps().invoke[A, R](token, args, opts)
+    BesomMDC(Key.LabelKey, Label.fromFunctionToken(token)) {
+      ResourceOps().invoke[A, R](token, args, opts)
+    }
+end ContextImpl
 
 object Context:
 
@@ -218,3 +208,4 @@ object Context:
       ctx <- apply(runInfo, featureSupport, config, logger, monitor, engine, taskTracker)
       _   <- ctx.initializeStack
     yield ctx
+end Context

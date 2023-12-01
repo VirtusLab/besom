@@ -1,6 +1,5 @@
 package besom.internal
 
-import scala.concurrent.{Promise => stdPromise, *}, ExecutionContext.Implicits.global, duration.*
 import scala.util.Try
 import RunResult.*
 

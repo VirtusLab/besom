@@ -1,5 +1,6 @@
 //> using scala "3.3.1"
 //> using options "-java-output-version:11", "-Ysafe-init", "-Xmax-inlines:64"
+//> using options "-Werror", "-Wunused:all", "-deprecation", "-feature"
 
 //> using dep "com.lihaoyi::sourcecode:0.3.1"
 //> using dep "com.google.protobuf:protobuf-java-util:3.24.4"
@@ -15,7 +16,7 @@
 //> using dep "com.outr::scribe-file:3.11.3"
 //> using dep "com.lihaoyi::pprint:0.6.6" // TODO BALEET
 
-//> using dep "org.scalameta::munit:1.0.0-M10" // FIXME: should be test.dep
+//> using test.dep "org.scalameta::munit:1.0.0-M10"
 
 //> using publish.name "besom-core"
 //> using publish.organization "org.virtuslab"

@@ -1,12 +1,10 @@
 package besom.internal
 
-import com.google.protobuf.struct.*, Value.Kind
-import Constants.*
+import com.google.protobuf.struct.*
 import Encoder.*
 import ProtobufUtil.*
 import besom.types.Label
 import besom.util.*
-import scala.CanEqual.derived
 import RunResult.{given, *}
 
 object EncoderTest:
@@ -37,7 +35,6 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
   val dummyLabel = Label.fromNameAndType("dummy", "dummy:pkg:Dummy")
 
   test("encode case class") {
-    given Context = DummyContext().unsafeRunSync()
     val e = summon[Encoder[TestCaseClass]]
     val expected = Map(
       "foo" -> 10.asValue,
@@ -50,8 +47,7 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
   }
 
   test("encoder enum") {
-    given Context = DummyContext().unsafeRunSync()
-    val e = summon[Encoder[TestEnum]]
+    val e             = summon[Encoder[TestEnum]]
     val (_, encodedA) = e.encode(TestEnum.A).unsafeRunSync()
     assertEqualsValue(encodedA, "A value".asValue)
     val (_, encodedB) = e.encode(TestEnum.B).unsafeRunSync()
@@ -59,7 +55,6 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
   }
 
   test("encode special case class with unmangling") {
-    given Context = DummyContext().unsafeRunSync()
     val e = summon[Encoder[SpecialCaseClass]]
     val expected = Map(
       "equals" -> 10.asValue,

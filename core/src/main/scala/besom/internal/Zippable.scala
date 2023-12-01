@@ -1,8 +1,5 @@
 package besom.internal
 
-import scala.util.Try
-import scala.concurrent.Future
-
 trait Zippable[-A, -B]:
   type Out
   def zip(left: A, right: B): Out

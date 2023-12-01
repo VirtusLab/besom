@@ -1,12 +1,11 @@
 package besom.internal
 
-import com.google.protobuf.struct.*, Value.Kind
+import com.google.protobuf.struct.*
 import Constants.*
 import Decoder.*
 import ProtobufUtil.*
 import besom.types.Label
 import besom.util.*
-import scala.CanEqual.derived
 
 object DecoderTest:
   case class TestCaseClass(
@@ -30,7 +29,6 @@ object DecoderTest:
     object B extends TestEnum("B", "B value")
 
     override val allInstances: Seq[TestEnum] = Seq(A, B)
-
 
 class DecoderTest extends munit.FunSuite:
   import DecoderTest.*
@@ -64,9 +62,10 @@ class DecoderTest extends munit.FunSuite:
     val v = Null
     val d = summon[Decoder[TestCaseClass]]
     d.decode(v, dummyLabel) match
-      case Validated.Invalid(es) => es.head match
-        case DecodingError(m, _, _) =>
-          assertEquals(m, "dummy[dummy:pkg:Dummy]: Expected a struct to deserialize Product[TestCaseClass], got: 'NullValue(NULL_VALUE)'")
+      case Validated.Invalid(es) =>
+        es.head match
+          case DecodingError(m, _, _) =>
+            assertEquals(m, "dummy[dummy:pkg:Dummy]: Expected a struct to deserialize Product[TestCaseClass], got: 'NullValue(NULL_VALUE)'")
       case Validated.Valid(_) => throw Exception("Unexpected, valid")
   }
 
@@ -117,3 +116,4 @@ class DecoderTest extends munit.FunSuite:
       case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some(SpecialCaseClass(10, "abc", "qwerty")))
       case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
   }
+end DecoderTest

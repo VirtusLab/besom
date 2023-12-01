@@ -1,6 +1,5 @@
 package besom.internal
 
-import besom.util.*
 import besom.types.*
 import RunResult.{given, *}
 import com.google.protobuf.struct.Struct
@@ -25,8 +24,8 @@ class RegistersOutputsDerivationTest extends munit.FunSuite {
     )
   }
 
-  case class TestRegistersOutputs3(aField: Output[Int], alsoAField: Output[String], anotherFields: Output[Boolean])(
-    using ComponentBase
+  case class TestRegistersOutputs3(aField: Output[Int], alsoAField: Output[String], anotherFields: Output[Boolean])(using
+    ComponentBase
   ) extends ComponentResource
 
   test("derive an instance for TestRegistersOutputs3") {

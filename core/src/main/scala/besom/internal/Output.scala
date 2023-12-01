@@ -3,8 +3,8 @@ package besom.internal
 import scala.collection.BuildFrom
 import scala.reflect.Typeable
 
-/** Output is a wrapper for a monadic effect used to model async execution that allows Pulumi to track information about
-  * dependencies between resources and properties of data (whether it's known or a secret for instance).
+/** Output is a wrapper for a monadic effect used to model async execution that allows Pulumi to track information about dependencies
+  * between resources and properties of data (whether it's known or a secret for instance).
   *
   * Invariant: dataResult has to be registered in TaskTracker by the time it reaches the constructor here!
   * @param dataResult
@@ -63,6 +63,7 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
         o      <- dataResult
       yield o.withIsSecret(secret)
     )
+end Output
 
 /** These factory methods should be the only way to create Output instances in user code!
   */
@@ -95,8 +96,8 @@ trait OutputExtensionsFactory:
           case Some(a) => Output(a)
           case None =>
             default match
-              case b: Output[_] => b.asInstanceOf[Output[B]]
-              case b: B         => Output(b)
+              case b: Output[B @unchecked] => b
+              case b: B                    => Output(b)
       }
     def orElse[B >: A](alternative: => Option[B] | Output[Option[B]])(using ctx: Context): Output[Option[B]] =
       output.flatMap { opt =>

@@ -34,7 +34,8 @@ object Export extends Dynamic:
           else    
             Expr.summon[Encoder[v]] match
               case Some(encoder) =>
-                Right('{ ${encoder}.encode(${value}).map { (deps, value1) => (${name}, value1) }})
+                // TODO make sure we don't need deps here (replaced with _)
+                Right('{ ${encoder}.encode(${value}).map { (_, value1) => (${name}, value1) }})
               case None =>
                 Left(() => report.error(s"Encoder[${Type.show[v]}] is missing", value))
       }

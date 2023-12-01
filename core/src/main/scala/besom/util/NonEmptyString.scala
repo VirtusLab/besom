@@ -3,20 +3,18 @@ package besom.util
 import scala.quoted.*
 import scala.language.implicitConversions
 
-/**
- * A [[String]] that is not empty or blank.
- */
+/** A [[String]] that is not empty or blank.
+  */
 opaque type NonEmptyString <: String = String
 
-/**
- * A [[String]] that is not empty or blank.
- */
+/** A [[String]] that is not empty or blank.
+  */
 object NonEmptyString:
   /** @param s
-   * a [[String]] to be converted to a [[NonEmptyString]].
-   * @return
-   * an optional [[NonEmptyString]] if the given [[String]] is not empty or blank, otherwise [[None]].
-   */
+    *   a [[String]] to be converted to a [[NonEmptyString]].
+    * @return
+    *   an optional [[NonEmptyString]] if the given [[String]] is not empty or blank, otherwise [[None]].
+    */
   def apply(s: String): Option[NonEmptyString] =
     if s.isBlank then None else Some(s)
 
@@ -32,10 +30,10 @@ object NonEmptyString:
       inline def asString: String = nes
 
   /** @param s
-   * a [[String]] to be converted to a [[NonEmptyString]].
-   * @return
-   * a [[NonEmptyString]] if the given [[String]] is not empty or blank.
-   */
+    *   a [[String]] to be converted to a [[NonEmptyString]].
+    * @return
+    *   a [[NonEmptyString]] if the given [[String]] is not empty or blank.
+    */
   inline def from(inline s: String): NonEmptyString = ${ fromImpl('s) }
 
   private def fromImpl(expr: Expr[String])(using quotes: Quotes): Expr[NonEmptyString] =
@@ -77,13 +75,10 @@ object NonEmptyString:
             report.errorAndAbort(
               "Only constant strings or string interpolations are allowed here, use NonEmptyString.apply instead!"
             )
+  end fromImpl
 
   implicit inline def str2NonEmptyString(inline s: String): NonEmptyString = NonEmptyString.from(s)
-
-  extension (s: String)
-    /** Returns `true` if the `String` is empty or contains only "white space" characters, otherwise `false`.
-      */
-    private def isBlank = s.trim.isEmpty
+end NonEmptyString
 
 trait NonEmptyStringFactory:
   /** @param s
