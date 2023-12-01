@@ -104,6 +104,33 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
     assert(res.isEmpty)
     assert(value.getStructValue.fields.isEmpty, value)
   }
+  
+  test("encode a union of string and int") {
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[Output[String | Int]]]
+
+    val (_, valueStr) = e.encode(Output[String | Int]("test1")).unsafeRunSync()
+    assertEquals(valueStr.getStringValue, "test1")
+    
+    val (_, valueInt) = e.encode(Output[String | Int](123)).unsafeRunSync()
+    assertEquals(valueInt.getNumberValue, 123d)
+  }
+  
+  test("encode a union of string and case class") {
+    val e = summon[Encoder[String | TestCaseClass]]
+
+    val (_, encodedString) = e.encode("abc").unsafeRunSync()
+    assertEqualsValue(encodedString, "abc".asValue)
+
+    val (_, encodedCaseClass) = e.encode(TestCaseClass(10, List("qwerty"), None, None, Some("abc"))).unsafeRunSync()
+    val expected = Map(
+      "foo" -> 10.asValue,
+      "bar" -> List("qwerty".asValue).asValue,
+      "optNone1" -> Null,
+      "optSome" -> Some("abc").asValue
+    ).asValue
+    assertEqualsValue(encodedCaseClass, expected)
+  }
 
 class ArgsEncoderTest extends munit.FunSuite with ValueAssertions:
   import EncoderTest.*

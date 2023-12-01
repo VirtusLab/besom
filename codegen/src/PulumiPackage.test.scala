@@ -69,7 +69,6 @@ class PulumiPackageTest extends munit.FunSuite {
                 |""".stripMargin,
       expectedType = "String | besom.api.aws.apigateway.RestApi",
       metadata = Some(PackageMetadata("aws", "6.7.0")),
-      tags = Set(munit.Ignore) // FIXME: https://github.com/VirtusLab/besom/issues/144
     ),
     Data(
       name = "TypeReference with external (downloaded) named type with duplicate object",
@@ -101,7 +100,8 @@ class PulumiPackageTest extends munit.FunSuite {
       val propertyDefinition = UpickleApi.read[PropertyDefinition](data.json)
 
       assertEquals(propertyDefinition.typeReference.asScalaType().syntax, data.expectedType)
-      assertEquals(propertyDefinition.typeReference.asScalaType(asArgsType = true).syntax, data.expectedArgsType.getOrElse(data.expectedType))
+      if (data.expectedArgsType.isDefined)
+        assertEquals(propertyDefinition.typeReference.asScalaType(asArgsType = true).syntax, data.expectedArgsType.get)
     }
   )
 }

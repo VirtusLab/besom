@@ -79,29 +79,27 @@ class TypeMapper(
       }
     }
 
+    // We need to be careful here because a type URI can refer to both a resource and an object type
+    // and we need to be flexible, because schemas are not always consistent
     val classCoordinates: Option[ScalaDefinitionCoordinates] =
-      if (isFromResourceUri) {
-        resourceClassCoordinates
-      } else if (isFromTypeUri) {
-        objectClassCoordinates
-      } else {
-        (resourceClassCoordinates, objectClassCoordinates) match {
-          case (Some(coordinates), None) =>
-            logger.warn(
-              s"Assuming a '/resources/` prefix for type URI, fileUri: '${fileUri}', typePath: '${typePath}'"
-            )
-            Some(coordinates)
-          case (None, Some(coordinates)) =>
-            logger.warn(s"Assuming a '/types/` prefix for type URI, fileUri: '${fileUri}', typePath: '${typePath}'")
-            Some(coordinates)
-          case (None, None) =>
-            logger.debug(s"Found no type definition for type URI, fileUri: '${fileUri}', typePath: '${typePath}'")
-            None
-          case _ =>
-            throw TypeMapperError(
-              s"Type URI can refer to both a resource or an object type, fileUri: '${fileUri}', typePath: '${typePath}'"
-            )
-        }
+      (resourceClassCoordinates, objectClassCoordinates) match {
+        case (Some(_), _) if isFromResourceUri =>
+          resourceClassCoordinates
+        case (_, Some(_)) if isFromTypeUri =>
+          objectClassCoordinates
+        case (Some(_), None) =>
+          logger.warn(s"Assuming '/resources/` prefix for type URI, fileUri: '${fileUri}', typePath: '${typePath}'")
+          resourceClassCoordinates
+        case (None, Some(_)) =>
+          logger.warn(s"Assuming '/types/` prefix for type URI, fileUri: '${fileUri}', typePath: '${typePath}'")
+          objectClassCoordinates
+        case (None, None) =>
+          logger.warn(s"Found no type definition for type URI, fileUri: '${fileUri}', typePath: '${typePath}'")
+          None
+        case _ =>
+          throw TypeMapperError(
+            s"Type URI can refer to both a resource or an object type, fileUri: '${fileUri}', typePath: '${typePath}'"
+          )
       }
 
     classCoordinates.map(_.fullyQualifiedTypeRef)

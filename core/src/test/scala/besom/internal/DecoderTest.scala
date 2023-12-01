@@ -1,11 +1,11 @@
 package besom.internal
 
-import com.google.protobuf.struct.*
-import Constants.*
-import Decoder.*
-import ProtobufUtil.*
-import besom.types.Label
+import besom.internal.Constants.*
+import besom.internal.Decoder.*
+import besom.internal.ProtobufUtil.*
+import besom.types.{Label, URN}
 import besom.util.*
+import com.google.protobuf.struct.*
 
 object DecoderTest:
   case class TestCaseClass(
@@ -116,4 +116,14 @@ class DecoderTest extends munit.FunSuite:
       case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some(SpecialCaseClass(10, "abc", "qwerty")))
       case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
   }
+
+  test("decode URN") {
+    val v = "urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource".asValue
+    val d = summon[Decoder[URN]]
+    d.decode(v, dummyLabel) match
+      case Validated.Invalid(ex)                                   => throw ex.head
+      case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some(URN("urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource")))
+      case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
+  }
+  
 end DecoderTest

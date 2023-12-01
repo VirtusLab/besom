@@ -370,7 +370,8 @@ class CodeGen(implicit
 
     val baseClassFileContent =
       s"""|package ${baseClassCoordinates.fullPackageName}
-          |
+          |import besom.internal.Encoder.*
+          |import besom.internal.Decoder.*
           |${baseClassComment}
           |${baseClass}
           |
@@ -614,7 +615,8 @@ class CodeGen(implicit
 
     val fileContent =
       s"""|package ${classCoordinates.fullPackageName}
-          |
+          |import besom.internal.Encoder.*
+          |import besom.internal.Decoder.*
           |${classComment}
           |${classDef}
           |
@@ -648,7 +650,8 @@ class CodeGen(implicit
 
     val fileContent =
       s"""|package ${classCoordinates.fullPackageName}
-          |
+          |import besom.internal.Encoder.*
+          |import besom.internal.Decoder.*
           |${argsClass}
           |
           |${argsCompanion}

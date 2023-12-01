@@ -64,7 +64,8 @@ class CodeGenTest extends munit.FunSuite {
       expected = Map(
         "src/index/Provider.scala" ->
           s"""|package besom.api.example
-              |
+              |import besom.internal.Encoder.*
+              |import besom.internal.Decoder.*
               |
               |final case class Provider private(
               |  urn: besom.types.Output[besom.types.URN],
@@ -86,7 +87,8 @@ class CodeGenTest extends munit.FunSuite {
               |""".stripMargin,
         "src/index/ProviderArgs.scala" ->
           s"""|package besom.api.example
-              |
+              |import besom.internal.Encoder.*
+              |import besom.internal.Decoder.*
               |final case class ProviderArgs private(
               |  helmReleaseSettings: besom.types.Output[scala.Option[besom.api.example.inputs.HelmReleaseSettingsArgs]]
               |) derives besom.types.ProviderArgsEncoder
