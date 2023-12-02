@@ -1,10 +1,10 @@
 import os.*
 
 import java.time.LocalTime
-import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.concurrent.atomic.AtomicInteger
 import scala.annotation.tailrec
+import scala.concurrent.duration.Duration
 
 def git(command: Shellable*)(wd: os.Path): CommandResult =
   val cmd = os.proc("git", command)
@@ -80,6 +80,8 @@ def sparseCheckout(
 
   repoPath
 
+end sparseCheckout
+
 def copyFilteredFiles(
   sourcePath: Path,
   targetPath: Path,
@@ -113,8 +115,8 @@ def githubToken: Option[String] =
 class Progress(
   var label: String,
   val report: (String, Int, Temporal) => Unit,
-  val summary: (String, Temporal, Temporal) => Unit,
-  val failure: (String, String) => Unit,
+  val ending: (String, Temporal, Temporal) => Unit,
+  val failure: (String, Temporal, Temporal, String) => Unit,
   var time: Temporal = LocalTime.now()
 ):
   private def increment(
@@ -126,11 +128,11 @@ class Progress(
     time = tm
     report(lbl, amount, tm)
 
-  private def end(end: Temporal = LocalTime.now()): Unit =
-    summary(label, time, end)
+  private def end(endTime: Temporal = LocalTime.now()): Unit =
+    ending(label, time, endTime)
 
-  private def fail(error: String): Unit =
-    failure(label, error)
+  private def fail(error: String, end: Temporal = LocalTime.now()): Unit =
+    failure(label, time, end, error)
 
 object Progress:
   def report(using progress: Progress): Unit =
@@ -145,53 +147,55 @@ object Progress:
   def report(amount: Int, label: String)(using progress: Progress): Unit =
     progress.increment(amount, lbl = label)
 
-  def failure(error: String)(using progress: Progress): Unit =
+  def fail(error: String)(using progress: Progress): Unit =
     progress.fail(error)
 
-  def summary(using progress: Progress): Unit =
+  def end(using progress: Progress): Unit =
     progress.end()
 
 def withProgress[A](title: String, total: Int)(f: Progress ?=> A): A =
-  val counter = new AtomicInteger(0)
-  val failed  = collection.concurrent.TrieMap.empty[String, String]
-  val first   = LocalTime.now()
+  val counter   = new AtomicInteger(0)
+  val failed    = collection.concurrent.TrieMap.empty[String, String]
+  val succeeded = collection.concurrent.TrieMap.empty[String, String]
+  val first     = LocalTime.now()
 
-  def elapsed(from: Temporal, to: Temporal = LocalTime.now()): String = {
-    Duration.between(from, to).toSeconds match
-      case s if s < 60 => s"$s seconds"
-      case s           => s"${s / 60} minutes"
-  }
+  def elapsed(from: Temporal, to: Temporal = LocalTime.now()): String =
+    Duration.fromNanos(java.time.Duration.between(from, to).toNanos) match
+      case d if d.toHours > 0   => f"${d.toHours} h ${d.toMinutes % 60} m ${d.toSeconds % 60} s"
+      case d if d.toMinutes > 0 => f"${d.toMinutes} m ${d.toSeconds % 60} s"
+      case d if d.toSeconds > 0 => f"${d.toSeconds} s ${d.toMillis % 1000} ms"
+      case d if d.toMillis > 0  => f"${d.toMillis} ms ${d.toMicros % 1000} µs"
+      case d                    => f"${d.toMicros} µs"
+
+  def end(lbl: String, start: Temporal, end: Temporal) =
+    if !failed.contains(lbl)
+    then succeeded.put(lbl, s"\r$lbl: DONE [${elapsed(start, end)}]")
+  def failure(lbl: String, start: Temporal, end: Temporal, error: String) = 
+    failed.put(lbl, s"\r$lbl: ERROR [${elapsed(start, end)}]: $error")
+
+  def report(lbl: String, amount: Int, time: Temporal): Unit =
+    val current = counter.addAndGet(amount)
+    val percentage = (current.toDouble / total * 100).toInt
+    Console.out.synchronized {
+      println(s"\r$lbl: $percentage% [$current/$total] [${time}]")
+    }
 
   // noinspection ScalaUnusedSymbol
-  val progress = Progress(
-    title,
-    report = (lbl, amount, time) =>
-      val current    = counter.addAndGet(amount)
-      val percentage = (current.toDouble / total * 100).toInt
-      Console.out.synchronized {
-        println(s"\r$lbl: $percentage% [$current/$total] [${time}]")
-      }
-    ,
-    summary = (lbl, start, end) =>
-      if failed.contains(lbl) then
-        Console.out.synchronized {
-          println(s"\r$lbl: ERROR [${elapsed(start, end)}]")
-        }
-      else
-        Console.out.synchronized {
-          println(s"\r$lbl: DONE [${elapsed(start, end)}]")
-        }
-    ,
-    failure = (lbl, error) =>
-      failed.put(lbl, error)
-  )
+  val progress = Progress(title, report = report, ending = end, failure = failure)
 
   println(title)
 
   try f(using progress)
   finally
-    println(s"Total time: ${elapsed(first)}")
-    if failed.nonEmpty then
-      println(s"Failures [${failed.size}]:")
-      failed.foreach((name, error) => println(s"  - $name: $error"))
     println()
+    println(s"Successes [${succeeded.size}/$total]:")
+    succeeded.toSeq.sortBy(_._1).foreach((name, msg) => println(s"  - $name: $msg"))
+    println()
+    if failed.nonEmpty then
+      println(s"Failures [${failed.size}/$total]:")
+      failed.toSeq.sortBy(_._1).foreach((name, error) => println(s"  - $name: $error"))
+    println()
+    println(s"Total [${succeeded.size}/$total] time: ${elapsed(first)}")
+    println()
+
+end withProgress

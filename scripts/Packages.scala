@@ -6,18 +6,53 @@
 //> using dep org.virtuslab::scala-yaml:0.0.8
 //> using file common.scala
 
-import java.util.Date
-import scala.util.control.NonFatal
 import org.virtuslab.yaml.*
+
+import java.util.Date
+import scala.concurrent.duration.Duration
+import scala.util.*
+import scala.util.control.NonFatal
 
 @main def run(args: String*): Unit =
   val packagesDir = os.pwd / ".out" / "packages"
 
+  val pluginDownloadProblemPackages = Vector(
+    "azure-native-v1",
+    "aws-s3-replicated-bucket",
+    "aws-miniflux",
+    "iosxe:0.0.1",
+    "aws-quickstart-aurora-postgres",
+    "gcp-global-cloudrun",
+    "packet",
+    "kubernetes-coredns",
+    "aws-quickstart-vpc",
+    "azure-quickstart-acr-geo-replication",
+    "aws-quickstart-redshift",
+    "nxos"
+  )
+
+  val codegenProblemPackages = Vector(
+    "aws-iam", // aws-iam:index:Account: property name "id" is reserved
+    "digitalocean", // digitalocean:index/reservedIp:ReservedIp: property name "urn"
+    // kubernetes:helm.sh/v3:Chart: property name "urn" is reserved
+    // Exception in thread "main" besom.codegen.TypeMapperError: 
+    // Failed to map type: 'NamedType(/kubernetes/v4.4.0/schema.json#/resources/kubernetes:core%2Fv1:ConfigMap,None)', asArgsType: false
+    "eks",
+    "iosxe", // schemaOnlyProvider does not implement runtime operation InitLogging
+    // error: error binding resource kubernetes:helm.sh/v3:Chart: failed to bind properties for kubernetes:helm.sh/v3:Chart: property name "urn" is reserved
+    // Exception in thread "main" besom.codegen.GeneralCodegenException: 
+    // Failed to download schema 'pulumi --logtostderr package get-schema kubernetes@4.5.5' into '.out/schemas/kubernetes/4.5.5/schema.json'
+    "kubernetes",
+    "nuage", // nuage:aws:Repository: property name "id" is reserved
+  )
+
+  val brokenPackages = pluginDownloadProblemPackages ++ codegenProblemPackages
+
   args match
+    case "metadata-all" :: Nil      => downloadPackagesMetadata(packagesDir)
     case "generate-all" :: Nil      => generateAll(packagesDir)
     case "publish-local-all" :: Nil => publishLocalAll(packagesDir)
     case "publish-maven-all" :: Nil => publishMavenAll(packagesDir)
-    case "metadata-all" :: Nil      => downloadPackagesMetadata(packagesDir)
     case _                          => println(s"Unknown command: $args")
 
   def generateAll(targetPath: os.Path): Unit = {
@@ -39,7 +74,7 @@ import org.virtuslab.yaml.*
         catch
           case NonFatal(_) =>
             Progress.failure(s"Code generation failed for provider '${name}' version '${version}'")
-        finally Progress.summary
+        finally Progress.end
       }
     }
   }
@@ -63,7 +98,7 @@ import org.virtuslab.yaml.*
         catch
           case NonFatal(_) =>
             Progress.failure(s"Publish failed for provider '${name}' version '${version}'")
-        finally Progress.summary
+        finally Progress.end
       }
     }
   }
@@ -85,17 +120,23 @@ import org.virtuslab.yaml.*
         catch
           case NonFatal(_) =>
             Progress.failure(s"Publish failed for provider '${name}' version '${version}'")
-        finally Progress.summary
+        finally Progress.end
       }
     }
   }
 
   def readAllPackagesMetadata(targetPath: os.Path): List[(PackageMetadata, os.Path)] = {
     val metadataFiles = os.list(targetPath).filter(_.last.endsWith("metadata.json"))
-    val metadata = metadataFiles.map { path =>
-      val metadata = upickle_.read[PackageMetadata](os.read(path))
-      (metadata, path)
-    }.toList
+    val metadata = metadataFiles
+      .map { path =>
+        val metadata = upickle_.read[PackageMetadata](os.read(path))
+        (metadata, path)
+      }
+      .collect {
+        case (metadata, path) if !brokenPackages.contains(metadata.name) => (metadata, path)
+      }
+      .toList
+
     if metadata.isEmpty then throw Exception(s"No packages metadata found in: '$targetPath'")
     metadata
   }
@@ -105,19 +146,19 @@ import org.virtuslab.yaml.*
 
     val packagesRepoApi = "https://api.github.com/repos/pulumi/registry/contents/themes/default/data/registry/packages"
 
-    val token = sys.env.getOrElse("GITHUB_TOKEN", sys.error("Expected GITHUB_TOKEN environment variable to be set"))
+    val token      = sys.env.getOrElse("GITHUB_TOKEN", sys.error("Expected GITHUB_TOKEN environment variable to be set"))
     val authHeader = Map("Authorization" -> s"token $token")
 
     val packagesResponse = requests.get(packagesRepoApi, headers = authHeader)
-    if packagesResponse.statusCode != 200 then
-      throw Exception(s"Failed to fetch packages list from: '$packagesRepoApi'")
+    if packagesResponse.statusCode != 200
+    then throw Exception(s"Failed to fetch packages list from: '$packagesRepoApi'")
 
     case class PackageSource(name: String, download_url: String, sha: String) derives upickle_.ReadWriter
     object PackageSource {
-      def fromList(json: ujson.Readable): List[PackageSource] = upickle_.read(json, trace = true)
+      def fromJsonArray(json: ujson.Readable): List[PackageSource] = upickle_.read(json, trace = true)
     }
 
-    val packages: List[PackageSource] = PackageSource.fromList(packagesResponse.text())
+    val packages: List[PackageSource] = PackageSource.fromJsonArray(packagesResponse.text())
     if packages.isEmpty then throw Exception(s"No packages found using: '$packagesRepoApi'")
 
     type Error = String
@@ -166,12 +207,14 @@ import org.virtuslab.yaml.*
           case Right(value) =>
             os.write.over(targetPath / s"${packageName}.metadata.json", value.toJson, createFolders = true)
 
-        Progress.summary
+        Progress.end
       }
     }
 
     println(s"Packages directory: '$targetPath'")
   }
+
+end run
 
 // synchronize with codegen/src/PackageMetadata.scala
 private case class PackageMetadata private (
