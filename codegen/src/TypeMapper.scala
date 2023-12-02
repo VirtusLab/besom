@@ -47,8 +47,6 @@ class TypeMapper(
       case token => (token, false, false)
     }
 
-    val uniformedTypeToken = escapedTypeToken.toLowerCase
-
     val typeCoordinates =
       PulumiDefinitionCoordinates.fromRawToken(
         escapedTypeToken,
@@ -56,6 +54,7 @@ class TypeMapper(
         packageInfo.providerToPackageParts
       )
 
+    val uniformedTypeToken           = typeCoordinates.token.asLookupKey
     lazy val hasProviderDefinition   = packageInfo.providerTypeToken == uniformedTypeToken
     lazy val hasResourceDefinition   = packageInfo.resourceTypeTokens.contains(uniformedTypeToken)
     lazy val hasObjectTypeDefinition = packageInfo.objectTypeTokens.contains(uniformedTypeToken)

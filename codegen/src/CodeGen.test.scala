@@ -67,7 +67,6 @@ class CodeGenTest extends munit.FunSuite {
         "src/index/Provider.scala" ->
           s"""|package besom.api.example
               |
-              |
               |final case class Provider private(
               |  urn: besom.types.Output[besom.types.URN],
               |  id: besom.types.Output[besom.types.ResourceId]

@@ -1,14 +1,15 @@
 package besom.codegen
 
+import besom.codegen.metaschema.PulumiPackage
+import besom.codegen.Utils.PulumiPackageOps
+
 //noinspection ScalaFileName,TypeAnnotation
 class DefinitionCoordinatesTest extends munit.FunSuite {
   implicit val logger: Logger                        = new Logger
   implicit val providerConfig: Config.ProviderConfig = Config.ProviderConfig()
 
   case class Data(
-    providerPackageParts: Seq[String],
-    modulePackageParts: Seq[String],
-    definitionName: String,
+    token: PulumiToken,
     tags: munit.Tag*
   )(val expected: Expectations*)
   sealed trait Expectations {
@@ -36,9 +37,7 @@ class DefinitionCoordinatesTest extends munit.FunSuite {
 
   val tests = List(
     Data(
-      providerPackageParts = Seq("example"),
-      modulePackageParts = Seq(),
-      definitionName = "Provider"
+      PulumiToken("example", "", "Provider")
     )(expected =
       ResourceClassExpectations(
         fullPackageName = "besom.api.example",
@@ -47,9 +46,7 @@ class DefinitionCoordinatesTest extends munit.FunSuite {
       )
     ),
     Data(
-      providerPackageParts = Seq("example"),
-      modulePackageParts = Seq("index"),
-      definitionName = "Provider"
+      PulumiToken("example", "index", "Provider")
     )(expected =
       ResourceClassExpectations(
         fullPackageName = "besom.api.example",
@@ -60,12 +57,9 @@ class DefinitionCoordinatesTest extends munit.FunSuite {
   )
 
   tests.foreach(data => {
-    test(s"Type: ${data.definitionName}".withTags(data.tags.toSet)) {
-      val coords = PulumiDefinitionCoordinates(
-        providerPackageParts = data.providerPackageParts,
-        modulePackageParts = data.modulePackageParts,
-        definitionName = data.definitionName
-      )
+    test(s"Type: ${data.token.asString}".withTags(data.tags.toSet)) {
+      val pulumiPackage = PulumiPackage("test")
+      val coords = data.token.toCoordinates(pulumiPackage)
 
       data.expected.foreach {
         case ResourceClassExpectations(fullPackageName, fullyQualifiedTypeRef, filePath, asArgsType) =>
