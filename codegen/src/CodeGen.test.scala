@@ -13,7 +13,9 @@ class CodeGenTest extends munit.FunSuite {
   case class Data(
     name: String,
     json: String,
-    expected: Map[String, String]
+    ignored: List[String] = List.empty,
+    expected: Map[String, String] = Map.empty,
+    expectedError: Option[String] = None
   )
 
   Vector(
@@ -99,6 +101,65 @@ class CodeGenTest extends munit.FunSuite {
               |      helmReleaseSettings = helmReleaseSettings.asOptionOutput(isSecret = false)
               |    )
               |""".stripMargin // TODO: the input should be marked as json=true equivalent
+      ),
+      ignored = List(
+        "src/index/outputs/HelmReleaseSettings.scala",
+        "src/index/outputs/HelmReleaseSettingsArgs.scala",
+        "src/index/inputs/HelmReleaseSettingsArgs.scala"
+      )
+    ),
+    Data(
+      name = "Error on id property",
+      json = """|{
+                |  "name": "fake-provider",
+                |  "version": "0.0.1",
+                |  "resources": {
+                |    "fake-provider:index:typ": {
+                |      "properties": {
+                |        "id": {
+                |          "type": "boolean"
+                |        }
+                |      },
+                |      "type": "object"
+                |    }
+                |  }
+                |}
+                |""".stripMargin,
+      ignored = List(
+        "src/index/Provider.scala",
+        "src/index/ProviderArgs.scala",
+        "src/index/Typ.scala",
+        "src/index/TypArgs.scala"
+      ),
+      expectedError = Some(
+        "invalid property for 'fake-provider:index:typ': property name 'id' is reserved"
+      )
+    ),
+    Data(
+      name = "Error on urn property",
+      json = """|{
+                |  "name": "fake-provider",
+                |  "version": "0.0.1",
+                |  "resources": {
+                |    "fake-provider:index:typ": {
+                |      "properties": {
+                |        "urn": {
+                |          "type": "boolean"
+                |        }
+                |      },
+                |      "type": "object"
+                |    }
+                |  }
+                |}
+                |""".stripMargin,
+      ignored = List(
+        "src/index/Provider.scala",
+        "src/index/ProviderArgs.scala",
+        "src/index/Typ.scala",
+        "src/index/TypArgs.scala"
+      ),
+      expectedError = Some(
+        "invalid property for 'fake-provider:index:typ': property name 'urn' is reserved"
       )
     )
   ).foreach(data =>
@@ -115,13 +176,18 @@ class CodeGenTest extends munit.FunSuite {
       implicit val tm: TypeMapper                 = new TypeMapper(packageInfo, schemaProvider)
 
       val codegen = new CodeGen
-      codegen.sourceFilesForProviderResource(pulumiPackage).foreach {
-        case SourceFile(FilePath(f: String), code: String) if data.expected.contains(f) =>
-          assertNoDiff(code, data.expected(f))
-          code.parse[Source].get
-        case SourceFile(filename, _) =>
-          fail(s"Unexpected file: ${filename.osSubPath}")
-      }
+      if (data.expectedError.isDefined)
+        interceptMessage[Exception](data.expectedError.get)(codegen.scalaFiles(pulumiPackage))
+      else
+        codegen.scalaFiles(pulumiPackage).foreach {
+          case SourceFile(FilePath(f: String), code: String) if data.expected.contains(f) =>
+            assertNoDiff(code, data.expected(f))
+            code.parse[Source].get
+          case SourceFile(FilePath(f: String), _: String) if data.ignored.contains(f) =>
+            logger.debug(s"Ignoring file: $f")
+          case SourceFile(filename, _) =>
+            fail(s"Unexpected file: ${filename.osSubPath}")
+        }
     }
   )
 }
