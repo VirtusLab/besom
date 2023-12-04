@@ -32,18 +32,7 @@ import scala.util.control.NonFatal
   )
 
   val codegenProblemPackages = Vector(
-    "aws-iam", // aws-iam:index:Account: property name "id" is reserved
-    "digitalocean", // digitalocean:index/reservedIp:ReservedIp: property name "urn"
-    // kubernetes:helm.sh/v3:Chart: property name "urn" is reserved
-    // Exception in thread "main" besom.codegen.TypeMapperError:
-    // Failed to map type: 'NamedType(/kubernetes/v4.4.0/schema.json#/resources/kubernetes:core%2Fv1:ConfigMap,None)', asArgsType: false
-    "eks",
     "iosxe", // schemaOnlyProvider does not implement runtime operation InitLogging
-    // error: error binding resource kubernetes:helm.sh/v3:Chart: failed to bind properties for kubernetes:helm.sh/v3:Chart: property name "urn" is reserved
-    // Exception in thread "main" besom.codegen.GeneralCodegenException:
-    // Failed to download schema 'pulumi --logtostderr package get-schema kubernetes@4.5.5' into '.out/schemas/kubernetes/4.5.5/schema.json'
-//    "kubernetes",
-    "nuage" // nuage:aws:Repository: property name "id" is reserved
   )
 
   val brokenPackages = pluginDownloadProblemPackages ++ codegenProblemPackages

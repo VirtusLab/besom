@@ -15,7 +15,8 @@ class CodeGenTest extends munit.FunSuite {
     json: String,
     ignored: List[String] = List.empty,
     expected: Map[String, String] = Map.empty,
-    expectedError: Option[String] = None
+    expectedError: Option[String] = None,
+    tags: Set[munit.Tag] = Set()
   )
 
   Vector(
@@ -132,7 +133,8 @@ class CodeGenTest extends munit.FunSuite {
       ),
       expectedError = Some(
         "invalid property for 'fake-provider:index:typ': property name 'id' is reserved"
-      )
+      ),
+      tags = Set(munit.Ignore) // FIXME: un-ignore when this is fixed: https://github.com/pulumi/pulumi-kubernetes/issues/2683
     ),
     Data(
       name = "Error on urn property",
@@ -159,10 +161,11 @@ class CodeGenTest extends munit.FunSuite {
       ),
       expectedError = Some(
         "invalid property for 'fake-provider:index:typ': property name 'urn' is reserved"
-      )
+      ),
+      tags = Set(munit.Ignore) // FIXME: un-ignore when this is fixed: https://github.com/pulumi/pulumi-kubernetes/issues/2683
     )
   ).foreach(data =>
-    test(data.name) {
+    test(data.name.withTags(data.tags)) {
       implicit val config: Config.CodegenConfig = CodegenConfig()
       implicit val logger: Logger               = new Logger(config.logLevel)
 
