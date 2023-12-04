@@ -112,6 +112,8 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
 
     besom.internal.Output.ofData(result) // TODO why the hell compiler assumes it's besom.aliases.Output?
   end invoke
+  
+  private[besom] def call[A: ArgsEncoder, R: Decoder](tok: FunctionToken, args: A, resource: Resource, opts: InvokeOptions): Output[R] = ???
 
   private def resolveProviderReferences(state: ResourceState): Result[Map[String, String]] =
     Result

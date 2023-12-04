@@ -111,7 +111,7 @@ across a spectrum of team, application, and infrastructure scenarios. Learn more
 By default, Pulumi creates a stack for you when you start a new project using the `pulumi new` command.
 Each stack that is created in a project will have a file
 named [`Pulumi.<stackname>.yaml`](https://www.pulumi.com/docs/concepts/projects/#stack-settings-file)
-in the root of the [project](#projects) directory that contains the [configuration](#configuration) specific to this
+in the root of the [project](#projects) directory that contains the [configuration](#configuration-and-secrets) specific to this
 stack.
 
 :::tip
@@ -350,7 +350,7 @@ State is used to:
 - track [resources](#resources) that are created by your [program](#programs)
 - record the relationship between resources
 - store metadata about your [project](#projects) and [stacks](#stacks)
-- and store [configuration](#configuration) and secret values
+- and store [configuration](#configuration-and-secrets) and secret values
 - and store [stack outputs](#stack-outputs)
 
 :::note

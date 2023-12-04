@@ -1,6 +1,7 @@
 package besom.codegen
 
 case class PulumiDefinitionCoordinates private (
+  token: PulumiToken,
   private val providerPackageParts: Seq[String],
   private val modulePackageParts: Seq[String],
   private val definitionName: String
@@ -35,26 +36,37 @@ case class PulumiDefinitionCoordinates private (
     )
   }
 
-  def topLevelMethod(implicit logger: Logger): ScalaDefinitionCoordinates =
-    ScalaDefinitionCoordinates(
-      providerPackageParts = providerPackageParts,
-      modulePackageParts = modulePackageParts,
-      definitionName = mangleMethodName(definitionName)
-    )
+  private def splitMethodName(definitionName: String): (Seq[String], String) = {
+    val methodNameParts = definitionName.split("/")
+    val methodName = methodNameParts.last
+    val methodPrefix = methodNameParts.init.filterNot(_ == methodName) // filter out the function name duplication
+    (methodPrefix, methodName)
+  }
 
-  def methodArgsClass(implicit logger: Logger): ScalaDefinitionCoordinates =
+  def resourceMethod(implicit logger: Logger): ScalaDefinitionCoordinates = {
+    val (methodPrefix, methodName) = splitMethodName(definitionName)
+    ScalaDefinitionCoordinates(
+      providerPackageParts = providerPackageParts,
+      modulePackageParts = modulePackageParts ++ methodPrefix,
+      definitionName = mangleMethodName(methodName)
+    )
+  }
+  def methodArgsClass(implicit logger: Logger): ScalaDefinitionCoordinates = {
+    val (methodPrefix, methodName) = splitMethodName(definitionName)
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
-      definitionName = mangleTypeName(capitalize(definitionName)) + "Args"
+      definitionName = (methodPrefix :+ mangleTypeName(methodName)).mkString("") + "Args"
     )
-
-  def methodResultClass(implicit logger: Logger): ScalaDefinitionCoordinates =
+  }
+  def methodResultClass(implicit logger: Logger): ScalaDefinitionCoordinates = {
+    val (methodPrefix, methodName) = splitMethodName(definitionName)
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
-      definitionName = mangleTypeName(capitalize(definitionName)) + "Result"
+      definitionName = (methodPrefix :+ mangleTypeName(methodName)).mkString("") + "Result"
     )
+  }
 }
 
 object PulumiDefinitionCoordinates {
@@ -78,12 +90,14 @@ object PulumiDefinitionCoordinates {
     typeToken match {
       case PulumiToken("pulumi", "providers", providerName) =>
         PulumiDefinitionCoordinates(
+          token = typeToken,
           providerPackageParts = providerName :: Nil,
           modulePackageParts = Utils.indexModuleName :: Nil,
           definitionName = Utils.providerTypeName
         )
       case PulumiToken(providerName, moduleName, definitionName) =>
         PulumiDefinitionCoordinates(
+          token = typeToken,
           providerPackageParts = providerToPackageParts(providerName),
           modulePackageParts = moduleToPackageParts(moduleName),
           definitionName = definitionName
@@ -133,12 +147,13 @@ object PulumiDefinitionCoordinates {
 
   @throws[PulumiDefinitionCoordinatesError]("if 'definitionName' is empty")
   def apply(
+    token: PulumiToken,
     providerPackageParts: Seq[String],
     modulePackageParts: Seq[String],
     definitionName: String
   ): PulumiDefinitionCoordinates = {
     if (definitionName.isBlank)
       throw PulumiDefinitionCoordinatesError("Unexpected empty 'definitionName' parameter")
-    new PulumiDefinitionCoordinates(providerPackageParts, modulePackageParts, definitionName)
+    new PulumiDefinitionCoordinates(token, providerPackageParts, modulePackageParts, definitionName)
   }
 }

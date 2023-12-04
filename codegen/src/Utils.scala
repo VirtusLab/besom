@@ -3,7 +3,7 @@ package besom.codegen
 import besom.codegen.PackageVersion.PackageVersion
 
 import scala.meta.Type
-import besom.codegen.metaschema.{PulumiPackage, TypeReference}
+import besom.codegen.metaschema.{FunctionDefinition, PulumiPackage, ResourceDefinition, TypeDefinition, TypeReference}
 
 import scala.util.matching.Regex
 
@@ -20,6 +20,8 @@ object Utils {
 
   // TODO: Find some workaround to enable passing the remaining arguments
   val jvmMaxParamsCount = 253 // https://github.com/scala/bug/issues/7324
+
+  type FunctionName = String
 
   implicit class TypeReferenceOps(typeRef: TypeReference) {
     def asScalaType(asArgsType: Boolean = false)(implicit typeMapper: TypeMapper): Type =
@@ -81,8 +83,91 @@ object Utils {
       import PackageVersion._
       overrideMetadata match {
         case Some(d) => PackageMetadata(d.name, PackageVersion.parse(pulumiPackage.version).reconcile(d.version))
-        case None => PackageMetadata(pulumiPackage.name, PackageVersion.parse(pulumiPackage.version))
+        case None    => PackageMetadata(pulumiPackage.name, PackageVersion.parse(pulumiPackage.version))
       }
     }
+
+    type FunctionToken = String
+
+    private [Utils] def nonOverlayFunctions(implicit logger: Logger): Map[FunctionToken, FunctionDefinition] = {
+      val (overlays, functions) = pulumiPackage.functions.partition { case (_, d) => d.isOverlay }
+      overlays.foreach { case (token, _) =>
+        logger.info(s"Function '${token}' was not generated because it was marked as overlay")
+      }
+      functions
+    }
+
+    def parsedFunctions(implicit logger: Logger): Map[PulumiDefinitionCoordinates, FunctionDefinition] = {
+      nonOverlayFunctions.map { case (token, function) =>
+        val coordinates = PulumiDefinitionCoordinates.fromRawToken(
+          typeToken = token,
+          moduleToPackageParts = moduleToPackageParts,
+          providerToPackageParts = providerToPackageParts
+        )
+        (coordinates, function)
+      }
+    }
+
+    def parsedTypes(implicit logger: Logger): Map[PulumiDefinitionCoordinates, TypeDefinition] = {
+      val (overlays, types) = pulumiPackage.types.partition { case (_, d) => d.isOverlay }
+      overlays.foreach { case (token, _) =>
+        logger.info(s"Type '${token}' was not generated because it was marked as overlay")
+      }
+      types.collect { case (token, typeRef) =>
+        val coordinates = PulumiDefinitionCoordinates.fromRawToken(
+          typeToken = token,
+          moduleToPackageParts = moduleToPackageParts,
+          providerToPackageParts = providerToPackageParts
+        )
+        (coordinates, typeRef)
+      }
+    }
+
+    def parsedResources(implicit logger: Logger): Map[PulumiDefinitionCoordinates, ResourceDefinition] = {
+      val (overlays, resources) = pulumiPackage.resources.partition { case (_, d) => d.isOverlay }
+      overlays.foreach { case (token, _) =>
+        logger.info(s"Resource '${token}' was not generated because it was marked as overlay")
+      }
+      resources.collect { case (token, resource) =>
+        val coordinates = PulumiDefinitionCoordinates.fromRawToken(
+          typeToken = token,
+          moduleToPackageParts = moduleToPackageParts,
+          providerToPackageParts = providerToPackageParts
+        )
+        (coordinates, resource)
+      }
+    }
+
+    def parsedMethods(
+      resourceDefinition: ResourceDefinition
+    )(implicit logger: Logger): Map[FunctionName, (PulumiDefinitionCoordinates, FunctionDefinition)] = {
+      val (notMethods, methods) = resourceDefinition.methods.toSeq
+        .sortBy { case (name, _) => name }
+        .map { case (name, token) =>
+          (
+            name,
+            (
+              PulumiDefinitionCoordinates.fromRawToken(
+                typeToken = token,
+                moduleToPackageParts = pulumiPackage.moduleToPackageParts,
+                providerToPackageParts = pulumiPackage.providerToPackageParts
+              ),
+              pulumiPackage.nonOverlayFunctions.getOrElse(
+                token,
+                throw TypeMapperError(s"Function '${token}' not found in package '${pulumiPackage.name}'")
+              )
+            )
+          )
+        }
+        .partition { case (_, (_, d)) => isMethod(d) }
+
+      notMethods.foreach { case (token, _) =>
+        logger.info(s"Method '${token}' was not generated because it was not marked as method")
+      }
+      methods.toMap
+    }
   }
+
+  def isMethod(functionDefinition: FunctionDefinition): Boolean =
+    functionDefinition.inputs.properties.isDefinedAt(Utils.selfParameterName)
 }

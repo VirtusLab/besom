@@ -67,6 +67,14 @@ trait Context extends TaskTracker:
     args: A,
     opts: InvokeOptions
   )(using Context): Output[R]
+
+  private[besom] def call[A: ArgsEncoder, R: Decoder, T <: Resource](
+    token: FunctionToken,
+    args: A,
+    resource: T,
+    opts: InvokeOptions
+  )(using Context): Output[R]
+
 end Context
 
 class ComponentContext(private val globalContext: Context, private val componentURN: Result[URN]) extends Context:
@@ -164,6 +172,17 @@ class ContextImpl(
     BesomMDC(Key.LabelKey, Label.fromFunctionToken(token)) {
       ResourceOps().invoke[A, R](token, args, opts)
     }
+    
+  override private[besom] def call[A: ArgsEncoder, R: Decoder, T <: Resource](
+    token: FunctionToken,
+    args: A,
+    resource: T,
+    opts: InvokeOptions
+  )(using Context): Output[R] =
+    BesomMDC(Key.LabelKey, Label.fromFunctionToken(token)) {
+      ResourceOps().call[A, R](token, args, resource, opts)
+    }
+
 end ContextImpl
 
 object Context:

@@ -42,10 +42,12 @@ default:
 clean-all: clean-sdk clean-out clean-compiler-plugin clean-codegen clean-test-integration clean-test-templates clean-test-examples clean-test-markdown
 
 # Compiles everything
-compile-all: compile-sdk compile-codegen compile-compiler-plugin build-language-plugin
+compile-all: compile-sdk compile-codegen compile-compiler-plugin build-language-plugin compile-scripts
 
 # Tests everything
 test-all: test-sdk test-codegen test-markdown test-integration test-templates test-examples test-markdown
+
+before-commit: compile-all test-all
 
 ####################
 # Language SDK
@@ -369,6 +371,14 @@ clean-test-markdown:
 	rm -rf target/mdoc-website
 
 ####################
+# Scripts
+####################
+
+# Compiles scripts module
+compile-scripts:
+	scala-cli --power compile scripts --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+
+####################
 # Troubleshooting
 ####################
 
@@ -416,6 +426,10 @@ clean-slate-liftoff: clean-sdk
 	just publish-local-provider-sdk kubernetes 4.2.0
 	just clean-liftoff
 	just liftoff
+
+####################
+# IDE
+####################
 
 # Runs 'scala-cli setup-ide' for all modules
 setup-intellij:
