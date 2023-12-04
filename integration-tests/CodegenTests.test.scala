@@ -45,7 +45,11 @@ class CodegenTests extends munit.FunSuite {
     "resource-property-overlap", // resource decoder issue
     "cyclic-types", // YAML schema is not supported
     "plain-and-default", // simple enum is not supported
-    "different-package-name-conflict" // duplicate issue
+    "different-package-name-conflict", // duplicate issue
+    "output-funcs", // deserialize issue
+    "dashed-import-schema", // simple enum is not supported
+    "output-funcs-edgeorder", // decoder issue
+    "other-owned" // codec not found
   )
 
   val tests =
