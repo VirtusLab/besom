@@ -260,12 +260,13 @@ class CodeGen(implicit
     resourceDefinition.properties.foreach {
       case (name, _) => {
         if (name == "urn" || name == "id") {
-          throw GeneralCodegenException(s"invalid property for '${token.asString}': property name '${name}' is reserved")
+          // TODO: throw an exception once 'kubernetes' is fixed: https://github.com/pulumi/pulumi-kubernetes/issues/2683
+          logger.error(s"invalid property for '${token.asString}': property name '${name}' is reserved")
         }
       }
     }
 
-    val requiredOutputs = (resourceDefinition.required ++ List("urn", "id")).toSet
+    val requiredOutputs = (resourceDefinition.required ++ resourceBaseProperties.toMap.keys).toSet
 
     val resourceProperties = {
       val allProperties = (resourceBaseProperties ++ resourceDefinition.properties.toSeq.sortBy(_._1))

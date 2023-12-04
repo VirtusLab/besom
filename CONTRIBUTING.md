@@ -324,6 +324,15 @@ pulumi up --tracing=file:./up.trace
 PULUMI_DEBUG_COMMANDS=1 pulumi view-trace ./up.trace
 ```
 
+### Downgrading Pulumi on Mac OS
+
+As a workaround one can downgrade `pulumi` to a version, e.g. `3.94.2` using a [commit hash](https://github.com/Homebrew/homebrew-core/commits/master/Formula/p/pulumi.rb):
+```
+curl -L -O https://raw.githubusercontent.com/Homebrew/homebrew-core/69b97f26bc78cf68eb30eedd0ca874b6e1914b19/Formula/p/pulumi.rb
+brew install pulumi.rb
+rm pulumi.rb
+```
+
 ### Compilation issues
 
 To restart `bloop` compilation server:
