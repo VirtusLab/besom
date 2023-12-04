@@ -35,15 +35,15 @@ import scala.util.control.NonFatal
     "aws-iam", // aws-iam:index:Account: property name "id" is reserved
     "digitalocean", // digitalocean:index/reservedIp:ReservedIp: property name "urn"
     // kubernetes:helm.sh/v3:Chart: property name "urn" is reserved
-    // Exception in thread "main" besom.codegen.TypeMapperError: 
+    // Exception in thread "main" besom.codegen.TypeMapperError:
     // Failed to map type: 'NamedType(/kubernetes/v4.4.0/schema.json#/resources/kubernetes:core%2Fv1:ConfigMap,None)', asArgsType: false
     "eks",
     "iosxe", // schemaOnlyProvider does not implement runtime operation InitLogging
     // error: error binding resource kubernetes:helm.sh/v3:Chart: failed to bind properties for kubernetes:helm.sh/v3:Chart: property name "urn" is reserved
-    // Exception in thread "main" besom.codegen.GeneralCodegenException: 
+    // Exception in thread "main" besom.codegen.GeneralCodegenException:
     // Failed to download schema 'pulumi --logtostderr package get-schema kubernetes@4.5.5' into '.out/schemas/kubernetes/4.5.5/schema.json'
-    "kubernetes",
-    "nuage", // nuage:aws:Repository: property name "id" is reserved
+//    "kubernetes",
+    "nuage" // nuage:aws:Repository: property name "id" is reserved
   )
 
   val brokenPackages = pluginDownloadProblemPackages ++ codegenProblemPackages
@@ -73,7 +73,7 @@ import scala.util.control.NonFatal
           ).call()
         catch
           case NonFatal(_) =>
-            Progress.failure(s"Code generation failed for provider '${name}' version '${version}'")
+            Progress.fail(s"Code generation failed for provider '${name}' version '${version}'")
         finally Progress.end
       }
     }
@@ -97,7 +97,7 @@ import scala.util.control.NonFatal
             .call(stdout = logFile, stderr = logFile)
         catch
           case NonFatal(_) =>
-            Progress.failure(s"Publish failed for provider '${name}' version '${version}'")
+            Progress.fail(s"Publish failed for provider '${name}' version '${version}'")
         finally Progress.end
       }
     }
@@ -119,7 +119,7 @@ import scala.util.control.NonFatal
           println(s"Successfully published provider '${name}' version '${version}'")
         catch
           case NonFatal(_) =>
-            Progress.failure(s"Publish failed for provider '${name}' version '${version}'")
+            Progress.fail(s"Publish failed for provider '${name}' version '${version}'")
         finally Progress.end
       }
     }
@@ -203,7 +203,7 @@ import scala.util.control.NonFatal
               Right(PackageMetadata(m.name, m.version).withUrl(m.repo_url))
 
         metadata match
-          case Left(error) => Progress.failure(error)
+          case Left(error) => Progress.fail(error)
           case Right(value) =>
             os.write.over(targetPath / s"${packageName}.metadata.json", value.toJson, createFolders = true)
 

@@ -260,7 +260,7 @@ class CodeGen(implicit
     resourceDefinition.properties.foreach {
       case (name, _) => {
         if (name == "urn" || name == "id") {
-          throw GeneralCodegenException(s"invalid property for '${typeToken.asString}': property name '${name}' is reserved")
+          throw GeneralCodegenException(s"invalid property for '${token.asString}': property name '${name}' is reserved")
         }
       }
     }
@@ -367,8 +367,9 @@ class CodeGen(implicit
         val code =
           s"""|  def ${Term.Name(name)}(using ctx: besom.types.Context)(
               |    args: ${argsClassRef}${argsDefault},
+              |    opts: besom.InvokeOptions = besom.InvokeOptions()
               |  ): besom.types.Output[${resultTypeRef}] =
-              |     ctx.call[$argsClassRef, $resultTypeRef, $thisTypeRef](${tokenLiteral}, args, this)
+              |     ctx.call[$argsClassRef, $resultTypeRef, $thisTypeRef](${tokenLiteral}, args, this, opts)
               |""".stripMargin
 
         (supportClassSourceFiles, code)

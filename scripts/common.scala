@@ -161,11 +161,11 @@ def withProgress[A](title: String, total: Int)(f: Progress ?=> A): A =
 
   def elapsed(from: Temporal, to: Temporal = LocalTime.now()): String =
     Duration.fromNanos(java.time.Duration.between(from, to).toNanos) match
-      case d if d.toHours > 0   => f"${d.toHours} h ${d.toMinutes % 60} m ${d.toSeconds % 60} s"
-      case d if d.toMinutes > 0 => f"${d.toMinutes} m ${d.toSeconds % 60} s"
-      case d if d.toSeconds > 0 => f"${d.toSeconds} s ${d.toMillis % 1000} ms"
-      case d if d.toMillis > 0  => f"${d.toMillis} ms ${d.toMicros % 1000} µs"
-      case d                    => f"${d.toMicros} µs"
+      case d if d.toHours > 0   => s"${d.toHours} h ${d.toMinutes % 60} m ${d.toSeconds % 60} s"
+      case d if d.toMinutes > 0 => s"${d.toMinutes} m ${d.toSeconds % 60} s"
+      case d if d.toSeconds > 0 => s"${d.toSeconds} s ${d.toMillis % 1000} ms"
+      case d if d.toMillis > 0  => s"${d.toMillis} ms ${d.toMicros % 1000} µs"
+      case d                    => s"${d.toMicros} µs"
 
   def end(lbl: String, start: Temporal, end: Temporal) =
     if !failed.contains(lbl)
@@ -189,11 +189,11 @@ def withProgress[A](title: String, total: Int)(f: Progress ?=> A): A =
   finally
     println()
     println(s"Successes [${succeeded.size}/$total]:")
-    succeeded.toSeq.sortBy(_._1).foreach((name, msg) => println(s"  - $name: $msg"))
+    succeeded.toVector.sortBy(_._1).foreach((name, msg) => println(s"  - $name: $msg"))
     println()
     if failed.nonEmpty then
       println(s"Failures [${failed.size}/$total]:")
-      failed.toSeq.sortBy(_._1).foreach((name, error) => println(s"  - $name: $error"))
+      failed.toVector.sortBy(_._1).foreach((name, error) => println(s"  - $name: $error"))
     println()
     println(s"Total [${succeeded.size}/$total] time: ${elapsed(first)}")
     println()

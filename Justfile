@@ -47,6 +47,8 @@ compile-all: compile-sdk compile-codegen compile-compiler-plugin build-language-
 # Tests everything
 test-all: test-sdk test-codegen test-markdown test-integration test-templates test-examples test-markdown
 
+before-commit: compile-all test-all
+
 ####################
 # Language SDK
 ####################

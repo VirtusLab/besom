@@ -71,7 +71,8 @@ trait Context extends TaskTracker:
   private[besom] def call[A: ArgsEncoder, R: Decoder, T <: Resource](
     token: FunctionToken,
     args: A,
-    resource: T
+    resource: T,
+    opts: InvokeOptions
   )(using Context): Output[R]
 
 end Context
@@ -175,9 +176,12 @@ class ContextImpl(
   override private[besom] def call[A: ArgsEncoder, R: Decoder, T <: Resource](
     token: FunctionToken,
     args: A,
-    resource: T
+    resource: T,
+    opts: InvokeOptions
   )(using Context): Output[R] =
-    ???
+    BesomMDC(Key.LabelKey, Label.fromFunctionToken(token)) {
+      ResourceOps().call[A, R](token, args, resource, opts)
+    }
 
 end ContextImpl
 
