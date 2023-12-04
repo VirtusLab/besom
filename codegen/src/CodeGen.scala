@@ -157,7 +157,7 @@ class CodeGen(implicit
       val caseRawName = valueDefinition.name.getOrElse {
         valueDefinition.value match {
           case StringConstValue(value) => value
-          case const => throw GeneralCodegenException(s"The name of enum cannot be derived from value ${const}")
+          case const                   => throw GeneralCodegenException(s"The name of enum cannot be derived from value ${const}")
         }
       }
       val caseName       = Term.Name(caseRawName).syntax
@@ -238,8 +238,7 @@ class CodeGen(implicit
       .collect {
         case (typeToken, resourceDefinition) if !resourceDefinition.isOverlay =>
           sourceFilesForResource(
-            typeCoordinates =
-              PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts),
+            typeCoordinates = PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts),
             resourceDefinition = resourceDefinition,
             typeToken = PulumiToken(typeToken),
             isProvider = false
@@ -264,6 +263,14 @@ class CodeGen(implicit
       "urn" -> PropertyDefinition(typeReference = UrnType),
       "id" -> PropertyDefinition(typeReference = ResourceIdType)
     )
+    // Some property names are reserved for resource outputs
+    resourceDefinition.properties.foreach {
+      case (name, _) => {
+        if (name == "urn" || name == "id") {
+          throw GeneralCodegenException(s"invalid property for '${typeToken.asString}': property name '${name}' is reserved")
+        }
+      }
+    }
 
     val requiredOutputs = (resourceDefinition.required ++ List("urn", "id")).toSet
 
@@ -400,8 +407,7 @@ class CodeGen(implicit
       .collect {
         case (functionToken, functionDefinition) if !functionDefinition.isOverlay =>
           sourceFilesForFunction(
-            functionCoordinates =
-              PulumiDefinitionCoordinates.fromRawToken(functionToken, moduleToPackageParts, providerToPackageParts),
+            functionCoordinates = PulumiDefinitionCoordinates.fromRawToken(functionToken, moduleToPackageParts, providerToPackageParts),
             functionDefinition = functionDefinition,
             functionToken = PulumiToken(functionToken)
           )
