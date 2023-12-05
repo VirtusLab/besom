@@ -359,7 +359,7 @@ class CodeGen(implicit
             |    args: ${argsClassName}${argsDefault},
             |    opts: besom.CustomResourceOptions = besom.CustomResourceOptions()
             |  ): besom.types.Output[$baseClassName] =
-            |    ctx.registerResource[$baseClassName, $argsClassName](${token}, name, args, opts)
+            |    ctx.readOrRegisterResource[$baseClassName, $argsClassName](${token}, name, args, opts)
             |
             |  given outputOps: {} with
             |    extension(output: besom.types.Output[$baseClassName])
