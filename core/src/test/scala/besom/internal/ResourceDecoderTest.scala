@@ -37,9 +37,9 @@ class ResourceDecoderTest extends munit.FunSuite:
       output.getData.unsafeRunSync()
       fail("Expected failed output")
     catch
-      case de: besom.internal.DecodingError =>
+      case de: besom.internal.DecodingError            =>
       case ade: besom.internal.AggregatedDecodingError =>
-      case t: Throwable                     => fail(s"Expected DecodingError", clues(t))
+      case t: Throwable                                => fail(s"Expected DecodingError", clues(t))
 
   test("resource resolver - happy path") {
     val resourceDecoder = summon[ResourceDecoder[TestResource]]
@@ -51,7 +51,7 @@ class ResourceDecoderTest extends munit.FunSuite:
     val errorOrResourceResult = Right(
       RawResourceResult(
         urn = URN("urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource"),
-        id = Some(ResourceId("fakeId")),
+        id = Some("fakeId"),
         data = Struct(
           Map(
             "property1" -> Some("abc").asValue,
@@ -89,10 +89,14 @@ class ResourceDecoderTest extends munit.FunSuite:
 
     given Context = DummyContext().unsafeRunSync()
 
+    val resourceId: ResourceId = "fakeId"
+    val viaUnsafeOf            = ResourceId.unsafeOf(resourceId)
+    assert(viaUnsafeOf == resourceId)
+
     val errorOrResourceResult = Right(
       RawResourceResult(
         urn = URN("urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource"),
-        id = Some(ResourceId("fakeId")),
+        id = Some(resourceId),
         data = Struct(
           Map(
             "property1" -> Some("abc").asValue,
@@ -132,7 +136,7 @@ class ResourceDecoderTest extends munit.FunSuite:
     val errorOrResourceResult = Right(
       RawResourceResult(
         urn = URN("urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource"),
-        id = Some(ResourceId("fakeId")),
+        id = Some(ResourceId.unsafeOf("fakeId")),
         data = Struct(
           Map(
             "property1" -> Some("abc").asValue,
@@ -161,3 +165,4 @@ class ResourceDecoderTest extends munit.FunSuite:
     checkOutput(resource.property2)(123, Set(resource, dependencyResource), false)
     assertDecodingError(resource.property3)
   }
+end ResourceDecoderTest

@@ -64,3 +64,20 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
     val (_, encoded) = e.encode(SpecialCaseClass(10, "abc", "qwerty")).unsafeRunSync()
     assertEqualsValue(encoded, expected)
   }
+
+  test("encode a union of string and case class") {
+    val e = summon[Encoder[String | TestCaseClass]]
+
+    val (_, encodedString) = e.encode("abc").unsafeRunSync()
+    assertEqualsValue(encodedString, "abc".asValue)
+
+    val (_, encodedCaseClass) = e.encode(TestCaseClass(10, List("qwerty"), None, None, Some("abc"))).unsafeRunSync()
+    val expected = Map(
+      "foo" -> 10.asValue,
+      "bar" -> List("qwerty".asValue).asValue,
+      "optNone1" -> Null,
+      "optSome" -> Some("abc").asValue
+    ).asValue
+    assertEqualsValue(encodedCaseClass, expected)
+  }
+end EncoderTest

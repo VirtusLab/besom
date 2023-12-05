@@ -234,14 +234,18 @@ object types:
       */
     val empty: ResourceId = ""
 
-    // this should be only usable in Decoder and RawResourceResult.fromResponse
-    private[besom] def apply(s: String): ResourceId = s
+    def apply(nes: NonEmptyString): ResourceId = nes
+
+    implicit inline def str2ResourceId(inline s: String): ResourceId = apply(NonEmptyString.from(s))
+
+    // this should be used ONLY in Decoder and RawResourceResult smart constructors
+    private[besom] def unsafeOf(s: String): ResourceId = s
 
     extension (id: ResourceId)
       /** @return
         *   the [[ResourceId]] as a [[String]]
         */
-      def asString: String = id
+      private[besom] def asString: String = id
 
   sealed trait AssetOrArchive
 
