@@ -1,6 +1,7 @@
 package besom.internal
 
 import besom.util.*
+import besom.types.{URN, ResourceId}
 
 trait CommonResourceOptions:
   def parent: Option[Resource]
@@ -11,7 +12,8 @@ trait CommonResourceOptions:
   def customTimeouts: Option[String] // CustomTimeouts // TODO
   // def resourceTransformations: List[ResourceTransformation], // TODO
   // def aliases: List[Output[Alias]], // TODO
-  def urn: Option[String] // TODO this is only necessary for Resource deserialization, dependency resources and multi-language remote components
+  // TODO this is only necessary for Resource deserialization, dependency resources and multi-language remote components
+  def urn: Option[URN]
   def replaceOnChanges: List[String] // TODO?
   def retainOnDelete: Boolean
   def pluginDownloadUrl: String
@@ -27,7 +29,7 @@ final case class CommonResourceOptionsImpl(
   customTimeouts: Option[String], // CustomTimeouts // TODO
   // resourceTransformations: List[ResourceTransformation], // TODO
   // aliases: List[Output[Alias]], // TODO
-  urn: Option[String], // TODO better type
+  urn: Option[URN],
   replaceOnChanges: List[String], // TODO?
   retainOnDelete: Boolean,
   pluginDownloadUrl: String, // should be blank string when not provided
@@ -44,13 +46,25 @@ sealed trait ResourceOptions:
   def ignoreChanges: List[String]
   def replaceOnChanges: List[String]
   def retainOnDelete: Boolean
+  def urn: Option[URN]
+
+  private[besom] def hasURN: Boolean = urn.isDefined
+  private[besom] def hasImportId: Boolean = this match
+    case cr: CustomResourceOptions         => cr.importId.isDefined
+    case sr: StackReferenceResourceOptions => sr.importId.isDefined
+    case _                                 => false
+
+  private[besom] def getImportId: Option[ResourceId] = this match
+    case cr: CustomResourceOptions         => cr.importId
+    case sr: StackReferenceResourceOptions => sr.importId
+    case _                                 => None
 
 final case class CustomResourceOptions private[internal] (
   common: CommonResourceOptions,
   provider: Option[ProviderResource],
   deleteBeforeReplace: Boolean,
   additionalSecretOutputs: List[String],
-  importId: Option[NonEmptyString] // TODO should this be Id?
+  importId: Option[ResourceId] // TODO should this be Id?
 ) extends ResourceOptions,
       CommonResourceOptions:
   export common.*
@@ -64,7 +78,7 @@ final case class ComponentResourceOptions private[internal] (
 
 final case class StackReferenceResourceOptions private[internal] (
   common: CommonResourceOptions,
-  id: Option[Output[NonEmptyString]] // TODO: This is for StackReference, should this be Id?
+  importId: Option[ResourceId] // TODO: This is for StackReference, should this be Id?
 ) extends ResourceOptions,
       CommonResourceOptions:
   export common.*
@@ -81,13 +95,13 @@ trait CustomResourceOptionsFactory:
     customTimeouts: String | NotProvided = NotProvided, // CustomTimeouts // TODO
     // resourceTransformations: List[ResourceTransformation], // TODO
     // aliases: List[Output[Alias]], // TODO
-    urn: String | NotProvided = NotProvided, // TODO better type
+    urn: URN | NotProvided = NotProvided, // TODO better type
     replaceOnChanges: List[String] = List.empty, // TODO?
     retainOnDelete: Boolean = false,
     pluginDownloadUrl: String | NotProvided = NotProvided,
     deleteBeforeReplace: Boolean = false,
     additionalSecretOutputs: List[String] = List.empty,
-    importId: NonEmptyString | NotProvided = NotProvided
+    importId: ResourceId | NotProvided = NotProvided
   ): CustomResourceOptions = CustomResourceOptions.apply(
     parent = parent,
     dependsOn = dependsOn,
@@ -118,13 +132,13 @@ object CustomResourceOptions:
     customTimeouts: String | NotProvided = NotProvided, // CustomTimeouts // TODO
     // resourceTransformations: List[ResourceTransformation], // TODO
     // aliases: List[Output[Alias]], // TODO
-    urn: String | NotProvided = NotProvided, // TODO better type
+    urn: URN | NotProvided = NotProvided,
     replaceOnChanges: List[String] = List.empty, // TODO?
     retainOnDelete: Boolean = false,
     pluginDownloadUrl: String | NotProvided = NotProvided,
     deleteBeforeReplace: Boolean = false,
     additionalSecretOutputs: List[String] = List.empty,
-    importId: NonEmptyString | NotProvided = NotProvided
+    importId: ResourceId | NotProvided = NotProvided
   ): CustomResourceOptions =
     val common = CommonResourceOptionsImpl(
       parent = parent.asOption,
@@ -146,6 +160,7 @@ object CustomResourceOptions:
       additionalSecretOutputs = additionalSecretOutputs,
       importId = importId.asOption
     )
+end CustomResourceOptions
 
 object ComponentResourceOptions:
   def apply(using Context)(
@@ -159,7 +174,7 @@ object ComponentResourceOptions:
     customTimeouts: String | NotProvided = NotProvided, // CustomTimeouts // TODO
     // resourceTransformations: List[ResourceTransformation], // TODO
     // aliases: List[Output[Alias]], // TODO
-    urn: String | NotProvided = NotProvided, // TODO better type
+    urn: URN | NotProvided = NotProvided,
     replaceOnChanges: List[String] = List.empty, // TODO?
     retainOnDelete: Boolean = false,
     pluginDownloadUrl: String | NotProvided = NotProvided,

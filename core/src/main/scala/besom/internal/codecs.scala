@@ -32,7 +32,6 @@ case class DecodingError(message: String, cause: Throwable = null, label: Label)
 case class AggregatedDecodingError(errors: NonEmptyVector[DecodingError]) extends Exception(errors.map(_.message).toVector.mkString("\n"))
 /*
  * Would be awesome to make error reporting better, ie:
- *  - make DecodingError work with any arity of errors and return aggregates
  *  - render yamled or jsoned version of top Value on error (so at the bottom of the stack!)
  *    this, along with the jq-like path to errors, would allow for very easy debugging
  *

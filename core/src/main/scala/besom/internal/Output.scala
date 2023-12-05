@@ -25,7 +25,6 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
       yield nested.flatten
     )
 
-  // EXTREMELY EXPERIMENTAL
   def flatMap[F[_]: Result.ToFuture, B](f: A => F[B]): Output[B] =
     Output.ofData(
       for
