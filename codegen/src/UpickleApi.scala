@@ -1,7 +1,7 @@
 package besom.codegen
 
 //noinspection ScalaUnusedSymbol
-private[codegen] object UpickleApi extends upickle.AttributeTagged {
+private[besom] object UpickleApi extends upickle.AttributeTagged {
   override implicit def OptionWriter[T: Writer]: Writer[Option[T]] =
     implicitly[Writer[T]].comap[Option[T]] {
       case None    => null.asInstanceOf[T]

@@ -4,12 +4,16 @@
 //> using dep com.lihaoyi::requests:0.8.0
 //> using dep com.lihaoyi::upickle:3.1.3
 //> using dep org.virtuslab::scala-yaml:0.0.8
+//> using dep org.virtuslab::besom-codegen:0.1.1-SNAPSHOT
 //> using file common.scala
 
+package besom.scripts
+
+import besom.codegen.Config.CodegenConfig
+import besom.codegen.{PackageMetadata, generator, UpickleApi}
 import org.virtuslab.yaml.*
 
 import java.util.Date
-import scala.concurrent.duration.Duration
 import scala.util.*
 import scala.util.control.NonFatal
 
@@ -32,7 +36,7 @@ import scala.util.control.NonFatal
   )
 
   val codegenProblemPackages = Vector(
-    "iosxe", // schemaOnlyProvider does not implement runtime operation InitLogging
+    "iosxe" // schemaOnlyProvider does not implement runtime operation InitLogging
   )
 
   val brokenPackages = pluginDownloadProblemPackages ++ codegenProblemPackages
@@ -47,23 +51,24 @@ import scala.util.control.NonFatal
   def generateAll(targetPath: os.Path): Unit = {
     val metadata = readAllPackagesMetadata(targetPath)
     withProgress("Generating packages from metadata", metadata.size) {
-      metadata.foreach { case (PackageMetadata(name, version, _), path: os.Path) =>
-        Progress.report(label = s"$name:$version")
-        try
-          os.proc(
-            "scala-cli",
-            "--power",
-            "run",
-            "codegen",
-            "--suppress-experimental-feature-warning",
-            "--",
-            "metadata",
-            path
-          ).call()
-        catch
-          case NonFatal(_) =>
-            Progress.fail(s"Code generation failed for provider '${name}' version '${version}'")
-        finally Progress.end
+      metadata.foreach {
+        case (m @ PackageMetadata(name, Some(version), _), metadataPath: os.Path) =>
+          Progress.report(label = s"$name:$version")
+          try
+            implicit val codegenConfig: CodegenConfig = CodegenConfig()
+            val result = generator.generatePackageSources(metadata = m)
+            println(new Date)
+            println(s"Successfully generated provider '${name}' version '${version}'")
+            println(result.asString)
+            println()
+          catch
+            case NonFatal(_) =>
+              Progress.fail(s"Code generation failed for provider '${name}' version '${version}'")
+          finally Progress.end
+        case (PackageMetadata(name, None, _), _: os.Path) =>
+          Progress.report(label = s"$name")
+          Progress.fail(s"Code generation failed for provider '${name}', version is not defined")
+          Progress.end
       }
     }
   }
@@ -78,16 +83,23 @@ import scala.util.control.NonFatal
 
     val metadata = readAllPackagesMetadata(targetPath)
     withProgress("Publishing packages locally", metadata.size) {
-      metadata.foreach { case (PackageMetadata(name, version, _), _: os.Path) =>
-        Progress.report(label = s"$name:$version")
-        try
-          val logFile = logDir / s"${name}-${version}.log"
-          os.proc("just", "publish-local-provider-sdk", name, version)
-            .call(stdout = logFile, stderr = logFile)
-        catch
-          case NonFatal(_) =>
-            Progress.fail(s"Publish failed for provider '${name}' version '${version}'")
-        finally Progress.end
+      metadata.foreach {
+        case (PackageMetadata(name, Some(version), _), _: os.Path) =>
+          Progress.report(label = s"$name:$version")
+          try
+            val logFile = logDir / s"${name}-${version}.log"
+            os.proc("just", "publish-local-provider-sdk", name, version.asString)
+              .call(stdout = logFile, stderr = logFile)
+            println(new Date)
+            println(s"Successfully published locally provider '${name}' version '${version}'")
+          catch
+            case NonFatal(_) =>
+              Progress.fail(s"Publish failed for provider '${name}' version '${version}'")
+          finally Progress.end
+        case (PackageMetadata(name, None, _), _: os.Path) =>
+          Progress.report(label = s"$name")
+          Progress.fail(s"Publish failed for provider '${name}', version is not defined")
+          Progress.end
       }
     }
   }
@@ -98,18 +110,23 @@ import scala.util.control.NonFatal
 
     val metadata = readAllPackagesMetadata(targetPath)
     withProgress("Publishing packages to Maven", metadata.size) {
-      metadata.foreach { case (PackageMetadata(name, version, _), _: os.Path) =>
-        Progress.report(label = s"$name:$version")
-        try
-          val logFile = logDir / s"${name}-${version}.log"
-          os.proc("just", "publish-maven-provider-sdk", name, version)
-            .call(stdout = logFile, stderr = logFile)
-          println(new Date)
-          println(s"Successfully published provider '${name}' version '${version}'")
-        catch
-          case NonFatal(_) =>
-            Progress.fail(s"Publish failed for provider '${name}' version '${version}'")
-        finally Progress.end
+      metadata.foreach {
+        case (PackageMetadata(name, Some(version), _), _: os.Path) =>
+          Progress.report(label = s"$name:$version")
+          try
+            val logFile = logDir / s"${name}-${version}.log"
+            os.proc("just", "publish-maven-provider-sdk", name, version.asString)
+              .call(stdout = logFile, stderr = logFile)
+            println(new Date)
+            println(s"Successfully published provider '${name}' version '${version}'")
+          catch
+            case NonFatal(_) =>
+              Progress.fail(s"Publish failed for provider '${name}' version '${version}'")
+          finally Progress.end
+        case (PackageMetadata(name, None, _), _: os.Path) =>
+          Progress.report(label = s"$name")
+          Progress.fail(s"Publish failed for provider '${name}', version is not defined")
+          Progress.end
       }
     }
   }
@@ -118,7 +135,7 @@ import scala.util.control.NonFatal
     val metadataFiles = os.list(targetPath).filter(_.last.endsWith("metadata.json"))
     val metadata = metadataFiles
       .map { path =>
-        val metadata = upickle_.read[PackageMetadata](os.read(path))
+        val metadata = PackageMetadata.fromJsonFile(path)
         (metadata, path)
       }
       .collect {
@@ -142,9 +159,9 @@ import scala.util.control.NonFatal
     if packagesResponse.statusCode != 200
     then throw Exception(s"Failed to fetch packages list from: '$packagesRepoApi'")
 
-    case class PackageSource(name: String, download_url: String, sha: String) derives upickle_.ReadWriter
+    case class PackageSource(name: String, download_url: String, sha: String) derives UpickleApi.ReadWriter
     object PackageSource {
-      def fromJsonArray(json: ujson.Readable): List[PackageSource] = upickle_.read(json, trace = true)
+      def fromJsonArray(json: ujson.Readable): List[PackageSource] = UpickleApi.read(json, trace = true)
     }
 
     val packages: List[PackageSource] = PackageSource.fromJsonArray(packagesResponse.text())
@@ -204,41 +221,3 @@ import scala.util.control.NonFatal
   }
 
 end run
-
-// synchronize with codegen/src/PackageMetadata.scala
-private case class PackageMetadata private (
-  name: String,
-  version: String,
-  server: Option[String] = None
-) derives upickle_.ReadWriter {
-  require(name.nonEmpty, "name cannot be empty")
-  require(version.nonEmpty, "version cannot be empty")
-
-  def withUrl(url: String): PackageMetadata = {
-    val server = url match {
-      case s"https://github.com/pulumi/pulumi-${_}" => None // use default
-      case s"https://github.com/$org/$name"         => Some(s"github://api.github.com/$org/$name")
-      case _                                        => throw Exception(s"Unknown repo url format: ${url}")
-    }
-    PackageMetadata(name, version, server)
-  }
-
-  def toJson: String = upickle_.write(this)
-}
-object PackageMetadata:
-  def apply(name: String, version: String, server: Option[String] = None): PackageMetadata =
-    new PackageMetadata(name, version.trim.stripPrefix("v"), server)
-
-private object upickle_ extends upickle.AttributeTagged {
-  override implicit def OptionWriter[T: Writer]: Writer[Option[T]] =
-    implicitly[Writer[T]].comap[Option[T]] {
-      case None    => null.asInstanceOf[T]
-      case Some(x) => x
-    }
-
-  override implicit def OptionReader[T: Reader]: Reader[Option[T]] = {
-    new Reader.Delegate[Any, Option[T]](implicitly[Reader[T]].map(Some(_))) {
-      override def visitNull(index: Int): Option[Nothing] = None
-    }
-  }
-}

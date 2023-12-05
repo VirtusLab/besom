@@ -1,8 +1,10 @@
 package besom.codegen
 
-import scala.meta._
+import besom.codegen.metaschema.*
+import besom.codegen.scalameta.interpolator.*
+
+import scala.meta.*
 import scala.meta.dialects.Scala33
-import besom.codegen.metaschema._
 
 class TypeMapper(
   val defaultPackageInfo: PulumiPackageInfo,
@@ -103,33 +105,33 @@ class TypeMapper(
         }
       }
 
-    classCoordinates.map(_.fullyQualifiedTypeRef)
+    classCoordinates.map(_.typeRef)
   }
 
   def asScalaType(typeRef: TypeReference, asArgsType: Boolean, fallbackType: Option[AnonymousType] = None): Type =
     typeRef match {
-      case BooleanType         => t"Boolean"
-      case StringType          => t"String"
-      case IntegerType         => t"Int"
-      case NumberType          => t"Double"
-      case UrnType             => t"besom.types.URN"
-      case ResourceIdType      => t"besom.types.ResourceId"
-      case ArrayType(elemType) => t"scala.collection.immutable.List[${asScalaType(elemType, asArgsType)}]"
-      case MapType(elemType)   => t"scala.Predef.Map[String, ${asScalaType(elemType, asArgsType)}]"
+      case BooleanType         => scalameta.types.Boolean
+      case StringType          => scalameta.types.String
+      case IntegerType         => scalameta.types.Int
+      case NumberType          => scalameta.types.Double
+      case UrnType             => scalameta.types.besom.types.URN
+      case ResourceIdType      => scalameta.types.besom.types.ResourceId
+      case ArrayType(elemType) => scalameta.types.List(asScalaType(elemType, asArgsType))
+      case MapType(elemType)   => scalameta.types.Map(scalameta.types.String, asScalaType(elemType, asArgsType))
       case unionType: UnionType =>
         unionType.oneOf.map(asScalaType(_, asArgsType, unionType.`type`)).reduce { (t1, t2) =>
-          if (t1.syntax == t2.syntax) t"$t1" else t"$t1 | $t2"
+          if t1.syntax == t2.syntax then t1 else Type.ApplyInfix(t1, Type.Name("|"), t2)
         }
       case namedType: NamedType =>
         unescape(namedType.typeUri) match {
           case "pulumi.json#/Archive" =>
-            t"besom.types.Archive"
+            scalameta.types.besom.types.Archive
           case "pulumi.json#/Asset" =>
-            t"besom.types.AssetOrArchive"
+            scalameta.types.besom.types.AssetOrArchive
           case "pulumi.json#/Any" =>
-            t"besom.types.PulumiAny"
+            scalameta.types.besom.types.PulumiAny
           case "pulumi.json#/Json" =>
-            t"besom.types.PulumiJson"
+            scalameta.types.besom.types.PulumiJson
 
           case typeUri =>
             scalaTypeFromTypeUri(typeUri, asArgsType) match {
@@ -151,8 +153,6 @@ class TypeMapper(
                 }
             }
         }
-      case _ =>
-        throw TypeMapperError(s"Unsupported type: '${typeRef}'")
     }
 
   private def unescape(value: String) = {

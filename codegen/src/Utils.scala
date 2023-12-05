@@ -1,10 +1,8 @@
 package besom.codegen
 
-import besom.codegen.PackageVersion.PackageVersion
+import besom.codegen.metaschema.*
 
-import scala.meta.Type
-import besom.codegen.metaschema.{FunctionDefinition, PulumiPackage, ResourceDefinition, TypeDefinition, TypeReference}
-
+import scala.meta.{Lit, Type}
 import scala.util.matching.Regex
 
 object Utils {
@@ -22,6 +20,15 @@ object Utils {
   val jvmMaxParamsCount = 253 // https://github.com/scala/bug/issues/7324
 
   type FunctionName = String
+
+  implicit class ConstValueOps(constValue: ConstValue) {
+    def asScala: Lit = constValue match {
+      case StringConstValue(value)  => Lit.String(value)
+      case BooleanConstValue(value) => Lit.Boolean(value)
+      case IntConstValue(value)     => Lit.Int(value)
+      case DoubleConstValue(value)  => Lit.Double(value)
+    }
+  }
 
   implicit class TypeReferenceOps(typeRef: TypeReference) {
     def asScalaType(asArgsType: Boolean = false)(implicit typeMapper: TypeMapper): Type =
@@ -56,7 +63,7 @@ object Utils {
       }
     }
 
-    private def packageFormatModuleToPackageParts: String => Seq[String] = { module: String =>
+    private def packageFormatModuleToPackageParts: String => Seq[String] = { (module: String) =>
       val moduleFormat: Regex = pulumiPackage.meta.moduleFormat.r
       module match {
         case _ if module.isEmpty =>
@@ -80,16 +87,16 @@ object Utils {
     def toPackageMetadata(overrideMetadata: PackageMetadata): PackageMetadata =
       toPackageMetadata(Some(overrideMetadata))
     def toPackageMetadata(overrideMetadata: Option[PackageMetadata] = None): PackageMetadata = {
-      import PackageVersion._
+      import PackageVersion.*
       overrideMetadata match {
-        case Some(d) => PackageMetadata(d.name, PackageVersion.parse(pulumiPackage.version).reconcile(d.version))
-        case None    => PackageMetadata(pulumiPackage.name, PackageVersion.parse(pulumiPackage.version))
+        case Some(d) => PackageMetadata(d.name, PackageVersion(pulumiPackage.version).reconcile(d.version))
+        case None    => PackageMetadata(pulumiPackage.name, PackageVersion(pulumiPackage.version))
       }
     }
 
     type FunctionToken = String
 
-    private [Utils] def nonOverlayFunctions(implicit logger: Logger): Map[FunctionToken, FunctionDefinition] = {
+    private[Utils] def nonOverlayFunctions(implicit logger: Logger): Map[FunctionToken, FunctionDefinition] = {
       val (overlays, functions) = pulumiPackage.functions.partition { case (_, d) => d.isOverlay }
       overlays.foreach { case (token, _) =>
         logger.info(s"Function '${token}' was not generated because it was marked as overlay")

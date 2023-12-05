@@ -2,7 +2,7 @@ package besom.codegen.metaschema
 
 import upickle.implicits.{key => fieldKey}
 import besom.codegen.{GeneralCodegenException, UpickleApi}
-import besom.codegen.UpickleApi._
+import besom.codegen.UpickleApi.*
 
 /** PulumiPackage describes a Pulumi package.
   *

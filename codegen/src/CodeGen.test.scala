@@ -93,14 +93,15 @@ class CodeGenTest extends munit.FunSuite {
               |  helmReleaseSettings: besom.types.Output[scala.Option[besom.api.example.inputs.HelmReleaseSettingsArgs]]
               |) derives besom.types.ProviderArgsEncoder
               |
+              |
               |object ProviderArgs:
               |  def apply(
-              |    helmReleaseSettings: besom.types.Input.Optional[besom.api.example.inputs.HelmReleaseSettingsArgs] = None
+              |    helmReleaseSettings: besom.types.Input.Optional[besom.api.example.inputs.HelmReleaseSettingsArgs] = scala.None
               |  )(using besom.types.Context): ProviderArgs =
               |    new ProviderArgs(
               |      helmReleaseSettings = helmReleaseSettings.asOptionOutput(isSecret = false)
               |    )
-              |""".stripMargin // TODO: the input should be marked as json=true equivalent
+              |""".stripMargin
       ),
       ignored = List(
         "src/index/outputs/HelmReleaseSettings.scala",

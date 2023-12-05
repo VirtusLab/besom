@@ -1,14 +1,13 @@
 package besom.codegen
 
-import scala.meta._
-import scala.meta.dialects.Scala33
+import scala.meta.*
 
 case class ScalaDefinitionCoordinates private (
   private val providerPackageParts: Seq[String],
   private val modulePackageParts: Seq[String],
   definitionName: String
 ) {
-  import ScalaDefinitionCoordinates._
+  import ScalaDefinitionCoordinates.*
 
   // only used for package parts sanitization
   // DO NOT use for splitting the package parts
@@ -18,15 +17,14 @@ case class ScalaDefinitionCoordinates private (
       .map(_.replace("-", ""))
   }
 
-  private def packageRef: Term.Ref = {
+  def packageRef: Term.Ref = {
     try {
       // we remove index from the package, if necessary
       val moduleParts = modulePackageParts.toList match {
         case head :: tail if head == Utils.indexModuleName => tail
         case p                                             => p
       }
-      val partsHead :: partsTail = sanitizeParts(baseApiPackagePrefixParts ++ providerPackageParts ++ moduleParts)
-      partsTail.foldLeft[Term.Ref](Term.Name(partsHead))((acc, name) => Term.Select(acc, Term.Name(name)))
+      scalameta.ref(sanitizeParts(baseApiPackagePrefixParts ++ providerPackageParts ++ moduleParts))
     } catch {
       case e: org.scalameta.invariants.InvariantFailedException =>
         throw ScalaDefinitionCoordinatesError(
@@ -38,13 +36,10 @@ case class ScalaDefinitionCoordinates private (
     }
   }
 
-  def fullyQualifiedTypeRef: Type.Ref = {
-    Type.Select(packageRef, Type.Name(definitionName))
-  }
-
-  def fullPackageName: String = {
-    packageRef.syntax
-  }
+  def termName: Term.Name = Term.Name(definitionName)
+  def typeName: Type.Name = Type.Name(definitionName)
+  def termRef: Term.Ref = Term.Select(packageRef, termName)
+  def typeRef: Type.Ref = Type.Select(packageRef, typeName)
 
   def filePath(implicit providerConfig: Config.ProviderConfig): FilePath = {
     // we DO NOT remove index from the file path, we add it if necessary
@@ -58,7 +53,6 @@ case class ScalaDefinitionCoordinates private (
           moduleName :: tail
         }
       case Nil => Utils.indexModuleName :: Nil
-      case p   => p
     }
     FilePath(Seq("src") ++ moduleParts ++ Seq(s"${definitionName}.scala"))
   }

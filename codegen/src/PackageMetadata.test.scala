@@ -2,7 +2,7 @@ package besom.codegen
 
 //noinspection ScalaFileName,TypeAnnotation
 class PackageMetadataTest extends munit.FunSuite {
-  import besom.codegen.PackageVersion._
+  import besom.codegen.PackageVersion.*
 
   test("fromJson") {
     val json = """{"name":"aws","version":"v6.7.0"}"""
@@ -18,7 +18,7 @@ class PackageMetadataTest extends munit.FunSuite {
   test("toJson") {
     val metadata = PackageMetadata("aws", "v6.7.0")
     assertEquals(
-      metadata.version.orDefault,
+      metadata.version.orDefault.asString,
       "6.7.0"
     )
 
@@ -49,35 +49,35 @@ class PackageVersionTest extends munit.FunSuite {
   implicit val logger: Logger = new Logger
 
   test("parse") {
-    assertEquals(PackageVersion.parse("v6.7.0"), Some("6.7.0"))
-    assertEquals(PackageVersion.parse("v6.7.0"), Some("6.7.0"))
-    assertEquals(PackageVersion.parse("0.123.1"), Some("0.123.1"))
-    assertEquals(PackageVersion.parse("1.0"), Some("1.0.0"))
-    assertEquals(PackageVersion.parse("1"), Some("1.0.0"))
-    assertEquals(PackageVersion.parse("v1"), Some("1.0.0"))
-    assertEquals(PackageVersion.parse("v1.0.0-alpha.1"), Some("1.0.0-alpha.1"))
-    assertEquals(PackageVersion.parse("v1.0.0-0.3.7"), Some("1.0.0-0.3.7"))
-    assertEquals(PackageVersion.parse("v1.0.0-alpha+001"), Some("1.0.0-alpha+001"))
-    assertEquals(PackageVersion.parse(""), None)
-    assertEquals(PackageVersion.parse("v6.7.0.0"), None)
+    assertEquals(PackageVersion("v6.7.0").map(_.asString), Some("6.7.0"))
+    assertEquals(PackageVersion("v6.7.0").map(_.asString), Some("6.7.0"))
+    assertEquals(PackageVersion("0.123.1").map(_.asString), Some("0.123.1"))
+    assertEquals(PackageVersion("1.0").map(_.asString), Some("1.0.0"))
+    assertEquals(PackageVersion("1").map(_.asString), Some("1.0.0"))
+    assertEquals(PackageVersion("v1").map(_.asString), Some("1.0.0"))
+    assertEquals(PackageVersion("v1.0.0-alpha.1").map(_.asString), Some("1.0.0-alpha.1"))
+    assertEquals(PackageVersion("v1.0.0-0.3.7").map(_.asString), Some("1.0.0-0.3.7"))
+    assertEquals(PackageVersion("v1.0.0-alpha+001").map(_.asString), Some("1.0.0-alpha+001"))
+    assertEquals(PackageVersion(""), None)
+    assertEquals(PackageVersion("v6.7.0.0"), None)
   }
 
   test("parse") {
-    assertEquals(PackageVersion.parse("v6.7.0"), Some("6.7.0"))
-    assertEquals(PackageVersion.parse("v6.7.0"), Some("6.7.0"))
-    assertEquals(PackageVersion.parse("6.7.0"), Some("6.7.0"))
-    assertEquals(PackageVersion.parse("1.0"), Some("1.0.0"))
-    assertEquals(PackageVersion.parse("1"), Some("1.0.0"))
-    assertEquals(PackageVersion.parse(""), None)
+    assertEquals(PackageVersion("v6.7.0").map(_.asString), Some("6.7.0"))
+    assertEquals(PackageVersion("v6.7.0").map(_.asString), Some("6.7.0"))
+    assertEquals(PackageVersion("6.7.0").map(_.asString), Some("6.7.0"))
+    assertEquals(PackageVersion("1.0").map(_.asString), Some("1.0.0"))
+    assertEquals(PackageVersion("1").map(_.asString), Some("1.0.0"))
+    assertEquals(PackageVersion(""), None)
   }
 
   test("reconcile") {
-    import PackageVersion._
+    import PackageVersion.*
 
-    assertEquals(PackageVersion.parse("v6.7.0").reconcile(Some("6.7.0")), Some("6.7.0"))
-    assertEquals(PackageVersion.parse("v6.7.0").reconcile(Some("1.2.0")), Some("6.7.0"))
-    assertEquals(PackageVersion.parse("v6.7.0").reconcile(Some(PackageVersion.default)), Some("6.7.0"))
-    assertEquals(Some(PackageVersion.default).reconcile(Some("v6.7.0")), Some("6.7.0"))
+    assertEquals(PackageVersion("v6.7.0").reconcile(PackageVersion("6.7.0")).map(_.asString), Some("6.7.0"))
+    assertEquals(PackageVersion("v6.7.0").reconcile(PackageVersion("1.2.0")).map(_.asString), Some("6.7.0"))
+    assertEquals(PackageVersion("v6.7.0").reconcile(Some(PackageVersion.default)).map(_.asString), Some("6.7.0"))
+    assertEquals(Some(PackageVersion.default).reconcile(PackageVersion("v6.7.0")).map(_.asString), Some("6.7.0"))
     assertEquals(Some(PackageVersion.default).reconcile(Some(PackageVersion.default)), None)
   }
 }
