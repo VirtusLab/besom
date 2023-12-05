@@ -79,7 +79,7 @@ class CodeGenTest extends munit.FunSuite {
               |    args: ProviderArgs = ProviderArgs(),
               |    opts: besom.CustomResourceOptions = besom.CustomResourceOptions()
               |  ): besom.types.Output[Provider] =
-              |    ctx.registerResource[Provider, ProviderArgs]("pulumi:providers:example", name, args, opts)
+              |    ctx.readOrRegisterResource[Provider, ProviderArgs]("pulumi:providers:example", name, args, opts)
               |
               |  given outputOps: {} with
               |    extension(output: besom.types.Output[Provider])

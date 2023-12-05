@@ -402,7 +402,7 @@ class CodeGen(implicit
             |    args: ${argsClassName}${argsDefault},
             |    opts: besom.CustomResourceOptions = besom.CustomResourceOptions()
             |  ): besom.types.Output[$baseClassName] =
-            |    ctx.registerResource[$baseClassName, $argsClassName](${tokenLit}, name, args, opts)
+            |    ctx.readOrRegisterResource[$baseClassName, $argsClassName](${tokenLit}, name, args, opts)
             |
             |  given outputOps: {} with
             |    extension(output: besom.types.Output[$baseClassName])
