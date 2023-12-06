@@ -35,22 +35,23 @@ def testToStack(name: String): String  = "tests-" + sanitizeName(name)
 
 //noinspection TypeAnnotation,ScalaWeakerAccess
 object pulumi {
-  def login(pulumiHome: os.Path) = pproc("pulumi", "--non-interactive", "login", s"file://$pulumiHome")
+  def login(pulumiHome: os.Path) = pproc("pulumi", "--non-interactive", "--logtostderr", "login", s"file://$pulumiHome")
 
-  def logout(pulumiHome: os.Path) = pproc("pulumi", "--non-interactive", "logout", s"file://$pulumiHome")
+  def logout(pulumiHome: os.Path) = pproc("pulumi", "--non-interactive", "--logtostderr", "logout", s"file://$pulumiHome")
 
   def stackInit(stackName: String) =
-    pproc("pulumi", "--non-interactive", "stack", "init", "--stack", stackName)
+    pproc("pulumi", "--non-interactive", "--logtostderr", "stack", "init", "--stack", stackName)
 
   def stackRm(stackName: String) =
-    pproc("pulumi", "--non-interactive", "stack", "rm", "-y", "--stack", stackName)
+    pproc("pulumi", "--non-interactive", "--logtostderr", "stack", "rm", "-y", "--stack", stackName)
 
   def preview(stackName: String, additional: os.Shellable*) =
-    pproc("pulumi", "--non-interactive", "preview", "--stack", stackName, additional)
+    pproc("pulumi", "--non-interactive", "--logtostderr", "preview", "--stack", stackName, additional)
 
   def up(stackName: String, additional: os.Shellable*) = pproc(
     "pulumi",
-    "--non-interactive",
+    "--non-interactive", 
+    "--logtostderr",
     "up",
     "--stack",
     stackName,
@@ -60,7 +61,8 @@ object pulumi {
 
   def destroy(stackName: String, additional: os.Shellable*) = pproc(
     "pulumi",
-    "--non-interactive",
+    "--non-interactive", 
+    "--logtostderr",
     "destroy",
     "--stack",
     stackName,
@@ -70,7 +72,8 @@ object pulumi {
 
   def config(stackName: String, additional: os.Shellable*) = pproc(
     "pulumi",
-    "--non-interactive",
+    "--non-interactive", 
+    "--logtostderr",
     "config",
     "--stack",
     stackName,
@@ -80,7 +83,8 @@ object pulumi {
 
   def secret(stackName: String, additional: os.Shellable*) = pproc(
     "pulumi",
-    "--non-interactive",
+    "--non-interactive", 
+    "--logtostderr",
     "config",
     "--stack",
     stackName,
@@ -91,7 +95,8 @@ object pulumi {
   
   def outputs(stackName: String, additional: os.Shellable*) = pproc(
     "pulumi",
-    "--non-interactive",
+    "--non-interactive", 
+    "--logtostderr",
     "stack",
     "output",
     "--stack",
@@ -103,7 +108,8 @@ object pulumi {
   def installScalaPlugin() =
     pproc(
       "pulumi",
-      "--non-interactive",
+      "--non-interactive", 
+      "--logtostderr",
       "plugin",
       "install",
       "language",

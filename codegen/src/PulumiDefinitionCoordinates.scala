@@ -37,7 +37,7 @@ case class PulumiDefinitionCoordinates private (
   }
 
   private def splitMethodName(definitionName: String): (Seq[String], String) = {
-    val methodNameParts = definitionName.split("/")
+    val methodNameParts = definitionName.split("/").toSeq
     val methodName = methodNameParts.last
     val methodPrefix = methodNameParts.init.filterNot(_ == methodName) // filter out the function name duplication
     (methodPrefix, methodName)

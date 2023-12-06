@@ -93,7 +93,7 @@ class LanguagePluginTest extends munit.FunSuite {
     assert(clue(pulumiUpOutput).contains(expectedError))
 
     val aboutInfoJson: String =
-      pproc("pulumi", "about", "--json").call(cwd = ctx.testDir, env = ctx.env).out.text()
+      pproc("pulumi", "--non-interactive", "about", "--json").call(cwd = ctx.testDir, env = ctx.env).out.text()
 
     val aboutPluginsVersions: Map[String, String] = ujson
       .read(aboutInfoJson)("plugins")
@@ -108,7 +108,7 @@ class LanguagePluginTest extends munit.FunSuite {
     }
 
     val pluginsLsJson =
-      pproc("pulumi", "plugin", "ls", "--json").call(cwd = ctx.testDir, env = ctx.env).out.text()
+      pproc("pulumi", "--non-interactive", "plugin", "ls", "--json").call(cwd = ctx.testDir, env = ctx.env).out.text()
 
     val installedPluginsVersions = ujson
       .read(pluginsLsJson)

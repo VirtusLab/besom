@@ -5,6 +5,8 @@
 //> using lib "org.scoverage::scalac-scoverage-domain:2.0.11"
 //> using lib "org.scoverage::scalac-scoverage-serializer:2.0.11"
 
+package besom.scripts
+
 import scoverage.domain.{ Constants, Coverage }
 import scoverage.reporter.{ CoverageAggregator, IOUtils, ScoverageHtmlWriter, ScoverageXmlWriter }
 import scoverage.serialize.Serializer
@@ -18,16 +20,16 @@ object Coverage:
     case "report" :: pathToSourceRoot :: reportsHTMLOutDir :: reportsXMLOutDir :: pathToCoverageData :: Nil =>
       report(File(pathToSourceRoot), File(pathToCoverageData), File(reportsHTMLOutDir), File(reportsXMLOutDir))
     case "report-module" :: modulePath :: Nil => // very specific to our project
-      val pathToSourceRootPath = File(modulePath).toPath()
-      val moduleName = pathToSourceRootPath.getFileName().toString()
-      val besomDir = pathToSourceRootPath.getParent()
+      val pathToSourceRootPath = File(modulePath).toPath
+      val moduleName = pathToSourceRootPath.getFileName.toString
+      val besomDir = pathToSourceRootPath.getParent
       val outDir = besomDir.resolve(".out")
       val coverageDir = outDir.resolve("coverage").resolve(moduleName)
       report(
-        pathToSourceRootPath.toFile(),
-        coverageDir.toFile(),
-        outDir.resolve("scoverage-report").resolve(moduleName).toFile(),
-        outDir.resolve("coverage-report").resolve(moduleName).toFile()
+        pathToSourceRootPath.toFile,
+        coverageDir.toFile,
+        outDir.resolve("scoverage-report").resolve(moduleName).toFile,
+        outDir.resolve("coverage-report").resolve(moduleName).toFile
       )
     case _ =>
       println("usage: coverage <command> <command-args>")

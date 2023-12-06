@@ -1,11 +1,12 @@
 package besom.codegen
 
-import scala.collection.mutable.ListBuffer
-import besom.codegen.metaschema._
 import besom.codegen.PackageMetadata.{SchemaFile, SchemaName}
-import besom.codegen.PackageVersion.PackageVersion
-import besom.codegen.Utils.PulumiPackageOps
+import besom.codegen.PackageVersion
 import besom.codegen.PackageVersion.PackageVersionOps
+import besom.codegen.Utils.PulumiPackageOps
+import besom.codegen.metaschema.*
+
+import scala.collection.mutable.ListBuffer
 
 trait SchemaProvider {
   def packageInfo(metadata: PackageMetadata, schema: Option[SchemaFile] = None): (PulumiPackage, PulumiPackageInfo)
@@ -20,7 +21,7 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
     collection.mutable.Map.empty
 
   private def pulumiPackage(metadata: PackageMetadata): (PulumiPackage, PackageMetadata) = {
-    val schemaFilePath = schemaCacheDirPath / metadata.name / metadata.version.orDefault / schemaFileName
+    val schemaFilePath = schemaCacheDirPath / metadata.name / metadata.version.orDefault.asString / schemaFileName
 
     if (!os.exists(schemaFilePath)) {
       logger.debug(
@@ -34,12 +35,12 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
           s"${metadata.name}@${metadata.version.orDefault}"
 
       val installCmd: List[String] =
-        List("pulumi", "--logtostderr", "plugin", "install", "resource", metadata.name) ++ {
+        List("pulumi", "--non-interactive", "--logtostderr", "plugin", "install", "resource", metadata.name) ++ {
           // use version only if it is not the default, otherwise try to install the latest
           if (metadata.version.isDefault)
             List.empty
           else
-            List(metadata.version.get)
+            List(metadata.version.get.asString)
         } ++ {
           // use server only if it is defined
           metadata.server.map(url => List("--server", url)).getOrElse(List.empty)
@@ -55,7 +56,7 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
 
       val schema =
         try {
-          os.proc("pulumi", "--logtostderr", "package", "get-schema", schemaSource).call().out.text
+          os.proc("pulumi", "--non-interactive", "--logtostderr", "package", "get-schema", schemaSource).call().out.text()
         } catch {
           case e: os.SubprocessException =>
             val msg =
@@ -67,7 +68,7 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
       // parse and save the schema using path corrected for the actual name and version for the package
       val pulumiPackage         = PulumiPackage.fromString(schema)
       val reconciled            = pulumiPackage.toPackageMetadata(metadata)
-      val correctSchemaFilePath = schemaCacheDirPath / reconciled.name / reconciled.version.orDefault / schemaFileName
+      val correctSchemaFilePath = schemaCacheDirPath / reconciled.name / reconciled.version.orDefault.asString / schemaFileName
       os.write.over(correctSchemaFilePath, schema, createFolders = true)
       (pulumiPackage, reconciled)
     } else {
@@ -82,7 +83,7 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
     // parse and save the schema using path corrected for the actual name and version for the package
     val pulumiPackage         = PulumiPackage.fromFile(schema)
     val reconciled            = pulumiPackage.toPackageMetadata(metadata)
-    val correctSchemaFilePath = schemaCacheDirPath / reconciled.name / reconciled.version.orDefault / schemaFileName
+    val correctSchemaFilePath = schemaCacheDirPath / reconciled.name / reconciled.version.orDefault.asString / schemaFileName
     os.copy.over(schema, correctSchemaFilePath, replaceExisting = true, createFolders = true)
     (pulumiPackage, metadata)
   }
@@ -122,8 +123,8 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
 
     // pre-process the package to gather information about types, that are used later during various parts of codegen
     // most notable place is TypeMapper.scalaTypeFromTypeUri
-    val enumTypeTokensBuffer   = ListBuffer.empty[String]
-    val objectTypeTokensBuffer = ListBuffer.empty[String]
+    val enumTypeTokensBuffer     = ListBuffer.empty[String]
+    val objectTypeTokensBuffer   = ListBuffer.empty[String]
     val resourceTypeTokensBuffer = ListBuffer.empty[String]
 
     // Post-process the tokens to unify them to lower case to circumvent inconsistencies in low quality schemas (e.g. aws)
@@ -138,11 +139,10 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
           logger.warn(s"Duplicate object type token '${coordinates.token.asLookupKey}' in package '${packageMetadata.name}'")
         objectTypeTokensBuffer += coordinates.token.asLookupKey
     }
-    pulumiPackage.parsedResources.foreach {
-      case (coordinates, _: ResourceDefinition) =>
-        if (resourceTypeTokensBuffer.contains(coordinates.token.asLookupKey))
-          logger.warn(s"Duplicate resource type token '${coordinates.token.asLookupKey}' in package '${packageMetadata.name}'")
-        resourceTypeTokensBuffer += coordinates.token.asLookupKey
+    pulumiPackage.parsedResources.foreach { case (coordinates, _: ResourceDefinition) =>
+      if (resourceTypeTokensBuffer.contains(coordinates.token.asLookupKey))
+        logger.warn(s"Duplicate resource type token '${coordinates.token.asLookupKey}' in package '${packageMetadata.name}'")
+      resourceTypeTokensBuffer += coordinates.token.asLookupKey
     }
 
     val reconciledMetadata = pulumiPackage.toPackageMetadata(packageMetadata)

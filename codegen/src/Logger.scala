@@ -3,7 +3,7 @@ package besom.codegen
 import scala.collection.mutable.ListBuffer
 
 class Logger(val printLevel: Logger.Level = Logger.Level.Info) {
-  import Logger.Level._
+  import Logger.Level.*
 
   private val buffer     = ListBuffer.empty[String]
   private var errorCount = 0
@@ -44,9 +44,9 @@ object Logger {
 
   // noinspection ScalaWeakerAccess
   object Level {
-    final case object Error extends Level(level = 0)
-    final case object Warn extends Level(level = 1)
-    final case object Info extends Level(level = 2)
-    final case object Debug extends Level(level = 3)
+    case object Error extends Level(level = 0)
+    case object Warn extends Level(level = 1)
+    case object Info extends Level(level = 2)
+    case object Debug extends Level(level = 3)
   }
 }

@@ -3,6 +3,8 @@
 //> using dep com.lihaoyi::os-lib:0.9.2
 //> using file common.scala
 
+package besom.scripts
+
 import os.*
 
 import scala.annotation.tailrec

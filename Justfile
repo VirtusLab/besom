@@ -198,8 +198,8 @@ install-language-plugin: build-language-plugin
 	mkdir -p $output_dir
 	cp {{language-plugin-output-dir}}/bootstrap.jar $output_dir/
 	cp {{language-plugin-output-dir}}/pulumi-language-scala $output_dir/
-	pulumi plugin rm language scala -y
-	pulumi plugin install language scala {{besom-version}} --file {{language-plugin-output-dir}}/local
+	pulumi --non-interactive --logtostderr plugin rm language scala -y
+	pulumi --non-interactive --logtostderr plugin install language scala {{besom-version}} --file {{language-plugin-output-dir}}/local
 
 # Package the scala language plugin for a given architecture
 package-language-plugin $GOOS $GOARCH:
@@ -248,11 +248,11 @@ publish-local-provider-all:
 # Download the schema for a specific provider, e.g. `just get-schema kubernetes 4.0.0`
 get-schema schema-name schema-version:
 	#!/usr/bin/env sh
-	pulumi plugin install resource {{schema-name}} {{schema-version}};
+	pulumi --non-interactive --logtostderr plugin install resource {{schema-name}} {{schema-version}};
 	schema_source={{ if schema-version == "" { schema-name } else { schema-name + "@" + schema-version } }}
 	schema_dir="{{schemas-output-dir}}/{{schema-name}}/{{schema-version}}"
 	mkdir -p $schema_dir
-	pulumi package get-schema $schema_source > $schema_dir/schema.json
+	pulumi --non-interactive --logtostderr package get-schema $schema_source > $schema_dir/schema.json
 
 # Publishes locally besom codegen
 publish-local-codegen: test-codegen
@@ -315,7 +315,7 @@ copy-test-schemas:
 # Runs a template test
 test-template template-name:
 	@echo "Testing template {{template-name}}"
-	pulumi --color=never --emoji=false new -y --force --dir target/test/{{template-name}} -n templates-test-{{template-name}} --stack templates-test-{{template-name}} ../../../templates/{{template-name}}/
+	pulumi --non-interactive --logtostderr --color=never --emoji=false new -y --force --dir target/test/{{template-name}} -n templates-test-{{template-name}} --stack templates-test-{{template-name}} ../../../templates/{{template-name}}/
 	scala-cli compile target/test/{{template-name}}
 	@echo "----------------------------------------"
 
@@ -323,7 +323,7 @@ test-template template-name:
 clean-test-template template-name:
 	@echo "Cleaning template test for {{template-name}}"
 	scala-cli clean target/test/{{template-name}} || echo "Could not clean"
-	pulumi --color=never --emoji=false stack rm --cwd target/test/{{template-name}} -y || echo "No stack to remove"
+	pulumi --non-interactive --logtostderr --color=never --emoji=false stack rm --cwd target/test/{{template-name}} -y || echo "No stack to remove"
 	rm -rf ./target/test/{{template-name}} || echo "No directory to remove"
 	rm -rf $HOME/.pulumi/stacks/templates-test-{{template-name}} || echo "No directory to remove"
 	@echo "----------------------------------------"
@@ -375,7 +375,7 @@ clean-test-markdown:
 ####################
 
 # Compiles scripts module
-compile-scripts:
+compile-scripts: publish-local-codegen
 	scala-cli --power compile scripts --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 
 ####################
@@ -396,26 +396,26 @@ liftoff:
 	#!/usr/bin/env sh
 	export PULUMI_CONFIG_PASSPHRASE=""
 	cd experimental
-	pulumi up --stack liftoff -y
+	pulumi --non-interactive --logtostderrup --stack liftoff -y
 
 # Reverts the deployment of experimental sample kubernetes Pulumi app from ./experimental directory
 destroy-liftoff:
 	#!/usr/bin/env sh
 	cd experimental
-	if (pulumi stack ls | grep liftoff > /dev/null); then
+	if (pulumi --non-interactive --logtostderrstack ls | grep liftoff > /dev/null); then
 		export PULUMI_CONFIG_PASSPHRASE=""
-		pulumi destroy --stack liftoff -y
+		pulumi  --non-interactive --logtostderrdestroy --stack liftoff -y
 	fi
 
 # Cleans the deployment of experimental sample kubernetes Pulumi app from ./experimental directory to the ground
 clean-liftoff: destroy-liftoff
 	#!/usr/bin/env sh
 	cd experimental
-	if (pulumi stack ls | grep liftoff > /dev/null); then
-		pulumi stack rm liftoff -y
+	if (pulumi --non-interactive --logtostderr stack ls | grep liftoff > /dev/null); then
+		pulumi --non-interactive --logtostderr stack rm liftoff -y
 	fi
 	export PULUMI_CONFIG_PASSPHRASE=""
-	pulumi stack init liftoff
+	pulumi --non-interactive --logtostderr stack init liftoff
 
 # Cleans the deployment of ./experimental app completely, rebuilds core and kubernetes provider SDKs, deploys the app again
 clean-slate-liftoff: clean-sdk

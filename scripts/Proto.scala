@@ -6,6 +6,8 @@
 //> using dep org.apache.commons:commons-lang3:3.14.0
 //> using file common.scala
 
+package besom.scripts
+
 import org.apache.commons.lang3.SystemUtils
 import os.*
 
