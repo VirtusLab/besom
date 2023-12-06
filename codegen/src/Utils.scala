@@ -148,7 +148,7 @@ object Utils {
     def parsedMethods(
       resourceDefinition: ResourceDefinition
     )(implicit logger: Logger): Map[FunctionName, (PulumiDefinitionCoordinates, FunctionDefinition)] = {
-      val (notMethods, methods) = resourceDefinition.methods.toSeq
+      val (methods, notMethods) = resourceDefinition.methods.toSeq
         .sortBy { case (name, _) => name }
         .map { case (name, token) =>
           (

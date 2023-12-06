@@ -31,19 +31,15 @@ class CodegenTests extends munit.FunSuite {
 
   // FIXME: broken - codegen error
   val ignoreList = List(
-    "simple-enum-schema", // simple enum is not supported
     "simple-yaml-schema", // YAML is not supported
     "external-enum", // depends on google-native, TODO: check if this is still broken
     "enum-reference", // depends on google-native, TODO: check if this is still broken
-    "different-enum", // simple enum is not supported
     "hyphen-url", // depends on azure-native,
     "naming-collisions", // codec not found
-    "mini-azurenative", // simple enum is not supported
+    "mini-azurenative", // decoder for union of 3 missing
     "cyclic-types", // YAML schema is not supported
-    "plain-and-default", // simple enum is not supported
     "different-package-name-conflict", // duplicate issue
     "output-funcs", // deserialize issue
-    "dashed-import-schema", // simple enum is not supported
     "output-funcs-edgeorder", // missing union decoder issue
     "other-owned" // codec not found
   )

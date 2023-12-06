@@ -43,7 +43,7 @@ class ScalaDefinitionCoordinatesTest extends munit.FunSuite {
     ),
     Data(
       providerPackageParts = "aws-native" :: Nil,
-      modulePackageParts = "index" :: "region" :: Nil,
+      modulePackageParts = "index" :: "Region" :: Nil, // unexpected upper case
       definitionName = "Region"
     )(
       Expectations(
@@ -59,7 +59,7 @@ class ScalaDefinitionCoordinatesTest extends munit.FunSuite {
       val coords: ScalaDefinitionCoordinates = ScalaDefinitionCoordinates(
         providerPackageParts = data.providerPackageParts,
         modulePackageParts = data.modulePackageParts,
-        definitionName = data.definitionName
+        definitionName = Some(data.definitionName)
       )
 
       assertEquals(coords.packageRef.syntax, data.expected.fullPackageName)

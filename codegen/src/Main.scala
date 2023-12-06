@@ -47,22 +47,26 @@ object generator {
     schemaName: SchemaName,
     packageVersion: PackageVersion,
     dependencies: List[PackageMetadata],
-    outputDir: os.Path
+    outputDir: os.Path,
+    total: Int
   ):
     def asString: String =
       s"""|Generated package:
           |  name: ${this.schemaName}
           |  version: ${this.packageVersion}
           |  outputDir: ${this.outputDir.relativeTo(os.pwd)}
+          |  total: ${this.total}
           |${
         if this.dependencies.nonEmpty
         then
           this.dependencies
-            .map { case PackageMetadata(name, version, _) => s"  - $name:$version" }
+            .map { case PackageMetadata(name, version, _) => s"  - $name:${version.orDefault}" }
             .mkString("  dependencies:\n", "\n", "")
         else ""
       }
           |""".stripMargin.trim
+
+  end Result
 
   // noinspection ScalaWeakerAccess
   def generatePackageSources(
@@ -87,8 +91,8 @@ object generator {
     val outputDir: os.Path =
       config.outputDir.getOrElse(os.rel / packageName / packageVersion.asString).resolveFrom(config.codegenDir)
 
-    generatePackageSources(pulumiPackage, packageInfo, outputDir)
-    logger.info(s"Finished generating package '$packageName:$packageVersion' codebase")
+    val total = generatePackageSources(pulumiPackage, packageInfo, outputDir)
+    logger.info(s"Finished generating package '$packageName:$packageVersion' codebase (${total} files)})")
 
     val dependencies = schemaProvider.dependencies(packageName, packageVersion).map { case (name, version) =>
       PackageMetadata(name, Some(version))
@@ -101,7 +105,8 @@ object generator {
       schemaName = packageName,
       packageVersion = packageVersion,
       dependencies = dependencies,
-      outputDir = outputDir
+      outputDir = outputDir,
+      total = total
     )
   }
 
@@ -114,7 +119,7 @@ object generator {
     codegenConfig: CodegenConfig,
     providerConfig: ProviderConfig,
     schemaProvider: SchemaProvider
-  ): Unit = {
+  ): Int = {
     // Print diagnostic information
     logger.info {
       val relOutputDir = outputDir.relativeTo(os.pwd)
@@ -138,8 +143,8 @@ object generator {
 
     val codeGen = new CodeGen
     try {
-      codeGen
-        .sourcesFromPulumiPackage(pulumiPackage, packageInfo)
+      val sources = codeGen.sourcesFromPulumiPackage(pulumiPackage, packageInfo)
+      sources
         .foreach { sourceFile =>
           val filePath = outputDir / sourceFile.filePath.osSubPath
           os.makeDir.all(filePath / os.up)
@@ -156,17 +161,20 @@ object generator {
               logger.error(message)
           }
         }
+      sources.size
     } catch {
       case e: Throwable =>
         logger.error(s"Error generating package '${packageInfo.name}:${packageInfo.version}', error: ${e.getMessage}")
         throw e
     } finally {
       val logFile = outputDir / ".codegen-log.txt"
-      if (logger.hasProblems) {
-        logger.error(s"Some problems were encountered during the code generation. See ${logFile.relativeTo(os.pwd)}")
-      } else {
-        logger.info(s"Code generation finished successfully. See ${logFile.relativeTo(os.pwd)}")
-      }
+
+      if logger.hasErrors
+      then logger.error(s"Some problems were encountered during the code generation. See ${logFile.relativeTo(os.pwd)}")
+      else if logger.hasWarnings
+      then logger.warn(s"Some warnings were encountered during the code generation. See ${logFile.relativeTo(os.pwd)}")
+      else logger.info(s"Code generation finished successfully. See ${logFile.relativeTo(os.pwd)}")
+
       logger.writeToFile(logFile)
     }
   }

@@ -34,7 +34,9 @@ class Logger(val printLevel: Logger.Level = Logger.Level.Info) {
   def writeToFile(file: os.Path): Unit =
     os.write(file, buffer, createFolders = true)
 
-  def hasProblems: Boolean = errorCount + warnCount > 0
+  def hasWarnings: Boolean = warnCount > 0
+
+  def hasErrors: Boolean = errorCount > 0
 }
 
 object Logger {

@@ -315,6 +315,9 @@ runtime:
 - `PULUMI_ENABLE_TRACE_LOGGING_TO_FILE` - for enabling Besom trace logging to file
 - `PULUMI_DEBUG_COMMANDS=1` - for activating hidden debugging Pulumi CLI commands
 - `TF_LOG=TRACE` - for debugging Terraform-based provider
+- `PULUMI_SKIP_UPDATE_CHECK=true` - to skip Pulumi update check
+
+More environment variables can be found in [Pulumi documentation](https://www.pulumi.com/docs/cli/environment-variables/).
 
 #### Tracing
 

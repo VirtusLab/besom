@@ -10,7 +10,7 @@
 package besom.scripts
 
 import besom.codegen.Config.CodegenConfig
-import besom.codegen.{PackageMetadata, generator, UpickleApi}
+import besom.codegen.{PackageMetadata, UpickleApi, generator}
 import org.virtuslab.yaml.*
 
 import java.util.Date
@@ -21,25 +21,35 @@ import scala.util.control.NonFatal
   val packagesDir = os.pwd / ".out" / "packages"
 
   val pluginDownloadProblemPackages = Vector(
-    "azure-native-v1",
-    "aws-s3-replicated-bucket",
-    "aws-miniflux",
-    "iosxe:0.0.1",
-    "aws-quickstart-aurora-postgres",
-    "gcp-global-cloudrun",
-    "packet",
-    "kubernetes-coredns",
-    "aws-quickstart-vpc",
-    "azure-quickstart-acr-geo-replication",
-    "aws-quickstart-redshift",
-    "nxos"
+    "aws-miniflux", // lack of darwin/arm64 binary
+    "aws-s3-replicated-bucket", // lack of darwin/arm64 binary
+    "aws-quickstart-aurora-postgres", // lack of darwin/arm64 binary
+    "aws-quickstart-redshift", // lack of darwin/arm64 binary
+    "aws-quickstart-vpc", // lack of darwin/arm64 binary
+    "azure-native-v1", // deprecated, lack of darwin/arm64 binary
+    "azure-quickstart-acr-geo-replication", // lack of darwin/arm64 binary
+    "gcp-global-cloudrun", // lack of darwin/arm64 binary
+    "iosxe", // schemaOnlyProvider does not implement runtime operation InitLogging
+    "kubernetes-coredns", // lack of darwin/arm64 binary
+    "nxos", // schemaOnlyProvider does not implement runtime operation InitLogging
+    "packet" // deprecated, lack of darwin/arm64 binary
   )
 
-  val codegenProblemPackages = Vector(
-    "iosxe" // schemaOnlyProvider does not implement runtime operation InitLogging
-  )
+  val codegenProblemPackages = Vector()
 
-  val brokenPackages = pluginDownloadProblemPackages ++ codegenProblemPackages
+  val compileProblemPackages = Vector(
+    "azure-native", // decoder error
+    "alicloud", // schema error, ListenerXforwardedForConfig vs ListenerxForwardedForConfig
+    "aws-apigateway", // decoder error
+    "aws-iam", // id parameter
+    "aws-native", // decoder error
+    "aws-static-website", // version confusion
+    "azure-justrun", // version confusion
+    "databricks", // 'scala' symbol in source code
+    "digitalocean", // urn parameter
+    "eks", // decoder error
+    "rootly", // version confusion
+  )
 
   args match
     case "metadata-all" :: Nil      => downloadPackagesMetadata(packagesDir)
@@ -51,25 +61,27 @@ import scala.util.control.NonFatal
   def generateAll(targetPath: os.Path): Unit = {
     val metadata = readAllPackagesMetadata(targetPath)
     withProgress("Generating packages from metadata", metadata.size) {
-      metadata.foreach {
-        case (m @ PackageMetadata(name, Some(version), _), metadataPath: os.Path) =>
-          Progress.report(label = s"$name:$version")
-          try
-            implicit val codegenConfig: CodegenConfig = CodegenConfig()
-            val result = generator.generatePackageSources(metadata = m)
-            println(new Date)
-            println(s"Successfully generated provider '${name}' version '${version}'")
-            println(result.asString)
-            println()
-          catch
-            case NonFatal(_) =>
-              Progress.fail(s"Code generation failed for provider '${name}' version '${version}'")
-          finally Progress.end
-        case (PackageMetadata(name, None, _), _: os.Path) =>
-          Progress.report(label = s"$name")
-          Progress.fail(s"Code generation failed for provider '${name}', version is not defined")
-          Progress.end
-      }
+      metadata
+        .filterNot(m => codegenProblemPackages.contains(m.name))
+        .foreach {
+          case m@PackageMetadata(name, Some(version), _) =>
+            Progress.report(label = s"$name:$version")
+            try
+              implicit val codegenConfig: CodegenConfig = CodegenConfig()
+              val result = generator.generatePackageSources(metadata = m)
+              println(new Date)
+              println(s"Successfully generated provider '${name}' version '${version}'")
+              println(result.asString)
+              println()
+            catch
+              case NonFatal(_) =>
+                Progress.fail(s"Code generation failed for provider '${name}' version '${version}'")
+            finally Progress.end
+          case PackageMetadata(name, None, _) =>
+            Progress.report(label = s"$name")
+            Progress.fail(s"Code generation failed for provider '${name}', version is not defined")
+            Progress.end
+        }
     }
   }
 
@@ -83,24 +95,26 @@ import scala.util.control.NonFatal
 
     val metadata = readAllPackagesMetadata(targetPath)
     withProgress("Publishing packages locally", metadata.size) {
-      metadata.foreach {
-        case (PackageMetadata(name, Some(version), _), _: os.Path) =>
-          Progress.report(label = s"$name:$version")
-          try
-            val logFile = logDir / s"${name}-${version}.log"
-            os.proc("just", "publish-local-provider-sdk", name, version.asString)
-              .call(stdout = logFile, stderr = logFile)
-            println(new Date)
-            println(s"Successfully published locally provider '${name}' version '${version}'")
-          catch
-            case NonFatal(_) =>
-              Progress.fail(s"Publish failed for provider '${name}' version '${version}'")
-          finally Progress.end
-        case (PackageMetadata(name, None, _), _: os.Path) =>
-          Progress.report(label = s"$name")
-          Progress.fail(s"Publish failed for provider '${name}', version is not defined")
-          Progress.end
-      }
+      metadata
+        .filterNot(m => compileProblemPackages.contains(m.name))
+        .foreach {
+          case PackageMetadata(name, Some(version), _) =>
+            Progress.report(label = s"$name:$version")
+            try
+              val logFile = logDir / s"${name}-${version}.log"
+              os.proc("just", "publish-local-provider-sdk", name, version.asString)
+                .call(stdout = logFile, stderr = logFile)
+              println(new Date)
+              println(s"Successfully published locally provider '${name}' version '${version}'")
+            catch
+              case NonFatal(_) =>
+                Progress.fail(s"Publish failed for provider '${name}' version '${version}'")
+            finally Progress.end
+          case PackageMetadata(name, None, _) =>
+            Progress.report(label = s"$name")
+            Progress.fail(s"Publish failed for provider '${name}', version is not defined")
+            Progress.end
+        }
     }
   }
 
@@ -111,7 +125,7 @@ import scala.util.control.NonFatal
     val metadata = readAllPackagesMetadata(targetPath)
     withProgress("Publishing packages to Maven", metadata.size) {
       metadata.foreach {
-        case (PackageMetadata(name, Some(version), _), _: os.Path) =>
+        case PackageMetadata(name, Some(version), _) =>
           Progress.report(label = s"$name:$version")
           try
             val logFile = logDir / s"${name}-${version}.log"
@@ -123,7 +137,7 @@ import scala.util.control.NonFatal
             case NonFatal(_) =>
               Progress.fail(s"Publish failed for provider '${name}' version '${version}'")
           finally Progress.end
-        case (PackageMetadata(name, None, _), _: os.Path) =>
+        case PackageMetadata(name, None, _) =>
           Progress.report(label = s"$name")
           Progress.fail(s"Publish failed for provider '${name}', version is not defined")
           Progress.end
@@ -131,15 +145,12 @@ import scala.util.control.NonFatal
     }
   }
 
-  def readAllPackagesMetadata(targetPath: os.Path): List[(PackageMetadata, os.Path)] = {
+  def readAllPackagesMetadata(targetPath: os.Path): List[PackageMetadata] = {
     val metadataFiles = os.list(targetPath).filter(_.last.endsWith("metadata.json"))
     val metadata = metadataFiles
-      .map { path =>
-        val metadata = PackageMetadata.fromJsonFile(path)
-        (metadata, path)
-      }
+      .map(PackageMetadata.fromJsonFile)
       .collect {
-        case (metadata, path) if !brokenPackages.contains(metadata.name) => (metadata, path)
+        case metadata if !pluginDownloadProblemPackages.contains(metadata.name) => metadata
       }
       .toList
 

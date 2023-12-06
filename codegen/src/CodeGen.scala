@@ -135,8 +135,18 @@ class CodeGen(implicit
   ): Seq[SourceFile] = {
     val classCoordinates = typeCoordinates.asEnumClass
 
-    val enumClassName       = Type.Name(classCoordinates.definitionName)
-    val enumClassStringName = Lit.String(classCoordinates.definitionName)
+    val enumClassName = classCoordinates.definitionTermName.getOrElse(
+      throw GeneralCodegenException(
+        s"Class name for ${classCoordinates.typeRef} could not be found"
+      )
+    )
+    val enumClassStringName = classCoordinates.definitionName
+      .map(Lit.String(_))
+      .getOrElse(
+        throw GeneralCodegenException(
+          s"Class name for ${classCoordinates.typeRef} could not be found"
+        )
+      )
 
     val (superclass, valueType) = enumDefinition.`type` match {
       case BooleanType => (scalameta.types.besom.types.BooleanEnum, scalameta.types.Boolean)
@@ -245,8 +255,16 @@ class CodeGen(implicit
     val token                = typeCoordinates.token
     val baseClassCoordinates = typeCoordinates.asResourceClass(asArgsType = false)
     val argsClassCoordinates = typeCoordinates.asResourceClass(asArgsType = true)
-    val baseClassName        = Type.Name(baseClassCoordinates.definitionName)
-    val argsClassName        = Type.Name(argsClassCoordinates.definitionName)
+    val baseClassName = baseClassCoordinates.definitionTypeName.getOrElse(
+      throw GeneralCodegenException(
+        s"Class name for ${baseClassCoordinates.typeRef} could not be found"
+      )
+    )
+    val argsClassName = argsClassCoordinates.definitionTermName.getOrElse(
+      throw GeneralCodegenException(
+        s"Class name for ${argsClassCoordinates.typeRef} could not be found"
+      )
+    )
 
     if (resourceDefinition.aliases.nonEmpty) {
       logger.warn(
@@ -334,7 +352,9 @@ class CodeGen(implicit
         then scalameta.types.Option(propertyInfo.baseType)
         else propertyInfo.baseType
       val resultType = scalameta.types.besom.types.Output(innerType)
-      m"""def ${propertyInfo.name}: $resultType = output.flatMap(_.${propertyInfo.name})""".parse[Stat].get
+
+      // colon after underscore would be treated as a part of the name so we add a space
+      m"""def ${propertyInfo.name} : $resultType = output.flatMap(_.${propertyInfo.name})""".parse[Stat].get
     }
 
     val hasOutputExtensions = baseOutputExtensionMethods.nonEmpty
@@ -360,7 +380,7 @@ class CodeGen(implicit
       methods.map { case (name, (functionCoordinates, functionDefinition)) =>
         val functionToken     = functionCoordinates.token
         val methodCoordinates = functionCoordinates.resourceMethod
-        if (name != methodCoordinates.definitionName) {
+        if (!methodCoordinates.definitionName.contains(name)) {
           logger.warn(
             s"""|Resource definition method name '${name}' (used) does not match the name
                 |in method definition '${methodCoordinates.definitionName}' (ignored)
@@ -394,13 +414,13 @@ class CodeGen(implicit
     // please make sure, it contains 'index' instead of empty module part if needed
     val tokenLit = Lit.String(token.asString)
 
-    val resourceDecoderInstance = 
-      m"""  given resourceDecoder(using besom.types.Context): besom.types.ResourceDecoder[$baseClassName] = 
+    val resourceDecoderInstance =
+      m"""  given resourceDecoder(using besom.types.Context): besom.types.ResourceDecoder[$baseClassName] =
          |    besom.internal.ResourceDecoder.derived[$baseClassName]
          |""".stripMargin
 
-    val decoderInstance = 
-      m"""  given decoder(using besom.types.Context): besom.types.Decoder[$baseClassName] = 
+    val decoderInstance =
+      m"""  given decoder(using besom.types.Context): besom.types.Decoder[$baseClassName] =
          |    besom.internal.Decoder.customResourceDecoder[$baseClassName]
          |""".stripMargin
 
@@ -467,13 +487,19 @@ class CodeGen(implicit
   ): (Seq[SourceFile], Type.Ref, String, Type) = {
     val requiredInputs = functionDefinition.inputs.required
     val inputProperties =
-      functionDefinition.inputs.properties.toSeq.sortBy(_._1).collect { case (propertyName, propertyDefinition) =>
-        PropertyInfo.from(
-          propertyName = propertyName,
-          propertyDefinition = propertyDefinition,
-          isPropertyRequired = requiredInputs.contains(propertyName)
-        )
-      }
+      functionDefinition.inputs.properties.toSeq
+        .sortBy(_._1)
+        .filterNot {
+          case (Utils.selfParameterName, _) => true
+          case _                            => false
+        }
+        .collect { case (propertyName, propertyDefinition) =>
+          PropertyInfo.from(
+            propertyName = propertyName,
+            propertyDefinition = propertyDefinition,
+            isPropertyRequired = requiredInputs.contains(propertyName)
+          )
+        }
 
     val argsClassCoordinates = functionCoordinates.methodArgsClass
     val argsClassSourceFile = makeArgsClassSourceFile(
@@ -531,10 +557,11 @@ class CodeGen(implicit
     val functionToken     = functionCoordinates.token
     val methodCoordinates = functionCoordinates.resourceMethod
 
-    val methodName = methodCoordinates.definitionName
-    if (methodName.contains("/")) {
-      throw GeneralCodegenException(s"Top level function name ${methodName} containing a '/' is not allowed")
-    }
+    val methodName = methodCoordinates.selectionName.getOrElse(
+      throw GeneralCodegenException(
+        s"Function '${functionToken.asString}' does not have a selection name"
+      )
+    )
     val methodSourceFile = {
       val token = Lit.String(functionToken.asString)
 
@@ -585,10 +612,9 @@ class CodeGen(implicit
         if propertyInfo.isOptional
         then scalameta.types.Option(propertyInfo.baseType)
         else propertyInfo.baseType
-      
-      // def equals_: Output is syntax error, so we need to add space after underscore
-      val methodName = if propertyInfo.name.syntax.endsWith("_") then propertyInfo.name.syntax + " " else propertyInfo.name.syntax
-      m"""def $methodName: besom.types.Output[$innerType] = output.map(_.${propertyInfo.name})""".parse[Stat].get
+
+      // colon after underscore would be treated as a part of the name so we add a space
+      m"""def ${propertyInfo.name} : besom.types.Output[$innerType] = output.map(_.${propertyInfo.name})""".parse[Stat].get
     }
     val optionOutputExtensionMethods = properties.map { propertyInfo =>
       val innerMethodName =
@@ -596,9 +622,8 @@ class CodeGen(implicit
         then Term.Name("flatMap")
         else Term.Name("map")
 
-      // def equals_: Output is syntax error, so we need to add space after underscore
-      val methodName = if propertyInfo.name.syntax.endsWith("_") then propertyInfo.name.syntax + " " else propertyInfo.name.syntax
-      m"""def $methodName: besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.map(_.${innerMethodName}(_.${propertyInfo.name}))"""
+      // colon after underscore would be treated as a part of the name so we add a space
+      m"""def ${propertyInfo.name} : besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.map(_.${innerMethodName}(_.${propertyInfo.name}))"""
         .parse[Stat]
         .get
     }
@@ -609,7 +634,11 @@ class CodeGen(implicit
     // val classComment = spec.description.fold("")(desc => s"/**\n${desc}\n*/\n") // TODO: Escape/sanitize comments
     val classComment = ""
 
-    val className = classCoordinates.typeName
+    val className = classCoordinates.definitionTypeName.getOrElse(
+      throw GeneralCodegenException(
+        s"Class name for ${classCoordinates.typeRef} could not be found"
+      )
+    )
     val classDef =
       m"""|final case class ${className} private(
           |${classParams.map(arg => m"  ${arg.syntax}").mkString(",\n")}
@@ -625,16 +654,14 @@ class CodeGen(implicit
         )
 
     val decoderInstance =
-      m"""  given decoder(using besom.types.Context): besom.types.Decoder[$className] = 
+      m"""  given decoder(using besom.types.Context): besom.types.Decoder[$className] =
          |    besom.internal.Decoder.derived[$className]
          |""".stripMargin
 
     val baseCompanionDef =
       if (hasOutputExtensions) {
-        val classNameTerminator =
-          if (className.value.endsWith("_")) " " else "" // colon after underscore would be treated as a part of the name
-
-        m"""|object ${className}${classNameTerminator}:
+        // colon after underscore would be treated as a part of the name so we add a space
+        m"""|object ${className} :
             |  given outputOps: {} with
             |    extension(output: besom.types.Output[$className])
             |${outputExtensionMethods.map(meth => m"      ${meth.syntax}").mkString("\n")}
@@ -700,7 +727,11 @@ class CodeGen(implicit
     classCoordinates: ScalaDefinitionCoordinates,
     inputProperties: Seq[PropertyInfo]
   ): Stat = {
-    val argsClassName = classCoordinates.typeName
+    val argsClassName = classCoordinates.definitionTypeName.getOrElse(
+      throw GeneralCodegenException(
+        s"Class name for ${classCoordinates.typeRef} could not be found"
+      )
+    )
     val argsClassParams = inputProperties.map { propertyInfo =>
       val fieldType =
         if propertyInfo.isOptional
@@ -725,7 +756,11 @@ class CodeGen(implicit
     isResource: Boolean,
     isProvider: Boolean
   ): Stat = {
-    val argsClassName = classCoordinates.typeName
+    val argsClassName = classCoordinates.definitionTypeName.getOrElse(
+      throw GeneralCodegenException(
+        s"Class name for ${classCoordinates.typeRef} could not be found"
+      )
+    )
     val argsCompanionApplyParams = inputProperties.filter(_.constValue.isEmpty).map { propertyInfo =>
       val paramType =
         if (propertyInfo.isOptional) scalameta.types.besom.types.InputOptional(propertyInfo.inputArgType)
@@ -751,21 +786,20 @@ class CodeGen(implicit
       }
       Term.Assign(Term.Name(propertyInfo.name.value), argValue)
     }
-    
-    // TODO this is not covered by unit tests
+
     val derivedTypeclasses = {
-      lazy val providerArgsEncoderInstance = 
-        m"""  given encoder(using besom.types.Context): besom.types.ProviderArgsEncoder[$argsClassName] = 
+      lazy val providerArgsEncoderInstance =
+        m"""  given encoder(using besom.types.Context): besom.types.ProviderArgsEncoder[$argsClassName] =
            |    besom.internal.ProviderArgsEncoder.derived[$argsClassName]
            |""".stripMargin
 
-      lazy val argsEncoderInstance = 
+      lazy val argsEncoderInstance =
          m"""  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[$argsClassName] =
             |    besom.internal.ArgsEncoder.derived[$argsClassName]
             |""".stripMargin
 
       if (isProvider) providerArgsEncoderInstance
-      else if (isResource) 
+      else if (isResource)
         m"""  given encoder(using besom.types.Context): besom.types.Encoder[$argsClassName] =
            |    besom.internal.Encoder.derived[$argsClassName]
            |$argsEncoderInstance""".stripMargin
