@@ -82,6 +82,27 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     besom.internal.Output.ofData(outputDataOfR) // TODO why the hell compiler assumes it's besom.aliases.Output?
   end invoke
 
+  private[besom] def call[A: ArgsEncoder, R: Decoder, S <: Resource: Encoder](
+    token: FunctionToken,
+    args: A,
+    opts: CallOptions,
+    resource: Option[S]
+  ): Output[R] =
+    // case class CallResourceStruct(`__self__`: Output[Option[S]]) derives ArgsEncoder
+
+    // PropertiesSerializer.serializeFilteredProperties(args, _ => false).flatMap { callArgs =>
+    //   PropertiesSerializer.serializeFilteredProperties(CallResourceStruct(Output(resource)), _ => false).flatMap { resource =>
+    //     // callArgs.serialized.fields.put("__self__", resource.serialized.fields.get("__self__"))
+    //     println(resource)
+    //     ???
+    //   }
+
+    //   val newValue: SerializationResult = callArgs
+    //   println(newValue)
+    //   ???
+    // }
+    ???
+
   private def executeInvoke(tok: FunctionToken, invokeArgs: SerializationResult, opts: InvokeOptions): Result[Value] =
     def buildInvokeRequest(args: Struct, provider: Option[String], version: Option[String]): Result[ResourceInvokeRequest] =
       Result {

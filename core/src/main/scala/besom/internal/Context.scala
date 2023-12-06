@@ -7,6 +7,7 @@ import besom.internal.logging.*
 import scala.annotation.implicitNotFound
 
 case class InvokeOptions(parent: Option[Resource] = None, provider: Option[ProviderResource] = None, version: Option[String] = None)
+case class CallOptions(parent: Option[Resource] = None, provider: Option[ProviderResource] = None, version: Option[String] = None)
 
 @implicitNotFound(s"""|Pulumi code has to be written with a Context in scope.
                       |
@@ -59,6 +60,20 @@ trait Context extends TaskTracker:
     token: FunctionToken,
     args: A,
     opts: InvokeOptions
+  )(using Context): Output[R]
+
+  private[besom] def call[A: ArgsEncoder, S <: Resource]( // S for Self
+    token: FunctionToken,
+    args: A,
+    opts: CallOptions,
+    resource: Option[S]
+  )(using Context): Output[Unit]
+
+  private[besom] def call[A: ArgsEncoder, R: Decoder, S <: Resource]( // S for Self
+    token: FunctionToken,
+    args: A,
+    opts: CallOptions,
+    resource: Option[S]
   )(using Context): Output[R]
 end Context
 
@@ -151,6 +166,24 @@ class ContextImpl(
     BesomMDC(Key.LabelKey, Label.fromFunctionToken(token)) {
       ResourceOps().invoke[A, R](token, args, opts)
     }
+
+  override private[besom] def call[A: ArgsEncoder, S <: Resource]( // S for Self
+    token: FunctionToken,
+    args: A,
+    opts: CallOptions,
+    resource: Option[S]
+  )(using Context): Output[Unit] = ???
+
+  override private[besom] def call[A: ArgsEncoder, R: Decoder, S <: Resource]( // S for Self
+    token: FunctionToken,
+    args: A,
+    opts: CallOptions,
+    resource: Option[S]
+  )(using Context): Output[R] =
+    BesomMDC(Key.LabelKey, Label.fromFunctionToken(token)) {
+      ResourceOps().call[A, R, S](token, args, opts, resource)
+    }
+
 end ContextImpl
 
 object Context:
