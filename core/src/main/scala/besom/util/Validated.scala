@@ -47,25 +47,33 @@ enum Validated[+E, +A]:
       case Invalid(e) => Invalid(e.map(f))
 end Validated
 
-extension [A](a: A) def valid: Validated[Nothing, A] = Validated.valid(a)
+extension [A](a: A)
+  def valid: Validated[Nothing, A]                       = Validated.valid(a)
+  def validResult: Validated.ValidatedResult[Nothing, A] = Validated.ValidatedResult.valid(a)
 
-extension [E](e: E) def invalid: Validated[E, Nothing] = Validated.invalid(e)
-
-extension [A](a: A) def validResult: Validated.ValidatedResult[Nothing, A] = Validated.ValidatedResult.valid(a)
-
-extension [E](e: E) def invalidResult: Validated.ValidatedResult[E, Nothing] = Validated.ValidatedResult.invalid(e)
+extension [E](e: E)
+  def invalid: Validated[E, Nothing]                       = Validated.invalid(e)
+  def invalidResult: Validated.ValidatedResult[E, Nothing] = Validated.ValidatedResult.invalid(e)
 
 extension [E, A](e: Either[E, A])
   def toValidated: Validated[E, A] =
     e.fold(_.invalid, _.valid)
+  def toValidatedResult: Validated.ValidatedResult[E, A] =
+    e.fold(_.invalidResult, _.validResult)
 
 extension [A](a: Option[A])
   def toValidatedOrError[E](e: => E): Validated[E, A] =
     a.fold(e.invalid)(_.valid)
+  def toValidatedResultOrError[E](e: => E): Validated.ValidatedResult[E, A] =
+    a.fold[Validated.ValidatedResult[E, A]](e.invalidResult)(_.validResult)
 
 extension [A](vec: Vector[A])
   def traverseV[E, B](f: A => Validated[E, B]): Validated[E, Vector[B]] =
     vec.foldLeft[Validated[E, Vector[B]]](Vector.empty[B].valid) { (acc, a) =>
+      acc.zipWith(f(a))(_ :+ _)
+    }
+  def traverseVR[E, B](f: A => Validated.ValidatedResult[E, B]): Validated.ValidatedResult[E, Vector[B]] =
+    vec.foldLeft[Validated.ValidatedResult[E, Vector[B]]](Vector.empty[B].validResult) { (acc, a) =>
       acc.zipWith(f(a))(_ :+ _)
     }
 
@@ -81,7 +89,9 @@ object Validated:
 
   import Validated.*
 
-  opaque type ValidatedResult[E, A] = Result[Validated[E, A]]
+  opaque type ValidatedResult[+E, +A] = Result[Validated[E, A]]
+
+  extension [E, A](resultOfValidated: Result[Validated[E, A]]) def asValidatedResult: ValidatedResult[E, A] = resultOfValidated
 
   extension [E, A](result: ValidatedResult[E, A])
     def zip[EE >: E, B](vb: ValidatedResult[EE, B])(using z: Zippable[A, B]): ValidatedResult[EE, z.Out] =
@@ -109,6 +119,13 @@ object Validated:
     def getOrElse[B >: A](default: => B): Result[B] =
       result.map(_.getOrElse(default))
 
+    def tapBoth(f: NonEmptyVector[E] => Result[Unit], g: A => Result[Unit]): ValidatedResult[E, A] =
+      result.flatMap { v =>
+        v match
+          case Invalid(e) => f(e).map(_ => v)
+          case Valid(a)   => g(a).map(_ => v)
+      }
+
     def orElse[EE >: E, B >: A](that: => ValidatedResult[EE, B]): ValidatedResult[EE, B] =
       result.flatMap { va =>
         va match
@@ -119,7 +136,7 @@ object Validated:
     def lmap[EE](f: E => EE): ValidatedResult[EE, A] =
       result.map(_.lmap(f))
 
-    def unwrap: Result[Validated[E, A]] = result
+    def asResult: Result[Validated[E, A]] = result
 
   end extension
 
@@ -129,6 +146,14 @@ object Validated:
     def valid[E, A](a: A): ValidatedResult[E, A] = Result.pure(Validated.valid(a))
 
     def invalid[E, A](e: E, es: E*): ValidatedResult[E, A] = Result.pure(Validated.invalid(e, es: _*))
+
+    class TransparencyZone[E, A](private val result: Result[Validated[E, A]]):
+      def in(zone: Result[Validated[E, A]] => Result[Validated[E, A]]): ValidatedResult[E, A] =
+        zone(result).asValidatedResult
+
+    def transparent[E, A](result: ValidatedResult[E, A]): TransparencyZone[E, A] =
+      new TransparencyZone(result.asResult)
+
   end ValidatedResult
 end Validated
 

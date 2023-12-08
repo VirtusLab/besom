@@ -105,7 +105,7 @@ class ValidatedTest extends munit.FunSuite:
 
     val result = a.zip(b).zip(c)
 
-    assertEquals(result.unwrap.unsafeRunSync(), ValidatedResult.invalid("b", "c").unwrap.unsafeRunSync())
+    assertEquals(result.asResult.unsafeRunSync(), ValidatedResult.invalid("b", "c").asResult.unsafeRunSync())
   }
 
   test("validated result map should apply function to valid value only") {
@@ -113,13 +113,13 @@ class ValidatedTest extends munit.FunSuite:
 
     val result = a.map(_.toUpperCase)
 
-    assertEquals(result.unwrap.unsafeRunSync(), ValidatedResult.valid("A").unwrap.unsafeRunSync())
+    assertEquals(result.asResult.unsafeRunSync(), ValidatedResult.valid("A").asResult.unsafeRunSync())
 
     val b: ValidatedResult[String, String] = ValidatedResult.invalid("error")
 
     val result2 = b.map(_.toUpperCase)
 
-    assertEquals(result2.unwrap.unsafeRunSync(), ValidatedResult.invalid("error").unwrap.unsafeRunSync())
+    assertEquals(result2.asResult.unsafeRunSync(), ValidatedResult.invalid("error").asResult.unsafeRunSync())
   }
 
   test("validated result flatMap should apply function to valid value only") {
@@ -127,13 +127,13 @@ class ValidatedTest extends munit.FunSuite:
 
     val result = a.flatMap(v => ValidatedResult.valid(v.toUpperCase))
 
-    assertEquals(result.unwrap.unsafeRunSync(), ValidatedResult.valid("A").unwrap.unsafeRunSync())
+    assertEquals(result.asResult.unsafeRunSync(), ValidatedResult.valid("A").asResult.unsafeRunSync())
 
     val b: ValidatedResult[String, String] = ValidatedResult.invalid("error")
 
     val result2 = b.flatMap(v => ValidatedResult.valid(v.toUpperCase))
 
-    assertEquals(result2.unwrap.unsafeRunSync(), ValidatedResult.invalid("error").unwrap.unsafeRunSync())
+    assertEquals(result2.asResult.unsafeRunSync(), ValidatedResult.invalid("error").asResult.unsafeRunSync())
   }
 
   test("validated result filterOrError should return valid value if predicate is true") {
@@ -141,13 +141,13 @@ class ValidatedTest extends munit.FunSuite:
 
     val result = a.filterOrError(_ == "a")("error")
 
-    assertEquals(result.unwrap.unsafeRunSync(), ValidatedResult.valid("a").unwrap.unsafeRunSync())
+    assertEquals(result.asResult.unsafeRunSync(), ValidatedResult.valid("a").asResult.unsafeRunSync())
 
     val b = ValidatedResult.invalid("error")
 
     val result2 = b.filterOrError(_ == "a")("error2")
 
-    assertEquals(result2.unwrap.unsafeRunSync(), ValidatedResult.invalid("error2").unwrap.unsafeRunSync())
+    assertEquals(result2.asResult.unsafeRunSync(), ValidatedResult.invalid("error2").asResult.unsafeRunSync())
   }
 
   test("validated result getOrElse should return valid value if valid") {
@@ -169,13 +169,13 @@ class ValidatedTest extends munit.FunSuite:
 
     val result = a.orElse(ValidatedResult.valid("b"))
 
-    assertEquals(result.unwrap.unsafeRunSync(), ValidatedResult.valid("a").unwrap.unsafeRunSync())
+    assertEquals(result.asResult.unsafeRunSync(), ValidatedResult.valid("a").asResult.unsafeRunSync())
 
     val b = ValidatedResult.invalid("error")
 
     val result2 = b.orElse(ValidatedResult.valid("b"))
 
-    assertEquals(result2.unwrap.unsafeRunSync(), ValidatedResult.valid("b").unwrap.unsafeRunSync())
+    assertEquals(result2.asResult.unsafeRunSync(), ValidatedResult.valid("b").asResult.unsafeRunSync())
   }
 
   test("validated result lmap should apply function to error value only") {
@@ -183,13 +183,13 @@ class ValidatedTest extends munit.FunSuite:
 
     val result = a.lmap(_.toUpperCase)
 
-    assertEquals(result.unwrap.unsafeRunSync(), ValidatedResult.valid("a").unwrap.unsafeRunSync())
+    assertEquals(result.asResult.unsafeRunSync(), ValidatedResult.valid("a").asResult.unsafeRunSync())
 
     val b = ValidatedResult.invalid("error")
 
     val result2 = b.lmap(_.toUpperCase)
 
-    assertEquals(result2.unwrap.unsafeRunSync(), ValidatedResult.invalid("ERROR").unwrap.unsafeRunSync())
+    assertEquals(result2.asResult.unsafeRunSync(), ValidatedResult.invalid("ERROR").asResult.unsafeRunSync())
   }
 
 end ValidatedTest

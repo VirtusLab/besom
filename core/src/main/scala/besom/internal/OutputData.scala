@@ -1,7 +1,7 @@
 package besom.internal
 
 import scala.collection.BuildFrom
-import besom.util.*
+import besom.util.*, Validated.ValidatedResult
 
 enum OutputData[+A]:
   case Unknown(resources: Set[Resource], isSecret: Boolean) extends OutputData[Nothing]
@@ -90,6 +90,12 @@ enum OutputData[+A]:
     this match
       case u @ Unknown(_, _)                       => Validated.valid(u)
       case k @ Known(resources, isSecret, None)    => Validated.valid(k.asInstanceOf[OutputData[B]])
+      case Known(resources, isSecret, Some(value)) => f(value).map(b => Known(resources, isSecret, Some(b)))
+
+  def traverseValidatedResult[E, B](f: A => ValidatedResult[E, B]): ValidatedResult[E, OutputData[B]] =
+    this match
+      case u @ Unknown(_, _)                       => ValidatedResult.valid(u)
+      case k @ Known(resources, isSecret, None)    => ValidatedResult.valid(k.asInstanceOf[OutputData[B]])
       case Known(resources, isSecret, Some(value)) => f(value).map(b => Known(resources, isSecret, Some(b)))
 
   def isEmpty: Boolean =

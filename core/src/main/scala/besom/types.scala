@@ -293,7 +293,7 @@ object types:
       decV.emap { (value, label) =>
         valuesToInstances
           .get(value)
-          .toValidatedOrError(DecodingError(s"$label: `${value}` is not a valid value of `${enumName}`", label = label))
+          .toValidatedResultOrError(DecodingError(s"$label: `${value}` is not a valid value of `${enumName}`", label = label))
       }
 
   export besom.aliases.{*, given}

@@ -6,6 +6,8 @@ import Decoder.*
 import ProtobufUtil.*
 import besom.types.Label
 import besom.util.*
+import RunResult.{given, *}
+import Validated.*
 
 object DecoderTest:
   case class TestCaseClass(
@@ -34,6 +36,8 @@ class DecoderTest extends munit.FunSuite:
   import DecoderTest.*
   val dummyLabel = Label.fromNameAndType("dummy", "dummy:pkg:Dummy")
 
+  extension [E, A](vr: ValidatedResult[E, A]) def verify(f: Validated[E, A] => Unit): Unit = vr.asResult.map(f).unsafeRunSync()
+
   test("special struct signature can be extracted") {
     val secretStructSample: Value = Map(
       SpecialSigKey -> SpecialSecretSig.asValue
@@ -51,56 +55,63 @@ class DecoderTest extends munit.FunSuite:
     ).asValue
     val d = summon[Decoder[TestCaseClass]]
 
-    d.decode(v, dummyLabel) match
+    d.decode(v, dummyLabel).verify {
       case Validated.Invalid(ex) => throw ex.head
       case Validated.Valid(OutputData.Known(res, isSecret, value)) =>
         assert(value == Some(TestCaseClass(10, List("qwerty"), None, None, Some("abc"))))
       case Validated.Valid(_) => throw Exception("Unexpected unknown!")
+    }
   }
 
   test("decode case class from null value") {
     val v = Null
     val d = summon[Decoder[TestCaseClass]]
-    d.decode(v, dummyLabel) match
+    d.decode(v, dummyLabel).verify {
       case Validated.Invalid(es) =>
         es.head match
           case DecodingError(m, _, _) =>
             assertEquals(m, "dummy[dummy:pkg:Dummy]: Expected a struct to deserialize Product[TestCaseClass], got: 'NullValue(NULL_VALUE)'")
       case Validated.Valid(_) => throw Exception("Unexpected, valid")
+    }
   }
 
   test("decode enum") {
     val v = "A value".asValue
     val d = summon[Decoder[TestEnum]]
 
-    d.decode(v, dummyLabel) match
+    d.decode(v, dummyLabel).verify {
       case Validated.Invalid(ex)                                   => throw ex.head
       case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some(TestEnum.A))
       case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
+    }
   }
 
   test("decode int/string union") {
     val d = summon[Decoder[Int | String]]
-    d.decode("A".asValue, dummyLabel) match
+    d.decode("A".asValue, dummyLabel).verify {
       case Validated.Invalid(ex)                                   => throw ex.head
       case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some("A"))
       case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
-    d.decode(1.asValue, dummyLabel) match
+    }
+    d.decode(1.asValue, dummyLabel).verify {
       case Validated.Invalid(ex)                                   => throw ex.head
       case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some(1))
       case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
+    }
   }
 
   test("decode string/custom resource union") {
     val d = summon[Decoder[Int | String]]
-    d.decode("A".asValue, dummyLabel) match
+    d.decode("A".asValue, dummyLabel).verify {
       case Validated.Invalid(ex)                                   => throw ex.head
       case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some("A"))
       case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
-    d.decode(1.asValue, dummyLabel) match
+    }
+    d.decode(1.asValue, dummyLabel).verify {
       case Validated.Invalid(ex)                                   => throw ex.head
       case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some(1))
       case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
+    }
   }
 
   test("decode special case class with unmangling") {
@@ -111,9 +122,10 @@ class DecoderTest extends munit.FunSuite:
     ).asValue
     val d = summon[Decoder[SpecialCaseClass]]
 
-    d.decode(v, dummyLabel) match
+    d.decode(v, dummyLabel).verify {
       case Validated.Invalid(ex)                                   => throw ex.head
       case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some(SpecialCaseClass(10, "abc", "qwerty")))
       case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
+    }
   }
 end DecoderTest

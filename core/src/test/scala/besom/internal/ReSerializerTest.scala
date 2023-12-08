@@ -56,10 +56,12 @@ class ReSerializerTest extends munit.FunSuite:
   def reSerialize[A: Encoder: Decoder](value: A): Result[A] = {
     val dec = summon[Decoder[A]]
     val enc = summon[Encoder[A]]
-    enc.encode(value).map { case (_, v) =>
-      dec.decode(v, Label.fromNameAndType("test", "a:b:c")) match
+    enc.encode(value).flatMap { case (_, v) =>
+      dec.decode(v, Label.fromNameAndType("test", "a:b:c")).asResult.map {
         case Validated.Valid(a) =>
           a.getValue.getOrElse(throw RuntimeException("No value"))
         case Validated.Invalid(e) => throw AggregatedDecodingError(e)
+      }
     }
   }
+end ReSerializerTest

@@ -62,12 +62,12 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
   private[besom] def invoke[A: ArgsEncoder, R: Decoder](tok: FunctionToken, args: A, opts: InvokeOptions): Output[R] =
     def decodeResponse(resultAsValue: Value, props: Map[String, Set[Resource]]): Result[OutputData[R]] =
       val resourceLabel = mdc.get(Key.LabelKey)
-      val decoded       = summon[Decoder[R]].decode(resultAsValue, resourceLabel)
-      decoded match
+      summon[Decoder[R]].decode(resultAsValue, resourceLabel).asResult.flatMap {
         case Validated.Invalid(errs) =>
           Result.fail(new AggregatedDecodingError(errs))
         case Validated.Valid(value) =>
           Result.pure(value.withDependencies(props.values.flatten.toSet))
+      }
 
     val outputDataOfR =
       PropertiesSerializer.serializeFilteredProperties(args, _ => false).flatMap { invokeArgs =>
