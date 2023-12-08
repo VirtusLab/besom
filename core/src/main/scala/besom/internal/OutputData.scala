@@ -12,6 +12,11 @@ enum OutputData[+A]:
       case Unknown(resources, isSecret)      => isSecret
       case Known(resources, isSecret, value) => isSecret
 
+  def known: Boolean =
+    this match
+      case _: Known[A] => true
+      case _           => false
+
   def getResources: Set[Resource] =
     this match
       case Unknown(resources, isSecret)      => resources
@@ -103,9 +108,12 @@ enum OutputData[+A]:
     this match
       case Unknown(_, _)         => default
       case Known(_, _, optValue) => optValue.getOrElse(default)
+end OutputData
 
 object OutputData:
-  def unknown(isSecret: Boolean = false): OutputData[Nothing] = Unknown(Set.empty, isSecret)
+  def unknown(isSecret: Boolean = false): OutputData[Nothing] = unknown(isSecret, Set.empty)
+
+  def unknown(isSecret: Boolean, resources: Set[Resource]): OutputData[Nothing] = Unknown(resources, isSecret)
 
   def apply[A](resources: Set[Resource], value: Option[A], isSecret: Boolean): OutputData[A] =
     Known(resources, isSecret, value)

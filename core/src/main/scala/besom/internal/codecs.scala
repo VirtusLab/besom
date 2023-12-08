@@ -192,6 +192,29 @@ object Decoder extends DecoderInstancesLowPrio1:
 
     def mapping(value: Value, label: Label): List[A] = List.empty
 
+  given setDecoder[A](using innerDecoder: Decoder[A]): Decoder[Set[A]] = new Decoder[Set[A]]:
+    override def decode(value: Value, label: Label): Validated[DecodingError, OutputData[Set[A]]] =
+      decodeAsPossibleSecret(value, label).flatMap { odv =>
+        odv
+          .traverseValidated { v =>
+            val listValue = if v.kind.isListValue then v.getListValue else error(s"$label: Expected a list!", label)
+
+            listValue.values.zipWithIndex
+              .map { case (v, i) =>
+                innerDecoder.decode(v, label.atIndex(i))
+              }
+              .foldLeft[Validated[DecodingError, Vector[OutputData[A]]]](Validated.valid(Vector.empty))(
+                accumulatedOutputDatasOrErrors(_, _, "list", label)
+              )
+              .map(_.toSet)
+              .map(OutputData.sequence)
+          }
+          .map(_.flatten)
+          .lmap(exception => DecodingError(s"$label: Encountered an error when deserializing a set", label = label, cause = exception))
+      }
+
+    def mapping(value: Value, label: Label): Set[A] = Set.empty
+
   given mapDecoder[A](using innerDecoder: Decoder[A]): Decoder[Map[String, A]] = new Decoder[Map[String, A]]:
     override def decode(value: Value, label: Label): Validated[DecodingError, OutputData[Map[String, A]]] =
       decodeAsPossibleSecret(value, label).flatMap { odv =>
@@ -216,6 +239,13 @@ object Decoder extends DecoderInstancesLowPrio1:
           .lmap(exception => DecodingError(s"$label: Encountered an error when deserializing a map", label = label, cause = exception))
       }
     def mapping(value: Value, label: Label): Map[String, A] = Map.empty
+
+  // this forces Decoder stack to be async because we need to perform a ReadResource rpc call here
+  given resourceDecoder[R <: Resource: ResourceDecoder](using Context): Decoder[R] = new Decoder[R]:
+    override def decode(value: Value, label: Label): Validated[DecodingError, OutputData[R]] =
+      ???
+
+    override def mapping(value: Value, label: Label): R = ???
 
   // wondering if this works, it's a bit of a hack
   given dependencyResourceDecoder(using Context): Decoder[DependencyResource] = new Decoder[DependencyResource]:
@@ -523,7 +553,7 @@ object Encoder:
   def encoderSum[A](mirror: Mirror.SumOf[A], nameEncoderPairs: List[(String, Encoder[?])]): Encoder[A] =
     new Encoder[A]:
       // TODO We only serialize dumb enums!!
-      // private val encoderMap                                    = nameEncoderPairs.toMap 
+      // private val encoderMap                                    = nameEncoderPairs.toMap
       override def encode(a: A): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> a.toString.asValue)
 
   def encoderProduct[A](nameEncoderPairs: List[(String, Encoder[?])]): Encoder[A] =
@@ -909,7 +939,7 @@ object JsonEncoder:
   given jsonEncoder[A](using enc: Encoder[A]): JsonEncoder[A] =
     new JsonEncoder[A]:
       def encode(a: A): Result[(Set[Resource], Value)] = enc.encode(a).flatMap {
-        case (resources, v @ Value(Kind.NullValue(_), _)) => Result.pure(resources -> v)
+        case (resources, v @ Value(Kind.NullValue(_), _))   => Result.pure(resources -> v)
         case (resources, s @ Value(Kind.StringValue(_), _)) => Result.pure(resources -> s)
         case (resources, value) =>
           Result.evalEither(value.asJsonString).transform {

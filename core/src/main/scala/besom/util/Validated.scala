@@ -18,13 +18,13 @@ enum Validated[+E, +A]:
 
   def map[B](f: A => B): Validated[E, B] =
     this match
-      case Valid(a)     => Valid(f(a))
-      case i@Invalid(_) => i.asInstanceOf[Validated[E, B]]
+      case Valid(a)       => Valid(f(a))
+      case i @ Invalid(_) => i.asInstanceOf[Validated[E, B]]
 
   def flatMap[EE >: E, B](f: A => Validated[EE, B]): Validated[EE, B] =
     this match
-      case Valid(a)     => f(a)
-      case i@Invalid(_) => i.asInstanceOf[Validated[EE, B]]
+      case Valid(a)       => f(a)
+      case i @ Invalid(_) => i.asInstanceOf[Validated[EE, B]]
 
   def filterOrError[EE >: E](p: A => Boolean)(e: EE): Validated[EE, A] =
     this match
@@ -45,12 +45,15 @@ enum Validated[+E, +A]:
     this match
       case Valid(a)   => Valid(a)
       case Invalid(e) => Invalid(e.map(f))
+end Validated
 
-extension [A](a: A)
-  def valid: Validated[Nothing, A] = Validated.valid(a)
+extension [A](a: A) def valid: Validated[Nothing, A] = Validated.valid(a)
 
-extension [E](e: E)
-  def invalid: Validated[E, Nothing] = Validated.invalid(e)
+extension [E](e: E) def invalid: Validated[E, Nothing] = Validated.invalid(e)
+
+extension [A](a: A) def validResult: Validated.ValidatedResult[Nothing, A] = Validated.ValidatedResult.valid(a)
+
+extension [E](e: E) def invalidResult: Validated.ValidatedResult[E, Nothing] = Validated.ValidatedResult.invalid(e)
 
 extension [E, A](e: Either[E, A])
   def toValidated: Validated[E, A] =
@@ -73,6 +76,61 @@ extension [E, A](vec: Vector[Validated[E, A]])
 object Validated:
   def valid[A](a: A): Validated[Nothing, A]           = Valid(a)
   def invalid[E](e: E, es: E*): Validated[E, Nothing] = Invalid(NonEmptyVector(e, es: _*))
+
+  import besom.internal.Result
+
+  import Validated.*
+
+  opaque type ValidatedResult[E, A] = Result[Validated[E, A]]
+
+  extension [E, A](result: ValidatedResult[E, A])
+    def zip[EE >: E, B](vb: ValidatedResult[EE, B])(using z: Zippable[A, B]): ValidatedResult[EE, z.Out] =
+      result.zipWith(vb)(z.zip)
+
+    def zipWith[EE >: E, B, C](vb: ValidatedResult[EE, B])(f: (A, B) => C): ValidatedResult[EE, C] =
+      for
+        va <- result
+        vb <- vb
+      yield va.zipWith(vb)(f)
+
+    def map[B](f: A => B): ValidatedResult[E, B] =
+      result.map(_.map(f))
+
+    def flatMap[EE >: E, B](f: A => ValidatedResult[EE, B]): ValidatedResult[EE, B] =
+      result.flatMap { va =>
+        va match
+          case Valid(a)       => f(a)
+          case i @ Invalid(_) => Result.pure(i.asInstanceOf[Validated[EE, B]])
+      }
+
+    def filterOrError[EE >: E](p: A => Boolean)(e: EE): ValidatedResult[EE, A] =
+      result.map(_.filterOrError(p)(e))
+
+    def getOrElse[B >: A](default: => B): Result[B] =
+      result.map(_.getOrElse(default))
+
+    def orElse[EE >: E, B >: A](that: => ValidatedResult[EE, B]): ValidatedResult[EE, B] =
+      result.flatMap { va =>
+        va match
+          case v @ Valid(_)   => Result.pure(v)
+          case i @ Invalid(_) => that.map(_.orElse(i))
+      }
+
+    def lmap[EE](f: E => EE): ValidatedResult[EE, A] =
+      result.map(_.lmap(f))
+
+    def unwrap: Result[Validated[E, A]] = result
+
+  end extension
+
+  object ValidatedResult:
+    def apply[E, A](result: Result[Validated[E, A]]): ValidatedResult[E, A] = result
+
+    def valid[E, A](a: A): ValidatedResult[E, A] = Result.pure(Validated.valid(a))
+
+    def invalid[E, A](e: E, es: E*): ValidatedResult[E, A] = Result.pure(Validated.invalid(e, es: _*))
+  end ValidatedResult
+end Validated
 
 final case class NonEmptyVector[+A](head: A, tail: Vector[A]):
   def append[B >: A](other: NonEmptyVector[B]): NonEmptyVector[B] =

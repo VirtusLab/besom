@@ -49,12 +49,12 @@ sealed trait ResourceOptions:
   def urn: Option[URN]
 
   private[besom] def hasURN: Boolean = urn.isDefined
-  private[besom] def hasImportId: Boolean = this match
+  private[besom] def hasImportId(using Context): Boolean = this match
     case cr: CustomResourceOptions         => cr.importId.isDefined
     case sr: StackReferenceResourceOptions => sr.importId.isDefined
     case _                                 => false
 
-  private[besom] def getImportId: Option[ResourceId] = this match
+  private[besom] def getImportId(using Context): Option[ResourceId] = this match
     case cr: CustomResourceOptions         => cr.importId
     case sr: StackReferenceResourceOptions => sr.importId
     case _                                 => None
@@ -78,7 +78,7 @@ final case class ComponentResourceOptions private[internal] (
 
 final case class StackReferenceResourceOptions private[internal] (
   common: CommonResourceOptions,
-  importId: Option[ResourceId] // TODO: This is for StackReference, should this be Id?
+  importId: Option[ResourceId]
 ) extends ResourceOptions,
       CommonResourceOptions:
   export common.*
