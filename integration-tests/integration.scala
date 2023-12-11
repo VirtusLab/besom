@@ -1,9 +1,7 @@
 package besom.integration.common
 
-import besom.codegen.Config
 import besom.codegen.Config.CodegenConfig
-import besom.codegen.PackageMetadata
-import besom.codegen.PackageMetadata.{SchemaName, SchemaVersion}
+import besom.codegen.{Config, PackageMetadata}
 import besom.codegen.generator.Result
 import munit.{Tag, Test}
 import os.Shellable
@@ -30,7 +28,7 @@ val defaultProjectFile =
       |//> using dep org.virtuslab::besom-core:$coreVersion
       |""".stripMargin
 
-def sanitizeName(name: String): String = name.replaceAll("[^a-zA-Z0-9]", "-").toLowerCase().take(64).stripSuffix("-")
+def sanitizeName(name: String): String = name.replaceAll("[^a-zA-Z0-9]", "-").toLowerCase().take(32).stripSuffix("-")
 def testToStack(name: String): String  = "tests-" + sanitizeName(name)
 
 //noinspection TypeAnnotation,ScalaWeakerAccess
@@ -50,7 +48,7 @@ object pulumi {
 
   def up(stackName: String, additional: os.Shellable*) = pproc(
     "pulumi",
-    "--non-interactive", 
+    "--non-interactive",
     "--logtostderr",
     "up",
     "--stack",
@@ -61,7 +59,7 @@ object pulumi {
 
   def destroy(stackName: String, additional: os.Shellable*) = pproc(
     "pulumi",
-    "--non-interactive", 
+    "--non-interactive",
     "--logtostderr",
     "destroy",
     "--stack",
@@ -72,7 +70,7 @@ object pulumi {
 
   def config(stackName: String, additional: os.Shellable*) = pproc(
     "pulumi",
-    "--non-interactive", 
+    "--non-interactive",
     "--logtostderr",
     "config",
     "--stack",
@@ -83,7 +81,7 @@ object pulumi {
 
   def secret(stackName: String, additional: os.Shellable*) = pproc(
     "pulumi",
-    "--non-interactive", 
+    "--non-interactive",
     "--logtostderr",
     "config",
     "--stack",
@@ -92,10 +90,10 @@ object pulumi {
     "--secret",
     additional
   )
-  
+
   def outputs(stackName: String, additional: os.Shellable*) = pproc(
     "pulumi",
-    "--non-interactive", 
+    "--non-interactive",
     "--logtostderr",
     "stack",
     "output",
@@ -108,7 +106,7 @@ object pulumi {
   def installScalaPlugin() =
     pproc(
       "pulumi",
-      "--non-interactive", 
+      "--non-interactive",
       "--logtostderr",
       "plugin",
       "install",
@@ -121,36 +119,52 @@ object pulumi {
     )
 
   // noinspection ScalaWeakerAccess
+  case class FixtureArgs(
+                          testDir: os.Path,
+                          projectFiles: Map[String, String] = Map("project.scala" -> defaultProjectFile),
+                          pulumiEnv: Map[String, String] = Map()
+                        )
   case class FixtureContext(stackName: String, testDir: os.Path, env: Map[String, String], pulumiHome: os.Path)
 
   object fixture {
     def setup(
+               args: FixtureArgs*
+             )(
+               test: munit.TestOptions
+             ): Vector[FixtureContext] =
+      args
+        .map(setup(_)(test))
+        .foldLeft(Vector.empty[FixtureContext])(_ :+ _)
+
+    def setup(
       testDir: os.Path,
       projectFiles: Map[String, String] = Map("project.scala" -> defaultProjectFile),
       pulumiEnv: Map[String, String] = Map()
-    )(
-      test: munit.TestOptions
-    ): FixtureContext = {
-      val stackName     = testToStack(test.name)
+             ): munit.TestOptions => FixtureContext =
+      setup(FixtureArgs(testDir, projectFiles, pulumiEnv))
+
+    def setup(args: FixtureArgs)(test: munit.TestOptions): FixtureContext = {
+      val stackName = testToStack(test.name) + sha1(args.testDir.relativeTo(os.pwd).toString)
       val tmpPulumiHome = os.temp.dir()
       val allEnv: Map[String, String] =
         Map(
           "PULUMI_CONFIG_PASSPHRASE" -> envVarOpt("PULUMI_CONFIG_PASSPHRASE").getOrElse("")
-        ) ++ pulumiEnv ++ Map( // don't override test-critical env vars
+        ) ++ args.pulumiEnv ++ Map( // don't override test-critical env vars
           "PULUMI_HOME" -> tmpPulumiHome.toString,
-          "PULUMI_STACK" -> stackName
+          "PULUMI_STACK" -> stackName,
+          "PULUMI_SKIP_UPDATE_CHECK" -> "true"
         )
 
       println(s"Test stack: $stackName")
-      projectFiles.foreach { case (name, content) =>
-        val file = testDir / name
+      args.projectFiles.foreach { case (name, content) =>
+        val file = args.testDir / name
         println(s"Writing test file: ${file.relativeTo(os.pwd)}")
         os.write.over(file, content)
       }
-      pulumi.login(tmpPulumiHome).call(cwd = testDir, env = allEnv)
-      pulumi.stackInit(stackName).call(cwd = testDir, env = allEnv)
-      pulumi.installScalaPlugin().call(cwd = testDir, env = allEnv)
-      FixtureContext(stackName, testDir, allEnv, tmpPulumiHome)
+      pulumi.login(tmpPulumiHome).call(cwd = args.testDir, env = allEnv)
+      pulumi.stackInit(stackName).call(cwd = args.testDir, env = allEnv)
+      pulumi.installScalaPlugin().call(cwd = args.testDir, env = allEnv)
+      FixtureContext(stackName, args.testDir, allEnv, tmpPulumiHome)
     }
 
     def teardown(ctx: FixtureContext): Unit = {
@@ -251,3 +265,11 @@ def tagsWhen(condition: Boolean)(excludedTag: Tag): Test => Boolean =
   else _ => false
 
 def tags(excludedTag: Tag): Test => Boolean = _.tags.contains(excludedTag)
+
+private def sha1(s: String): String = {
+  import java.security.MessageDigest
+  import java.util.HexFormat
+
+  val bytes = MessageDigest.getInstance("SHA-1").digest(s.getBytes("UTF-8"))
+  HexFormat.of().withLowerCase().formatHex(bytes)
+}

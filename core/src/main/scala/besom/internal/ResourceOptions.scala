@@ -1,7 +1,7 @@
 package besom.internal
 
+import besom.types.{ResourceId, URN}
 import besom.util.*
-import besom.types.{URN, ResourceId}
 
 trait CommonResourceOptions:
   def parent: Option[Resource]
@@ -194,3 +194,35 @@ object ComponentResourceOptions:
       deletedWith = deletedWith.asOption
     )
     new ComponentResourceOptions(common, providers)
+
+object StackReferenceResourceOptions:
+  def apply(using Context)(
+    parent: Resource | NotProvided = NotProvided,
+    dependsOn: Output[List[Resource]] = Output(List.empty[Resource]),
+    protect: Boolean = false,
+    ignoreChanges: List[String] = List.empty,
+    version: NonEmptyString | NotProvided = NotProvided, // TODO? UGLY AF
+    customTimeouts: String | NotProvided = NotProvided, // CustomTimeouts // TODO
+    // resourceTransformations: List[ResourceTransformation], // TODO
+    // aliases: List[Output[Alias]], // TODO
+    urn: URN | NotProvided = NotProvided,
+    replaceOnChanges: List[String] = List.empty, // TODO?
+    retainOnDelete: Boolean = false,
+    pluginDownloadUrl: String | NotProvided = NotProvided,
+    deletedWith: Resource | NotProvided = NotProvided,
+    importId: ResourceId | NotProvided = NotProvided
+  ): StackReferenceResourceOptions =
+    val common = CommonResourceOptionsImpl(
+      parent = parent.asOption,
+      dependsOn = dependsOn,
+      protect = protect,
+      ignoreChanges = ignoreChanges,
+      version = version.asOption.getOrElse(""), // TODO grpc & go are "strongly" typed
+      customTimeouts = customTimeouts.asOption,
+      urn = urn.asOption,
+      replaceOnChanges = replaceOnChanges,
+      retainOnDelete = retainOnDelete,
+      pluginDownloadUrl = pluginDownloadUrl.asOption.getOrElse(""),
+      deletedWith = deletedWith.asOption
+    )
+    new StackReferenceResourceOptions(common, importId.asOption)

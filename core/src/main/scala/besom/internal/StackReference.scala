@@ -1,7 +1,7 @@
 package besom.internal
 
-import spray.json.*
 import besom.types.*
+import spray.json.*
 
 case class StackReference(
   urn: Output[URN],
@@ -49,10 +49,12 @@ case class StackReference(
     yield isSecret
 end StackReference
 
-object StackReference:
-  def apply(name: NonEmptyString, args: Input.Optional[StackReferenceArgs], opts: StackReferenceResourceOptions)(using
-    Context
-  ): Output[StackReference] =
+trait StackReferenceFactory:
+  def apply(
+             name: NonEmptyString,
+             args: Input.Optional[StackReferenceArgs],
+             opts: StackReferenceResourceOptions
+           )(using Context): Output[StackReference] =
     args
       .asOptionOutput(false)
       .flatMap {

@@ -1,8 +1,9 @@
 package besom.integration.core
 
 import besom.codegen.PackageMetadata
-import os.*
 import besom.integration.common.*
+import besom.integration.common.pulumi.FixtureArgs
+import os.*
 
 //noinspection ScalaWeakerAccess,TypeAnnotation,ScalaFileName
 class CoreTests extends munit.FunSuite {
@@ -107,22 +108,41 @@ class CoreTests extends munit.FunSuite {
     assert(result.exitCode == 0)
   }
 
-  FunFixture[pulumi.FixtureContext](
+  FunFixture[Vector[pulumi.FixtureContext]](
     setup = {
       val schemaName = "tls"
       val result     = codegen.generatePackage(PackageMetadata(schemaName, providerTlsSchemaVersion))
       scalaCli.publishLocal(result.outputDir).call()
       pulumi.fixture.setup(
-        wd / "resources" / "references" / "source-stack",
-        projectFiles = Map(
-          "project.scala" ->
-            (defaultProjectFile + s"""//> using dep org.virtuslab::besom-$schemaName:$providerTlsVersion""")
+        FixtureArgs(
+          wd / "resources" / "references" / "source-stack",
+          projectFiles = Map(
+            "project.scala" ->
+              (defaultProjectFile + s"""//> using dep org.virtuslab::besom-$schemaName:$providerTlsVersion""")
+          )
+        ),
+        FixtureArgs(
+          wd / "resources" / "references" / "target-stack",
+          projectFiles = Map(
+            "project.scala" ->
+              (defaultProjectFile + s"""//> using dep org.virtuslab::besom-$schemaName:$providerTlsVersion""")
+          )
         )
       )
     },
-    teardown = pulumi.fixture.teardown
-  ).test("source stack should work") { ctx =>
-    val result = pulumi.up(ctx.stackName).call(cwd = ctx.testDir, env = ctx.env)
-    assert(result.exitCode == 0)
+    teardown = {
+      case Vector(ctx1, ctx2) =>
+        pulumi.fixture.teardown(ctx1)
+        pulumi.fixture.teardown(ctx2)
+      case _ => throw new Exception("Invalid number of contexts")
+    }
+  ).test("stack outputs and references should work") {
+    case Vector(ctx1, ctx2) =>
+      val result1 = pulumi.up(ctx1.stackName).call(cwd = ctx1.testDir, env = ctx1.env)
+      assert(result1.exitCode == 0)
+      val result2 = pulumi.up(ctx2.stackName, "--config", s"sourceStack=$ctx1.stackName").call(cwd = ctx2.testDir, env = ctx2.env)
+      assert(result2.exitCode == 0)
+
+    case _ => throw new Exception("Invalid number of contexts")
   }
 }

@@ -22,8 +22,6 @@ import besom.*
 
   val foo = config.requireObject[Foo]("foo")
 
-  case class Bar(foo: Output[String], bar: Output[Double]) derives Encoder
-
   Output(
     exports(
       name = name,
@@ -34,8 +32,7 @@ import besom.*
       viral2 = viral2,
       viral3 = viral3,
       names = names,
-      foo = foo,
-      bar = Bar(Output.secret("Some value"), Output(42.0))
+      foo = foo
     )
   )
 }
