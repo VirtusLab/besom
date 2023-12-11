@@ -157,9 +157,9 @@ class ContextImpl(
     opts: InvokeOptions
   )(using Context): Output[R] =
     BesomMDC(Key.LabelKey, Label.fromFunctionToken(token)) {
-      ResourceOps().invoke[A, R](token, args, opts)
+      ResourceOps().invokeInternal[A, R](token, args, opts)
     }
-    
+
   override private[besom] def call[A: ArgsEncoder, R: Decoder, T <: Resource](
     token: FunctionToken,
     args: A,
@@ -167,12 +167,13 @@ class ContextImpl(
     opts: InvokeOptions
   )(using Context): Output[R] =
     BesomMDC(Key.LabelKey, Label.fromFunctionToken(token)) {
-      ResourceOps().call[A, R](token, args, resource, opts)
+      ResourceOps().callInternal[A, R](token, args, resource, opts)
     }
 
 end ContextImpl
 
 object Context:
+  def apply()(using Context): Context = summon[Context]
 
   def apply(
     runInfo: RunInfo,

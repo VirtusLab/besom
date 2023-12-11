@@ -9,6 +9,7 @@ import besom.util.Validated.*
 import besom.types.*
 import Asset.*
 import Archive.*
+import besom.util.NonEmptyString
 
 object Constants:
   final val UnknownValue           = "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
@@ -241,10 +242,50 @@ object Decoder extends DecoderInstancesLowPrio1:
       }
     def mapping(value: Value, label: Label): Map[String, A] = Map.empty
 
-  // this forces Decoder stack to be async because we need to perform a ReadResource rpc call here
-  given resourceDecoder[R <: Resource: ResourceDecoder](using Context): Decoder[R] = new Decoder[R]:
+  // handles ProviderResources too as they extend CustomResource
+  given customResourceDecoder[R <: CustomResource: ResourceDecoder](using Context): Decoder[R] = new Decoder[R]:
     override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[R]] =
-      ???
+      decodeAsPossibleSecret(value, label).flatMap { odv =>
+        odv
+          .traverseValidatedResult { innerValue =>
+            extractSpecialStructSignature(innerValue) match
+              case None => error(s"$label: Expected a special struct signature!", label)
+              case Some(specialSig) =>
+                if specialSig != Constants.SpecialSecretSig then errorInvalid(s"$label: Expected a special resource signature!", label)
+                else
+                  val structValue = innerValue.getStructValue
+                  structValue.fields
+                    .get(Constants.ResourceUrnName)
+                    .map(_.getStringValue)
+                    .toValidatedResultOrError(error(s"$label: Expected a resource urn in resource struct!", label))
+                    .flatMap(urnString => URN.from(urnString).toEither.toValidatedResult)
+                    .flatMap { urn =>
+                      val resourceName = NonEmptyString(urn.resourceName).getOrElse {
+                        error(s"$label: Expected a non-empty resource name in resource urn!", label)
+                      }
+
+                      val opts = CustomResourceOptions(urn = urn) // triggers GetResource instead of RegisterResource
+
+                      Context()
+                        .readOrRegisterResource[R, EmptyArgs](urn.resourceType, resourceName, EmptyArgs(), opts)
+                        .getData
+                        .either
+                        .map {
+                          case Right(outpudDataOfR) => outpudDataOfR.valid
+                          case Left(err)            => err.invalid
+                        }
+                        .asValidatedResult
+                    }
+          }
+          .map(_.flatten)
+          .lmap(exception =>
+            DecodingError(
+              s"$label: Encountered an error when deserializing a resource",
+              label = label,
+              cause = exception
+            )
+          )
+      }
 
     override def mapping(value: Value, label: Label): R = ???
 
@@ -278,6 +319,8 @@ object Decoder extends DecoderInstancesLowPrio1:
       }
 
     override def mapping(value: Value, label: Label): DependencyResource = ???
+
+  // TODO remoteComponentResourceDecoder
 
   def assetArchiveDecoder[A](
     specialSig: String,

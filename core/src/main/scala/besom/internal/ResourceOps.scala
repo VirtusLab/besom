@@ -59,7 +59,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         }
     }
 
-  private[besom] def invoke[A: ArgsEncoder, R: Decoder](tok: FunctionToken, args: A, opts: InvokeOptions): Output[R] =
+  private[besom] def invokeInternal[A: ArgsEncoder, R: Decoder](tok: FunctionToken, args: A, opts: InvokeOptions): Output[R] =
     def decodeResponse(resultAsValue: Value, props: Map[String, Set[Resource]]): Result[OutputData[R]] =
       val resourceLabel = mdc.get(Key.LabelKey)
       summon[Decoder[R]].decode(resultAsValue, resourceLabel).asResult.flatMap {
@@ -80,9 +80,14 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       }
 
     besom.internal.Output.ofData(outputDataOfR) // TODO why the hell compiler assumes it's besom.aliases.Output?
-  end invoke
+  end invokeInternal
 
-  private[besom] def call[A: ArgsEncoder, R: Decoder](tok: FunctionToken, args: A, resource: Resource, opts: InvokeOptions): Output[R] =
+  private[besom] def callInternal[A: ArgsEncoder, R: Decoder](
+    tok: FunctionToken,
+    args: A,
+    resource: Resource,
+    opts: InvokeOptions
+  ): Output[R] =
     ???
 
   private def executeInvoke(tok: FunctionToken, invokeArgs: SerializationResult, opts: InvokeOptions): Result[Value] =
@@ -586,7 +591,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         case None =>
           invokeOpts.parent match
             case Some(explicitParent) =>
-              summon[Context].resources.getStateFor(explicitParent).map { parentState =>
+              Context().resources.getStateFor(explicitParent).map { parentState =>
                 parentState.providers.get(token.getPackage)
               }
             case None => Result(None)

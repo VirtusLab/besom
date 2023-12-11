@@ -71,6 +71,5 @@ object StackReference:
           Some(importId)
         )
 
-        summon[Context]
-          .readOrRegisterResource[StackReference, StackReferenceArgs]("pulumi:pulumi:StackReference", name, stackRefArgs, mergedOpts)
+        Context().readOrRegisterResource[StackReference, StackReferenceArgs]("pulumi:pulumi:StackReference", name, stackRefArgs, mergedOpts)
       }

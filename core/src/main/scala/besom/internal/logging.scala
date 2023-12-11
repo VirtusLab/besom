@@ -65,7 +65,7 @@ object logging:
 
       block(using mdc)
 
-  def log(using Context): BesomLogger = summon[Context].logger
+  def log(using Context): BesomLogger = Context().logger
 
   export scribe.message.LoggableMessage.*
   export scribe.Level

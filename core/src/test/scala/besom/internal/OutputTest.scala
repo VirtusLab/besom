@@ -36,7 +36,7 @@ class OutputTest extends munit.FunSuite:
     assert(takesNEString(Output("string")).getData.unsafeRunSync() == OutputData(Some("string")))
     assert(takesNEString(None).getData.unsafeRunSync() == OutputData(None))
 
-    summon[Context].waitForAllTasks.unsafeRunSync()
+    Context().waitForAllTasks.unsafeRunSync()
   }
 
   test("multi-input list type functions") {
@@ -56,7 +56,7 @@ class OutputTest extends munit.FunSuite:
     assert(takesAnOptionalList(Output(Option(List("value")))).getData.unsafeRunSync() == OutputData(Option(List("value"))))
     assert(takesAnOptionalList(Output(Option(List(Output("value"))))).getData.unsafeRunSync() == OutputData(Option(List("value"))))
 
-    summon[Context].waitForAllTasks.unsafeRunSync()
+    Context().waitForAllTasks.unsafeRunSync()
   }
 
   test("multi-input map type functions") {
@@ -78,7 +78,7 @@ class OutputTest extends munit.FunSuite:
       takesAnOptionalMap(Output(Option(Map("key" -> Output("value"))))).getData.unsafeRunSync() == OutputData(Option(Map("key" -> "value")))
     )
 
-    summon[Context].waitForAllTasks.unsafeRunSync()
+    Context().waitForAllTasks.unsafeRunSync()
   }
 
   test("multiple evaluations of sequence") {
@@ -92,7 +92,7 @@ class OutputTest extends munit.FunSuite:
     val secondEval = seq.getData.unsafeRunSync()
     assertEquals(secondEval, OutputData(List("value", "value2")))
 
-    summon[Context].waitForAllTasks.unsafeRunSync()
+    Context().waitForAllTasks.unsafeRunSync()
   }
 
 end OutputTest
