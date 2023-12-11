@@ -87,11 +87,11 @@ class CoreTests extends munit.FunSuite {
     assert(output.contains("randomString:"), s"Output:\n$output\n")
     assert(result.exitCode == 0)
   }
-  
+
   FunFixture[pulumi.FixtureContext](
     setup = {
       val schemaName = "tls"
-      val result = codegen.generatePackage(PackageMetadata(schemaName, providerTlsSchemaVersion))
+      val result     = codegen.generatePackage(PackageMetadata(schemaName, providerTlsSchemaVersion))
       scalaCli.publishLocal(result.outputDir).call()
       pulumi.fixture.setup(
         wd / "resources" / "tls-example",
@@ -103,6 +103,25 @@ class CoreTests extends munit.FunSuite {
     },
     teardown = pulumi.fixture.teardown
   ).test("tls provider should work with function") { ctx =>
+    val result = pulumi.up(ctx.stackName).call(cwd = ctx.testDir, env = ctx.env)
+    assert(result.exitCode == 0)
+  }
+
+  FunFixture[pulumi.FixtureContext](
+    setup = {
+      val schemaName = "tls"
+      val result     = codegen.generatePackage(PackageMetadata(schemaName, providerTlsSchemaVersion))
+      scalaCli.publishLocal(result.outputDir).call()
+      pulumi.fixture.setup(
+        wd / "resources" / "references" / "source-stack",
+        projectFiles = Map(
+          "project.scala" ->
+            (defaultProjectFile + s"""//> using dep org.virtuslab::besom-$schemaName:$providerTlsVersion""")
+        )
+      )
+    },
+    teardown = pulumi.fixture.teardown
+  ).test("source stack should work") { ctx =>
     val result = pulumi.up(ctx.stackName).call(cwd = ctx.testDir, env = ctx.env)
     assert(result.exitCode == 0)
   }

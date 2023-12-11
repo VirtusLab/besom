@@ -15,12 +15,14 @@ import besom.*
   val names = config.requireObject[List[String]]("names")
 
   import spray.json.JsonFormat
-  case class Foo(name: String, age: Int)
-  //noinspection ScalaUnusedSymbol
+  case class Foo(name: String, age: Int) derives Encoder
+  // noinspection ScalaUnusedSymbol
   object Foo:
     given JsonFormat[Foo] = jsonFormat2(Foo.apply)
 
   val foo = config.requireObject[Foo]("foo")
+
+  case class Bar(foo: Output[String], bar: Output[Double]) derives Encoder
 
   Output(
     exports(
@@ -32,7 +34,8 @@ import besom.*
       viral2 = viral2,
       viral3 = viral3,
       names = names,
-      foo = foo.map(summon[JsonFormat[Foo]].write(_))
+      foo = foo,
+      bar = Bar(Output.secret("Some value"), Output(42.0))
     )
   )
 }

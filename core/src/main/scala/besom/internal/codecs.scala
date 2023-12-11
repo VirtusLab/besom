@@ -10,6 +10,7 @@ import besom.types.*
 import Asset.*
 import Archive.*
 import besom.util.NonEmptyString
+import scala.annotation.implicitNotFound
 
 object Constants:
   final val UnknownValue           = "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
@@ -584,6 +585,13 @@ end DecoderHelpers
   *
   * JsonEncoder - this is a separate typeclass required for json-serialized fields of ProviderArgs
   */
+@implicitNotFound("""Instance of Encoder[${A}] is missing! Most likely you are trying to use structured 
+    |stack exports and you have defined a case class that holds your exported values. 
+    |
+    |Add `derives Encoder` (or `derives besom.Encoder` if you don't have the global import in
+    |that scope) to your case class definition like this:
+    |
+    |case class MyExportedValues(...) derives Encoder""")
 trait Encoder[A]:
   self =>
   def encode(a: A): Result[(Set[Resource], Value)]
