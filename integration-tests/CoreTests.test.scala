@@ -15,7 +15,7 @@ class CoreTests extends munit.FunSuite {
     ),
     teardown = pulumi.fixture.teardown
   ).test("SDK logging be visible in Pulumi CLI") { ctx =>
-    val result = pulumi.up(ctx.stackName).call(cwd = ctx.testDir, env = ctx.env)
+    val result = pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
     val output = result.out.text()
     assert(output.contains("Nothing here yet. It's waiting for you!"), s"Output:\n$output\n")
     assert(output.contains("Interpolated value"), s"Output:\n$output\n")
@@ -28,22 +28,22 @@ class CoreTests extends munit.FunSuite {
     ),
     teardown = pulumi.fixture.teardown
   ).test("SDK config and secrets should work with Pulumi CLI") { ctx =>
-    pulumi.config(ctx.stackName, "name", "config value").call(cwd = ctx.testDir, env = ctx.env)
-    pulumi.secret(ctx.stackName, "hush").call(cwd = ctx.testDir, env = ctx.env, stdin = "secret value\n")
+    pulumi.config(ctx.stackName, "name", "config value").call(cwd = ctx.programDir, env = ctx.env)
+    pulumi.secret(ctx.stackName, "hush").call(cwd = ctx.programDir, env = ctx.env, stdin = "secret value\n")
 
-    pulumi.config(ctx.stackName, "--path", "names[0]", "a").call(cwd = ctx.testDir, env = ctx.env)
-    pulumi.config(ctx.stackName, "--path", "names[1]", "b").call(cwd = ctx.testDir, env = ctx.env)
-    pulumi.config(ctx.stackName, "--path", "names[2]", "c").call(cwd = ctx.testDir, env = ctx.env)
-    pulumi.secret(ctx.stackName, "--path", "names[3]", "super secret").call(cwd = ctx.testDir, env = ctx.env)
+    pulumi.config(ctx.stackName, "--path", "names[0]", "a").call(cwd = ctx.programDir, env = ctx.env)
+    pulumi.config(ctx.stackName, "--path", "names[1]", "b").call(cwd = ctx.programDir, env = ctx.env)
+    pulumi.config(ctx.stackName, "--path", "names[2]", "c").call(cwd = ctx.programDir, env = ctx.env)
+    pulumi.secret(ctx.stackName, "--path", "names[3]", "super secret").call(cwd = ctx.programDir, env = ctx.env)
 
-    pulumi.config(ctx.stackName, "--path", "foo.name", "Name").call(cwd = ctx.testDir, env = ctx.env)
-    pulumi.config(ctx.stackName, "--path", "foo.age", "23").call(cwd = ctx.testDir, env = ctx.env)
+    pulumi.config(ctx.stackName, "--path", "foo.name", "Name").call(cwd = ctx.programDir, env = ctx.env)
+    pulumi.config(ctx.stackName, "--path", "foo.age", "23").call(cwd = ctx.programDir, env = ctx.env)
 
-    val upResult = pulumi.up(ctx.stackName).call(cwd = ctx.testDir, env = ctx.env)
+    val upResult = pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
     println(upResult.out.text())
     assert(upResult.exitCode == 0)
 
-    val outResult = pulumi.outputs(ctx.stackName).call(cwd = ctx.testDir, env = ctx.env)
+    val outResult = pulumi.outputs(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
     assert(outResult.exitCode == 0)
 
     val output  = outResult.out.text()
@@ -57,7 +57,7 @@ class CoreTests extends munit.FunSuite {
 //    assertEquals(outputs("hush"),"[secret]", s"Output:\n$output\n")
 //    assertEquals(outputs("names").arr.map(_.str).toList, List("a","b","c","[secret]"), s"Output:\n$output\n")
 
-    val outResult2 = pulumi.outputs(ctx.stackName, "--show-secrets").call(cwd = ctx.testDir, env = ctx.env)
+    val outResult2 = pulumi.outputs(ctx.stackName, "--show-secrets").call(cwd = ctx.programDir, env = ctx.env)
     assert(outResult.exitCode == 0)
 
     val output2  = outResult2.out.text()
@@ -83,7 +83,7 @@ class CoreTests extends munit.FunSuite {
     },
     teardown = pulumi.fixture.teardown
   ).test("random provider and memoization should work") { ctx =>
-    val result = pulumi.up(ctx.stackName).call(cwd = ctx.testDir, env = ctx.env)
+    val result = pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
     val output = result.out.text()
     assert(output.contains("randomString:"), s"Output:\n$output\n")
     assert(result.exitCode == 0)
@@ -104,17 +104,17 @@ class CoreTests extends munit.FunSuite {
     },
     teardown = pulumi.fixture.teardown
   ).test("tls provider should work with function") { ctx =>
-    val result = pulumi.up(ctx.stackName).call(cwd = ctx.testDir, env = ctx.env)
+    val result = pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
     assert(result.exitCode == 0)
   }
 
-  FunFixture[Vector[pulumi.FixtureContext]](
+  FunFixture[pulumi.FixtureMultiContext](
     setup = {
       val schemaName = "tls"
       val result     = codegen.generatePackage(PackageMetadata(schemaName, providerTlsSchemaVersion))
       scalaCli.publishLocal(result.outputDir).call()
       pulumi.fixture.setup(
-        FixtureOpts(useSameState = true),
+        FixtureOpts(),
         FixtureArgs(
           wd / "resources" / "references" / "source-stack",
           projectFiles = Map(
@@ -131,22 +131,15 @@ class CoreTests extends munit.FunSuite {
         )
       )
     },
-    teardown = {
-      case Vector(ctx1, ctx2) =>
-        pulumi.fixture.teardown(ctx1)
-        pulumi.fixture.teardown(ctx2)
-      case _ => throw new Exception("Invalid number of contexts")
-    }
+    teardown = pulumi.fixture.teardown
   ).test("stack outputs and references should work") {
-    case Vector(ctx1, ctx2) =>
-      println(s"Source stack name: ${ctx1.stackName}, pulumi home: ${ctx1.pulumiHome}")
-      val result1 = pulumi.up(ctx1.stackName).call(cwd = ctx1.testDir, env = ctx1.env)
-      assert(result1.exitCode == 0)
-      println(pulumi.stackLs().call(cwd = ctx1.testDir, env = ctx1.env, check = false).out.text())
-      println(s"Target stack name: ${ctx2.stackName}, pulumi home: ${ctx2.pulumiHome}")
-      val result2 =
-        pulumi.up(ctx2.stackName, "--config", s"sourceStack=${ctx1.stackName}").call(cwd = ctx2.testDir, env = ctx2.env)
-      assert(result2.exitCode == 0)
+    case pulumi.FixtureMultiContext(ctx, Vector(ctx1, ctx2)) =>
+      println(s"Source stack name: ${ctx1.stackName}, pulumi home: ${ctx.home}")
+      pulumi.up(ctx1.stackName).call(cwd = ctx1.programDir, env = ctx1.env)
+      println(pulumi.outputs(ctx1.stackName).call(cwd = ctx1.programDir, env = ctx1.env).out.text())
+      println(pulumi.stackLs().call(cwd = ctx2.programDir, env = ctx2.env, check = false).out.text())
+      println(s"Target stack name: ${ctx2.stackName}, pulumi home: ${ctx.home}")
+      pulumi.up(ctx2.stackName, "--config", s"sourceStack=organization/source-stack-test/${ctx1.stackName}").call(cwd = ctx2.programDir, env = ctx2.env)
 
     case _ => throw new Exception("Invalid number of contexts")
   }

@@ -1,8 +1,8 @@
 package besom.integration.common
 
 import besom.codegen.Config.CodegenConfig
-import besom.codegen.{Config, PackageMetadata}
 import besom.codegen.generator.Result
+import besom.codegen.{Config, PackageMetadata}
 import munit.{Tag, Test}
 import os.Shellable
 
@@ -123,13 +123,41 @@ object pulumi {
     )
 
   // noinspection ScalaWeakerAccess
+  case class FixtureOpts(
+                          pulumiHomeDir: os.Path = os.temp.dir(),
+                          pulumiEnv: Map[String, String] = Map()
+                        )
   case class FixtureArgs(
-    testDir: os.Path,
-    projectFiles: Map[String, String] = Map("project.scala" -> defaultProjectFile),
-    pulumiEnv: Map[String, String] = Map()
+                          programDir: os.Path,
+                          projectFiles: Map[String, String] = Map("project.scala" -> defaultProjectFile)
+                        )
+
+  case class ProgramContext(
+                             stackName: String,
+                             programDir: os.Path,
+                             env: Map[String, String]
   )
-  case class FixtureContext(stackName: String, testDir: os.Path, env: Map[String, String], pulumiHome: os.Path)
-  case class FixtureOpts(useSameState: Boolean = false)
+
+  case class PulumiContext(
+                            home: os.Path,
+                            env: Map[String, String]
+                          )
+
+  case class FixtureContext(
+                             pulumi: PulumiContext,
+                             program: ProgramContext
+                           ) {
+    def stackName: String = program.stackName
+
+    def programDir: os.Path = program.programDir
+
+    def env: Map[String, String] = program.env
+  }
+
+  case class FixtureMultiContext(
+                                  pulumi: PulumiContext,
+                                  program: Vector[ProgramContext]
+                                )
 
   object fixture {
     def setup(
@@ -137,51 +165,74 @@ object pulumi {
       args: FixtureArgs*
     )(
       test: munit.TestOptions
-    ): Vector[FixtureContext] =
-      // if useSameState is set create a single path for pulumi home
-      val pulumiState = if opts.useSameState then Some(os.temp.dir()) else None
-      args
-        .map(setup(_, pulumiState)(test))
-        .foldLeft(Vector.empty[FixtureContext])(_ :+ _)
+    ): FixtureMultiContext =
+      val pulumiContext = init(opts)
+      val programContexts = args
+        .map(setup(pulumiContext, _)(test))
+        .foldLeft(Vector.empty[ProgramContext])(_ :+ _)
+      FixtureMultiContext(pulumiContext, programContexts)
 
     def setup(
       testDir: os.Path,
       projectFiles: Map[String, String] = Map("project.scala" -> defaultProjectFile),
-      pulumiEnv: Map[String, String] = Map(),
-      opts: FixtureOpts = FixtureOpts()
+      pulumiHomeDir: os.Path = os.temp.dir(),
+      pulumiEnv: Map[String, String] = Map()
     ): munit.TestOptions => FixtureContext =
-      val pulumiState = if opts.useSameState then Some(os.temp.dir()) else None
-      setup(FixtureArgs(testDir, projectFiles, pulumiEnv), pulumiState)
+      val pulumiContext = init(FixtureOpts(pulumiHomeDir, pulumiEnv))
+      val programContext = setup(pulumiContext, FixtureArgs(testDir, projectFiles))
+      (test: munit.TestOptions) => FixtureContext(pulumiContext, programContext(test))
 
-    def setup(args: FixtureArgs, pulumiState: Option[os.Path])(test: munit.TestOptions): FixtureContext = {
-      val stackName     = testToStack(test.name) + sha1(args.testDir.relativeTo(os.pwd).toString)
-      val tmpPulumiHome = pulumiState.getOrElse(os.temp.dir())
+    def init(opts: FixtureOpts): PulumiContext = {
+      val allEnv: Map[String, String] =
+        // local environment, to run locally offline, make sure you set PULUMI_BACKEND_URL and PULUMI_API
+        opts.pulumiEnv ++ Map(
+          //          "PULUMI_BACKEND_URL" -> s"file://${opts.pulumiHomeDir.toString}",
+          //          "PULUMI_API" -> s"file://${opts.pulumiHomeDir.toString}",
+          "PULUMI_HOME" -> (opts.pulumiHomeDir / ".pulumi").toString,
+          "PULUMI_SKIP_UPDATE_CHECK" -> "true"
+        )
+      pulumi.login(opts.pulumiHomeDir).call(cwd = opts.pulumiHomeDir, env = allEnv)
+      pulumi.installScalaPlugin().call(cwd = opts.pulumiHomeDir, env = allEnv)
+      PulumiContext(opts.pulumiHomeDir, allEnv)
+    }
+
+    def setup(pulumiContext: PulumiContext, args: FixtureArgs)(test: munit.TestOptions): ProgramContext = {
+      val stackName = testToStack(test.name) + sha1(args.programDir.relativeTo(os.pwd).toString)
       val allEnv: Map[String, String] =
         Map(
           "PULUMI_CONFIG_PASSPHRASE" -> envVarOpt("PULUMI_CONFIG_PASSPHRASE").getOrElse("")
-        ) ++ args.pulumiEnv ++ Map( // don't override test-critical env vars
-          "PULUMI_HOME" -> tmpPulumiHome.toString,
-          "PULUMI_STACK" -> stackName,
-          "PULUMI_SKIP_UPDATE_CHECK" -> "true"
+        ) ++ pulumiContext.env ++ Map( // don't override test-critical env vars
+          "PULUMI_STACK" -> stackName
         )
 
       println(s"Test stack: $stackName")
       args.projectFiles.foreach { case (name, content) =>
-        val file = args.testDir / name
+        val file = args.programDir / name
         println(s"Writing test file: ${file.relativeTo(os.pwd)}")
         os.write.over(file, content)
       }
-      pulumi.login(tmpPulumiHome).call(cwd = args.testDir, env = allEnv)
-      pulumi.stackInit(stackName).call(cwd = args.testDir, env = allEnv)
-      pulumi.installScalaPlugin().call(cwd = args.testDir, env = allEnv)
-      FixtureContext(stackName, args.testDir, allEnv, tmpPulumiHome)
+      pulumi.stackInit(stackName).call(cwd = args.programDir, env = allEnv)
+      ProgramContext(stackName, args.programDir, allEnv)
     }
 
     def teardown(ctx: FixtureContext): Unit = {
-      pulumi.destroy(ctx.stackName).call(cwd = ctx.testDir, env = ctx.env)
-      pulumi.stackRm(ctx.stackName).call(cwd = ctx.testDir, env = ctx.env)
-      pulumi.logout(ctx.pulumiHome).call(cwd = ctx.testDir, env = ctx.env)
+      destroy(ctx.program)
+      logout(ctx.pulumi)
+    }
+
+    def teardown(ctx: FixtureMultiContext): Unit = {
+      ctx.program.foreach(destroy)
+      logout(ctx.pulumi)
+    }
+
+    def destroy(ctx: ProgramContext): Unit = {
+      pulumi.destroy(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
+      pulumi.stackRm(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
       // purposely not deleting project.scala to make editing tests easier
+    }
+
+    def logout(ctx: PulumiContext): Unit = {
+      pulumi.logout(ctx.home).call(cwd = ctx.home, env = ctx.env)
     }
   }
 }

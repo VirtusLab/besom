@@ -85,7 +85,7 @@ class LanguagePluginTest extends munit.FunSuite {
     val pulumiUpOutput =
       pulumi
         .up(ctx.stackName, "--skip-preview")
-        .call(cwd = ctx.testDir, env = ctx.env)
+        .call(cwd = ctx.programDir, env = ctx.env)
         .out
         .text()
 
@@ -93,7 +93,7 @@ class LanguagePluginTest extends munit.FunSuite {
     assert(clue(pulumiUpOutput).contains(expectedError))
 
     val aboutInfoJson: String =
-      pproc("pulumi", "--non-interactive", "about", "--json").call(cwd = ctx.testDir, env = ctx.env).out.text()
+      pproc("pulumi", "--non-interactive", "about", "--json").call(cwd = ctx.programDir, env = ctx.env).out.text()
 
     val aboutPluginsVersions: Map[String, String] = ujson
       .read(aboutInfoJson)("plugins")
@@ -108,7 +108,7 @@ class LanguagePluginTest extends munit.FunSuite {
     }
 
     val pluginsLsJson =
-      pproc("pulumi", "--non-interactive", "plugin", "ls", "--json").call(cwd = ctx.testDir, env = ctx.env).out.text()
+      pproc("pulumi", "--non-interactive", "plugin", "ls", "--json").call(cwd = ctx.programDir, env = ctx.env).out.text()
 
     val installedPluginsVersions = ujson
       .read(pluginsLsJson)
@@ -141,7 +141,7 @@ class LanguagePluginTest extends munit.FunSuite {
       bootstrapLibJarPath,
       "--main-class",
       "besom.bootstrap.PulumiPluginsDiscoverer"
-    ).call(cwd = ctx.testDir, env = ctx.env).out.text()
+    ).call(cwd = ctx.programDir, env = ctx.env).out.text()
 
     testExecutor(ctx, pluginsJson)
   }
@@ -167,12 +167,12 @@ class LanguagePluginTest extends munit.FunSuite {
     val tmpBuildDir = os.temp.dir()
     os.list(executorsDir / "scala-cli").foreach(file => os.copy.into(file, tmpBuildDir))
     pproc("scala-cli", "--power", "package", ".", "--assembly", "-o", "app.jar").call(cwd = tmpBuildDir)
-    os.copy.into(tmpBuildDir / "app.jar", ctx.testDir, replaceExisting = true)
+    os.copy.into(tmpBuildDir / "app.jar", ctx.programDir, replaceExisting = true)
 
-    val binaryPath = ctx.testDir / "app.jar"
+    val binaryPath = ctx.programDir / "app.jar"
     val pluginsJson =
       pproc("java", "-cp", s"$bootstrapLibJarPath:$binaryPath", "besom.bootstrap.PulumiPluginsDiscoverer")
-        .call(cwd = ctx.testDir, env = ctx.env)
+        .call(cwd = ctx.programDir, env = ctx.env)
         .out
         .text()
 
