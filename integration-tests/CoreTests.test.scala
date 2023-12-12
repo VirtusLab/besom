@@ -132,7 +132,7 @@ class CoreTests extends munit.FunSuite {
       )
     },
     teardown = pulumi.fixture.teardown
-  ).test("stack outputs and references should work".only) {
+  ).test("stack outputs and references should work") {
     case pulumi.FixtureMultiContext(ctx, Vector(ctx1, ctx2)) =>
       println(s"Source stack name: ${ctx1.stackName}, pulumi home: ${ctx.home}")
       pulumi.up(ctx1.stackName).call(cwd = ctx1.programDir, env = ctx1.env)
