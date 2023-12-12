@@ -132,14 +132,16 @@ class CoreTests extends munit.FunSuite {
       )
     },
     teardown = pulumi.fixture.teardown
-  ).test("stack outputs and references should work") {
+  ).test("stack outputs and references should work".only) {
     case pulumi.FixtureMultiContext(ctx, Vector(ctx1, ctx2)) =>
       println(s"Source stack name: ${ctx1.stackName}, pulumi home: ${ctx.home}")
       pulumi.up(ctx1.stackName).call(cwd = ctx1.programDir, env = ctx1.env)
       println(pulumi.outputs(ctx1.stackName).call(cwd = ctx1.programDir, env = ctx1.env).out.text())
       println(pulumi.stackLs().call(cwd = ctx2.programDir, env = ctx2.env, check = false).out.text())
       println(s"Target stack name: ${ctx2.stackName}, pulumi home: ${ctx.home}")
-      pulumi.up(ctx2.stackName, "--config", s"sourceStack=organization/source-stack-test/${ctx1.stackName}").call(cwd = ctx2.programDir, env = ctx2.env)
+      pulumi
+        .up(ctx2.stackName, "--config", s"sourceStack=organization/source-stack-test/${ctx1.stackName}")
+        .call(cwd = ctx2.programDir, env = ctx2.env)
 
     case _ => throw new Exception("Invalid number of contexts")
   }

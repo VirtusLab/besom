@@ -122,6 +122,7 @@ class LanguagePluginTest extends munit.FunSuite {
       clue(pluginsLsJson)
       clue(installedPluginsVersions) == clue(expectedInstalledPluginsVersions)
     }
+  end testExecutor
 
   override def beforeAll(): Unit =
     publishLocalResourcePlugins()

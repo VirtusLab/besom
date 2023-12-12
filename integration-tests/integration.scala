@@ -124,29 +124,29 @@ object pulumi {
 
   // noinspection ScalaWeakerAccess
   case class FixtureOpts(
-                          pulumiHomeDir: os.Path = os.temp.dir(),
-                          pulumiEnv: Map[String, String] = Map()
-                        )
+    pulumiHomeDir: os.Path = os.temp.dir(),
+    pulumiEnv: Map[String, String] = Map()
+  )
   case class FixtureArgs(
-                          programDir: os.Path,
-                          projectFiles: Map[String, String] = Map("project.scala" -> defaultProjectFile)
-                        )
+    programDir: os.Path,
+    projectFiles: Map[String, String] = Map("project.scala" -> defaultProjectFile)
+  )
 
   case class ProgramContext(
-                             stackName: String,
-                             programDir: os.Path,
-                             env: Map[String, String]
+    stackName: String,
+    programDir: os.Path,
+    env: Map[String, String]
   )
 
   case class PulumiContext(
-                            home: os.Path,
-                            env: Map[String, String]
-                          )
+    home: os.Path,
+    env: Map[String, String]
+  )
 
   case class FixtureContext(
-                             pulumi: PulumiContext,
-                             program: ProgramContext
-                           ) {
+    pulumi: PulumiContext,
+    program: ProgramContext
+  ) {
     def stackName: String = program.stackName
 
     def programDir: os.Path = program.programDir
@@ -155,9 +155,9 @@ object pulumi {
   }
 
   case class FixtureMultiContext(
-                                  pulumi: PulumiContext,
-                                  program: Vector[ProgramContext]
-                                )
+    pulumi: PulumiContext,
+    program: Vector[ProgramContext]
+  )
 
   object fixture {
     def setup(
@@ -178,7 +178,7 @@ object pulumi {
       pulumiHomeDir: os.Path = os.temp.dir(),
       pulumiEnv: Map[String, String] = Map()
     ): munit.TestOptions => FixtureContext =
-      val pulumiContext = init(FixtureOpts(pulumiHomeDir, pulumiEnv))
+      val pulumiContext  = init(FixtureOpts(pulumiHomeDir, pulumiEnv))
       val programContext = setup(pulumiContext, FixtureArgs(testDir, projectFiles))
       (test: munit.TestOptions) => FixtureContext(pulumiContext, programContext(test))
 
