@@ -31,18 +31,18 @@ class CodegenTests extends munit.FunSuite {
 
   // FIXME: broken - codegen error
   val ignoreList = List(
-    "simple-resource-schema", // resource decoder issue
+    // "simple-resource-schema", // fixed
     "simple-enum-schema", // simple enum is not supported
     "simple-yaml-schema", // YAML is not supported
     "external-enum", // depends on google-native, TODO: check if this is still broken
-    "external-resource-schema", // resource decoder issue
+    // "external-resource-schema", // fixed
     "enum-reference", // depends on google-native, TODO: check if this is still broken
     "different-enum", // simple enum is not supported
     "hyphen-url", // depends on azure-native,
     "naming-collisions", // codec not found
     "mini-azurenative", // simple enum is not supported
     "replace-on-change", // resource decoder issue
-    "resource-property-overlap", // resource decoder issue
+    // "resource-property-overlap", // fixed
     "cyclic-types", // YAML schema is not supported
     "plain-and-default", // simple enum is not supported
     "different-package-name-conflict", // duplicate issue
@@ -86,7 +86,7 @@ class CodegenTests extends munit.FunSuite {
       for (dep <- result.dependencies) {
         codegen.generateLocalPackage(dep)
       }
-      println(s"\nCompiling generated code for ${data.name}...")
+      println(s"\nCompiling generated code for ${data.name} in ${result.outputDir}...")
       val compiled = scalaCli.compile(result.outputDir).call(check = false)
       assert {
         clue(data)

@@ -354,7 +354,7 @@ class CodeGen(implicit
     val baseClass =
       m"""|final case class $baseClassName private(
           |${baseClassParams.map(param => s"  ${param.syntax}").mkString(",\n")}
-          |) extends ${resourceBaseClass} derives besom.ResourceDecoder""".stripMargin.parse[Stat].get
+          |) extends ${resourceBaseClass}""".stripMargin.parse[Stat].get
 
     val (methodFiles, baseClassMethods) =
       methods.map { case (name, (functionCoordinates, functionDefinition)) =>
@@ -394,6 +394,16 @@ class CodeGen(implicit
     // please make sure, it contains 'index' instead of empty module part if needed
     val tokenLit = Lit.String(token.asString)
 
+    val resourceDecoderInstance = 
+      m"""  given resourceDecoder(using besom.types.Context): besom.types.ResourceDecoder[$baseClassName] = 
+         |    besom.internal.ResourceDecoder.derived[$baseClassName]
+         |""".stripMargin
+
+    val decoderInstance = 
+      m"""  given decoder(using besom.types.Context): besom.types.Decoder[$baseClassName] = 
+         |    besom.internal.Decoder.customResourceDecoder[$baseClassName]
+         |""".stripMargin
+
     val baseCompanion =
       if (hasOutputExtensions) {
         m"""|object $baseClassName:
@@ -404,12 +414,15 @@ class CodeGen(implicit
             |  ): besom.types.Output[$baseClassName] =
             |    ctx.readOrRegisterResource[$baseClassName, $argsClassName](${tokenLit}, name, args, opts)
             |
+            |$resourceDecoderInstance
+            |$decoderInstance
             |  given outputOps: {} with
             |    extension(output: besom.types.Output[$baseClassName])
             |${baseOutputExtensionMethods.map(meth => s"      ${meth.syntax}").mkString("\n")}
             |""".stripMargin.parse[Stat].get
       } else {
-        m"""object $baseClassName""".parse[Stat].get
+        m"""object $baseClassName:
+           |$resourceDecoderInstance""".stripMargin.parse[Stat].get
       }
 
     val baseClassFileContent =
@@ -572,7 +585,10 @@ class CodeGen(implicit
         if propertyInfo.isOptional
         then scalameta.types.Option(propertyInfo.baseType)
         else propertyInfo.baseType
-      m"""def ${propertyInfo.name}: besom.types.Output[$innerType] = output.map(_.${propertyInfo.name})""".parse[Stat].get
+      
+      // def equals_: Output is syntax error, so we need to add space after underscore
+      val methodName = if propertyInfo.name.syntax.endsWith("_") then propertyInfo.name.syntax + " " else propertyInfo.name.syntax
+      m"""def $methodName: besom.types.Output[$innerType] = output.map(_.${propertyInfo.name})""".parse[Stat].get
     }
     val optionOutputExtensionMethods = properties.map { propertyInfo =>
       val innerMethodName =
@@ -580,7 +596,9 @@ class CodeGen(implicit
         then Term.Name("flatMap")
         else Term.Name("map")
 
-      m"""def ${propertyInfo.name}: besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.map(_.${innerMethodName}(_.${propertyInfo.name}))"""
+      // def equals_: Output is syntax error, so we need to add space after underscore
+      val methodName = if propertyInfo.name.syntax.endsWith("_") then propertyInfo.name.syntax + " " else propertyInfo.name.syntax
+      m"""def $methodName: besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.map(_.${innerMethodName}(_.${propertyInfo.name}))"""
         .parse[Stat]
         .get
     }
@@ -593,10 +611,9 @@ class CodeGen(implicit
 
     val className = classCoordinates.typeName
     val classDef =
-      m"""|final case class ${classCoordinates.typeName} private(
+      m"""|final case class ${className} private(
           |${classParams.map(arg => m"  ${arg.syntax}").mkString(",\n")}
-          |) derives besom.types.Decoder
-          |""".stripMargin
+          |)""".stripMargin
         .parse[Stat]
         .fold(
           e =>
@@ -606,6 +623,11 @@ class CodeGen(implicit
             ),
           identity
         )
+
+    val decoderInstance =
+      m"""  given decoder(using besom.types.Context): besom.types.Decoder[$className] = 
+         |    besom.internal.Decoder.derived[$className]
+         |""".stripMargin
 
     val baseCompanionDef =
       if (hasOutputExtensions) {
@@ -617,12 +639,14 @@ class CodeGen(implicit
             |    extension(output: besom.types.Output[$className])
             |${outputExtensionMethods.map(meth => m"      ${meth.syntax}").mkString("\n")}
             |
+            |$decoderInstance
             |  given optionOutputOps: {} with
             |    extension(output: besom.types.Output[scala.Option[$className]])
             |${optionOutputExtensionMethods.map(meth => m"      ${meth.syntax}").mkString("\n")}
             |""".stripMargin.parse[Stat].get
       } else {
-        m"""object $className""".parse[Stat].get
+        m"""object $className:
+           |$decoderInstance""".stripMargin.parse[Stat].get
       }
 
     val fileContent =
@@ -649,13 +673,13 @@ class CodeGen(implicit
   ) = {
     val argsClass = makeArgsClass(
       classCoordinates = classCoordinates,
-      inputProperties = properties,
-      isResource = isResource,
-      isProvider = isProvider
+      inputProperties = properties
     )
     val argsCompanion = makeArgsCompanion(
       classCoordinates = classCoordinates,
-      inputProperties = properties
+      inputProperties = properties,
+      isResource = isResource,
+      isProvider = isProvider
     )
 
     val fileContent =
@@ -674,15 +698,9 @@ class CodeGen(implicit
 
   private def makeArgsClass(
     classCoordinates: ScalaDefinitionCoordinates,
-    inputProperties: Seq[PropertyInfo],
-    isResource: Boolean,
-    isProvider: Boolean
+    inputProperties: Seq[PropertyInfo]
   ): Stat = {
     val argsClassName = classCoordinates.typeName
-    val derivedTypeclasses =
-      if (isProvider) "besom.types.ProviderArgsEncoder"
-      else if (isResource) "besom.types.ArgsEncoder"
-      else "besom.types.Encoder, besom.types.ArgsEncoder"
     val argsClassParams = inputProperties.map { propertyInfo =>
       val fieldType =
         if propertyInfo.isOptional
@@ -698,13 +716,14 @@ class CodeGen(implicit
 
     m"""|final case class $argsClassName private(
         |${argsClassParams.map(arg => m"  ${arg.syntax}").mkString(",\n")}
-        |) derives ${derivedTypeclasses}
-        |""".stripMargin.parse[Stat].get
+        |)""".stripMargin.parse[Stat].get
   }
 
   private def makeArgsCompanion(
     classCoordinates: ScalaDefinitionCoordinates,
-    inputProperties: Seq[PropertyInfo]
+    inputProperties: Seq[PropertyInfo],
+    isResource: Boolean,
+    isProvider: Boolean
   ): Stat = {
     val argsClassName = classCoordinates.typeName
     val argsCompanionApplyParams = inputProperties.filter(_.constValue.isEmpty).map { propertyInfo =>
@@ -732,6 +751,28 @@ class CodeGen(implicit
       }
       Term.Assign(Term.Name(propertyInfo.name.value), argValue)
     }
+    
+    // TODO this is not covered by unit tests
+    val derivedTypeclasses = {
+      lazy val providerArgsEncoderInstance = 
+        m"""  given encoder(using besom.types.Context): besom.types.ProviderArgsEncoder[$argsClassName] = 
+           |    besom.internal.ProviderArgsEncoder.derived[$argsClassName]
+           |""".stripMargin
+
+      lazy val argsEncoderInstance = 
+         m"""  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[$argsClassName] =
+            |    besom.internal.ArgsEncoder.derived[$argsClassName]
+            |""".stripMargin
+
+      if (isProvider) providerArgsEncoderInstance
+      else if (isResource) 
+        m"""  given encoder(using besom.types.Context): besom.types.Encoder[$argsClassName] =
+           |    besom.internal.Encoder.derived[$argsClassName]
+           |$argsEncoderInstance""".stripMargin
+      else m"""  given encoder(using besom.types.Context): besom.types.Encoder[$argsClassName] =
+              |    besom.internal.Encoder.derived[$argsClassName]
+              |$argsEncoderInstance""".stripMargin
+    }
 
     m"""|object $argsClassName:
         |  def apply(
@@ -740,6 +781,8 @@ class CodeGen(implicit
         |    new $argsClassName(
         |${argsCompanionApplyBodyArgs.map(arg => s"      ${arg.syntax}").mkString(",\n")}
         |    )
+        |
+        |$derivedTypeclasses
         |""".stripMargin.parse[Stat].get
   }
 }
