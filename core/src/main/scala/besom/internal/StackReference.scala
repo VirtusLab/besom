@@ -1,5 +1,6 @@
 package besom.internal
 
+import besom.util.NonEmptyString
 import besom.types.*
 import spray.json.*
 
@@ -50,11 +51,11 @@ case class StackReference(
 end StackReference
 
 trait StackReferenceFactory:
-  def apply(
-             name: NonEmptyString,
-             args: Input.Optional[StackReferenceArgs],
-             opts: StackReferenceResourceOptions
-           )(using Context): Output[StackReference] =
+  def apply(using Context)(
+    name: NonEmptyString,
+    args: Input.Optional[StackReferenceArgs] = None,
+    opts: StackReferenceResourceOptions = StackReferenceResourceOptions()
+  ): Output[StackReference] =
     args
       .asOptionOutput(false)
       .flatMap {
@@ -68,7 +69,7 @@ trait StackReferenceFactory:
           Output(selectedName)
         )
 
-        val mergedOpts = StackReferenceResourceOptions(
+        val mergedOpts = new StackReferenceResourceOptions( // use constructor directly to avoid apply
           opts.common,
           Some(importId)
         )

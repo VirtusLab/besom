@@ -1,6 +1,6 @@
 package besom.util
 
-import besom.types.URN
+import besom.types.*
 
 class URNTest extends munit.FunSuite with CompileAssertions:
 

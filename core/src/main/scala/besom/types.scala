@@ -163,7 +163,7 @@ object types:
   object URN:
     /** The instance of [[URN]] that represents an empty URN
       */
-    val empty: URN = ""
+    private[besom] val empty: URN = ""
 
     /** This is implemented according to https://www.pulumi.com/docs/concepts/resources/names/#urns and
       * https://pulumi-developer-docs.readthedocs.io/en/latest/providers/implementers-guide.html?highlight=URN#urns
@@ -209,7 +209,7 @@ object types:
 
     private[types] val UrnRegex = urnRegex.r
 
-    private[besom] inline def apply(s: String): URN =
+    inline def apply(s: String): URN =
       requireConst(s)
       inline if !constValue[Matches[
           s.type,
@@ -217,7 +217,7 @@ object types:
         ]]
       then
         error(
-          "this string doesn't match the URN format, see https://www.pulumi.com/docs/concepts/resources/names/#urns"
+          "This string doesn't match the URN format, see https://www.pulumi.com/docs/concepts/resources/names/#urns"
         )
       else s
 
@@ -227,11 +227,8 @@ object types:
       else throw IllegalArgumentException(s"URN $s is not valid")
     }
 
-    // trait CanDeserializeURN:
-    //   protected def parseURN(s: String): Try[URN] = Try {
-    //     if UrnRegex.matches(s) then s
-    //     else throw IllegalArgumentException(s"URN $s is not valid")
-    //   }
+    def parse(value: String)(using besom.internal.Context): Output[URN] =
+      besom.internal.Output(besom.internal.Result.evalTry(besom.types.URN.from(value)))
 
     extension (urn: URN)
       /** @return

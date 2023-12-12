@@ -35,13 +35,17 @@ def testToStack(name: String): String  = "tests-" + sanitizeName(name)
 object pulumi {
   def login(pulumiHome: os.Path) = pproc("pulumi", "--non-interactive", "--logtostderr", "login", s"file://$pulumiHome")
 
-  def logout(pulumiHome: os.Path) = pproc("pulumi", "--non-interactive", "--logtostderr", "logout", s"file://$pulumiHome")
+  def logout(pulumiHome: os.Path) =
+    pproc("pulumi", "--non-interactive", "--logtostderr", "logout", s"file://$pulumiHome")
 
   def stackInit(stackName: String) =
     pproc("pulumi", "--non-interactive", "--logtostderr", "stack", "init", "--stack", stackName)
 
   def stackRm(stackName: String) =
     pproc("pulumi", "--non-interactive", "--logtostderr", "stack", "rm", "-y", "--stack", stackName)
+
+  def stackLs() =
+    pproc("pulumi", "--non-interactive", "--logtostderr", "stack", "ls", "--json")
 
   def preview(stackName: String, additional: os.Shellable*) =
     pproc("pulumi", "--non-interactive", "--logtostderr", "preview", "--stack", stackName, additional)
@@ -120,32 +124,38 @@ object pulumi {
 
   // noinspection ScalaWeakerAccess
   case class FixtureArgs(
-                          testDir: os.Path,
-                          projectFiles: Map[String, String] = Map("project.scala" -> defaultProjectFile),
-                          pulumiEnv: Map[String, String] = Map()
-                        )
+    testDir: os.Path,
+    projectFiles: Map[String, String] = Map("project.scala" -> defaultProjectFile),
+    pulumiEnv: Map[String, String] = Map()
+  )
   case class FixtureContext(stackName: String, testDir: os.Path, env: Map[String, String], pulumiHome: os.Path)
+  case class FixtureOpts(useSameState: Boolean = false)
 
   object fixture {
     def setup(
-               args: FixtureArgs*
-             )(
-               test: munit.TestOptions
-             ): Vector[FixtureContext] =
+      opts: FixtureOpts,
+      args: FixtureArgs*
+    )(
+      test: munit.TestOptions
+    ): Vector[FixtureContext] =
+      // if useSameState is set create a single path for pulumi home
+      val pulumiState = if opts.useSameState then Some(os.temp.dir()) else None
       args
-        .map(setup(_)(test))
+        .map(setup(_, pulumiState)(test))
         .foldLeft(Vector.empty[FixtureContext])(_ :+ _)
 
     def setup(
       testDir: os.Path,
       projectFiles: Map[String, String] = Map("project.scala" -> defaultProjectFile),
-      pulumiEnv: Map[String, String] = Map()
-             ): munit.TestOptions => FixtureContext =
-      setup(FixtureArgs(testDir, projectFiles, pulumiEnv))
+      pulumiEnv: Map[String, String] = Map(),
+      opts: FixtureOpts = FixtureOpts()
+    ): munit.TestOptions => FixtureContext =
+      val pulumiState = if opts.useSameState then Some(os.temp.dir()) else None
+      setup(FixtureArgs(testDir, projectFiles, pulumiEnv), pulumiState)
 
-    def setup(args: FixtureArgs)(test: munit.TestOptions): FixtureContext = {
-      val stackName = testToStack(test.name) + sha1(args.testDir.relativeTo(os.pwd).toString)
-      val tmpPulumiHome = os.temp.dir()
+    def setup(args: FixtureArgs, pulumiState: Option[os.Path])(test: munit.TestOptions): FixtureContext = {
+      val stackName     = testToStack(test.name) + sha1(args.testDir.relativeTo(os.pwd).toString)
+      val tmpPulumiHome = pulumiState.getOrElse(os.temp.dir())
       val allEnv: Map[String, String] =
         Map(
           "PULUMI_CONFIG_PASSPHRASE" -> envVarOpt("PULUMI_CONFIG_PASSPHRASE").getOrElse("")

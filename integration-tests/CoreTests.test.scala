@@ -2,7 +2,7 @@ package besom.integration.core
 
 import besom.codegen.PackageMetadata
 import besom.integration.common.*
-import besom.integration.common.pulumi.FixtureArgs
+import besom.integration.common.pulumi.{FixtureArgs, FixtureOpts}
 import os.*
 
 //noinspection ScalaWeakerAccess,TypeAnnotation,ScalaFileName
@@ -114,6 +114,7 @@ class CoreTests extends munit.FunSuite {
       val result     = codegen.generatePackage(PackageMetadata(schemaName, providerTlsSchemaVersion))
       scalaCli.publishLocal(result.outputDir).call()
       pulumi.fixture.setup(
+        FixtureOpts(useSameState = true),
         FixtureArgs(
           wd / "resources" / "references" / "source-stack",
           projectFiles = Map(
@@ -138,9 +139,13 @@ class CoreTests extends munit.FunSuite {
     }
   ).test("stack outputs and references should work") {
     case Vector(ctx1, ctx2) =>
+      println(s"Source stack name: ${ctx1.stackName}, pulumi home: ${ctx1.pulumiHome}")
       val result1 = pulumi.up(ctx1.stackName).call(cwd = ctx1.testDir, env = ctx1.env)
       assert(result1.exitCode == 0)
-      val result2 = pulumi.up(ctx2.stackName, "--config", s"sourceStack=$ctx1.stackName").call(cwd = ctx2.testDir, env = ctx2.env)
+      println(pulumi.stackLs().call(cwd = ctx1.testDir, env = ctx1.env, check = false).out.text())
+      println(s"Target stack name: ${ctx2.stackName}, pulumi home: ${ctx2.pulumiHome}")
+      val result2 =
+        pulumi.up(ctx2.stackName, "--config", s"sourceStack=${ctx1.stackName}").call(cwd = ctx2.testDir, env = ctx2.env)
       assert(result2.exitCode == 0)
 
     case _ => throw new Exception("Invalid number of contexts")

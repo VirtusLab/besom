@@ -1,6 +1,6 @@
 package besom.internal
 
-import besom.types.*
+import besom.util.NonEmptyString
 
 case class StackReferenceArgs(name: Output[NonEmptyString]) derives ArgsEncoder
 

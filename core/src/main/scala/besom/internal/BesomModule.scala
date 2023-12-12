@@ -68,6 +68,8 @@ trait EffectBesomModule extends BesomSyntax:
         throw err
       case Right(_) =>
         sys.exit(0)
+  end run
+end EffectBesomModule
 
 /** The Besom module provides the core functionality of the Besom runtime.
   * @see

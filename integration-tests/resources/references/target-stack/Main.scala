@@ -1,6 +1,7 @@
 import besom.*
 import besom.api.tls
 import besom.internal.StackReferenceResourceOptions
+import spray.json.*
 
 //noinspection UnitMethodIsParameterless,TypeAnnotation
 @main def main = Pulumi.run {
@@ -10,15 +11,28 @@ import besom.internal.StackReferenceResourceOptions
     StackReferenceArgs(sourceStackName),
     StackReferenceResourceOptions()
   )
-  val sshKeyUrn = sourceStack.map(_.getOutput("sshKeyUrn").map(URN(_.toString)))
+
+  val sshKeyUrn = sourceStack.flatMap(
+    _.getOutput("sshKeyUrn")
+      .map {
+        case Some(JsString(s)) => s
+        case other             => throw RuntimeException(s"Expected string, got $other")
+      }
+      .flatMap(URN.parse(_))
+  )
 
   val fetchedResource =
-    for u <- sshKeyUrn
-    yield tls.PrivateKey(
-      "sshKey",
-      EmptyArgs(),
-      CustomResourceOptions(urn = u)
-    )
+    for
+      u <- sshKeyUrn
+      fetched <- tls.PrivateKey(
+        "sshKey",
+        tls.PrivateKeyArgs(
+          algorithm = "RSA",
+          rsaBits = 4096
+        ),
+        CustomResourceOptions(urn = u)
+      )
+    yield fetched
 
   Output {
     exports(
