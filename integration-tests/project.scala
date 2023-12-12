@@ -1,5 +1,5 @@
 //> using scala 3.3.1
-//> using options -java-output-version:17 -deprecation
+//> using options -java-output-version:11 -deprecation
 
 //> using exclude "*/resources/*"
 

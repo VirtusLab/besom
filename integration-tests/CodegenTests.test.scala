@@ -41,14 +41,14 @@ class CodegenTests extends munit.FunSuite {
     "hyphen-url", // depends on azure-native,
     "naming-collisions", // codec not found
     "mini-azurenative", // simple enum is not supported
-    "replace-on-change", // resource decoder issue
+    // "replace-on-change", // fixed
     // "resource-property-overlap", // fixed
     "cyclic-types", // YAML schema is not supported
     "plain-and-default", // simple enum is not supported
     "different-package-name-conflict", // duplicate issue
     "output-funcs", // deserialize issue
     "dashed-import-schema", // simple enum is not supported
-    "output-funcs-edgeorder", // decoder issue
+    "output-funcs-edgeorder", // missing union decoder issue
     "other-owned" // codec not found
   )
 

@@ -329,8 +329,7 @@ def tags(excludedTag: Tag): Test => Boolean = _.tags.contains(excludedTag)
 
 private def sha1(s: String): String = {
   import java.security.MessageDigest
-  import java.util.HexFormat
 
   val bytes = MessageDigest.getInstance("SHA-1").digest(s.getBytes("UTF-8"))
-  HexFormat.of().withLowerCase().formatHex(bytes)
+  String.format("%064x", new java.math.BigInteger(1, bytes))
 }
