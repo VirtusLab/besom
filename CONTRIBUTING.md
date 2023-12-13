@@ -338,9 +338,34 @@ rm pulumi.rb
 
 ### Compilation issues
 
+To clean the builds:
+```bash
+just clean-all
+```
+
+If a deep cleaning needed:
+```bash
+just power-wash
+````
+
 To restart `bloop` compilation server:
 ```bash
 scala-cli bloop exit
+```
+
+To set `bloop` verbosity:
+```bash
+scala-cli setup-ide -v -v -v .
+```
+
+To use a nightly version of Scala compiler:
+```bash
+scala-cli compile -S 3.nightly .
+```
+
+To increase Scala compiler verbosity:
+```bash
+scala-cli compile --javac-opt=-verbose .
 ```
 
 ## Getting Help
