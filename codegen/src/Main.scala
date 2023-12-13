@@ -92,7 +92,7 @@ object generator {
       config.outputDir.getOrElse(os.rel / packageName / packageVersion.asString).resolveFrom(config.codegenDir)
 
     val total = generatePackageSources(pulumiPackage, packageInfo, outputDir)
-    logger.info(s"Finished generating package '$packageName:$packageVersion' codebase (${total} files)})")
+    logger.info(s"Finished generating package '$packageName:$packageVersion' codebase (${total} files)")
 
     val dependencies = schemaProvider.dependencies(packageName, packageVersion).map { case (name, version) =>
       PackageMetadata(name, Some(version))
