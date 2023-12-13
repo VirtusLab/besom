@@ -186,8 +186,6 @@ object pulumi {
       val allEnv: Map[String, String] =
         // local environment, to run locally offline, make sure you set PULUMI_BACKEND_URL and PULUMI_API
         opts.pulumiEnv ++ Map(
-          //          "PULUMI_BACKEND_URL" -> s"file://${opts.pulumiHomeDir.toString}",
-          //          "PULUMI_API" -> s"file://${opts.pulumiHomeDir.toString}",
           "PULUMI_HOME" -> (opts.pulumiHomeDir / ".pulumi").toString,
           "PULUMI_SKIP_UPDATE_CHECK" -> "true"
         )
