@@ -1,6 +1,6 @@
+package besom.internal
+
 import besom.*
-import besom.api.tls
-import besom.internal.StackReferenceResourceOptions
 import spray.json.*
 
 //noinspection UnitMethodIsParameterless,TypeAnnotation
@@ -18,25 +18,37 @@ import spray.json.*
         case Some(JsString(s)) => s
         case other             => throw RuntimeException(s"Expected string, got $other")
       }
-      .flatMap(URN.parse(_))
+      .flatMap(URN.parse)
   )
 
-  val fetchedResource =
-    for
-      u <- sshKeyUrn
-      fetched <- tls.PrivateKey(
-        "sshKey",
-        tls.PrivateKeyArgs(
-          algorithm = "RSA",
-          rsaBits = 4096
-        ),
-        CustomResourceOptions(urn = u)
-      )
-    yield fetched
+  val value1 = sourceStack.flatMap(_.getOutput("value1").map {
+    case Some(JsNumber(s)) => s.toInt
+    case other             => throw RuntimeException(s"Expected string, got $other")
+  })
+  val value2 = sourceStack.flatMap(_.getOutput("value2").map {
+    case Some(JsString(s)) => s
+    case other             => throw RuntimeException(s"Expected string, got $other")
+  })
+  val structured = sourceStack.flatMap(_.getOutput("structured"))
 
-  Output {
-    exports(
-      theSshKeyUrn = fetchedResource.urn
-    )
-  }
+  val r =
+    for
+      sku <- sshKeyUrn.getData.map(_.secret)
+      v1  <- value1.getData.map(_.secret)
+      v2  <- value2.getData.map(_.secret)
+      s   <- structured.getData.map(_.secret)
+    yield
+      assert(!sku, "sshKeyUrn should not be a secret")
+      assert(!v1, "value1 should not be a secret")
+      assert(!v2, "value2 should not be a secret")
+      assert(s, "structured should be a secret")
+
+  for {
+    _ <- Output(r)
+  } yield exports(
+    sshKeyUrn = sshKeyUrn,
+    value1 = value1,
+    value2 = value2,
+    structured = structured
+  )
 }

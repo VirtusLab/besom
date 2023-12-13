@@ -117,25 +117,28 @@ class CoreTests extends munit.FunSuite {
           )
         ),
         FixtureArgs(
-          wd / "resources" / "references" / "target-stack",
-          projectFiles = Map(
-            "project.scala" ->
-              (defaultProjectFile + s"""//> using dep org.virtuslab::besom-$schemaName:$providerTlsVersion""")
-          )
+          wd / "resources" / "references" / "target-stack"
         )
       )
     },
     teardown = pulumi.fixture.teardown
-  ).test("stack outputs and references should work") {
+  ).test("stack outputs and references should work".only) {
     case pulumi.FixtureMultiContext(ctx, Vector(ctx1, ctx2)) =>
       println(s"Source stack name: ${ctx1.stackName}, pulumi home: ${ctx.home}")
       pulumi.up(ctx1.stackName).call(cwd = ctx1.programDir, env = ctx1.env)
-      println(pulumi.outputs(ctx1.stackName).call(cwd = ctx1.programDir, env = ctx1.env).out.text())
-      println(pulumi.stackLs().call(cwd = ctx2.programDir, env = ctx2.env).out.text())
+      val outputs1 = upickle.default.read[Map[String, Value]](
+        pulumi.outputs(ctx1.stackName, "--show-secrets").call(cwd = ctx1.programDir, env = ctx1.env).out.text()
+      )
+
       println(s"Target stack name: ${ctx2.stackName}, pulumi home: ${ctx.home}")
       pulumi
         .up(ctx2.stackName, "--config", s"sourceStack=organization/source-stack-test/${ctx1.stackName}")
         .call(cwd = ctx2.programDir, env = ctx2.env)
+      val outputs2 = upickle.default.read[Map[String, ujson.Value]](
+        pulumi.outputs(ctx2.stackName, "--show-secrets").call(cwd = ctx2.programDir, env = ctx2.env).out.text()
+      )
+
+      assertEquals(outputs1, outputs2)
 
     case _ => throw new Exception("Invalid number of contexts")
   }
