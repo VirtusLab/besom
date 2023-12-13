@@ -126,7 +126,7 @@ class CoreTests extends munit.FunSuite {
     case pulumi.FixtureMultiContext(ctx, Vector(ctx1, ctx2)) =>
       println(s"Source stack name: ${ctx1.stackName}, pulumi home: ${ctx.home}")
       pulumi.up(ctx1.stackName).call(cwd = ctx1.programDir, env = ctx1.env)
-      val outputs1 = upickle.default.read[Map[String, Value]](
+      val outputs1 = upickle.default.read[Map[String, ujson.Value]](
         pulumi.outputs(ctx1.stackName, "--show-secrets").call(cwd = ctx1.programDir, env = ctx1.env).out.text()
       )
 
