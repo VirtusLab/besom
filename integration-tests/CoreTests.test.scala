@@ -19,7 +19,6 @@ class CoreTests extends munit.FunSuite {
     val output = result.out.text()
     assert(output.contains("Nothing here yet. It's waiting for you!"), s"Output:\n$output\n")
     assert(output.contains("Interpolated value"), s"Output:\n$output\n")
-    assert(result.exitCode == 0)
   }
 
   FunFixture[pulumi.FixtureContext](
@@ -41,10 +40,8 @@ class CoreTests extends munit.FunSuite {
 
     val upResult = pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
     println(upResult.out.text())
-    assert(upResult.exitCode == 0)
 
     val outResult = pulumi.outputs(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
-    assert(outResult.exitCode == 0)
 
     val output  = outResult.out.text()
     val outputs = upickle.default.read[Map[String, ujson.Value]](output)
@@ -58,7 +55,6 @@ class CoreTests extends munit.FunSuite {
 //    assertEquals(outputs("names").arr.map(_.str).toList, List("a","b","c","[secret]"), s"Output:\n$output\n")
 
     val outResult2 = pulumi.outputs(ctx.stackName, "--show-secrets").call(cwd = ctx.programDir, env = ctx.env)
-    assert(outResult.exitCode == 0)
 
     val output2  = outResult2.out.text()
     val outputs2 = upickle.default.read[Map[String, ujson.Value]](output2)
@@ -86,7 +82,6 @@ class CoreTests extends munit.FunSuite {
     val result = pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
     val output = result.out.text()
     assert(output.contains("randomString:"), s"Output:\n$output\n")
-    assert(result.exitCode == 0)
   }
 
   FunFixture[pulumi.FixtureContext](
@@ -104,8 +99,7 @@ class CoreTests extends munit.FunSuite {
     },
     teardown = pulumi.fixture.teardown
   ).test("tls provider should work with function") { ctx =>
-    val result = pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
-    assert(result.exitCode == 0)
+    pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
   }
 
   FunFixture[pulumi.FixtureMultiContext](
@@ -137,7 +131,7 @@ class CoreTests extends munit.FunSuite {
       println(s"Source stack name: ${ctx1.stackName}, pulumi home: ${ctx.home}")
       pulumi.up(ctx1.stackName).call(cwd = ctx1.programDir, env = ctx1.env)
       println(pulumi.outputs(ctx1.stackName).call(cwd = ctx1.programDir, env = ctx1.env).out.text())
-      println(pulumi.stackLs().call(cwd = ctx2.programDir, env = ctx2.env, check = false).out.text())
+      println(pulumi.stackLs().call(cwd = ctx2.programDir, env = ctx2.env).out.text())
       println(s"Target stack name: ${ctx2.stackName}, pulumi home: ${ctx.home}")
       pulumi
         .up(ctx2.stackName, "--config", s"sourceStack=organization/source-stack-test/${ctx1.stackName}")
