@@ -15,8 +15,8 @@ import besom.*
   val names = config.requireObject[List[String]]("names")
 
   import spray.json.JsonFormat
-  case class Foo(name: String, age: Int)
-  //noinspection ScalaUnusedSymbol
+  case class Foo(name: String, age: Int) derives Encoder
+  // noinspection ScalaUnusedSymbol
   object Foo:
     given JsonFormat[Foo] = jsonFormat2(Foo.apply)
 
@@ -32,7 +32,7 @@ import besom.*
       viral2 = viral2,
       viral3 = viral3,
       names = names,
-      foo = foo.map(summon[JsonFormat[Foo]].write(_))
+      foo = foo
     )
   )
 }

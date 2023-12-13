@@ -46,7 +46,8 @@ object types:
     *   - The `<module>` component of the type (e.g. s3/bucket, compute, apps/v1, index) is the module path where the resource lives within
     *     the package. It is / delimited by component of the path. The name index indicates that the resource is not nested, and is instead
     *     available at the top level of the package. Per-language Pulumi SDKs use the module path to emit nested namespaces/modules in a
-    *     language-specific way to organize all the types defined in a package.
+    *     language-specific way to organize all the types defined in a package. <module> is optional, if it's omitted `index` module is
+    *     assumed (so `random:RandomPassword` is equivalent to `random:index:RandomPassword`)
     *   - The `<typename>` component of the type (e.g. Bucket, VirtualMachine, Deployment, RandomPassword) is the identifier used to refer
     *     to the resource itself. It is mapped to the class or constructor name in the per-language Pulumi SDK.
     */
@@ -61,9 +62,12 @@ object types:
       * @return
       *   a [[ResourceType]] if the string is valid, otherwise an compile time error occurs
       */
+
     // validate that resource type contains two colons between three identifiers, special characters are allowed, for instance:
     // pulumi:providers:kubernetes is a valid type
     // kubernetes:core/v1:ConfigMap is a valid type
+    // this macro is used for validation of resource types for user built components, it will NOT accept short resource types
+    // ie.: random:RandomPassword (shorthand for random:index:RandomPassword)
     inline def from(s: String): ResourceType =
       requireConst(s)
       inline if !constValue[Matches[s.type, ".+:.+:.+"]] then
@@ -75,6 +79,8 @@ object types:
       else s
 
     implicit inline def str2ResourceType(inline s: String): ResourceType = ResourceType.from(s)
+
+    private[besom] def unsafeOf(s: String): ResourceType = s
 
   end ResourceType
 
@@ -157,21 +163,61 @@ object types:
   object URN:
     /** The instance of [[URN]] that represents an empty URN
       */
-    val empty: URN = ""
+    private[besom] val empty: URN = ""
 
-    // This is implemented according to https://www.pulumi.com/docs/concepts/resources/names/#urns
-    private[types] val UrnRegex =
-      """urn:pulumi:(?<stack>[^:]+)::(?<project>[^:]+)::(?<parentType>.+?)((\$(?<resourceType>.+))?)::(?<resourceName>.+)""".r
+    /** This is implemented according to https://www.pulumi.com/docs/concepts/resources/names/#urns and
+      * https://pulumi-developer-docs.readthedocs.io/en/latest/providers/implementers-guide.html?highlight=URN#urns
+      *
+      * If you want to understand this regex better head to: https://regex101.com/r/o2QWJ3/1
+      *
+      * Now hear me out, this regex is a bit complicated, but it's not that bad. Let's break it down. We have to adhere to this grammar:
+      * ```
+      * urn = "urn:pulumi:" stack "::" project "::" qualified type name "::" name ;
+      *
+      * stack   = string ;
+      * project = string ;
+      * name    = string ;
+      * string  = (* any sequence of unicode code points that does not contain "::" *) ;
+      *
+      * qualified type name = [ parent type "$" ] type ;
+      * parent type         = type ;
+      *
+      * type       = package ":" [ module ":" ] type name ;
+      * package    = identifier ;
+      * module     = identifier ;
+      * type name  = identifier ;
+      * identifier = unicode letter { unicode letter | unicode digit | "_" } ; // this actually lies a bit because it has to allow "/"
+      * ```
+      *
+      * So let's start with the easy part, the first part of the regex is just a constant string: `urn:pulumi:`. Then we have these
+      * segments:
+      * ```
+      * 1. Identifier Regex: \p{L}[\p{L}\p{N}_/]*
+      * 2. Type Components Regex: The package, module, and type name follow the identifier pattern, separated by :.
+      *    This can be represented as (\p{L}[\p{L}\p{N}_/]*) for each component, with optional components for module.
+      * 3. Qualified Type Name Regex: This includes any number of parent types (each following the type pattern) separated by $,
+      *    and then the final resource type. The parent types are optional and non-greedy to ensure they don't consume the final
+      *    resource type.
+      * 4. Stack, Project, and Name Regex: These are strings that do not contain ::. This can be represented as ([^:]+|[^:]*::[^:]*).
+      * ```
+      * The final regex is then an amalgamation of these components, with the parent type and resource type separated by :: and named
+      * capture groups for each component.
+      */
 
-    private[besom] inline def apply(s: String): URN =
+    private inline val urnRegex =
+      """urn:pulumi:(?<stack>[^:]+|[^:]*::[^:]*)::(?<project>[^:]+|[^:]*::[^:]*)::(?<parentType>(?:(\p{L}[\p{L}\p{N}_/]*)(?::(\p{L}[\p{L}\p{N}_/]*))?:(\p{L}[\p{L}\p{N}_/]*)(?:\$))*)(?<resourceType>(\p{L}[\p{L}\p{N}_/]*)(?::(\p{L}[\p{L}\p{N}_/]*))?:(\p{L}[\p{L}\p{N}_/]*))::(?<resourceName>[^:]+|[^:]*::[^:]*)"""
+
+    private[types] val UrnRegex = urnRegex.r
+
+    inline def apply(s: String): URN =
       requireConst(s)
       inline if !constValue[Matches[
           s.type,
-          """urn:pulumi:(?<stack>[^:]+)::(?<project>[^:]+)::(?<parentType>.+?)((\$(?<resourceType>.+))?)::(?<resourceName>.+)"""
+          urnRegex.type
         ]]
       then
         error(
-          "this string doesn't match the URN format, see https://www.pulumi.com/docs/concepts/resources/names/#urns"
+          "This string doesn't match the URN format, see https://www.pulumi.com/docs/concepts/resources/names/#urns"
         )
       else s
 
@@ -181,11 +227,8 @@ object types:
       else throw IllegalArgumentException(s"URN $s is not valid")
     }
 
-    // trait CanDeserializeURN:
-    //   protected def parseURN(s: String): Try[URN] = Try {
-    //     if UrnRegex.matches(s) then s
-    //     else throw IllegalArgumentException(s"URN $s is not valid")
-    //   }
+    def parse(value: String)(using besom.internal.Context): Output[URN] =
+      besom.internal.Output(besom.internal.Result.evalTry(besom.types.URN.from(value)))
 
     extension (urn: URN)
       /** @return
@@ -206,13 +249,19 @@ object types:
       /** @return
         *   the type of the parent [[besom.internal.Resource]]
         */
-      def parentType: String = URN.UrnRegex.findFirstMatchIn(urn).get.group("parentType")
+      def parentType: Vector[ResourceType] = URN.UrnRegex
+        .findFirstMatchIn(urn)
+        .fold(Vector.empty) { m =>
+          m.group("parentType") match
+            case s if s.isEmpty() => Vector.empty
+            case s                => s.split('$').toVector.map(ResourceType.unsafeOf)
+        }
 
       /** @return
         *   the type of this [[besom.internal.Resource]]
         */
-      def resourceType: Option[String] =
-        URN.UrnRegex.findFirstMatchIn(urn).map(_.group("resourceType")).flatMap(Option(_))
+      def resourceType: ResourceType =
+        ResourceType.unsafeOf(URN.UrnRegex.findFirstMatchIn(urn).get.group("resourceType"))
 
       /** @return
         *   the logical name of this [[besom.internal.Resource]]
@@ -234,14 +283,18 @@ object types:
       */
     val empty: ResourceId = ""
 
-    // this should be only usable in Decoder and RawResourceResult.fromResponse
-    private[besom] def apply(s: String): ResourceId = s
+    def apply(nes: NonEmptyString): ResourceId = nes
+
+    implicit inline def str2ResourceId(inline s: String): ResourceId = apply(NonEmptyString.from(s))
+
+    // this should be used ONLY in Decoder and RawResourceResult smart constructors
+    private[besom] def unsafeOf(s: String): ResourceId = s
 
     extension (id: ResourceId)
       /** @return
         *   the [[ResourceId]] as a [[String]]
         */
-      def asString: String = id
+      private[besom] def asString: String = id
 
   sealed trait AssetOrArchive
 
@@ -289,7 +342,7 @@ object types:
       decV.emap { (value, label) =>
         valuesToInstances
           .get(value)
-          .toValidatedOrError(DecodingError(s"$label: `${value}` is not a valid value of `${enumName}`", label = label))
+          .toValidatedResultOrError(DecodingError(s"$label: `${value}` is not a valid value of `${enumName}`", label = label))
       }
 
   export besom.aliases.{*, given}

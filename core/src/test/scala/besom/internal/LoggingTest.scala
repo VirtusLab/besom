@@ -22,7 +22,7 @@ class LoggingTest extends munit.FunSuite:
   test("plain logging works") {
     val urn      = URN("urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource")
     val logger   = BesomLogger.local().unsafeRunSync()
-    val res      = TestResource(Output(urn), Output(ResourceId("bar")), Output("url"))
+    val res      = TestResource(Output(urn), Output("bar"), Output("url"))
     val messages = mutable.ArrayBuffer.empty[LogRecord]
 
     scribe.Logger.root

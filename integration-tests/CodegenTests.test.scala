@@ -31,24 +31,20 @@ class CodegenTests extends munit.FunSuite {
 
   // FIXME: broken - codegen error
   val ignoreList = List(
-    "simple-resource-schema", // resource decoder issue
     "simple-enum-schema", // simple enum is not supported
     "simple-yaml-schema", // YAML is not supported
     "external-enum", // depends on google-native, TODO: check if this is still broken
-    "external-resource-schema", // resource decoder issue
     "enum-reference", // depends on google-native, TODO: check if this is still broken
     "different-enum", // simple enum is not supported
     "hyphen-url", // depends on azure-native,
     "naming-collisions", // codec not found
     "mini-azurenative", // simple enum is not supported
-    "replace-on-change", // resource decoder issue
-    "resource-property-overlap", // resource decoder issue
     "cyclic-types", // YAML schema is not supported
     "plain-and-default", // simple enum is not supported
     "different-package-name-conflict", // duplicate issue
     "output-funcs", // deserialize issue
     "dashed-import-schema", // simple enum is not supported
-    "output-funcs-edgeorder", // decoder issue
+    "output-funcs-edgeorder", // missing union decoder issue
     "other-owned" // codec not found
   )
 
@@ -86,10 +82,12 @@ class CodegenTests extends munit.FunSuite {
       for (dep <- result.dependencies) {
         codegen.generateLocalPackage(dep)
       }
-      println(s"\nCompiling generated code for ${data.name}...")
+      println(s"\nCompiling generated code for ${data.name} in ${result.outputDir}...")
       val compiled = scalaCli.compile(result.outputDir).call(check = false)
       assert {
         clue(data)
+        clue(compiled.out.text())
+        clue(compiled.err.text())
         compiled.exitCode == 0
       }
       println()

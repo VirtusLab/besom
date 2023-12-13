@@ -1,7 +1,7 @@
 package besom.internal
 
 import scala.collection.BuildFrom
-import besom.util.*
+import besom.util.*, Validated.ValidatedResult
 
 enum OutputData[+A]:
   case Unknown(resources: Set[Resource], isSecret: Boolean) extends OutputData[Nothing]
@@ -11,6 +11,11 @@ enum OutputData[+A]:
     this match
       case Unknown(resources, isSecret)      => isSecret
       case Known(resources, isSecret, value) => isSecret
+
+  def known: Boolean =
+    this match
+      case _: Known[A] => true
+      case _           => false
 
   def getResources: Set[Resource] =
     this match
@@ -87,6 +92,12 @@ enum OutputData[+A]:
       case k @ Known(resources, isSecret, None)    => Validated.valid(k.asInstanceOf[OutputData[B]])
       case Known(resources, isSecret, Some(value)) => f(value).map(b => Known(resources, isSecret, Some(b)))
 
+  def traverseValidatedResult[E, B](f: A => ValidatedResult[E, B]): ValidatedResult[E, OutputData[B]] =
+    this match
+      case u @ Unknown(_, _)                       => ValidatedResult.valid(u)
+      case k @ Known(resources, isSecret, None)    => ValidatedResult.valid(k.asInstanceOf[OutputData[B]])
+      case Known(resources, isSecret, Some(value)) => f(value).map(b => Known(resources, isSecret, Some(b)))
+
   def isEmpty: Boolean =
     this match
       case Unknown(_, _)         => true
@@ -103,9 +114,12 @@ enum OutputData[+A]:
     this match
       case Unknown(_, _)         => default
       case Known(_, _, optValue) => optValue.getOrElse(default)
+end OutputData
 
 object OutputData:
-  def unknown(isSecret: Boolean = false): OutputData[Nothing] = Unknown(Set.empty, isSecret)
+  def unknown(isSecret: Boolean = false): OutputData[Nothing] = unknown(isSecret, Set.empty)
+
+  def unknown(isSecret: Boolean, resources: Set[Resource]): OutputData[Nothing] = Unknown(resources, isSecret)
 
   def apply[A](resources: Set[Resource], value: Option[A], isSecret: Boolean): OutputData[A] =
     Known(resources, isSecret, value)

@@ -250,6 +250,7 @@ class Config private (
     *   the configuration or secret deserialized JSON value of the requested type or [[ConfigError]]
     */
   def requireObject[A: ConfigValueReader: JsonReader](key: NonEmptyString)(using Context): Output[A] = require[A](key)
+end Config
 
 //noinspection ScalaUnusedSymbol
 object Config:
@@ -503,6 +504,8 @@ object Config:
       */
     def requireObject[A: ConfigValueReader: JsonReader](key: NonEmptyString)(using Context): Output[A] =
       output.flatMap(_.requireObject[A](key))
+  end extension
+end Config
 
 trait ConfigFactory:
   /** Creates a new Config with the given namespace.
@@ -514,5 +517,5 @@ trait ConfigFactory:
     *   a new Config with the given namespace.
     */
   def apply(namespace: NonEmptyString)(using Context): Output[Config] =
-    val projectConfig = summon[Context].config
+    val projectConfig = Context().config
     Output(Config.forNamespace(namespace, projectConfig.configMap, projectConfig.configSecretKeys))

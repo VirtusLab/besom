@@ -71,7 +71,7 @@ class CodeGenTest extends munit.FunSuite {
               |final case class Provider private(
               |  urn: besom.types.Output[besom.types.URN],
               |  id: besom.types.Output[besom.types.ResourceId]
-              |) extends besom.ProviderResource derives besom.ResourceDecoder
+              |) extends besom.ProviderResource
               |
               |object Provider:
               |  def apply(using ctx: besom.types.Context)(
@@ -79,7 +79,13 @@ class CodeGenTest extends munit.FunSuite {
               |    args: ProviderArgs = ProviderArgs(),
               |    opts: besom.CustomResourceOptions = besom.CustomResourceOptions()
               |  ): besom.types.Output[Provider] =
-              |    ctx.registerResource[Provider, ProviderArgs]("pulumi:providers:example", name, args, opts)
+              |    ctx.readOrRegisterResource[Provider, ProviderArgs]("pulumi:providers:example", name, args, opts)
+              |
+              |  given resourceDecoder(using besom.types.Context): besom.types.ResourceDecoder[Provider] = 
+              |    besom.internal.ResourceDecoder.derived[Provider]
+              |
+              |  given decoder(using besom.types.Context): besom.types.Decoder[Provider] = 
+              |    besom.internal.Decoder.customResourceDecoder[Provider]
               |
               |  given outputOps: {} with
               |    extension(output: besom.types.Output[Provider])
@@ -91,8 +97,7 @@ class CodeGenTest extends munit.FunSuite {
               |
               |final case class ProviderArgs private(
               |  helmReleaseSettings: besom.types.Output[scala.Option[besom.api.example.inputs.HelmReleaseSettingsArgs]]
-              |) derives besom.types.ProviderArgsEncoder
-              |
+              |)
               |
               |object ProviderArgs:
               |  def apply(
@@ -101,6 +106,9 @@ class CodeGenTest extends munit.FunSuite {
               |    new ProviderArgs(
               |      helmReleaseSettings = helmReleaseSettings.asOptionOutput(isSecret = false)
               |    )
+              |
+              |  given encoder(using besom.types.Context): besom.types.ProviderArgsEncoder[ProviderArgs] = 
+              |    besom.internal.ProviderArgsEncoder.derived[ProviderArgs]
               |""".stripMargin
       ),
       ignored = List(

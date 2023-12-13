@@ -41,14 +41,7 @@ trait Context extends TaskTracker:
     options: CustomResourceOptions
   )(using Context): Output[R]
 
-  private[besom] def registerResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
-    typ: ResourceType,
-    name: NonEmptyString,
-    args: A,
-    options: ResourceOptions
-  )(using Context): Output[R]
-
-  private[besom] def readResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
+  private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
     typ: ResourceType,
     name: NonEmptyString,
     args: A,
@@ -115,11 +108,12 @@ class ContextImpl(
   override private[besom] def registerComponentResource(
     name: NonEmptyString,
     typ: ResourceType
+    // TODO missing component resource options from user here
   )(using Context): Result[ComponentBase] =
     val label = Label.fromNameAndType(name, typ)
 
     BesomMDC(Key.LabelKey, label) {
-      ResourceOps().registerResourceInternal[ComponentBase, EmptyArgs](
+      ResourceOps().readOrRegisterResourceInternal[ComponentBase, EmptyArgs](
         typ,
         name,
         EmptyArgs(),
@@ -134,25 +128,18 @@ class ContextImpl(
     options: CustomResourceOptions
   )(using Context): Output[R] =
     BesomMDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
-      Output.ofData(ResourceOps().registerResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
+      Output.ofData(ResourceOps().readOrRegisterResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
     }
 
-  override private[besom] def registerResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
+  override private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
     typ: ResourceType,
     name: NonEmptyString,
     args: A,
     options: ResourceOptions
   )(using Context): Output[R] =
     BesomMDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
-      Output.ofData(ResourceOps().registerResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
+      Output.ofData(ResourceOps().readOrRegisterResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
     }
-
-  override private[besom] def readResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
-    typ: ResourceType,
-    name: NonEmptyString,
-    args: A,
-    options: ResourceOptions
-  )(using Context): Output[R] = ???
 
   override private[besom] def registerResourceOutputs(
     name: NonEmptyString,
@@ -170,9 +157,9 @@ class ContextImpl(
     opts: InvokeOptions
   )(using Context): Output[R] =
     BesomMDC(Key.LabelKey, Label.fromFunctionToken(token)) {
-      ResourceOps().invoke[A, R](token, args, opts)
+      ResourceOps().invokeInternal[A, R](token, args, opts)
     }
-    
+
   override private[besom] def call[A: ArgsEncoder, R: Decoder, T <: Resource](
     token: FunctionToken,
     args: A,
@@ -180,12 +167,13 @@ class ContextImpl(
     opts: InvokeOptions
   )(using Context): Output[R] =
     BesomMDC(Key.LabelKey, Label.fromFunctionToken(token)) {
-      ResourceOps().call[A, R](token, args, resource, opts)
+      ResourceOps().callInternal[A, R](token, args, resource, opts)
     }
 
 end ContextImpl
 
 object Context:
+  def apply()(using Context): Context = summon[Context]
 
   def apply(
     runInfo: RunInfo,
