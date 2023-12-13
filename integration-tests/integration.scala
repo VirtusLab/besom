@@ -28,7 +28,7 @@ val defaultProjectFile =
       |//> using dep org.virtuslab::besom-core:$coreVersion
       |""".stripMargin
 
-def sanitizeName(name: String): String = name.replaceAll("[^a-zA-Z0-9]", "-").toLowerCase().take(32).stripSuffix("-")
+def sanitizeName(name: String): String = name.replaceAll("[^a-zA-Z0-9]", "-").toLowerCase().take(40).stripSuffix("-")
 def testToStack(name: String): String  = "tests-" + sanitizeName(name)
 
 //noinspection TypeAnnotation,ScalaWeakerAccess
@@ -331,5 +331,5 @@ private def sha1(s: String): String = {
   import java.security.MessageDigest
 
   val bytes = MessageDigest.getInstance("SHA-1").digest(s.getBytes("UTF-8"))
-  String.format("%064x", new java.math.BigInteger(1, bytes))
+  String.format("%x", new java.math.BigInteger(1, bytes))
 }
