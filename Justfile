@@ -12,6 +12,9 @@ coverage-output-dir-zio := coverage-output-dir + "/zio"
 
 coverage := "false"
 
+# use bloop for publishing locally
+bloop := "false"
+
 # replace with a function when https://github.com/casey/just/pull/1069 is merged
 scala-cli-coverage-options-core := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-core } else { "" }
 scala-cli-test-options-core := scala-cli-coverage-options-core
@@ -24,7 +27,9 @@ scala-cli-test-options-zio := scala-cli-coverage-options-zio
 
 publish-maven-auth-options := "--user env:OSSRH_USERNAME --password env:OSSRH_PASSWORD --gpg-key $PGP_KEY_ID --gpg-option --pinentry-mode --gpg-option loopback --gpg-option --passphrase --gpg-option $PGP_PASSWORD"
 
-scala-cli-bloop-opts := "--jvm=17 --bloop-jvm=17 --bloop-java-opt=-XX:MaxRAMPercentage=95.0 --bloop-java-opt=-XX:InitialRAMPercentage=70.0 --bloop-java-opt=-XX:+UseUseParallelGC --bloop-java-opt=-XX:-UseZGC"
+scala-cli-bloop-opts := "--jvm=17 --bloop-jvm=17 --bloop-java-opt=-XX:MaxHeapSize=32G --bloop-java-opt=-XX:+UseParallelGC --bloop-java-opt=-XX:-UseZGC"
+scala-cli-direct-opts := "--server=false --javac-opt=-verbose --javac-opt=-J-XX:MaxHeapSize=32G --javac-opt=-J-XX:+UseParallelGC"
+scala-cli-publish-local-opts := if bloop == "true" { scala-cli-bloop-opts } else { scala-cli-direct-opts }
 
 # This list of available targets
 default:
@@ -125,10 +130,6 @@ publish-maven-zio:
 # Publishes besom compiler plugin
 publish-maven-compiler-plugin:
 	scala-cli --power publish compiler-plugin --project-version {{besom-version}} {{publish-maven-auth-options}}
-
-# Compiles and publishes the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes`
-publish-maven-provider-sdk schema-name schema-version:
-	scala-cli --power publish {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} {{publish-maven-auth-options}}
 
 # Cleans core build
 clean-core: 
@@ -284,11 +285,15 @@ generate-provider-sdk schema-name schema-version:
 
 # Compiles the previously generated scala API code for the given provider, e.g. `just compile-provider-sdk kubernetes 4.0.0`
 compile-provider-sdk schema-name schema-version:
-	scala-cli --power compile {{scala-cli-bloop-opts}} {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning --interactive=false
+	scala-cli --power compile {{scala-cli-publish-local-opts}} {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning --interactive=false
 
 # Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes 4.0.0`
 publish-local-provider-sdk schema-name schema-version:
-	scala-cli --power publish local --sources=false --doc=false {{scala-cli-bloop-opts}} {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish local --sources=false --doc=false {{scala-cli-publish-local-opts}} {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning
+
+# Compiles and publishes the previously generated scala API code for the given provider, e.g. `just publish-maven-provider-sdk kubernetes 4.0.0`
+publish-maven-provider-sdk schema-name schema-version:
+	scala-cli --power publish {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} {{publish-maven-auth-options}}
 
 ####################
 # Integration testing

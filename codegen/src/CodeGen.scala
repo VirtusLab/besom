@@ -794,7 +794,7 @@ class CodeGen(implicit
            |""".stripMargin
 
       lazy val argsEncoderInstance =
-         m"""  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[$argsClassName] =
+        m"""  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[$argsClassName] =
             |    besom.internal.ArgsEncoder.derived[$argsClassName]
             |""".stripMargin
 

@@ -368,6 +368,12 @@ To increase Scala compiler verbosity:
 scala-cli compile --javac-opt=-verbose .
 ```
 
+To inspect a running JVM byt its PID use `jcmd`, e.g.:
+```bash
+jcmd 25776 VM.flags
+jcmd 25776 GC.heap_info
+```
+
 ## Getting Help
 
 We are sure there are rough edges, and we appreciate you helping out.

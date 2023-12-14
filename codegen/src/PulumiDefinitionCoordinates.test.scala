@@ -1,7 +1,7 @@
 package besom.codegen
 
 import besom.codegen.Config.ProviderConfig
-import besom.codegen.PackageMetadata.SchemaName
+import besom.codegen.SchemaName
 
 import scala.meta.*
 import scala.meta.dialects.Scala33

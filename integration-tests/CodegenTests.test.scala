@@ -1,7 +1,6 @@
 package besom.integration.codegen
 
 import besom.codegen.PackageMetadata
-import besom.codegen.PackageVersion
 import besom.integration.common.*
 import munit.{Slow, TestOptions}
 import os.*
@@ -35,13 +34,11 @@ class CodegenTests extends munit.FunSuite {
     "external-enum", // depends on google-native, TODO: check if this is still broken
     "enum-reference", // depends on google-native, TODO: check if this is still broken
     "hyphen-url", // depends on azure-native,
-    "naming-collisions", // codec not found
     "mini-azurenative", // decoder for union of 3 missing
     "cyclic-types", // YAML schema is not supported
-    "different-package-name-conflict", // duplicate issue
-    "output-funcs", // deserialize issue
+    "different-package-name-conflict", // file duplicate issue
+    "output-funcs", // union decoder issue
     "output-funcs-edgeorder", // missing union decoder issue
-    "other-owned" // codec not found
   )
 
   val tests =
@@ -73,9 +70,9 @@ class CodegenTests extends munit.FunSuite {
     test(options) {
       println(s"Test: $name")
       val result = codegen.generatePackageFromSchema(PackageMetadata(data.name), data.schema)
-      if (result.dependencies.nonEmpty)
-        println(s"\nCompiling dependencies for ${result.schemaName}...")
-      for (dep <- result.dependencies) {
+      if (result.metadata.dependencies.nonEmpty)
+        println(s"\nCompiling dependencies for ${result.metadata.name}...")
+      for (dep <- result.metadata.dependencies) {
         codegen.generateLocalPackage(dep)
       }
       println(s"\nCompiling generated code for ${data.name} in ${result.outputDir}...")
@@ -88,9 +85,5 @@ class CodegenTests extends munit.FunSuite {
       }
       println()
     }
-  }
-
-  override def beforeAll(): Unit = {
-    pproc("scala-cli", "bloop", "exit").call()
   }
 }

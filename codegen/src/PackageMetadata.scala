@@ -2,19 +2,25 @@ package besom.codegen
 
 import besom.codegen.UpickleApi.*
 
+type SchemaName    = String
+type SchemaVersion = String
+type SchemaFile    = os.Path
+
 private case class PackageMetadataProtocol(
   name: String,
   version: Option[String] = None,
-  server: Option[String] = None
+  server: Option[String] = None,
+  dependencies: Vector[PackageMetadata] = Vector.empty
 )
 object PackageMetadataProtocol {
   def derived: ReadWriter[PackageMetadataProtocol] = macroRW
 }
 
 case class PackageMetadata(
-  name: PackageMetadata.SchemaName,
+  name: SchemaName,
   version: Option[PackageVersion] = None,
-  server: Option[String] = None
+  server: Option[String] = None,
+  dependencies: Vector[PackageMetadata] = Vector.empty
 ) {
   def withUrl(url: String): PackageMetadata = {
     val server = url match {
@@ -25,18 +31,18 @@ case class PackageMetadata(
     PackageMetadata(name, version, server)
   }
 
+  def withDependencies(dependencies: Vector[PackageMetadata]): PackageMetadata = {
+    PackageMetadata(name, version, server, dependencies)
+  }
+
   def toJson: String = PackageMetadata.toJson(this)
 }
 
 object PackageMetadata {
   given ReadWriter[PackageMetadata] = PackageMetadataProtocol.derived.bimap(
-    m => PackageMetadataProtocol(m.name, m.version.map(_.asString), m.server),
-    p => PackageMetadata(p.name, PackageVersion(p.version), p.server)
+    m => PackageMetadataProtocol(m.name, m.version.map(_.asString), m.server, m.dependencies),
+    p => PackageMetadata(p.name, PackageVersion(p.version), p.server, p.dependencies)
   )
-
-  type SchemaName    = String
-  type SchemaVersion = String
-  type SchemaFile    = os.Path
 
   def apply(name: SchemaName, version: SchemaVersion): PackageMetadata = {
     new PackageMetadata(name, PackageVersion(version), None)
@@ -54,10 +60,15 @@ object PackageMetadata {
     read[PackageMetadata](os.read(path))
   }
 
-  def toJson(m: PackageMetadata): String = write[PackageMetadata](m)
+  def fromJsonList(json: String): Vector[PackageMetadata] = {
+    read[Vector[PackageMetadata]](json)
+  }
+
+  def toJson(m: PackageMetadata): String          = write[PackageMetadata](m)
+  def toJson(ms: Vector[PackageMetadata]): String = write[Vector[PackageMetadata]](ms)
 }
 
-opaque type PackageVersion = PackageMetadata.SchemaVersion
+opaque type PackageVersion = SchemaVersion
 object PackageVersion {
 
   private val DefaultVersion  = "0.0.0"
@@ -84,7 +95,7 @@ object PackageVersion {
   def unapply(version: PackageVersion): Option[String] = Some(version)
 
   implicit class PackageVersionOps(version: PackageVersion) {
-    def asString: String = version
+    def asString: String          = version
     override def toString: String = version.asString
   }
 
