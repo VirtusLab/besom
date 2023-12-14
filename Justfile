@@ -432,15 +432,15 @@ liftoff:
 	#!/usr/bin/env sh
 	export PULUMI_CONFIG_PASSPHRASE=""
 	cd experimental
-	pulumi --non-interactive --logtostderrup --stack liftoff -y
+	pulumi --non-interactive --logtostderr up--stack liftoff -y
 
 # Reverts the deployment of experimental sample kubernetes Pulumi app from ./experimental directory
 destroy-liftoff:
 	#!/usr/bin/env sh
 	cd experimental
-	if (pulumi --non-interactive --logtostderrstack ls | grep liftoff > /dev/null); then
+	if (pulumi --non-interactive --logtostderr stack ls | grep liftoff > /dev/null); then
 		export PULUMI_CONFIG_PASSPHRASE=""
-		pulumi  --non-interactive --logtostderrdestroy --stack liftoff -y
+		pulumi  --non-interactive --logtostderr destroy --stack liftoff -y
 	fi
 
 # Cleans the deployment of experimental sample kubernetes Pulumi app from ./experimental directory to the ground

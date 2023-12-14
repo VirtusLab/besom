@@ -72,6 +72,14 @@ case class PulumiDefinitionCoordinates private (
       definitionName = Some((methodPrefix.toSeq :+ mangleTypeName(methodName)).mkString("") + "Result")
     )
   }
+
+  def asConfigClass(implicit logger: Logger): ScalaDefinitionCoordinates = {
+    ScalaDefinitionCoordinates(
+      providerPackageParts = providerPackageParts,
+      modulePackageParts = modulePackageParts,
+      definitionName = Some(mangleTypeName(definitionName))
+    )
+  }
 }
 
 object PulumiDefinitionCoordinates {

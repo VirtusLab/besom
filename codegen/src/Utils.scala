@@ -11,7 +11,9 @@ object Utils {
   // Needs to be used in Pulumi types, but should NOT be translated to Scala code
   // Placeholder module for classes that should be in the root package (according to pulumi's convention)
   val indexModuleName  = "index"
+  val configModuleName = "config"
   val providerTypeName = "Provider"
+  val configTypeName   = "Config"
 
   // Name of the self parameter of resource methods
   val selfParameterName = "__self__"
@@ -31,6 +33,9 @@ object Utils {
   }
 
   implicit class TypeReferenceOps(typeRef: TypeReference) {
+    def asTokenAndDependency(implicit typeMapper: TypeMapper): Vector[(Option[PulumiToken], Option[PackageMetadata])] =
+      typeMapper.findTokenAndDependencies(typeRef)
+
     def asScalaType(asArgsType: Boolean = false)(implicit typeMapper: TypeMapper): Type =
       try {
         typeMapper.asScalaType(typeRef, asArgsType)
@@ -68,8 +73,9 @@ object Utils {
       module match {
         case _ if module.isEmpty =>
           throw TypeMapperError("Module cannot be empty")
-        case _ if module == indexModuleName => Seq(indexModuleName)
-        case moduleFormat(name)             => languageModuleToPackageParts(name)
+        case _ if module == indexModuleName  => Seq(indexModuleName)
+        case _ if module == configModuleName => Seq(configModuleName)
+        case moduleFormat(name)              => languageModuleToPackageParts(name)
         case _ =>
           throw TypeMapperError(
             s"Cannot parse module portion '$module' with moduleFormat: $moduleFormat"

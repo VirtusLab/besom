@@ -89,10 +89,10 @@ object PulumiPackage {
           val indexEnd   = e.index + offset
           throw GeneralCodegenException(
             s"""|Cannot parse Pulumi package JSON schema: ${e.getMessage}
-              |JSON fragment [$indexStart, $indexEnd]]:
-              |...
-              |${input.slice(indexStart, indexEnd).stripLineEnd}
-              |...""".stripMargin,
+                |JSON fragment [$indexStart, $indexEnd]]:
+                |...
+                |${input.slice(indexStart, indexEnd).stripLineEnd}
+                |...""".stripMargin,
             e
           )
         case e: ujson.IncompleteParseException =>

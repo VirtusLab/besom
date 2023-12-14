@@ -57,7 +57,7 @@ class TypeMapper(
 
     (PulumiToken(escapedTypeToken), packageInfo, isFromTypeUri, isFromResourceUri)
   }
-                
+
   private def scalaCoordinatesFromTypeUri(
     typeUri: String,
     asArgsType: Boolean
@@ -183,6 +183,25 @@ class TypeMapper(
                 yield enumType.withSelectionName(Some(instance)).termRef
         }
       case _ => None
+    }
+
+  // TODO: This is a temporary solution, we should use a proper type mapping using ADTs
+  def findTokenAndDependencies(typeRef: TypeReference): Vector[(Option[PulumiToken], Option[PackageMetadata])] =
+    typeRef match {
+      case ArrayType(elemType) => findTokenAndDependencies(elemType)
+      case MapType(elemType)   => findTokenAndDependencies(elemType)
+      case unionType: UnionType =>
+        unionType.oneOf.map(findTokenAndDependencies(_)).reduce(_ ++ _)
+      case namedType: NamedType =>
+        unescape(namedType.typeUri) match {
+          case "pulumi.json#/Archive" | "pulumi.json#/Asset" | "pulumi.json#/Any" | "pulumi.json#/Json" =>
+            Vector((None, None))
+          case typeUri =>
+            preParseFromTypeUri(typeUri) match
+              case (token: PulumiToken, packageInfo, _, _) =>
+                Vector((Some(token), Some(packageInfo.asPackageMetadata)))
+        }
+      case _ => Vector((None, None))
     }
 
   private def unescape(value: String) = {

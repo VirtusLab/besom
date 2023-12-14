@@ -264,8 +264,9 @@ class CodeGenTest extends munit.FunSuite {
              |final case class ClusterGetKubeconfigResult private(
              |  kubeconfig: String
              |)
-             |
              |object ClusterGetKubeconfigResult :
+             |
+             |
              |  given outputOps: {} with
              |    extension(output: besom.types.Output[ClusterGetKubeconfigResult])
              |      def kubeconfig : besom.types.Output[String] = output.map(_.kubeconfig)
@@ -635,6 +636,8 @@ class CodeGenTest extends munit.FunSuite {
              |  spec: scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]
              |)
              |object EniConfig :
+             |
+             |
              |  given outputOps: {} with
              |    extension(output: besom.types.Output[EniConfig])
              |      def apiVersion : besom.types.Output[String] = output.map(_.apiVersion)
@@ -688,6 +691,8 @@ class CodeGenTest extends munit.FunSuite {
              |  subnet: scala.Option[String]
              |)
              |object EniConfigSpec :
+             |
+             |
              |  given outputOps: {} with
              |    extension(output: besom.types.Output[EniConfigSpec])
              |      def securityGroups : besom.types.Output[scala.Option[scala.collection.immutable.List[String]]] = output.map(_.securityGroups)
@@ -800,9 +805,9 @@ class CodeGenTest extends munit.FunSuite {
 
       val codegen = new CodeGen
       if (data.expectedError.isDefined)
-        interceptMessage[Exception](data.expectedError.get)(codegen.scalaFiles(pulumiPackage))
+        interceptMessage[Exception](data.expectedError.get)(codegen.scalaFiles(pulumiPackage, packageInfo))
       else
-        codegen.scalaFiles(pulumiPackage).foreach {
+        codegen.scalaFiles(pulumiPackage, packageInfo).foreach {
           case SourceFile(FilePath(f: String), code: String) if data.expected.contains(f) =>
             assertNoDiff(code, data.expected(f))
             code.parse[Source].get
