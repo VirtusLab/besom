@@ -16,6 +16,7 @@ class PropertyInfoTest extends munit.FunSuite {
     expectedName: String,
     expectedType: String,
     expectedArgsType: Option[String] = None,
+    expectedInputArgsType: Option[String] = None,
     metadata: PackageMetadata = TestPackageMetadata,
     tags: Set[munit.Tag] = Set()
   )
@@ -90,7 +91,8 @@ class PropertyInfoTest extends munit.FunSuite {
                 |""".stripMargin,
       expectedName = "pod",
       expectedType = "besom.api.kubernetes.core.v1.outputs.Pod",
-      expectedArgsType = Some("besom.api.kubernetes.core.v1.inputs.PodArgs")
+      expectedArgsType = Some("besom.api.kubernetes.core.v1.inputs.PodArgs"),
+      expectedInputArgsType = Some("besom.api.kubernetes.core.v1.inputs.PodArgs")
     ),
     Data(
       name = "property named enum",
@@ -105,6 +107,7 @@ class PropertyInfoTest extends munit.FunSuite {
                 |""".stripMargin,
       expectedName = "`enum`",
       expectedType = "scala.collection.immutable.List[besom.types.PulumiJson]",
+      expectedInputArgsType = Some("scala.collection.immutable.List[besom.types.Input[besom.types.PulumiJson]]")
     )
   ).foreach(data =>
     test(data.name.withTags(data.tags)) {
@@ -124,10 +127,8 @@ class PropertyInfoTest extends munit.FunSuite {
 
       assertEquals(property.name.syntax, data.expectedName)
       assertEquals(property.baseType.syntax, data.expectedType)
-      assertEquals(
-        property.argType.syntax,
-        data.expectedArgsType.getOrElse(data.expectedType)
-      )
+      assertEquals(property.argType.syntax, data.expectedArgsType.getOrElse(data.expectedType))
+      assertEquals(property.inputArgType.syntax, data.expectedInputArgsType.getOrElse(data.expectedType))
     }
   )
 }

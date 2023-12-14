@@ -6,7 +6,7 @@ case class PulumiDefinitionCoordinates private (
   private val modulePackageParts: Seq[String],
   private val definitionName: String
 ) {
-  import PulumiDefinitionCoordinates._
+  import PulumiDefinitionCoordinates.*
 
   def className(asArgsType: Boolean)(implicit logger: Logger): String = {
     val classNameSuffix = if (asArgsType) "Args" else ""
@@ -17,7 +17,7 @@ case class PulumiDefinitionCoordinates private (
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
-      definitionName = className(asArgsType)
+      definitionName = Some(className(asArgsType))
     )
   }
   def asObjectClass(asArgsType: Boolean)(implicit logger: Logger): ScalaDefinitionCoordinates = {
@@ -25,30 +25,35 @@ case class PulumiDefinitionCoordinates private (
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts :+ packageSuffix,
-      definitionName = className(asArgsType)
+      definitionName = Some(className(asArgsType))
     )
   }
   def asEnumClass(implicit logger: Logger): ScalaDefinitionCoordinates = {
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts :+ enumsPackage,
-      definitionName = mangleTypeName(definitionName)
+      definitionName = Some(mangleTypeName(definitionName)),
+      isEnum = true
     )
   }
 
-  private def splitMethodName(definitionName: String): (Seq[String], String) = {
-    val methodNameParts = definitionName.split("/").toSeq
-    val methodName = methodNameParts.last
-    val methodPrefix = methodNameParts.init.filterNot(_ == methodName) // filter out the function name duplication
-    (methodPrefix, methodName)
+  private def splitMethodName(definitionName: String): (Option[String], String) = {
+    definitionName.split('/') match
+      case Array(methodName) =>
+        (None, methodName)
+      case Array(className, methodName) =>
+        // filter out the function name duplication
+        (Some(className).filterNot(_ == methodName), methodName)
+      case _ => throw PulumiDefinitionCoordinatesError(s"Invalid definition name '$definitionName'")
   }
 
   def resourceMethod(implicit logger: Logger): ScalaDefinitionCoordinates = {
     val (methodPrefix, methodName) = splitMethodName(definitionName)
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
-      modulePackageParts = modulePackageParts ++ methodPrefix,
-      definitionName = mangleMethodName(methodName)
+      modulePackageParts = modulePackageParts,
+      definitionName = methodPrefix,
+      selectionName = Some(mangleMethodName(methodName))
     )
   }
   def methodArgsClass(implicit logger: Logger): ScalaDefinitionCoordinates = {
@@ -56,7 +61,7 @@ case class PulumiDefinitionCoordinates private (
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
-      definitionName = (methodPrefix :+ mangleTypeName(methodName)).mkString("") + "Args"
+      definitionName = Some((methodPrefix.toSeq :+ mangleTypeName(methodName)).mkString("") + "Args")
     )
   }
   def methodResultClass(implicit logger: Logger): ScalaDefinitionCoordinates = {
@@ -64,7 +69,7 @@ case class PulumiDefinitionCoordinates private (
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
-      definitionName = (methodPrefix :+ mangleTypeName(methodName)).mkString("") + "Result"
+      definitionName = Some((methodPrefix.toSeq :+ mangleTypeName(methodName)).mkString("") + "Result")
     )
   }
 }
@@ -109,7 +114,6 @@ object PulumiDefinitionCoordinates {
   private def outputsPackage = "outputs"
   private def enumsPackage   = "enums"
 
-  private def capitalize(s: String)   = s(0).toUpper.toString ++ s.substring(1, s.length)
   private def decapitalize(s: String) = s(0).toLower.toString ++ s.substring(1, s.length)
   private val maxNameLength           = 200
 
@@ -131,11 +135,11 @@ object PulumiDefinitionCoordinates {
       logger.warn(s"Mangled type name '$name' as '$truncated' (truncated)")
       truncated
     }
-    val capitalized = capitalize(truncated)
-    if (capitalized != truncated)
-      logger.debug(s"Mangled type name '$name' as '$capitalized' (capitalized)")
+    val normalized = normalize(truncated)
+    if (normalized != truncated)
+      logger.debug(s"Mangled type name '$name' as '$normalized' (normalized)")
 
-    capitalized
+    normalized
   }
 
   private def mangleMethodName(name: String)(implicit logger: Logger) = {
@@ -144,6 +148,19 @@ object PulumiDefinitionCoordinates {
       logger.debug(s"Mangled method name '$name' as '$decapitalized' (decapitalized)")
     decapitalized
   }
+
+  private[codegen] def normalize(input: String): String =
+    val head = input.head.toUpper
+    val it   = input.tail.iterator.buffered
+    val tail =
+      for c <- it
+      yield
+        if it.headOption.map(_.isUpper).getOrElse(true)
+        then c.toLower
+        else c
+
+    (head +: tail.toArray).mkString
+  end normalize
 
   @throws[PulumiDefinitionCoordinatesError]("if 'definitionName' is empty")
   def apply(

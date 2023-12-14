@@ -14,6 +14,12 @@ class TypeMapper(
     typeUri: String,
     asArgsType: Boolean
   ): Option[Type.Ref] = {
+    scalaCoordinatesFromTypeUri(typeUri, asArgsType).map(_.typeRef)
+  }
+
+  private def preParseFromTypeUri(
+    typeUri: String
+  ): (PulumiToken, PulumiPackageInfo, Boolean, Boolean) = {
     // Example URIs available in TypeMapper.test.scala
 
     val (fileUri, typePath) = typeUri.split("#") match {
@@ -49,12 +55,19 @@ class TypeMapper(
       case token => (token, false, false)
     }
 
-    val typeCoordinates =
-      PulumiDefinitionCoordinates.fromRawToken(
-        escapedTypeToken,
-        packageInfo.moduleToPackageParts,
-        packageInfo.providerToPackageParts
-      )
+    (PulumiToken(escapedTypeToken), packageInfo, isFromTypeUri, isFromResourceUri)
+  }
+                
+  private def scalaCoordinatesFromTypeUri(
+    typeUri: String,
+    asArgsType: Boolean
+  ): Option[ScalaDefinitionCoordinates] = {
+    val (typeToken, packageInfo, isFromTypeUri, isFromResourceUri) = preParseFromTypeUri(typeUri)
+    val typeCoordinates = PulumiDefinitionCoordinates.fromToken(
+      typeToken,
+      packageInfo.moduleToPackageParts,
+      packageInfo.providerToPackageParts
+    )
 
     val uniformedTypeToken           = typeCoordinates.token.asLookupKey
     lazy val hasProviderDefinition   = packageInfo.providerTypeToken == uniformedTypeToken
@@ -70,7 +83,7 @@ class TypeMapper(
       }
     }
 
-    def objectClassCoordinates: Option[ScalaDefinitionCoordinates] = {
+    def objectOrEnumClassCoordinates: Option[ScalaDefinitionCoordinates] = {
       if (hasObjectTypeDefinition) {
         Some(typeCoordinates.asObjectClass(asArgsType = asArgsType))
       } else if (hasEnumTypeDefinition) {
@@ -84,28 +97,28 @@ class TypeMapper(
       if (isFromResourceUri) {
         resourceClassCoordinates
       } else if (isFromTypeUri) {
-        objectClassCoordinates
+        objectOrEnumClassCoordinates
       } else {
-        (resourceClassCoordinates, objectClassCoordinates) match {
+        (resourceClassCoordinates, objectOrEnumClassCoordinates) match {
           case (Some(coordinates), None) =>
             logger.warn(
-              s"Assuming a '/resources/` prefix for type URI, fileUri: '${fileUri}', typePath: '${typePath}'"
+              s"Assuming a '/resources/` prefix for type URI, typeUri: '${typeUri}'"
             )
             Some(coordinates)
           case (None, Some(coordinates)) =>
-            logger.warn(s"Assuming a '/types/` prefix for type URI, fileUri: '${fileUri}', typePath: '${typePath}'")
+            logger.warn(s"Assuming a '/types/` prefix for type URI, typeUri: '${typeUri}'")
             Some(coordinates)
           case (None, None) =>
-            logger.debug(s"Found no type definition for type URI, fileUri: '${fileUri}', typePath: '${typePath}'")
+            logger.debug(s"Found no type definition for type URI, typeUri: '${typeUri}'")
             None
           case _ =>
             throw TypeMapperError(
-              s"Type URI can refer to both a resource or an object type, fileUri: '${fileUri}', typePath: '${typePath}'"
+              s"Type URI can refer to both a resource or an object type, typeUri: '${typeUri}'"
             )
         }
       }
 
-    classCoordinates.map(_.typeRef)
+    classCoordinates
   }
 
   def asScalaType(typeRef: TypeReference, asArgsType: Boolean, fallbackType: Option[AnonymousType] = None): Type =
@@ -153,6 +166,25 @@ class TypeMapper(
                 }
             }
         }
+    }
+
+  // TODO: This is a temporary solution, we should use a proper type mapping using ADTs
+  def enumValue(typeRef: TypeReference, value: ConstValue): Option[Term.Ref] =
+    typeRef match {
+      case namedType: NamedType =>
+        unescape(namedType.typeUri) match {
+          case "pulumi.json#/Archive" | "pulumi.json#/Asset" | "pulumi.json#/Any" | "pulumi.json#/Json" =>
+            None
+          case typeUri =>
+            preParseFromTypeUri(typeUri) match
+              case (token: PulumiToken, packageInfo, _, _) =>
+                for
+                  instances <- packageInfo.enumValueToInstances.get(token)
+                  instance  <- instances.get(value)
+                  enumType  <- scalaCoordinatesFromTypeUri(typeUri, asArgsType = false)
+                yield enumType.withSelectionName(Some(instance)).termRef
+        }
+      case _ => None
     }
 
   private def unescape(value: String) = {

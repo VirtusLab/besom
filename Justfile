@@ -28,7 +28,7 @@ scala-cli-test-options-zio := scala-cli-main-options-zio + " " + scala-cli-cover
 
 publish-maven-auth-options := "--user env:OSSRH_USERNAME --password env:OSSRH_PASSWORD --gpg-key $PGP_KEY_ID --gpg-option --pinentry-mode --gpg-option loopback --gpg-option --passphrase --gpg-option $PGP_PASSWORD"
 
-scala-cli-bloop-opts := "--jvm=17 --bloop-jvm=17 --bloop-java-opt='-XX:MaxRAMPercentage=95.0' --bloop-java-opt='-XX:InitialRAMPercentage=70.0' --bloop-java-opt='-XX:+UseUseParallelGC'"
+scala-cli-bloop-opts := "--jvm=17 --bloop-jvm=17 --bloop-java-opt=-XX:MaxRAMPercentage=95.0 --bloop-java-opt=-XX:InitialRAMPercentage=70.0 --bloop-java-opt=-XX:+UseUseParallelGC --bloop-java-opt=-XX:-UseZGC"
 
 # This list of available targets
 default:
@@ -39,7 +39,7 @@ default:
 ####################
 
 # Cleans everything
-clean-all: clean-sdk clean-out clean-compiler-plugin clean-codegen clean-test-integration clean-test-templates clean-test-examples clean-test-markdown
+clean-all: clean-sdk clean-out clean-compiler-plugin clean-codegen clean-scripts clean-test-integration clean-test-templates clean-test-examples clean-test-markdown
 
 # Compiles everything
 compile-all: compile-sdk compile-codegen compile-compiler-plugin build-language-plugin compile-scripts
@@ -47,6 +47,7 @@ compile-all: compile-sdk compile-codegen compile-compiler-plugin build-language-
 # Tests everything
 test-all: test-sdk test-codegen test-markdown test-integration test-templates test-examples test-markdown
 
+# Runs all necessary checks before committing
 before-commit: compile-all test-all
 
 ####################
@@ -234,14 +235,17 @@ compile-codegen:
 test-codegen:
 	scala-cli --power test codegen --suppress-experimental-feature-warning
 
+# Dowloads Pulumi Packages metadata for all providers in the registry
 get-metadata-all:
 	export GITHUB_TOKEN=$(gh auth token); \
 	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts/Packages.scala -- metadata-all
 
+# Generates Scala SDKs for all providers in the registry
 generate-provider-all:
 	export GITHUB_TOKEN=$(gh auth token); \
 	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts/Packages.scala -- generate-all
 
+# Publishes locally Scala SDKs for all providers in the registry
 publish-local-provider-all:
     scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts/Packages.scala -- publish-local-all
 
@@ -268,7 +272,7 @@ compile-provider-sdk schema-name schema-version:
 
 # Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes 4.0.0`
 publish-local-provider-sdk schema-name schema-version:
-	scala-cli --power publish local {{scala-cli-bloop-opts}} {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish local --sources=false --doc=false {{scala-cli-bloop-opts}} {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning
 
 ####################
 # Integration testing
@@ -378,10 +382,15 @@ clean-test-markdown:
 compile-scripts: publish-local-codegen
 	scala-cli --power compile scripts --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 
+# Clean scripts module
+clean-scripts:
+    scala-cli --power clean scripts
+
 ####################
 # Troubleshooting
 ####################
 
+# Cleans everything, including the local ivy, git untracked files, and kills all java processes
 power-wash: clean-all
 	rm -rf ~/.ivy2/local/org.virtuslab/
 	git clean -i -d -x

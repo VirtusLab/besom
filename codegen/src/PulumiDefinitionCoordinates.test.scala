@@ -123,8 +123,8 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
     )(
       ResourceClassExpectations(
         fullPackageName = "besom.api.kubernetes.meta.v1",
-        fullyQualifiedTypeRef = "besom.api.kubernetes.meta.v1.APIVersions",
-        filePath = "src/meta/v1/APIVersions.scala"
+        fullyQualifiedTypeRef = "besom.api.kubernetes.meta.v1.ApiVersions",
+        filePath = "src/meta/v1/ApiVersions.scala"
       )
     ),
     Data(
@@ -192,12 +192,11 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
       )
     )(
       FunctionClassExpectations(
-        fullPackageName =
-          "besom.api.eks.Cluster", // this one is tricky, because it is technically not a package, but a class
+        fullPackageName = "besom.api.eks",
         fullyQualifiedTypeRef = "besom.api.eks.Cluster.getKubeconfig",
         // this will not be used actually because it is a class method and not a standalone function
         // but we include this anyway to document the current behaviour
-        filePath = "src/index/Cluster/getKubeconfig.scala",
+        filePath = "src/index/Cluster.scala",
         args = FunctionClassExpectations.FunctionClassExpectationsArgs(
           fullPackageName = "besom.api.eks",
           fullyQualifiedTypeRef = "besom.api.eks.ClusterGetKubeconfigArgs",
@@ -247,6 +246,24 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
           assertEquals(rc.typeRef.syntax, result.fullyQualifiedTypeRef)
           assertEquals(rc.filePath.osSubPath.toString(), result.filePath)
       }
+    }
+  }
+
+  test("normalize strings correctly") {
+    val testCases = Map(
+      "A" -> "A",
+      "ID" -> "Id",
+      "JSONPatch" -> "JsonPatch",
+      "URLParser" -> "UrlParser",
+      "camelCase" -> "CamelCase",
+      "PascalCase" -> "PascalCase",
+      "lowercase" -> "Lowercase",
+      "UPPERCASE" -> "Uppercase",
+      "ListenerXForwardedForConfig" -> "ListenerxForwardedForConfig",
+    )
+
+    for ((input, expected) <- testCases) {
+      assertEquals(PulumiDefinitionCoordinates.normalize(input), expected)
     }
   }
 }

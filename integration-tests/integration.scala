@@ -255,6 +255,8 @@ object scalaCli {
     "--power",
     "publish",
     "local",
+    "--sources=false",
+    "--doc=false",
     "--suppress-experimental-feature-warning",
     "--suppress-directives-in-multiple-files-warning",
     "--jvm=17",

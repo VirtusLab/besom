@@ -315,6 +315,9 @@ runtime:
 - `PULUMI_ENABLE_TRACE_LOGGING_TO_FILE` - for enabling Besom trace logging to file
 - `PULUMI_DEBUG_COMMANDS=1` - for activating hidden debugging Pulumi CLI commands
 - `TF_LOG=TRACE` - for debugging Terraform-based provider
+- `PULUMI_SKIP_UPDATE_CHECK=true` - to skip Pulumi update check
+
+More environment variables can be found in [Pulumi documentation](https://www.pulumi.com/docs/cli/environment-variables/).
 
 #### Tracing
 
@@ -335,9 +338,34 @@ rm pulumi.rb
 
 ### Compilation issues
 
+To clean the builds:
+```bash
+just clean-all
+```
+
+If a deep cleaning needed:
+```bash
+just power-wash
+````
+
 To restart `bloop` compilation server:
 ```bash
 scala-cli bloop exit
+```
+
+To set `bloop` verbosity:
+```bash
+scala-cli setup-ide -v -v -v .
+```
+
+To use a nightly version of Scala compiler:
+```bash
+scala-cli compile -S 3.nightly .
+```
+
+To increase Scala compiler verbosity:
+```bash
+scala-cli compile --javac-opt=-verbose .
 ```
 
 ## Getting Help

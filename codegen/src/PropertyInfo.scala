@@ -37,13 +37,25 @@ object PropertyInfo:
       case tp =>
         tp.asScalaType(asArgsType = true)
     }
-    val defaultValue =
-      propertyDefinition.default
-        .orElse(propertyDefinition.const)
-        .map(_.asScala)
+
+    def enumDefaultValue(value: ConstValue) =
+      typeMapper.enumValue(propertyDefinition.typeReference, value)
+
+    val defaultValue: Option[Term] = {
+      val propertyDefaultValue =
+        propertyDefinition.default
+          .map(d => enumDefaultValue(d).getOrElse(d.asScala))
+
+      val propertyConstValue =
+        propertyDefinition.const
+          .map(_.asScala)
+
+      propertyDefaultValue
+        .orElse(propertyConstValue)
         .orElse {
           if isPropertyRequired then None else Some(scalameta.None)
         }
+    }
     val constValue = propertyDefinition.const.map(_.asScala)
 
     PropertyInfo(
@@ -79,9 +91,8 @@ object PropertyInfo:
   private def manglePropertyName(name: String)(implicit logger: Logger): String =
     if anyRefMethodNames.contains(name) then
       val mangledName = name + "_"
-      logger.warn(s"Mangled property name '$name' as '$mangledName'")
+      logger.debug(s"Mangled property name '$name' as '$mangledName'")
       mangledName
     else name
 
 end PropertyInfo
-

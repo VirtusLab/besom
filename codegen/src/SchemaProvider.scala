@@ -127,10 +127,25 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
     val objectTypeTokensBuffer   = ListBuffer.empty[String]
     val resourceTypeTokensBuffer = ListBuffer.empty[String]
 
+    val enumValueToInstancesBuffer = ListBuffer.empty[(PulumiToken, Map[ConstValue, EnumInstanceName])]
+
+    def valueToInstances(enumDefinition: EnumTypeDefinition): Map[ConstValue, EnumInstanceName] =
+      enumDefinition.`enum`.map { (valueDefinition: EnumValueDefinition) =>
+        val caseRawName: EnumInstanceName = valueDefinition.name.getOrElse {
+          valueDefinition.value match {
+            case StringConstValue(value) => value
+            case const                   => throw GeneralCodegenException(s"The name of enum cannot be derived from value ${const}")
+          }
+        }
+        valueDefinition.value -> caseRawName
+      }.toMap
+
     // Post-process the tokens to unify them to lower case to circumvent inconsistencies in low quality schemas (e.g. aws)
     // This allows us to use case-insensitive matching when looking up tokens
     pulumiPackage.parsedTypes.foreach {
-      case (coordinates, _: EnumTypeDefinition) =>
+      case (coordinates, definition: EnumTypeDefinition) =>
+        enumValueToInstancesBuffer += coordinates.token -> valueToInstances(definition)
+
         if (enumTypeTokensBuffer.contains(coordinates.token.asLookupKey))
           logger.warn(s"Duplicate enum type token '${coordinates.token.asLookupKey}' in package '${packageMetadata.name}'")
         enumTypeTokensBuffer += coordinates.token.asLookupKey
@@ -154,7 +169,8 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
       providerTypeToken = pulumiPackage.providerTypeToken,
       resourceTypeTokens = resourceTypeTokensBuffer.toSet,
       moduleToPackageParts = pulumiPackage.moduleToPackageParts,
-      providerToPackageParts = pulumiPackage.providerToPackageParts
+      providerToPackageParts = pulumiPackage.providerToPackageParts,
+      enumValueToInstances = enumValueToInstancesBuffer.toMap
     )
   }
 }

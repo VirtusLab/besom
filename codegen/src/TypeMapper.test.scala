@@ -113,7 +113,6 @@ class TypeMapperTest extends munit.FunSuite {
     Data(NumberType)(Expectations("Double")),
     Data(StringType)(Expectations("String")),
     Data(UnionType(List(StringType, NumberType), None))(Expectations("String | Double"))
-    // TODO: input tests
   )
 
   tests.foreach { data =>
