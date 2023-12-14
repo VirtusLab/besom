@@ -20,6 +20,7 @@ case class ScalaDefinitionCoordinates private (
     parts.toList
       .filterNot(_.isBlank)
       .map(_.replace("-", ""))
+      .map(_.replace(".", ""))
       .map(_.toLowerCase)
   }
 
