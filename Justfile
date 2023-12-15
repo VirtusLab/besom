@@ -39,13 +39,13 @@ default:
 ####################
 
 # Cleans everything
-clean-all: clean-sdk clean-out clean-compiler-plugin clean-codegen clean-scripts clean-test-integration clean-test-templates clean-test-examples clean-test-markdown
+clean-all: clean-json clean-sdk clean-out clean-compiler-plugin clean-codegen clean-scripts clean-test-integration clean-test-templates clean-test-examples clean-test-markdown
 
 # Compiles everything
-compile-all: compile-sdk compile-codegen compile-compiler-plugin build-language-plugin compile-scripts
+compile-all: compile-json compile-sdk compile-codegen compile-compiler-plugin build-language-plugin compile-scripts
 
 # Tests everything
-test-all: test-sdk test-codegen test-markdown test-integration test-templates test-examples test-markdown
+test-all: test-json test-sdk test-codegen test-markdown test-integration test-templates test-examples test-markdown
 
 # Runs all necessary checks before committing
 before-commit: compile-all test-all
@@ -59,7 +59,7 @@ compile-pulumi-protobufs:
 	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts/Proto.scala -- all
 
 # Compiles core besom SDK
-compile-core:
+compile-core: publish-local-json
 	scala-cli --power compile core --suppress-experimental-feature-warning
 
 # Compiles besom cats-effect extension
@@ -164,6 +164,26 @@ clean-out:
 # Cleans the coverage out directory and sdk compilation output
 clean-coverage: clean-sdk
 	rm -rf {{coverage-output-dir}}
+
+####################
+# Json
+####################
+
+# Compiles json module
+compile-json:
+    scala-cli --power compile besom-json --suppress-experimental-feature-warning
+
+test-json:
+    scala-cli --power test besom-json --suppress-experimental-feature-warning
+
+clean-json:
+    scala-cli --power clean besom-json
+
+publish-local-json:
+    scala-cli --power publish local besom-json --project-version {{besom-version}} --suppress-experimental-feature-warning
+
+publish-maven-json:
+    scala-cli --power publish besom-json --project-version {{besom-version}} {{publish-maven-auth-options}}
 
 ####################
 # Language plugin
