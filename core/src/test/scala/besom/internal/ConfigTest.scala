@@ -154,8 +154,59 @@ class ConfigTest extends munit.FunSuite {
     assertEquals(actual, expected)
   }
 
+  sealed abstract class Region(val name: String, val value: String) extends besom.types.StringEnum
+  object Region extends EnumCompanion[String, Region]("Region"):
+    object AFSouth1 extends Region("AFSouth1", "af-south-1")
+    object APEast1 extends Region("APEast1", "ap-east-1")
+    object APNortheast1 extends Region("APNortheast1", "ap-northeast-1")
+    object APNortheast2 extends Region("APNortheast2", "ap-northeast-2")
+    override val allInstances: Seq[Region] = Seq(
+      AFSouth1,
+      APEast1,
+      APNortheast1,
+      APNortheast2
+    )
+    given EnumCompanion[String, Region] = this
+
+  testConfig("get StringEnum")(
+    configMap = Map("prov:region" -> "ap-northeast-1"),
+    configSecretKeys = Set.empty,
+    tested = Codegen.config[Region]("prov")(
+      key = "region",
+      isSecret = false,
+      environment = Nil,
+      default = None
+    )
+  ) { actual =>
+    val expected = OutputData(Some(Region.APNortheast1))
+    assertEquals(actual, expected)
+  }
+
+
+  sealed abstract class Switch(val name: String, val value: Boolean) extends besom.types.BooleanEnum
+  object Switch extends EnumCompanion[Boolean, Switch]("Switch"):
+    object On extends Switch("On", true)
+    object Off extends Switch("Off", false)
+    override val allInstances: Seq[Switch] = Seq(On, Off)
+    given EnumCompanion[Boolean, Switch] = this
+
+  testConfig("get BooleanEnum")(
+    configMap = Map("prov:switch" -> "false"),
+    configSecretKeys = Set.empty,
+    tested = Codegen.config[Switch]("prov")(
+      key = "switch",
+      isSecret = false,
+      environment = Nil,
+      default = None
+    )
+  ) { actual =>
+    val expected = OutputData(Some(Switch.Off))
+    assertEquals(actual, expected)
+  }
+
   case class Foo(a: Int, b: Int)
-  given JsonFormat[Foo] = jsonFormatN
+  object Foo:
+    given JsonFormat[Foo] = jsonFormatN
   testConfig("get case class Foo")(
     configMap = Map("foo" -> """{"a":1,"b":2}"""),
     configSecretKeys = Set("foo"),
@@ -170,7 +221,7 @@ class ConfigTest extends munit.FunSuite {
   case class Bar(a: Int, b: Int)
   testConfig("get case class Bar compile error")(
     configMap = Map("bar" -> """{"a":1,"b":2}"""),
-    configSecretKeys = Set.empty,
+    configSecretKeys = Set.empty
   ) {
     assertNoDiff(
       compileErrors("""config.getObject[Bar]("bar")"""),
@@ -190,7 +241,7 @@ class ConfigTest extends munit.FunSuite {
 
   testConfig("require case Bar class compile error")(
     configMap = Map("bar" -> """{"a":1,"b":2}"""),
-    configSecretKeys = Set.empty,
+    configSecretKeys = Set.empty
   ) {
     assertNoDiff(
       compileErrors("""config.requireObject[Bar]("bar")"""),
@@ -262,7 +313,7 @@ class ConfigTest extends munit.FunSuite {
     assertEquals(outputData2, OutputData(Some("bar")))
   }
 
-  testConfig("Codegen.config") (
+  testConfig("Codegen.config - List")(
     configMap = Map("prov:names" -> """["a","b","c","super secret name"]"""),
     configSecretKeys = Set.empty,
     tested = Codegen.config[List[String]]("prov")(
@@ -272,7 +323,7 @@ class ConfigTest extends munit.FunSuite {
       default = None
     )
   ) { actual =>
-      val expected     = OutputData(Some(List("a", "b", "c", "super secret name")), isSecret = true)
-      assertEquals(actual, expected)
+    val expected = OutputData(Some(List("a", "b", "c", "super secret name")), isSecret = true)
+    assertEquals(actual, expected)
   }
 }

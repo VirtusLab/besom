@@ -127,7 +127,10 @@ class CodeGen(implicit
     pulumiPackage.parsedTypes.flatMap { case (coordinates, typeDefinition) =>
       typeDefinition match {
         case enumDef: EnumTypeDefinition =>
-          sourceFilesForEnum(typeCoordinates = coordinates, enumDefinition = enumDef)
+          sourceFilesForEnum(
+            typeCoordinates = coordinates,
+            enumDefinition = enumDef
+          )
         case objectDef: ObjectTypeDefinition =>
           sourceFilesForObjectType(
             typeCoordinates = coordinates,
@@ -144,7 +147,7 @@ class CodeGen(implicit
   ): Seq[SourceFile] = {
     val classCoordinates = typeCoordinates.asEnumClass
 
-    val enumClassName = classCoordinates.definitionTermName.getOrElse(
+    val enumClassName = classCoordinates.definitionTypeName.getOrElse(
       throw GeneralCodegenException(
         s"Class name for ${classCoordinates.typeRef} could not be found"
       )
@@ -191,6 +194,7 @@ class CodeGen(implicit
           |  override val allInstances: Seq[${enumClassName}] = Seq(
           |${instances.map(instance => s"    ${instance._2.syntax}").mkString(",\n")}
           |  )
+          |  given besom.types.EnumCompanion[${valueType}, ${enumClassName}] = this
           |""".stripMargin.parse[Source].get
 
     Seq(

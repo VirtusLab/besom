@@ -1,13 +1,14 @@
 package besom
 
+import besom.internal.*
+import besom.internal.ProtobufUtil.*
+import besom.util.*
+import com.google.protobuf.struct.*
+
 import scala.compiletime.*
 import scala.compiletime.ops.string.*
 import scala.language.implicitConversions
 import scala.util.Try
-import com.google.protobuf.struct.*
-import besom.internal.ProtobufUtil.*
-import besom.util.*
-import besom.internal.*
 
 object types:
   // TODO: replace these stubs with proper implementations
@@ -328,7 +329,11 @@ object types:
 
   trait EnumCompanion[V, E <: PulumiEnum[V]](enumName: String):
     def allInstances: Seq[E]
-    private lazy val valuesToInstances: Map[Any, E] = allInstances.map(instance => instance.value -> instance).toMap
+    def fromValue(value: V): Either[Exception, E] = valuesToInstances.get(value).toRight(
+      left = Exception(s"`${value}` is not a valid value of `${enumName}`")
+    )
+
+    private lazy val valuesToInstances: Map[V, E] = allInstances.map(instance => instance.value -> instance).toMap
 
     extension [A](a: A)
       def asValueAny: Value = a match

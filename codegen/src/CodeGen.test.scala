@@ -379,6 +379,7 @@ class CodeGenTest extends munit.FunSuite {
              |    SupplementalServicing,
              |    PremiumAssurance
              |  )
+             |  given besom.types.EnumCompanion[String, SupportType] = this
              |""".stripMargin,
         "src/windowsesu/MultipleActivationKeyArgs.scala" ->
           """|package besom.api.azurenative.windowsesu
@@ -459,6 +460,7 @@ class CodeGenTest extends munit.FunSuite {
              |    NotRequired,
              |    Required
              |  )
+             |  given besom.types.EnumCompanion[String, UserConfirmation] = this
              |""".stripMargin,
         "src/hybriddata/JobDefinitionArgs.scala" ->
           """|package besom.api.azurenative.hybriddata
