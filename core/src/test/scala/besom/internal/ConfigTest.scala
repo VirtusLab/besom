@@ -1,9 +1,9 @@
 package besom.internal
 
 import besom.*
-import spray.json.*
-import spray.json.DefaultJsonProtocol.*
-import RunResult.{given, *}
+import besom.internal.RunResult.{*, given}
+import besom.json.*
+import besom.json.DefaultJsonProtocol.*
 
 class ConfigTest extends munit.FunSuite {
 
@@ -155,7 +155,7 @@ class ConfigTest extends munit.FunSuite {
   }
 
   case class Foo(a: Int, b: Int)
-  given JsonFormat[Foo] = jsonFormat2(Foo.apply)
+  given JsonFormat[Foo] = jsonFormatN
   testConfig("get case class Foo")(
     configMap = Map("foo" -> """{"a":1,"b":2}"""),
     configSecretKeys = Set("foo"),
@@ -179,9 +179,9 @@ class ConfigTest extends munit.FunSuite {
          |I found:
          |
          |    besom.internal.ConfigValueReader.objectReader[ConfigTest.this.Bar](
-         |      /* missing */summon[spray.json.JsonReader[ConfigTest.this.Bar]])
+         |      /* missing */summon[besom.json.JsonReader[ConfigTest.this.Bar]])
          |
-         |But no implicit values were found that match type spray.json.JsonReader[ConfigTest.this.Bar].
+         |But no implicit values were found that match type besom.json.JsonReader[ConfigTest.this.Bar].
          |config.getObject[Bar]("bar")
          |                           ^
          |""".stripMargin
@@ -199,9 +199,9 @@ class ConfigTest extends munit.FunSuite {
          |I found:
          |
          |    besom.internal.ConfigValueReader.objectReader[ConfigTest.this.Bar](
-         |      /* missing */summon[spray.json.JsonReader[ConfigTest.this.Bar]])
+         |      /* missing */summon[besom.json.JsonReader[ConfigTest.this.Bar]])
          |
-         |But no implicit values were found that match type spray.json.JsonReader[ConfigTest.this.Bar].
+         |But no implicit values were found that match type besom.json.JsonReader[ConfigTest.this.Bar].
          |config.requireObject[Bar]("bar")
          |                               ^
          |""".stripMargin

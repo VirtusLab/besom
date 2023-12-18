@@ -12,12 +12,12 @@ import besom.internal.*
 object types:
   // TODO: replace these stubs with proper implementations
   private object Opaques:
-    opaque type PulumiAny = spray.json.JsValue
+    opaque type PulumiAny = besom.json.JsValue
     object PulumiAny:
       given Encoder[PulumiAny] = Encoder.jsonEncoder
       given Decoder[PulumiAny] = Decoder.jsonDecoder
 
-    opaque type PulumiJson = spray.json.JsValue
+    opaque type PulumiJson = besom.json.JsValue
     object PulumiJson:
       given Encoder[PulumiJson] = Encoder.jsonEncoder
       given Decoder[PulumiJson] = Decoder.jsonDecoder

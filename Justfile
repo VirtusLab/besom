@@ -16,15 +16,11 @@ coverage := "false"
 scala-cli-coverage-options-core := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-core } else { "" }
 scala-cli-test-options-core := scala-cli-coverage-options-core
 
-scala-cli-core-dependency-option := "--dep org.virtuslab::besom-core:" + besom-version 
-
-scala-cli-main-options-cats := scala-cli-core-dependency-option
 scala-cli-coverage-options-cats := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-cats } else { "" }
-scala-cli-test-options-cats := scala-cli-main-options-cats + " " + scala-cli-coverage-options-cats
+scala-cli-test-options-cats := scala-cli-coverage-options-cats
 
-scala-cli-main-options-zio := scala-cli-core-dependency-option
 scala-cli-coverage-options-zio := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-zio } else { "" }
-scala-cli-test-options-zio := scala-cli-main-options-zio + " " + scala-cli-coverage-options-zio
+scala-cli-test-options-zio := scala-cli-coverage-options-zio
 
 publish-maven-auth-options := "--user env:OSSRH_USERNAME --password env:OSSRH_PASSWORD --gpg-key $PGP_KEY_ID --gpg-option --pinentry-mode --gpg-option loopback --gpg-option --passphrase --gpg-option $PGP_PASSWORD"
 
@@ -64,14 +60,14 @@ compile-core: publish-local-json
 
 # Compiles besom cats-effect extension
 compile-cats: publish-local-core
-	scala-cli --power compile besom-cats {{scala-cli-main-options-cats}} --suppress-experimental-feature-warning
+	scala-cli --power compile besom-cats --suppress-experimental-feature-warning
 
 # Compiles besom zio extension
 compile-zio: publish-local-core
-	scala-cli --power compile besom-zio {{scala-cli-main-options-zio}} --suppress-experimental-feature-warning
+	scala-cli --power compile besom-zio --suppress-experimental-feature-warning
 
 # Compiles all SDK modules
-compile-sdk: publish-local-core compile-cats compile-zio compile-compiler-plugin
+compile-sdk: compile-core compile-cats compile-zio compile-compiler-plugin
 
 # Compiles besom compiler plugin
 compile-compiler-plugin:
@@ -101,11 +97,11 @@ publish-local-core: test-core
 
 # Publishes locally besom cats-effect extension
 publish-local-cats: publish-local-core
-	scala-cli --power publish local besom-cats --project-version {{besom-version}} {{scala-cli-main-options-cats}}  --suppress-experimental-feature-warning
+	scala-cli --power publish local besom-cats --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes locally besom zio extension
 publish-local-zio: publish-local-core
-	scala-cli --power publish local besom-zio --project-version {{besom-version}} {{scala-cli-main-options-zio}} --suppress-experimental-feature-warning
+	scala-cli --power publish local besom-zio --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes locally all SDK modules: core, cats-effect extension, zio extension
 publish-local-sdk: publish-local-core publish-local-cats publish-local-zio
@@ -120,11 +116,11 @@ publish-maven-core:
 
 # Publishes besom cats-effect extension
 publish-maven-cats:
-	scala-cli --power publish besom-cats {{ scala-cli-main-options-cats }} --project-version {{besom-version}} {{publish-maven-auth-options}}
+	scala-cli --power publish besom-cats --project-version {{besom-version}} {{publish-maven-auth-options}}
 
 # Publishes besom zio extension
 publish-maven-zio:
-	scala-cli --power publish besom-zio {{ scala-cli-main-options-zio }} --project-version {{besom-version}} {{publish-maven-auth-options}}
+	scala-cli --power publish besom-zio --project-version {{besom-version}} {{publish-maven-auth-options}}
 
 # Publishes besom compiler plugin
 publish-maven-compiler-plugin:
@@ -464,6 +460,3 @@ clean-slate-liftoff: clean-sdk
 setup-intellij:
 	for file in `ls */project.scala | cut -f1 -d'/'`; do scala-cli setup-ide $file --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning; done
 	for file in `ls */*/project.scala | cut -f1,2 -d'/'`; do scala-cli setup-ide $file --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning; done
-	scala-cli setup-ide scripts --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
-	scala-cli setup-ide besom-cats --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
-	scala-cli setup-ide besom-zio --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning

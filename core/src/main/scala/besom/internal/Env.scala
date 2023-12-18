@@ -1,6 +1,7 @@
 package besom.internal
 
 import besom.util.NonEmptyString
+
 import scala.util.Try
 
 //noinspection TypeAnnotation
@@ -42,7 +43,7 @@ object Env:
   private[internal] def getMaybe(key: String): Option[NonEmptyString] =
     sys.env.get(key).flatMap(NonEmptyString(_))
 
-  import spray.json._, DefaultJsonProtocol._
+  import besom.json.*, DefaultJsonProtocol.*
 
   given nesJF(using jfs: JsonFormat[String]): JsonFormat[NonEmptyString] =
     new JsonFormat[NonEmptyString]:

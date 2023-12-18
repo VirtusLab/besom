@@ -11,14 +11,12 @@ import besom.*
   val viral2     = name.flatMap(n => hush.map(h => n + h))
   val viral3     = hush.flatMap(h => name.map(n => n + h))
 
-  import spray.json.DefaultJsonProtocol._
+  import besom.json.*, DefaultJsonProtocol.*
   val names = config.requireObject[List[String]]("names")
 
-  import spray.json.JsonFormat
   case class Foo(name: String, age: Int) derives Encoder
-  // noinspection ScalaUnusedSymbol
   object Foo:
-    given JsonFormat[Foo] = jsonFormat2(Foo.apply)
+    given JsonFormat[Foo] = jsonFormatN
 
   val foo = config.requireObject[Foo]("foo")
 

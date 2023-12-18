@@ -93,7 +93,7 @@ object NameUnmangler:
     } else name
 
 object Decoder extends DecoderInstancesLowPrio1:
-  import spray.json.*
+  import besom.json.*
 
   given Decoder[Unit] with
     def mapping(value: Value, label: Label): Unit = ()
@@ -452,7 +452,7 @@ object Decoder extends DecoderInstancesLowPrio1:
 end Decoder
 
 trait DecoderInstancesLowPrio1 extends DecoderInstancesLowPrio2:
-  import spray.json.JsValue
+  import besom.json.JsValue
 
   given unionBooleanDecoder[A: Decoder](using NotGiven[A <:< Boolean]): Decoder[Boolean | A] = unionDecoder[A, Boolean]
   given unionStringDecoder[A: Decoder](using NotGiven[A <:< String]): Decoder[String | A]    = unionDecoder[A, String]
@@ -600,7 +600,7 @@ trait Encoder[A]:
 
 object Encoder:
   import Constants.*
-  import spray.json.*
+  import besom.json.*
 
   def encoderSum[A](mirror: Mirror.SumOf[A], nameEncoderPairs: List[(String, Encoder[?])]): Encoder[A] =
     new Encoder[A]:

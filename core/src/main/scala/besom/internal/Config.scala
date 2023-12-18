@@ -1,7 +1,7 @@
 package besom.internal
 
+import besom.json.{JsValue, JsonReader}
 import besom.util.NonEmptyString
-import spray.json.{JsValue, JsonReader}
 
 import scala.util.Try
 
@@ -209,7 +209,7 @@ class Config private (
     * @param Context
     *   the Besom context
     * @return
-    *   an optional configuration or secret [[spray.json.JsValue]] value
+    *   an optional configuration or secret [[besom.json.JsValue]] value
     */
   def getJson(key: NonEmptyString)(using Context): Output[Option[JsValue]] = get[JsValue](key)
 
@@ -220,7 +220,7 @@ class Config private (
     * @param Context
     *   the Besom context
     * @return
-    *   the configuration or secret [[spray.json.JsValue]] value or [[ConfigError]]
+    *   the configuration or secret [[besom.json.JsValue]] value or [[ConfigError]]
     */
   def requireJson(key: NonEmptyString)(using Context): Output[JsValue] = require[JsValue](key)
 
@@ -456,7 +456,7 @@ object Config:
       * @param Context
       *   the Besom context
       * @return
-      *   an optional configuration or secret [[spray.json.JsValue]] value
+      *   an optional configuration or secret [[besom.json.JsValue]] value
       */
     def getJson(key: NonEmptyString)(using Context): Output[Option[JsValue]] = output.flatMap(_.getJson(key))
 
@@ -468,7 +468,7 @@ object Config:
       * @param Context
       *   the Besom context
       * @return
-      *   the configuration or secret [[spray.json.JsValue]] value or [[ConfigError]]
+      *   the configuration or secret [[besom.json.JsValue]] value or [[ConfigError]]
       */
     def requireJson(key: NonEmptyString)(using Context): Output[JsValue] = output.flatMap(_.requireJson(key))
 
