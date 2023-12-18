@@ -30,11 +30,6 @@ package object json {
 
   implicit def enrichAny[T](any: T): RichAny[T] = new RichAny(any)
   implicit def enrichString(string: String): RichString = new RichString(string)
-
-  @deprecated("use enrichAny", "1.3.4")
-  def pimpAny[T](any: T) = new PimpedAny(any)
-  @deprecated("use enrichString", "1.3.4")
-  def pimpString(string: String) = new PimpedString(string)
 }
 
 package json {
@@ -47,22 +42,7 @@ package json {
   }
 
   private[json] class RichString(string: String) {
-    @deprecated("deprecated in favor of parseJson", "1.2.6")
-    def asJson: JsValue = parseJson
     def parseJson: JsValue = JsonParser(string)
     def parseJson(settings: JsonParserSettings): JsValue = JsonParser(string, settings)
   }
-
-  @deprecated("use RichAny", "1.3.4")
-  private[json] class PimpedAny[T](any: T) {
-    def toJson(implicit writer: JsonWriter[T]): JsValue = writer.write(any)
-  }
-
-  @deprecated("use RichString", "1.3.4")
-  private[json] class PimpedString(string: String) {
-    @deprecated("deprecated in favor of parseJson", "1.2.6")
-    def asJson: JsValue = parseJson
-    def parseJson: JsValue = JsonParser(string)
-  }
-
 }

@@ -1,9 +1,14 @@
 //> using scala "3.3.1"
 //> using options "-java-output-version:11" "-encoding:utf-8"
+//> using options "-deprecation", "-feature", "-Werror", "-Wunused:all"
 
-//> using test.dep "org.specs2:specs2-core_2.13:4.5.1"
-//> using test.dep "org.specs2:specs2-scalacheck_2.13:4.5.1"
-//> using test.dep "org.scalacheck:scalacheck_2.13:1.15.4"
+//> using test.resourceDir src/test/resources
+
+//> using test.dep "org.scalameta::munit::1.0.0-M10"
+//> using test.dep "com.lihaoyi::os-lib:0.9.2"
+//> using test.dep "org.specs2::specs2-core:4.19.2"
+//> using test.dep "org.specs2::specs2-scalacheck:4.19.2"
+//> using test.dep "org.scalacheck::scalacheck:1.17.0"
 
 //> using publish.name "besom-json"
 //> using publish.organization "org.virtuslab"

@@ -146,7 +146,7 @@ class ProductFormatsSpec extends Specification {
   }
 
   "A JsonFormat for a generic case class with an explicitly provided type parameter" should {
-    "support the jsonFormat1 syntax" in {
+    "support the jsonFormatN syntax" in {
       case class Box[A](a: A)
       object BoxProtocol extends DefaultJsonProtocol {
         implicit val boxFormat: JsonFormat[Box[Int]] = jsonFormatN[Box[Int]]
