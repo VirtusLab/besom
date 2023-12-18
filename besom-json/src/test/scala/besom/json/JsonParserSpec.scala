@@ -104,8 +104,8 @@ class JsonParserSpec extends Specification {
 
         val start = System.nanoTime()
         f()
-        val end = System.nanoTime()
-        end - start
+        val end_ = System.nanoTime()
+        end_ - start
       }
 
       val regularJson = createJson(regularKeys)
@@ -167,7 +167,7 @@ class JsonParserSpec extends Specification {
               nested.parseJson(settings)
               queue.push("didn't fail")
             } catch {
-              case s: StackOverflowError => queue.push("stackoverflow")
+              case _: StackOverflowError => queue.push("stackoverflow")
               case NonFatal(e) =>
                 queue.push(s"nonfatal: ${e.getMessage}")
             }

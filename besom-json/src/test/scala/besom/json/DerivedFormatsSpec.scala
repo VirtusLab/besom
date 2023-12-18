@@ -1,6 +1,6 @@
 package besom.json
 
-import org.specs2.mutable._
+import org.specs2.mutable.*
 
 class DerivedFormatsSpec extends Specification {
 

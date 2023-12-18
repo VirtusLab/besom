@@ -16,9 +16,6 @@
 
 package besom.json
 
-import scala.annotation.tailrec
-import scala.util.control.NonFatal
-
 trait ProductFormats:
   self: StandardFormats with AdditionalFormats =>
 
@@ -58,7 +55,6 @@ object ProductFormatsMacro:
               new RootJsonFormat[T]:
                 private val allInstances = ${allInstancesExpr}
                 private val fmts = ${prodFormats}
-                private val keys = allInstances.map(_._1)
                 def read(json: JsValue): T = json match
                   case JsObject(fields) => 
                     val values = allInstances.map { case (fieldName, fieldFormat, isOption) =>

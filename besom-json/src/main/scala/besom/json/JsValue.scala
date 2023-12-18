@@ -41,9 +41,6 @@ sealed abstract class JsValue {
    * Returns `this` if this JsValue is a JsObject, otherwise throws a DeserializationException.
    */
   def asJsObject: JsObject = asJsObject()
-
-  @deprecated("Superceded by 'convertTo'", "1.1.0")
-  def fromJson[T :JsonReader]: T = convertTo
 }
 
 /**
@@ -56,22 +53,15 @@ case class JsObject(fields: Map[String, JsValue]) extends JsValue {
 object JsObject {
   val empty = JsObject(TreeMap.empty[String, JsValue])
   def apply(members: JsField*): JsObject = new JsObject(TreeMap(members: _*))
-  @deprecated("Use JsObject(JsValue*) instead", "1.3.0")
-  def apply(members: List[JsField]): JsObject = apply(members: _*)
 }
 
 /**
   * A JSON array.
  */
-case class JsArray(elements: Vector[JsValue]) extends JsValue {
-  @deprecated("Use JsArray(Vector[JsValue]) instead", "1.3.0")
-  def this(elements: List[JsValue]) = this(elements.toVector)
-}
+case class JsArray(elements: Vector[JsValue]) extends JsValue
 object JsArray {
   val empty = JsArray(Vector.empty)
   def apply(elements: JsValue*) = new JsArray(elements.toVector)
-  @deprecated("Use JsArray(Vector[JsValue]) instead", "1.3.0")
-  def apply(elements: List[JsValue]) = new JsArray(elements.toVector)
 }
 
 /**
