@@ -3,7 +3,7 @@ package besom.bootstrap
 import scala.util.Using
 import scala.jdk.CollectionConverters.*
 import io.github.classgraph.ClassGraph
-import spray.json.*
+import besom.json.*
 
 object PulumiPluginsDiscoverer:
   def main(args: Array[String]): Unit =

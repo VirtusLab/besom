@@ -1,7 +1,7 @@
 package besom.internal
 
 import besom.*
-import spray.json.*
+import besom.json.*
 
 //noinspection UnitMethodIsParameterless,TypeAnnotation
 @main def main = Pulumi.run {

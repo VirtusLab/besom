@@ -29,23 +29,22 @@ class ReSerializerTest extends munit.FunSuite:
   }
 
   test("serialize-deserialize JSON") {
-    val e: Encoder[spray.json.JsValue] = summon[Encoder[spray.json.JsValue]]
-    val d: Decoder[spray.json.JsValue] = summon[Decoder[spray.json.JsValue]]
+    val e: Encoder[besom.json.JsValue] = summon[Encoder[besom.json.JsValue]]
+    val d: Decoder[besom.json.JsValue] = summon[Decoder[besom.json.JsValue]]
 
-    assertEquals(reSerialize(spray.json.JsNull)(e, d).unsafeRunSync(), spray.json.JsNull)
-    assertEquals(reSerialize(spray.json.JsObject.empty)(e, d).unsafeRunSync(), spray.json.JsObject.empty)
-    assertEquals(reSerialize(spray.json.JsArray.empty)(e, d).unsafeRunSync(), spray.json.JsArray.empty)
-    assertEquals(reSerialize(spray.json.JsString("asdf"))(e, d).unsafeRunSync(), spray.json.JsString("asdf"))
-    assertEquals(reSerialize(spray.json.JsNumber(123))(e, d).unsafeRunSync(), spray.json.JsNumber(123))
-    assertEquals(reSerialize(spray.json.JsBoolean(true))(e, d).unsafeRunSync(), spray.json.JsBoolean(true))
-    assertEquals(reSerialize(spray.json.JsBoolean(false))(e, d).unsafeRunSync(), spray.json.JsBoolean(false))
+    assertEquals(reSerialize(besom.json.JsNull)(e, d).unsafeRunSync(), besom.json.JsNull)
+    assertEquals(reSerialize(besom.json.JsObject.empty)(e, d).unsafeRunSync(), besom.json.JsObject.empty)
+    assertEquals(reSerialize(besom.json.JsArray.empty)(e, d).unsafeRunSync(), besom.json.JsArray.empty)
+    assertEquals(reSerialize(besom.json.JsString("asdf"))(e, d).unsafeRunSync(), besom.json.JsString("asdf"))
+    assertEquals(reSerialize(besom.json.JsNumber(123))(e, d).unsafeRunSync(), besom.json.JsNumber(123))
+    assertEquals(reSerialize(besom.json.JsBoolean(true))(e, d).unsafeRunSync(), besom.json.JsBoolean(true))
+    assertEquals(reSerialize(besom.json.JsBoolean(false))(e, d).unsafeRunSync(), besom.json.JsBoolean(false))
     assertEquals(
-      reSerialize(spray.json.JsObject("asdf" -> spray.json.JsNull))(e, d).unsafeRunSync(),
-      spray.json.JsObject("asdf" -> spray.json.JsNull)
+      reSerialize(besom.json.JsObject("asdf" -> besom.json.JsNull))(e, d).unsafeRunSync(),
+      besom.json.JsObject("asdf" -> besom.json.JsNull)
     )
 
-    import spray.json.*
-    import DefaultJsonProtocol.*
+    import besom.json.*, DefaultJsonProtocol.*
     assertEquals(reSerialize("""{}""".toJson)(e, d).unsafeRunSync(), """{}""".toJson)
     assertEquals(reSerialize("""[]""".toJson)(e, d).unsafeRunSync(), """[]""".toJson)
     assertEquals(reSerialize("""{"asdf": null}""".toJson)(e, d).unsafeRunSync(), """{"asdf": null}""".toJson)

@@ -1,6 +1,6 @@
 package besom.codegen
 
-import scala.meta._
+import scala.meta.*
 import scala.meta.dialects.Scala33
 
 object scalameta:
@@ -31,10 +31,7 @@ object scalameta:
       object CodegenProtocol {
         def apply(): Term.Ref = Term.Select(Term.Select(Term.Name("besom"), Term.Name("internal")), Term.Name("CodegenProtocol"))
 
-        def jsonFormatN(size: Int)(a: Term): Term.Apply = Term.Apply(
-          Term.Select(CodegenProtocol.apply(), Term.Name("jsonFormat" + size)),
-          Term.ArgClause(a :: Nil)
-        )
+        def jsonFormatN: Term.Ref = Term.Select(CodegenProtocol.apply(), Term.Name("jsonFormatN"))
       }
     }
   }

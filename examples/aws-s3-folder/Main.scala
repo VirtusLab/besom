@@ -3,7 +3,7 @@ import besom.api.aws.s3
 import besom.api.aws.s3.inputs.BucketWebsiteArgs
 import besom.types.Asset.FileAsset
 import besom.types.Output
-import spray.json.*
+import besom.json.*
 
 import java.io.File
 import java.nio.file.Files

@@ -1,8 +1,8 @@
 package besom.internal
 
-import besom.util.NonEmptyString
+import besom.json.*
 import besom.types.*
-import spray.json.*
+import besom.util.NonEmptyString
 
 case class StackReference(
   urn: Output[URN],
