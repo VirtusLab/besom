@@ -41,7 +41,7 @@ clean-all: clean-json clean-sdk clean-out clean-compiler-plugin clean-codegen cl
 compile-all: compile-json compile-sdk compile-codegen compile-compiler-plugin build-language-plugin compile-scripts
 
 # Tests everything
-test-all: test-json test-sdk test-codegen test-markdown test-integration test-templates test-examples test-markdown
+test-all: test-json test-sdk test-codegen test-integration test-templates test-examples test-markdown
 
 # Runs all necessary checks before committing
 before-commit: compile-all test-all
@@ -298,12 +298,15 @@ publish-local-provider-sdk schema-name schema-version:
 test-integration: test-integration-core test-integration-compiler-plugin test-integration-codegen test-integration-language-plugin
 	scala-cli --power test integration-tests
 
+test-integration-ci: publish-local-codegen publish-local-sdk install-language-plugin publish-local-compiler-plugin
+	scala-cli --power test integration-tests
+
 # Cleans after integration tests
 clean-test-integration: clean-test-integration-codegen
 	scala-cli --power clean integration-tests
 
 # Runs integration tests for core
-test-integration-core: publish-local-codegen publish-local-core install-language-plugin publish-local-compiler-plugin
+test-integration-core: publish-local-codegen publish-local-sdk install-language-plugin publish-local-compiler-plugin
 	scala-cli --power test integration-tests --test-only 'besom.integration.core*'
 
 # Runs integration tests for compiler plugin

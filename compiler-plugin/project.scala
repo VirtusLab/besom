@@ -2,7 +2,7 @@
 
 //> using resourceDir "./src/main/resources"
 
-//> using lib "org.scala-lang::scala3-compiler:3.3.1"
+//> using dep "org.scala-lang::scala3-compiler:3.3.1"
 
 // this is intentional - we need compiler plugin to work with the same range of jvms as the compiler itself
 //> using options "-java-output-version:8"

@@ -1,0 +1,3 @@
+name: zio-tls-besom-test
+description: Besom TLS test with ZIO
+runtime: scala

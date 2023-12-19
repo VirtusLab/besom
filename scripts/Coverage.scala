@@ -1,9 +1,9 @@
 //> using scala "3.3.1"
 
-//> using lib "com.lihaoyi::os-lib:0.9.2"
-//> using lib "org.scoverage::scalac-scoverage-reporter:2.0.11"
-//> using lib "org.scoverage::scalac-scoverage-domain:2.0.11"
-//> using lib "org.scoverage::scalac-scoverage-serializer:2.0.11"
+//> using dep "com.lihaoyi::os-lib:0.9.2"
+//> using dep "org.scoverage::scalac-scoverage-reporter:2.0.11"
+//> using dep "org.scoverage::scalac-scoverage-domain:2.0.11"
+//> using dep "org.scoverage::scalac-scoverage-serializer:2.0.11"
 
 package besom.scripts
 

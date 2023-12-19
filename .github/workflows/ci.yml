@@ -25,6 +25,7 @@ on:
 
 env:
   PULUMI_CONFIG_PASSPHRASE: 'passphrase'
+  PULUMI_SKIP_UPDATE_CHECK: 'true'
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
@@ -73,60 +74,5 @@ jobs:
     - name: Compile everything
       run: just compile-all
 
-    - name: Test core SDK
-      run: just test-sdk
-    
-    - name: Publish compiler plugin
-      run: just publish-local-compiler-plugin
-
-    - name: Test language plugin
-      run: just test-integration-language-plugin
-
-    - name: Cross-package language plugin
-      run: just package-language-plugins-all
-
-    - name: Install language plugin
-      run: just install-language-plugin
-
-    - name: Login in to pulumi
-      run: pulumi login --local
-
-    - name: Integration test for core SDK
-      run: just test-integration-core
-
-    - name: Integration test for Codegen
-      run: just test-integration-codegen
-
-    - name: Integration test for compiler plugin
-      run: just test-integration-compiler-plugin
-
-    - name: Publish local SDK
-      run: just publish-local-sdk
-
-    - name: Generate purrl provider
-      run: just generate-provider-sdk purrl 0.4.1
-
-    - name: Publish purrl provider
-      run: just publish-local-provider-sdk purrl 0.4.1
-    
-    - name: Run purrl tests
-      uses: pulumi/actions@v4
-      with:
-        command: up
-        work-dir: integration-tests/src/test/resources/purrl-example
-        stack-name: test
-        upsert: true
-
-    - name: Generate tls provider
-      run: just generate-provider-sdk tls 4.10.0
-
-    - name: Publish tls provider
-      run: just publish-local-provider-sdk tls 4.10.0
-    
-    - name: Run tls tests
-      uses: pulumi/actions@v4
-      with:
-        command: up
-        work-dir: integration-tests/src/test/resources/tls-example
-        stack-name: test
-        upsert: true
+    - name: Test most of the things
+      run: just test-json test-sdk test-codegen test-integration-ci
