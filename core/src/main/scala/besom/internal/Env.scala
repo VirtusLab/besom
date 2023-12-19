@@ -1,6 +1,6 @@
 package besom.internal
 
-import besom.util.NonEmptyString
+import besom.util.*
 
 import scala.util.Try
 
@@ -55,11 +55,6 @@ object Env:
 
   private[internal] def getConfigSecretKeys(key: String): Try[Set[NonEmptyString]] =
     Try { sys.env.get(key).map(_.parseJson.convertTo[Set[NonEmptyString]]).getOrElse(Set.empty) }
-
-  private[internal] def isTruthy(s: String): Boolean =
-    s == "1" || s.equalsIgnoreCase("true")
-
-  private[internal] def isNotTruthy(s: String): Boolean = !isTruthy(s)
 
   lazy val logLevel        = getMaybe(EnvLogLevel).flatMap(scribe.Level.get(_)).getOrElse(scribe.Level.Warn)
   lazy val traceRunToFile  = getMaybe(EnvEnableTraceLoggingToFile).map(isTruthy).getOrElse(false)

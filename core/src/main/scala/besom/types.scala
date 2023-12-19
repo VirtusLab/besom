@@ -57,7 +57,7 @@ object types:
       * @param s
       *   a resource type string to parse
       * @return
-      *   a [[ResourceType]] if the string is valid, otherwise an compile time error occurs
+      *   a [[ResourceType]] if the string is valid, otherwise a compile time error occurs
       */
 
     // validate that resource type contains two colons between three identifiers, special characters are allowed, for instance:
@@ -102,7 +102,7 @@ object types:
       * @param s
       *   a provider type string to parse
       * @return
-      *   a [[ProviderType]] if the string is valid, otherwise an compile time error occurs
+      *   a [[ProviderType]] if the string is valid, otherwise a compile time error occurs
       */
     // validate that provider type contains a prefix of `pulumi:providers:` and the provider identifier
     inline def from(s: String): ProviderType =
@@ -127,7 +127,7 @@ object types:
       * @param s
       *   a function token string to parse
       * @return
-      *   a [[FunctionToken]] if the string is valid, otherwise an compile time error occurs
+      *   a [[FunctionToken]] if the string is valid, otherwise a compile time error occurs
       */
     // validate that function token contains two colons between three identifiers, see @ResourceType
     inline def from(s: String): FunctionToken =
