@@ -19,11 +19,8 @@ jobs:
     - uses: VirtusLab/scala-cli-setup@v1.1.0
       with: 
         jvm: graalvm-java11:22.3.1
-        apps: scala-cli:1.0.4
+        power: true
     - uses: arduino/setup-protoc@v1
-
-    - name: Trust me bro
-      run: scala-cli config power true
 
     - name: Fetch & compile protobuf 
       run: just compile-pulumi-protobufs

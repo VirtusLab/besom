@@ -142,4 +142,44 @@ class CoreTests extends munit.FunSuite {
 
     case _ => throw new Exception("Invalid number of contexts")
   }
+
+  FunFixture[pulumi.FixtureContext](
+    setup = {
+      val schemaName = "tls"
+      val result     = codegen.generatePackage(PackageMetadata(schemaName, providerTlsSchemaVersion))
+      scalaCli.publishLocal(result.outputDir).call()
+      pulumi.fixture.setup(
+        wd / "resources" / "zio-tls-example",
+        projectFiles = Map(
+          "project.scala" ->
+            (defaultProjectFile
+              + s"""//> using dep org.virtuslab::besom-zio:$coreVersion\n"""
+              + s"""//> using dep org.virtuslab::besom-$schemaName:$providerTlsVersion\n""")
+        )
+      )
+    },
+    teardown = pulumi.fixture.teardown
+  ).test("zio tls provider should work") { ctx =>
+    pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
+  }
+
+  FunFixture[pulumi.FixtureContext](
+    setup = {
+      val schemaName                 = "purrl"
+      val result                     = codegen.generatePackage(PackageMetadata(schemaName, providerPurrlSchemaVersion))
+      scalaCli.publishLocal(result.outputDir).call()
+      pulumi.fixture.setup(
+        wd / "resources" / "cats-purrl-example",
+        projectFiles = Map(
+          "project.scala" ->
+            (defaultProjectFile
+              + s"""//> using dep org.virtuslab::besom-cats:$coreVersion\n"""
+              + s"""//> using dep org.virtuslab::besom-$schemaName:$providerPurrlVersion\n""")
+        )
+      )
+    },
+    teardown = pulumi.fixture.teardown
+  ).test("cats purrl provider should work") { ctx =>
+    pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
+  }
 }

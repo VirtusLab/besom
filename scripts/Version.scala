@@ -14,11 +14,13 @@ import scala.util.matching.Regex
   val besomVersion = os.read(os.pwd / "version.txt").trim
 
   val besomDependencyPattern: Regex =
-    ("""^(//> using (?:test\.)?dep ["]{0,1}org.virtuslab::besom-[a-z]+:(?:[0-9\.]+-core\.)?)""" + besomVersion + """(["]{0,1})$""").r
+    ("""^(//> using (?:test\.)?(?:dep|lib|plugin)[ ]+["]{0,1}org.virtuslab::besom-[a-z]+:(?:[0-9\.]+-core\.)?)[a-zA-Z0-9\.\-]+(["]{0,1})$""").r
+
+  val expectedFileNames = Vector("project.scala", "project-test.scala", "run.scala")
 
   val projectFiles: Map[os.Path, String] =
     os.walk(os.pwd)
-      .filter(_.last == "project.scala")
+      .filter(f => expectedFileNames.contains(f.last))
       .filterNot(_.startsWith(os.pwd / ".out"))
       .map((f: os.Path) => f -> os.read(f))
       .toMap
@@ -39,6 +41,8 @@ import scala.util.matching.Regex
           println("You have to provide new besom version as the second argument.")
           sys.exit(1)
         }
+
+      println(s"Bumping Besom version from '$besomVersion' to '$newBesomVersion'")
 
       projectFiles
         .collect { case (path, content) if content.linesIterator.exists(besomDependencyPattern.matches) => path -> content }
