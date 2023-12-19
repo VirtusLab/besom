@@ -402,6 +402,9 @@ compile-scripts: publish-local-codegen
 clean-scripts:
     scala-cli --power clean scripts
 
+bump-version new-version:
+    scala-cli run scripts/Version.scala -- bump {{new-version}}
+
 ####################
 # Troubleshooting
 ####################
