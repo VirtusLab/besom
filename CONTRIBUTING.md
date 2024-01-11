@@ -129,15 +129,15 @@ just install-language-plugin
 
 You have to generate an SDK for a provider of your choice, to do that run:
 ```bash
-just generate-provider-sdk ${provider_name} ${provider_version}
-just publish-local-provider-sdk ${provider_name} ${provider_version}
+just generate-provider ${provider_name} ${provider_version}
+just publish-local-provider ${provider_name} ${provider_version}
 ```
 
 e.g.:
 
 ```bash
-just generate-provider-sdk kubernetes 4.2.0
-just publish-local-provider-sdk kubernetes 4.2.0
+just generate-provider kubernetes 4.2.0
+just publish-local-provider kubernetes 4.2.0
 ```
 
 ### Working with published dependencies

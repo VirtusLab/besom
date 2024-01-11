@@ -2,15 +2,27 @@ package besom.codegen
 
 import scala.meta.*
 import scala.meta.dialects.Scala33
+import scala.meta.parsers.Parse
 
 object scalameta:
   def parseStatement(code: String): Stat = code.parse[Stat].toEither match
-    case Left(error) => throw GeneralCodegenException(s"Failed to parse statement code:\n$code", error.details)
+    case Left(error) => throw parseException(code, error)
     case Right(term) => term
 
   def parseSource(code: String): Source = code.parse[Source].toEither match
-    case Left(error) => throw GeneralCodegenException(s"Failed to parse source code:\n$code", error.details)
+    case Left(error) => throw parseException(code, error)
     case Right(term) => term
+
+  private def parseException(code: String, error: Parsed.Error): GeneralCodegenException =
+    GeneralCodegenException(
+      s"""Failed to parse source code: $error
+         |Code:
+         |${numberedLines(code)}
+         |""".stripMargin,
+      error.details
+    )
+  private def numberedLines(code: String): String =
+    code.linesIterator.zipWithIndex.map { case (line, i) => f"${i + 1}%04d" + s"| $line" }.mkString("\n")
 
   def given_(decltpe: Type)(body: Term): Defn.GivenAlias = Defn.GivenAlias(
     mods = Nil,

@@ -406,7 +406,7 @@ class CodeGen(implicit
         if (!methodCoordinates.definitionName.contains(name)) {
           logger.warn(
             s"""|Resource definition method name '${name}' (used) does not match the name
-                |in method definition '${methodCoordinates.definitionName}' (ignored)
+                |in method definition '${methodCoordinates.definitionName.getOrElse("")}' (ignored)
                 |for function '${functionToken.asString}' - this is a schema error""".stripMargin
           )
         }
@@ -637,7 +637,7 @@ class CodeGen(implicit
       }
       val description = configDefinition.description.getOrElse("")
       val deprecationCode = configDefinition.deprecationMessage match {
-        case Some(message) => s"""\n  @deprecated("$message")"""
+        case Some(message) => s"""\n@deprecated("$message")"""
         case None          => ""
       }
       val deprecationDocs = configDefinition.deprecationMessage match {
@@ -892,7 +892,7 @@ class CodeGen(implicit
 
     val derivedTypeclasses = {
       lazy val providerArgsEncoderInstance =
-        m"""|  given encoder(using besom.types.Context): besom.types.ProviderArgsEncoder[$argsClassName] =
+        m"""|  given providerArgsEncoder(using besom.types.Context): besom.types.ProviderArgsEncoder[$argsClassName] =
             |    besom.internal.ProviderArgsEncoder.derived[$argsClassName]
             |""".stripMargin
 
@@ -901,7 +901,10 @@ class CodeGen(implicit
             |    besom.internal.ArgsEncoder.derived[$argsClassName]
             |""".stripMargin
 
-      if (isProvider) providerArgsEncoderInstance
+      if (isProvider)
+        m"""|  given encoder(using besom.types.Context): besom.types.Encoder[$argsClassName] =
+            |    besom.internal.Encoder.derived[$argsClassName]
+            |$providerArgsEncoderInstance""".stripMargin
       else if (isResource)
         m"""|  given encoder(using besom.types.Context): besom.types.Encoder[$argsClassName] =
             |    besom.internal.Encoder.derived[$argsClassName]

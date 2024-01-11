@@ -1,6 +1,6 @@
 //> using scala 3.3.1
 
-//> using dep com.lihaoyi::os-lib:0.9.2
+//> using dep com.lihaoyi::os-lib:0.9.3
 //> using dep com.lihaoyi::requests:0.8.0
 //> using dep com.lihaoyi::upickle:3.1.3
 //> using dep org.virtuslab::scala-yaml:0.0.8
@@ -19,8 +19,10 @@ import scala.util.*
 import scala.util.control.NonFatal
 
 @main def run(args: String*): Unit =
-  val packagesDir   = os.pwd / ".out" / "packages"
-  val generatedFile = os.pwd / ".out" / "codegen" / "generated.json"
+  val packagesDir    = os.pwd / ".out" / "packages"
+  val publishLogsDir = os.pwd / ".out" / "publishLocal"
+  val generatedFile  = os.pwd / ".out" / "codegen" / "generated.json"
+  val publishedFile  = os.pwd / ".out" / "publishLocal" / "published.json"
 
   val pluginDownloadProblemPackages = Vector(
     "aws-miniflux", // lack of darwin/arm64 binary
@@ -55,84 +57,116 @@ import scala.util.control.NonFatal
 
   args match
     case "metadata-all" :: Nil      => downloadPackagesMetadata(packagesDir)
+    case "metadata" :: tail         => downloadPackagesMetadata(packagesDir, selected = tail)
     case "generate-all" :: Nil      => generateAll(packagesDir)
-    case "publish-local-all" :: Nil => publishLocalAll()
+    case "generate" :: tail         => generateSelected(packagesDir, tail)
+    case "publish-local-all" :: Nil => publishLocalAll(generatedFile)
+    case "publish-local" :: tail    => publishSelected(generatedFile, tail)
     case "publish-maven-all" :: Nil => publishMavenAll(packagesDir)
     case _                          => println(s"Unknown command: $args")
 
-  def generateAll(targetPath: os.Path): Unit = {
+  def generateAll(targetPath: os.Path): os.Path = {
     val metadata = generate(readAllPackagesMetadata(targetPath))
-    os.write(generatedFile, PackageMetadata.toJson(metadata), createFolders = true)
+      .filterNot(m => codegenProblemPackages.contains(m.name))
+    os.write.over(generatedFile, PackageMetadata.toJson(metadata), createFolders = true)
+    generatedFile
   }
+
+  def generateSelected(targetPath: os.Path, packages: List[String]): os.Path = {
+    val selectedPackages = readAllPackagesMetadata(targetPath)
+      .filter(p => packages.contains(p.name))
+    val metadata = generate(selectedPackages)
+    os.write.over(generatedFile, PackageMetadata.toJson(metadata), createFolders = true)
+    generatedFile
+  }
+
+  def publishLocalAll(sourceFile: os.Path): os.Path = {
+    val generated = PackageMetadata
+      .fromJsonList(os.read(sourceFile: os.Path))
+      .filterNot(m => compileProblemPackages.contains(m.name))
+    val published = publishLocal(generated)
+    os.write.over(publishedFile, PackageMetadata.toJson(published), createFolders = true)
+    publishedFile
+  }
+
+  def publishSelected(sourceFile: os.Path, packages: List[String]): os.Path = {
+    val generated = PackageMetadata
+      .fromJsonList(os.read(sourceFile))
+      .filter(p => packages.contains(p.name))
+    val published = publishLocal(generated)
+    os.write.over(publishedFile, PackageMetadata.toJson(published), createFolders = true)
+    publishedFile
+  }
+
+  type PackageId = (String, Option[String])
 
   def generate(metadata: Vector[PackageMetadata]): Vector[PackageMetadata] = {
-    val results = withProgress("Generating packages from metadata", metadata.size) {
-      metadata
-        .filterNot(m => codegenProblemPackages.contains(m.name))
-        .flatMap {
-          case m @ PackageMetadata(name, Some(version), _, _) =>
-            Progress.report(label = s"$name:$version")
-            try
-              implicit val codegenConfig: CodegenConfig = CodegenConfig()
+    val seen = mutable.HashSet.empty[PackageId]
+    val todo = mutable.Queue.empty[PackageMetadata]
+    val done = mutable.ListBuffer.empty[PackageMetadata]
 
-              val result = generator.generatePackageSources(metadata = m)
-              println(new Date)
-              println(s"Successfully generated provider '${name}' version '${version}'")
-              println(result.asString)
-              println()
+    todo.enqueueAll(metadata)
+    withProgress("Generating packages from metadata", todo.size) {
+      while todo.nonEmpty do
+        val m             = todo.dequeue()
+        val id: PackageId = (m.name, m.version.map(_.asString))
+        if !seen.contains(id) then
+          seen.add(id)
+          val versionOrLatest = m.version.getOrElse("latest")
+          Progress.report(label = s"${m.name}:${versionOrLatest}")
+          try
+            implicit val codegenConfig: CodegenConfig = CodegenConfig()
+            val result                                = generator.generatePackageSources(metadata = m)
+            val version = result.metadata.version.getOrElse(throw Exception("Package version must be present after generating")).asString
 
-              Vector(result.metadata)
-            catch
-              case NonFatal(_) =>
-                Progress.fail(s"Code generation failed for provider '${name}' version '${version}'")
-                Vector()
-            finally Progress.end
-          case PackageMetadata(name, None, _, _) =>
-            Progress.report(label = s"$name")
-            Progress.fail(s"Code generation failed for provider '${name}', version is not defined")
-            Progress.end
-            Vector()
-        }
+            println(s"[${new Date}] Successfully generated provider '${m.name}' version '${version}' [${new Date}]")
+            println(result.asString)
+            println()
+
+            todo.enqueueAll(result.metadata.dependencies)
+            done += result.metadata
+            Progress.total(done.size)
+          catch
+            case NonFatal(_) =>
+              Progress.fail(s" [${new Date}] Code generation failed for provider '${m.name}' version '${versionOrLatest}'")
+          finally Progress.end
     }
-    val (dependencies, packages) = extractDependencies(results)
-    deDuplicate(generate(dependencies)) ++ packages
+    done.toVector
   }
 
-  def publishLocalAll(): Unit = {
-    val generated = PackageMetadata.fromJsonList(os.read(generatedFile))
-    publishLocal(generated)
-  }
+  def publishLocal(generated: Vector[PackageMetadata]): Vector[PackageMetadata] = {
+    val seen = mutable.HashSet.empty[PackageId]
+    val todo = mutable.Queue.empty[PackageMetadata]
+    val done = mutable.ListBuffer.empty[PackageMetadata]
 
-  def publishLocal(generated: Vector[PackageMetadata]): Unit = {
-    val logDir = os.pwd / ".out" / "publishLocal"
-    os.remove.all(logDir)
-    os.makeDir.all(logDir)
+    os.remove.all(publishLogsDir)
+    os.makeDir.all(publishLogsDir)
 
-    val (dependencies, packages) = extractDependencies(generated)
-    publishLocal(dependencies)
+    generated.foreach(m => {
+      todo.enqueueAll(m.dependencies) // dependencies first to avoid missing dependencies during compilation
+      todo.enqueue(m)
+    })
+    withProgress("Publishing packages locally", todo.size) {
+      while todo.nonEmpty do
+        val m             = todo.dequeue()
+        val id: PackageId = (m.name, m.version.map(_.asString))
+        if !seen.contains(id) then
+          seen.add(id)
+          val version = m.version.getOrElse(throw Exception("Package version must be provided for publishing")).asString
+          Progress.report(label = s"${m.name}:${version}")
+          val logFile = publishLogsDir / s"${m.name}-${version}.log"
+          try
+            os.proc("just", "publish-local-provider", m.name, version).call(stdout = logFile, mergeErrIntoOut = true)
+            println(s"[${new Date}] Successfully published locally provider '${m.name}' version '${version}'")
 
-    withProgress("Publishing packages locally", packages.size) {
-      packages
-        .filterNot(m => compileProblemPackages.contains(m.name))
-        .foreach {
-          case PackageMetadata(name, Some(version), _, _) =>
-            Progress.report(label = s"$name:$version")
-            try
-              val logFile = logDir / s"${name}-${version}.log"
-              os.proc("just", "publish-local-provider-sdk", name, version.asString)
-                .call(stdout = logFile, stderr = logFile)
-              println(new Date)
-              println(s"Successfully published locally provider '${name}' version '${version}'")
-            catch
-              case NonFatal(_) =>
-                Progress.fail(s"Publish failed for provider '${name}' version '${version}'")
-            finally Progress.end
-          case PackageMetadata(name, None, _, _) =>
-            Progress.report(label = s"$name")
-            Progress.fail(s"Publish failed for provider '${name}', version is not defined")
-            Progress.end
-        }
+            done += m
+            Progress.total(done.size)
+          catch
+            case NonFatal(_) =>
+              Progress.fail(s" [${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}")
+          finally Progress.end
     }
+    done.toVector
   }
 
   def publishMavenAll(targetPath: os.Path): Unit = {
@@ -145,19 +179,17 @@ import scala.util.control.NonFatal
       metadata.foreach {
         case PackageMetadata(name, Some(version), _, _) =>
           Progress.report(label = s"$name:$version")
+          val logFile = logDir / s"${name}-${version}.log"
           try
-            val logFile = logDir / s"${name}-${version}.log"
-            os.proc("just", "publish-maven-provider-sdk", name, version.asString)
-              .call(stdout = logFile, stderr = logFile)
-            println(new Date)
-            println(s"Successfully published provider '${name}' version '${version}'")
+            os.proc("just", "publish-maven-provider", name, version.asString).call(stdout = logFile, mergeErrIntoOut = true)
+            println(s"[${new Date}] Successfully published provider '${name}' version '${version}'")
           catch
             case NonFatal(_) =>
-              Progress.fail(s"Publish failed for provider '${name}' version '${version}'")
+              Progress.fail(s"[${new Date}] Publish failed for provider '${name}' version '${version}', logs: ${logFile}")
           finally Progress.end
         case PackageMetadata(name, None, _, _) =>
           Progress.report(label = s"$name")
-          Progress.fail(s"Publish failed for provider '${name}', version is not defined")
+          Progress.fail(s"[${new Date}] Publish failed for provider '${name}', version is not defined")
           Progress.end
       }
     }
@@ -176,7 +208,7 @@ import scala.util.control.NonFatal
     metadata
   }
 
-  def downloadPackagesMetadata(targetPath: os.Path): Unit = {
+  def downloadPackagesMetadata(targetPath: os.Path, selected: List[String] = Nil): Unit = {
     os.remove.all(targetPath)
 
     val packagesRepoApi = "https://api.github.com/repos/pulumi/registry/contents/themes/default/data/registry/packages"
@@ -194,16 +226,26 @@ import scala.util.control.NonFatal
     }
 
     val packages: List[PackageSource] = PackageSource.fromJsonArray(packagesResponse.text())
-    if packages.isEmpty then throw Exception(s"No packages found using: '$packagesRepoApi'")
+    if packages.isEmpty
+    then throw Exception(s"No packages found using: '$packagesRepoApi'")
+    else println(s"Found ${packages.size} packages total")
 
     type Error = String
 
     case class PackageYAML(name: String, repo_url: String, schema_file_path: String, version: String) derives YamlCodec
 
+    val size = if selected.isEmpty then packages.size else selected.size
+
     // fetch all production schemas
-    withProgress("Downloading packages metadata", packages.size) {
-      packages.foreach { (p: PackageSource) =>
-        val packageName = p.name.stripSuffix(".yaml")
+    withProgress(s"Downloading $size packages metadata", size) {
+      packages.map { p =>
+          val packageName = p.name.stripSuffix(".yaml")
+          packageName -> p
+      }.filter { (name, _) =>
+        selected match
+          case Nil => true
+          case selected => selected.contains(name)
+      }.foreach { (packageName: String, p: PackageSource) =>
         Progress.report(label = packageName)
 
         val metadataFile = p.name
@@ -248,20 +290,5 @@ import scala.util.control.NonFatal
 
     println(s"Packages directory: '$targetPath'")
   }
-
-  def extractDependencies(metadata: Vector[PackageMetadata]): (Vector[PackageMetadata], Vector[PackageMetadata]) =
-    val (dependencies, packages) = metadata.foldLeft((Vector.empty[PackageMetadata], Vector.empty[PackageMetadata])) { (acc, m) =>
-      (acc._1 ++ m.dependencies, acc._2 :+ m)
-    }
-    (deDuplicate(dependencies), packages)
-  end extractDependencies
-
-  def deDuplicate[A](items: Vector[A]): Vector[A] =
-    val seen = mutable.HashSet.empty[A]
-    items.filter { item =>
-      val isNew = !seen.contains(item)
-      seen.add(item)
-      isNew
-    }
 
 end run

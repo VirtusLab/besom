@@ -107,7 +107,9 @@ class CodeGenTest extends munit.FunSuite {
               |      helmReleaseSettings = helmReleaseSettings.asOptionOutput(isSecret = false)
               |    )
               |
-              |  given encoder(using besom.types.Context): besom.types.ProviderArgsEncoder[ProviderArgs] =
+              |  given encoder(using besom.types.Context): besom.types.Encoder[ProviderArgs] =
+              |    besom.internal.Encoder.derived[ProviderArgs]
+              |  given providerArgsEncoder(using besom.types.Context): besom.types.ProviderArgsEncoder[ProviderArgs] =
               |    besom.internal.ProviderArgsEncoder.derived[ProviderArgs]
               |""".stripMargin
       ),

@@ -119,6 +119,7 @@ class Progress(
   val report: (String, Int, Temporal) => Unit,
   val ending: (String, Temporal, Temporal) => Unit,
   val failure: (String, Temporal, Temporal, String) => Unit,
+  val total: Int => Unit,
   var time: Temporal = LocalTime.now()
 ):
   private def increment(
@@ -135,6 +136,9 @@ class Progress(
 
   private def fail(error: String, end: Temporal = LocalTime.now()): Unit =
     failure(label, time, end, error)
+
+  private def updateTotal(amount: Int): Unit =
+    total(amount)
 
 object Progress:
   def report(using progress: Progress): Unit =
@@ -155,11 +159,14 @@ object Progress:
   def end(using progress: Progress): Unit =
     progress.end()
 
-def withProgress[A](title: String, total: Int)(f: Progress ?=> A): A =
-  val counter   = new AtomicInteger(0)
+  def total(amount: Int)(using progress: Progress): Unit = progress.updateTotal(amount)
+
+def withProgress[A](title: String, initialTotal: Int)(f: Progress ?=> A): A =
+  val counter   = AtomicInteger(0)
   val failed    = collection.concurrent.TrieMap.empty[String, String]
   val succeeded = collection.concurrent.TrieMap.empty[String, String]
   val first     = LocalTime.now()
+  val realTotal = AtomicInteger(initialTotal)
 
   def elapsed(from: Temporal, to: Temporal = LocalTime.now()): String =
     Duration.fromNanos(java.time.Duration.between(from, to).toNanos) match
@@ -175,29 +182,31 @@ def withProgress[A](title: String, total: Int)(f: Progress ?=> A): A =
   def failure(lbl: String, start: Temporal, end: Temporal, error: String) = 
     failed.put(lbl, s"\r$lbl: ERROR [${elapsed(start, end)}]: $error")
 
+  def total(amount: Int): Unit = realTotal.set(amount)
+
   def report(lbl: String, amount: Int, time: Temporal): Unit =
     val current = counter.addAndGet(amount)
-    val percentage = (current.toDouble / total * 100).toInt
+    val percentage = (current.toDouble / realTotal.get() * 100).toInt
     Console.out.synchronized {
-      println(s"\r$lbl: $percentage% [$current/$total] [${time}]")
+      println(s"\r$lbl: $percentage% [$current/${realTotal.get()}] [${time}]")
     }
 
   // noinspection ScalaUnusedSymbol
-  val progress = Progress(title, report = report, ending = end, failure = failure)
+  val progress = Progress(title, report = report, ending = end, failure = failure, total = total)
 
   println(title)
 
   try f(using progress)
   finally
     println()
-    println(s"Successes [${succeeded.size}/$total]:")
+    println(s"Successes [${succeeded.size}/${realTotal.get()}]:")
     succeeded.toVector.sortBy(_._1).foreach((name, msg) => println(s"  - $name: $msg"))
     println()
     if failed.nonEmpty then
-      println(s"Failures [${failed.size}/$total]:")
+      println(s"Failures [${failed.size}/${realTotal.get()}]:")
       failed.toVector.sortBy(_._1).foreach((name, error) => println(s"  - $name: $error"))
     println()
-    println(s"Total [${succeeded.size}/$total] time: ${elapsed(first)}")
+    println(s"Total [${succeeded.size}/${realTotal.get()}] time: ${elapsed(first)}")
     println()
 
 end withProgress
