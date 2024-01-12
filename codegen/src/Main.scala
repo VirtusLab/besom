@@ -1,9 +1,9 @@
 package besom.codegen
 
 import besom.codegen.Config.{CodegenConfig, ProviderConfig}
-import besom.codegen.PackageMetadata.{SchemaFile, SchemaName}
-import besom.codegen.PackageVersion
+import besom.codegen.UpickleApi.*
 import besom.codegen.metaschema.PulumiPackage
+import besom.codegen.{PackageVersion, SchemaFile}
 
 object Main {
   def main(args: Array[String]): Unit = {
@@ -44,26 +44,24 @@ object Main {
 
 object generator {
   case class Result(
-    schemaName: SchemaName,
-    packageVersion: PackageVersion,
-    dependencies: List[PackageMetadata],
+    metadata: PackageMetadata,
     outputDir: os.Path,
     total: Int
   ):
     def asString: String =
       s"""|Generated package:
-          |  name: ${this.schemaName}
-          |  version: ${this.packageVersion}
+          |  name: ${this.metadata.name}
+          |  version: ${this.metadata.version.getOrElse("none")}
           |  outputDir: ${this.outputDir.relativeTo(os.pwd)}
           |  total: ${this.total}
           |${
-        if this.dependencies.nonEmpty
-        then
-          this.dependencies
-            .map { case PackageMetadata(name, version, _) => s"  - $name:${version.orDefault}" }
-            .mkString("  dependencies:\n", "\n", "")
-        else ""
-      }
+           if this.metadata.dependencies.nonEmpty
+           then
+             this.metadata.dependencies
+               .map { case PackageMetadata(name, version, _, _) => s"  - $name:${version.orDefault}" }
+               .mkString("  dependencies:\n", "\n", "")
+           else ""
+         }
           |""".stripMargin.trim
 
   end Result
@@ -98,13 +96,11 @@ object generator {
       PackageMetadata(name, Some(version))
     }
     logger.debug(
-      s"Dependencies: \n${dependencies.map { case PackageMetadata(name, version, _) => s"- $name:$version\n" }}"
+      s"Dependencies: \n${dependencies.map { case PackageMetadata(name, version, _, _) => s"- $name:$version\n" }}"
     )
 
     Result(
-      schemaName = packageName,
-      packageVersion = packageVersion,
-      dependencies = dependencies,
+      metadata = packageInfo.asPackageMetadata.withDependencies(dependencies.toVector),
       outputDir = outputDir,
       total = total
     )

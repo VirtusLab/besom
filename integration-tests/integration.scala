@@ -244,11 +244,10 @@ object scalaCli {
     "compile",
     "--suppress-experimental-feature-warning",
     "--suppress-directives-in-multiple-files-warning",
-    "--jvm=17",
-    "--bloop-jvm=17",
-    "--bloop-java-opt=-XX:-UseZGC",
-    "--bloop-java-opt=-XX:+UseUseParallelGC",
-    "--bloop-java-opt=-XX:ParallelGCThreads=120",
+    "--server=false",
+    "--javac-opt=-verbose",
+    "--javac-opt=-J-XX:MaxHeapSize=32G",
+    "--javac-opt=-J-XX:+UseParallelGC",
     additional
   )
 
@@ -261,11 +260,10 @@ object scalaCli {
     "--doc=false",
     "--suppress-experimental-feature-warning",
     "--suppress-directives-in-multiple-files-warning",
-    "--jvm=17",
-    "--bloop-jvm=17",
-    "--bloop-java-opt=-XX:-UseZGC",
-    "--bloop-java-opt=-XX:+UseUseParallelGC",
-    "--bloop-java-opt=-XX:ParallelGCThreads=120",
+    "--server=false",
+    "--javac-opt=-verbose",
+    "--javac-opt=-J-XX:MaxHeapSize=32G",
+    "--javac-opt=-J-XX:+UseParallelGC",
     additional
   )
 }
@@ -278,9 +276,9 @@ object codegen {
   ): Unit = {
     val result = codegen.generatePackage(metadata)
     scalaCli.publishLocal(result.outputDir).call(check = false) // compilation will fail anyway
-    if (result.dependencies.nonEmpty)
-      println(s"\nCompiling dependencies for ${result.schemaName}:${result.packageVersion}...")
-    for (dep <- result.dependencies) {
+    if (result.metadata.dependencies.nonEmpty)
+      println(s"\nCompiling dependencies for ${result.metadata.name}:${result.metadata.version.getOrElse("none")}...")
+    for (dep <- result.metadata.dependencies) {
       generateLocalPackage(dep)
     }
   }

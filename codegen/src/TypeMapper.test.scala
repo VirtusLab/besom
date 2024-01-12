@@ -37,7 +37,7 @@ class TypeMapperTest extends munit.FunSuite {
     Data(
       UnionType(List(StringType, NamedType("#/types/aws:iam/role:Role")), Some(StringType)),
       metadata = PackageMetadata("aws", "6.7.0"),
-      tags = Set(munit.Slow, munit.Ignore)
+      tags = Set(munit.Slow)
     )(
       Expectations("String | besom.api.aws.iam.Role")
     ),

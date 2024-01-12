@@ -1,6 +1,6 @@
 //> using scala "3.3.1"
 //> using options "-java-output-version:11", "-Ysafe-init", "-Xmax-inlines:64"
-//> using options "-Werror", "-Wunused:all", "-deprecation", "-feature"
+//> using options "-Werror", "-Wunused:all", "-deprecation", "-feature", -language:noAutoTupling
 
 //> using dep "org.virtuslab::besom-json:0.1.1-SNAPSHOT"
 

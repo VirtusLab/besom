@@ -57,7 +57,7 @@ class TypeMapper(
 
     (PulumiToken(escapedTypeToken), packageInfo, isFromTypeUri, isFromResourceUri)
   }
-                
+
   private def scalaCoordinatesFromTypeUri(
     typeUri: String,
     asArgsType: Boolean
@@ -93,29 +93,27 @@ class TypeMapper(
       }
     }
 
+    // We need to be careful here because a type URI can refer to both a resource and an object type
+    // and we need to be flexible, because schemas are not always consistent
     val classCoordinates: Option[ScalaDefinitionCoordinates] =
-      if (isFromResourceUri) {
-        resourceClassCoordinates
-      } else if (isFromTypeUri) {
-        objectOrEnumClassCoordinates
-      } else {
-        (resourceClassCoordinates, objectOrEnumClassCoordinates) match {
-          case (Some(coordinates), None) =>
-            logger.warn(
-              s"Assuming a '/resources/` prefix for type URI, typeUri: '${typeUri}'"
-            )
-            Some(coordinates)
-          case (None, Some(coordinates)) =>
-            logger.warn(s"Assuming a '/types/` prefix for type URI, typeUri: '${typeUri}'")
-            Some(coordinates)
-          case (None, None) =>
-            logger.debug(s"Found no type definition for type URI, typeUri: '${typeUri}'")
-            None
-          case _ =>
-            throw TypeMapperError(
-              s"Type URI can refer to both a resource or an object type, typeUri: '${typeUri}'"
-            )
-        }
+      (resourceClassCoordinates, objectOrEnumClassCoordinates) match {
+        case (Some(_), _) if isFromResourceUri =>
+          resourceClassCoordinates
+        case (_, Some(_)) if isFromTypeUri =>
+          objectOrEnumClassCoordinates
+        case (Some(_), None) =>
+          logger.warn(s"Assuming a '/resources/` prefix for type URI, typeUri: '${typeUri}'")
+          resourceClassCoordinates
+        case (None, Some(_)) =>
+          logger.warn(s"Assuming a '/types/` prefix for type URI, typeUri: '${typeUri}'")
+          objectOrEnumClassCoordinates
+        case (None, None) =>
+          logger.warn(s"Found no type definition for type URI, typeUri: '${typeUri}'")
+          None
+        case _ =>
+          throw TypeMapperError(
+            s"Type URI can refer to both a resource or an object type, typeUri: '${typeUri}'"
+          )
       }
 
     classCoordinates
@@ -185,6 +183,25 @@ class TypeMapper(
                 yield enumType.withSelectionName(Some(instance)).termRef
         }
       case _ => None
+    }
+
+  // TODO: This is a temporary solution, we should use a proper type mapping using ADTs
+  def findTokenAndDependencies(typeRef: TypeReference): Vector[(Option[PulumiToken], Option[PackageMetadata])] =
+    typeRef match {
+      case ArrayType(elemType) => findTokenAndDependencies(elemType)
+      case MapType(elemType)   => findTokenAndDependencies(elemType)
+      case unionType: UnionType =>
+        unionType.oneOf.map(findTokenAndDependencies(_)).reduce(_ ++ _)
+      case namedType: NamedType =>
+        unescape(namedType.typeUri) match {
+          case "pulumi.json#/Archive" | "pulumi.json#/Asset" | "pulumi.json#/Any" | "pulumi.json#/Json" =>
+            Vector((None, None))
+          case typeUri =>
+            preParseFromTypeUri(typeUri) match
+              case (token: PulumiToken, packageInfo, _, _) =>
+                Vector((Some(token), Some(packageInfo.asPackageMetadata)))
+        }
+      case _ => Vector((None, None))
     }
 
   private def unescape(value: String) = {

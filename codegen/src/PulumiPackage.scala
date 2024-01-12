@@ -1,8 +1,8 @@
 package besom.codegen.metaschema
 
-import upickle.implicits.{key => fieldKey}
-import besom.codegen.{GeneralCodegenException, UpickleApi}
 import besom.codegen.UpickleApi.*
+import besom.codegen.{GeneralCodegenException, UpickleApi}
+import upickle.implicits.key as fieldKey
 
 /** PulumiPackage describes a Pulumi package.
   *
@@ -89,10 +89,10 @@ object PulumiPackage {
           val indexEnd   = e.index + offset
           throw GeneralCodegenException(
             s"""|Cannot parse Pulumi package JSON schema: ${e.getMessage}
-              |JSON fragment [$indexStart, $indexEnd]]:
-              |...
-              |${input.slice(indexStart, indexEnd).stripLineEnd}
-              |...""".stripMargin,
+                |JSON fragment [$indexStart, $indexEnd]]:
+                |...
+                |${input.slice(indexStart, indexEnd).stripLineEnd}
+                |...""".stripMargin,
             e
           )
         case e: ujson.IncompleteParseException =>
@@ -686,6 +686,8 @@ case class ObjectTypeDefinitionOrTypeReferenceProto(
 
 object ObjectTypeDefinitionOrTypeReferenceProto {
   implicit val reader: Reader[ObjectTypeDefinitionOrTypeReferenceProto] = macroR
+
+  def empty: ObjectTypeDefinitionOrTypeReferenceProto = ObjectTypeDefinitionOrTypeReferenceProto()
 }
 
 case class ObjectTypeDefinitionOrTypeReference(
@@ -697,7 +699,10 @@ object ObjectTypeDefinitionOrTypeReference {
   implicit val reader: Reader[ObjectTypeDefinitionOrTypeReference] =
     ObjectTypeDefinitionOrTypeReferenceProto.reader.map { proto =>
       val deserialized =
-        if (proto.properties.nonEmpty)
+        if proto == ObjectTypeDefinitionOrTypeReferenceProto.empty
+        then Some(empty)
+        else if proto.properties.nonEmpty
+        then
           proto.maybeAsObjectTypeDefinition.map(objectTypeDefinition =>
             ObjectTypeDefinitionOrTypeReference(objectTypeDefinition = Some(objectTypeDefinition), typeReference = None)
           )

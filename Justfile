@@ -12,6 +12,9 @@ coverage-output-dir-zio := coverage-output-dir + "/zio"
 
 coverage := "false"
 
+# use bloop for publishing locally
+bloop := "false"
+
 # replace with a function when https://github.com/casey/just/pull/1069 is merged
 scala-cli-coverage-options-core := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-core } else { "" }
 scala-cli-test-options-core := scala-cli-coverage-options-core
@@ -24,7 +27,9 @@ scala-cli-test-options-zio := scala-cli-coverage-options-zio
 
 publish-maven-auth-options := "--user env:OSSRH_USERNAME --password env:OSSRH_PASSWORD --gpg-key $PGP_KEY_ID --gpg-option --pinentry-mode --gpg-option loopback --gpg-option --passphrase --gpg-option $PGP_PASSWORD"
 
-scala-cli-bloop-opts := "--jvm=17 --bloop-jvm=17 --bloop-java-opt=-XX:MaxRAMPercentage=95.0 --bloop-java-opt=-XX:InitialRAMPercentage=70.0 --bloop-java-opt=-XX:+UseUseParallelGC --bloop-java-opt=-XX:-UseZGC"
+scala-cli-bloop-opts := "--jvm=17 --bloop-jvm=17 --bloop-java-opt=-XX:MaxHeapSize=32G --bloop-java-opt=-XX:+UseParallelGC --bloop-java-opt=-XX:-UseZGC"
+scala-cli-direct-opts := "--server=false --javac-opt=-verbose --javac-opt=-J-XX:MaxHeapSize=32G --javac-opt=-J-XX:+UseParallelGC"
+scala-cli-publish-local-opts := if bloop == "true" { scala-cli-bloop-opts } else { scala-cli-direct-opts }
 
 # This list of available targets
 default:
@@ -42,6 +47,9 @@ compile-all: compile-json compile-sdk compile-codegen compile-compiler-plugin bu
 
 # Tests everything
 test-all: test-json test-sdk test-codegen test-integration test-templates test-examples test-markdown
+
+# Publishes everything locally
+publish-local-all: publish-local-json publish-local-sdk publish-local-codegen publish-local-compiler-plugin install-language-plugin
 
 # Runs all necessary checks before committing
 before-commit: compile-all test-all
@@ -74,7 +82,7 @@ compile-compiler-plugin:
 	scala-cli --power compile compiler-plugin --suppress-experimental-feature-warning
 
 # Runs tests for core besom SDK
-test-core:
+test-core: compile-core
 	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-core}}; fi
 	scala-cli --power test core {{ scala-cli-test-options-core }} --suppress-experimental-feature-warning
 
@@ -126,10 +134,6 @@ publish-maven-zio:
 publish-maven-compiler-plugin:
 	scala-cli --power publish compiler-plugin --project-version {{besom-version}} {{publish-maven-auth-options}}
 
-# Compiles and publishes the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes`
-publish-maven-provider-sdk schema-name schema-version:
-	scala-cli --power publish {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} {{publish-maven-auth-options}}
-
 # Cleans core build
 clean-core: 
 	scala-cli clean core 
@@ -169,15 +173,19 @@ clean-coverage: clean-sdk
 compile-json:
     scala-cli --power compile besom-json --suppress-experimental-feature-warning
 
+# Runs tests for json module
 test-json:
     scala-cli --power test besom-json --suppress-experimental-feature-warning
 
+# Cleans json module
 clean-json:
     scala-cli --power clean besom-json
 
+# Publishes locally json module
 publish-local-json:
     scala-cli --power publish local besom-json --project-version {{besom-version}} --suppress-experimental-feature-warning
 
+# Publishes json module
 publish-maven-json:
     scala-cli --power publish besom-json --project-version {{besom-version}} {{publish-maven-auth-options}}
 
@@ -251,6 +259,10 @@ compile-codegen:
 test-codegen:
 	scala-cli --power test codegen --suppress-experimental-feature-warning
 
+# Publishes locally besom codegen
+publish-local-codegen: test-codegen
+	scala-cli --power publish local codegen --project-version {{besom-version}} --suppress-experimental-feature-warning
+
 # Dowloads Pulumi Packages metadata for all providers in the registry
 get-metadata-all:
 	export GITHUB_TOKEN=$(gh auth token); \
@@ -274,21 +286,21 @@ get-schema schema-name schema-version:
 	mkdir -p $schema_dir
 	pulumi --non-interactive --logtostderr package get-schema $schema_source > $schema_dir/schema.json
 
-# Publishes locally besom codegen
-publish-local-codegen: test-codegen
-	scala-cli --power publish local codegen --project-version {{besom-version}} --suppress-experimental-feature-warning
-
-# Generate scala API code for the given provider, e.g. `just generate-provider-sdk kubernetes 4.0.0`
-generate-provider-sdk schema-name schema-version:
+# Generate scala API code for the given provider, e.g. `just generate-provider kubernetes 4.0.0`
+generate-provider schema-name schema-version:
 	scala-cli --power run codegen --suppress-experimental-feature-warning -- named {{schema-name}} {{schema-version}}
 
-# Compiles the previously generated scala API code for the given provider, e.g. `just compile-provider-sdk kubernetes 4.0.0`
-compile-provider-sdk schema-name schema-version:
-	scala-cli --power compile {{scala-cli-bloop-opts}} {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning --interactive=false
+# Compiles the previously generated scala API code for the given provider, e.g. `just compile-provider kubernetes 4.0.0`
+compile-provider schema-name schema-version:
+	scala-cli --power compile {{scala-cli-publish-local-opts}} {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning --interactive=false
 
-# Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-provider-sdk kubernetes 4.0.0`
-publish-local-provider-sdk schema-name schema-version:
-	scala-cli --power publish local --sources=false --doc=false {{scala-cli-bloop-opts}} {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning
+# Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-provider kubernetes 4.0.0`
+publish-local-provider schema-name schema-version:
+	scala-cli --power publish local --sources=false --doc=false {{scala-cli-publish-local-opts}} {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning
+
+# Compiles and publishes the previously generated scala API code for the given provider, e.g. `just publish-maven-provider kubernetes 4.0.0`
+publish-maven-provider schema-name schema-version:
+	scala-cli --power publish {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} {{publish-maven-auth-options}}
 
 ####################
 # Integration testing
@@ -405,6 +417,7 @@ compile-scripts: publish-local-codegen
 clean-scripts:
     scala-cli --power clean scripts
 
+# Update Besom version
 bump-version new-version:
     scala-cli run scripts/Version.scala -- bump {{new-version}}
 
@@ -415,7 +428,7 @@ bump-version new-version:
 # Cleans everything, including the local ivy, git untracked files, and kills all java processes
 power-wash: clean-all
 	rm -rf ~/.ivy2/local/org.virtuslab/
-	git clean -i -d -x
+	git clean -i -d -x -e ".idea"
 	killall -9 java
 
 ####################
@@ -427,15 +440,15 @@ liftoff:
 	#!/usr/bin/env sh
 	export PULUMI_CONFIG_PASSPHRASE=""
 	cd experimental
-	pulumi --non-interactive --logtostderrup --stack liftoff -y
+	pulumi --non-interactive --logtostderr up --stack liftoff -y
 
 # Reverts the deployment of experimental sample kubernetes Pulumi app from ./experimental directory
 destroy-liftoff:
 	#!/usr/bin/env sh
 	cd experimental
-	if (pulumi --non-interactive --logtostderrstack ls | grep liftoff > /dev/null); then
+	if (pulumi --non-interactive --logtostderr stack ls | grep liftoff > /dev/null); then
 		export PULUMI_CONFIG_PASSPHRASE=""
-		pulumi  --non-interactive --logtostderrdestroy --stack liftoff -y
+		pulumi  --non-interactive --logtostderr destroy --stack liftoff -y
 	fi
 
 # Cleans the deployment of experimental sample kubernetes Pulumi app from ./experimental directory to the ground
@@ -451,10 +464,10 @@ clean-liftoff: destroy-liftoff
 # Cleans the deployment of ./experimental app completely, rebuilds core and kubernetes provider SDKs, deploys the app again
 clean-slate-liftoff: clean-sdk
 	#!/usr/bin/env sh
-	just generate-provider-sdk kubernetes 4.2.0 
+	just generate-provider kubernetes 4.2.0
 	just publish-local-core
 	just publish-local-compiler-plugin
-	just publish-local-provider-sdk kubernetes 4.2.0
+	just publish-local-provider kubernetes 4.2.0
 	just clean-liftoff
 	just liftoff
 

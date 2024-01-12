@@ -1,8 +1,7 @@
 package besom.codegen
 
-import besom.codegen.PackageMetadata.SchemaName
-import besom.codegen.PackageVersion
 import besom.codegen.metaschema.ConstValue
+import besom.codegen.{PackageVersion, SchemaName}
 
 type EnumInstanceName = String
 

@@ -142,6 +142,8 @@ object Validated:
 
   object ValidatedResult:
     def apply[E, A](result: Result[Validated[E, A]]): ValidatedResult[E, A] = result
+    
+    def apply[E, A](validated: Validated[E, A]): ValidatedResult[E, A] = Result.pure(validated).asValidatedResult
 
     def valid[E, A](a: A): ValidatedResult[E, A] = Result.pure(Validated.valid(a))
 

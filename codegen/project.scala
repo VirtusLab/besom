@@ -1,5 +1,5 @@
 //> using scala 3.3.1
-//> using options -release:11 -deprecation -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
+//> using options -release:11 -deprecation -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement -language:noAutoTupling
 
 //> using dep org.scalameta:scalameta_2.13:4.8.14
 //> using dep com.lihaoyi::upickle:3.1.3

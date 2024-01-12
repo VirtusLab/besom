@@ -67,6 +67,43 @@ class Config private (
 
   /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
     * secret, it will be marked internally as such and redacted in console outputs.
+    *
+    * This method differs from [[get]] in that it will return the default value from the given environment variable or given default value
+    * if the configuration value is not set.
+    *
+    * Requires `ConfigValueReader[A]` to be in scope.
+    *
+    * This method is designed for Package Codegen use case and should not be used in regular Pulumi programs.
+    *
+    * @param key
+    *   the requested configuration key
+    * @param isSecret
+    *   whether the configuration value is a secret
+    * @param default
+    *   the environment variable names to probe for default value
+    * @param Context
+    *   the Besom context
+    * @tparam A
+    *   the type of the configuration value
+    * @return
+    *   an optional configuration or secret value of the requested type, either from the configuration bag or from the environment, or
+    *   default value
+    */
+  def getOrDefault[A: ConfigValueReader](
+    key: NonEmptyString,
+    isSecret: Boolean,
+    environment: List[String],
+    default: Option[A]
+  )(using Context): Output[Option[A]] =
+    val rawValue = unsafeGet(key)
+      .orElse(environment.collectFirst {
+        case env if sys.env.contains(env) => sys.env(env)
+      })
+    val value = if isSecret then Output.secret(rawValue) else Output(rawValue)
+    readConfigValue(key, value).map(_.orElse(default))
+
+  /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
+    * secret, it will be marked internally as such and redacted in console outputs.
     * @param key
     *   the requested configuration or secret key
     * @param Context

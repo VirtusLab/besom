@@ -107,7 +107,9 @@ class CodeGenTest extends munit.FunSuite {
               |      helmReleaseSettings = helmReleaseSettings.asOptionOutput(isSecret = false)
               |    )
               |
-              |  given encoder(using besom.types.Context): besom.types.ProviderArgsEncoder[ProviderArgs] =
+              |  given encoder(using besom.types.Context): besom.types.Encoder[ProviderArgs] =
+              |    besom.internal.Encoder.derived[ProviderArgs]
+              |  given providerArgsEncoder(using besom.types.Context): besom.types.ProviderArgsEncoder[ProviderArgs] =
               |    besom.internal.ProviderArgsEncoder.derived[ProviderArgs]
               |""".stripMargin
       ),
@@ -264,8 +266,9 @@ class CodeGenTest extends munit.FunSuite {
              |final case class ClusterGetKubeconfigResult private(
              |  kubeconfig: String
              |)
-             |
              |object ClusterGetKubeconfigResult :
+             |
+             |
              |  given outputOps: {} with
              |    extension(output: besom.types.Output[ClusterGetKubeconfigResult])
              |      def kubeconfig : besom.types.Output[String] = output.map(_.kubeconfig)
@@ -378,6 +381,7 @@ class CodeGenTest extends munit.FunSuite {
              |    SupplementalServicing,
              |    PremiumAssurance
              |  )
+             |  given besom.types.EnumCompanion[String, SupportType] = this
              |""".stripMargin,
         "src/windowsesu/MultipleActivationKeyArgs.scala" ->
           """|package besom.api.azurenative.windowsesu
@@ -458,6 +462,7 @@ class CodeGenTest extends munit.FunSuite {
              |    NotRequired,
              |    Required
              |  )
+             |  given besom.types.EnumCompanion[String, UserConfirmation] = this
              |""".stripMargin,
         "src/hybriddata/JobDefinitionArgs.scala" ->
           """|package besom.api.azurenative.hybriddata
@@ -583,6 +588,157 @@ class CodeGenTest extends munit.FunSuite {
       )
     ),
     Data(
+      name = "Type with dots in package segment",
+      json = """|{
+                |  "name": "embedded-crd",
+                |  "types": {
+                |    "kubernetes:crd.k8s.amazonaws.com/v1alpha1:ENIConfig": {
+                |      "properties": {
+                |        "apiVersion": {
+                |          "type": "string",
+                |          "const": "crd.k8s.amazonaws.com/v1alpha1"
+                |        },
+                |        "kind": {
+                |          "type": "string",
+                |          "const": "ENIConfig"
+                |        },
+                |        "spec": {
+                |          "type": "object",
+                |          "$ref": "#/types/kubernetes:crd.k8s.amazonaws.com/v1alpha1:ENIConfigSpec"
+                |        }
+                |      },
+                |      "type": "object"
+                |    },
+                |    "kubernetes:crd.k8s.amazonaws.com/v1alpha1:ENIConfigSpec": {
+                |      "properties": {
+                |        "securityGroups": {
+                |          "type": "array",
+                |          "items": {
+                |            "type": "string"
+                |          }
+                |        },
+                |        "subnet": {
+                |          "type": "string"
+                |        }
+                |      },
+                |      "type": "object"
+                |    }
+                |  }
+                |}""".stripMargin,
+      ignored = List(
+        "src/index/Provider.scala",
+        "src/index/ProviderArgs.scala"
+      ),
+      expected = Map(
+        "src/crdk8samazonawscom/v1alpha1/outputs/EniConfig.scala" ->
+          """|package besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs
+             |
+             |
+             |final case class EniConfig private(
+             |  apiVersion: String,
+             |  kind: String,
+             |  spec: scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]
+             |)
+             |object EniConfig :
+             |
+             |
+             |  given outputOps: {} with
+             |    extension(output: besom.types.Output[EniConfig])
+             |      def apiVersion : besom.types.Output[String] = output.map(_.apiVersion)
+             |      def kind : besom.types.Output[String] = output.map(_.kind)
+             |      def spec : besom.types.Output[scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]] = output.map(_.spec)
+             |
+             |  given decoder(using besom.types.Context): besom.types.Decoder[EniConfig] =
+             |    besom.internal.Decoder.derived[EniConfig]
+             |
+             |  given optionOutputOps: {} with
+             |    extension(output: besom.types.Output[scala.Option[EniConfig]])
+             |      def apiVersion : besom.types.Output[scala.Option[String]] = output.map(_.map(_.apiVersion))
+             |      def kind : besom.types.Output[scala.Option[String]] = output.map(_.map(_.kind))
+             |      def spec : besom.types.Output[scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]] = output.map(_.flatMap(_.spec))
+             |
+             |
+             |
+             |""".stripMargin,
+        "src/crdk8samazonawscom/v1alpha1/inputs/EniConfigArgs.scala" ->
+          """|package besom.api.kubernetes.crdk8samazonawscom.v1alpha1.inputs
+             |
+             |final case class EniConfigArgs private(
+             |  apiVersion: besom.types.Output[String],
+             |  kind: besom.types.Output[String],
+             |  spec: besom.types.Output[scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.inputs.EniConfigSpecArgs]]
+             |)
+             |
+             |object EniConfigArgs:
+             |  def apply(
+             |    spec: besom.types.Input.Optional[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.inputs.EniConfigSpecArgs] = scala.None
+             |  )(using besom.types.Context): EniConfigArgs =
+             |    new EniConfigArgs(
+             |      apiVersion = besom.types.Output("crd.k8s.amazonaws.com/v1alpha1"),
+             |      kind = besom.types.Output("ENIConfig"),
+             |      spec = spec.asOptionOutput(isSecret = false)
+             |    )
+             |
+             |  given encoder(using besom.types.Context): besom.types.Encoder[EniConfigArgs] =
+             |    besom.internal.Encoder.derived[EniConfigArgs]
+             |  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[EniConfigArgs] =
+             |    besom.internal.ArgsEncoder.derived[EniConfigArgs]
+             |
+             |
+             |""".stripMargin,
+        "src/crdk8samazonawscom/v1alpha1/outputs/EniConfigSpec.scala" ->
+          """|package besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs
+             |
+             |
+             |final case class EniConfigSpec private(
+             |  securityGroups: scala.Option[scala.collection.immutable.List[String]],
+             |  subnet: scala.Option[String]
+             |)
+             |object EniConfigSpec :
+             |
+             |
+             |  given outputOps: {} with
+             |    extension(output: besom.types.Output[EniConfigSpec])
+             |      def securityGroups : besom.types.Output[scala.Option[scala.collection.immutable.List[String]]] = output.map(_.securityGroups)
+             |      def subnet : besom.types.Output[scala.Option[String]] = output.map(_.subnet)
+             |
+             |  given decoder(using besom.types.Context): besom.types.Decoder[EniConfigSpec] =
+             |    besom.internal.Decoder.derived[EniConfigSpec]
+             |
+             |  given optionOutputOps: {} with
+             |    extension(output: besom.types.Output[scala.Option[EniConfigSpec]])
+             |      def securityGroups : besom.types.Output[scala.Option[scala.collection.immutable.List[String]]] = output.map(_.flatMap(_.securityGroups))
+             |      def subnet : besom.types.Output[scala.Option[String]] = output.map(_.flatMap(_.subnet))
+             |
+             |
+             |
+             |""".stripMargin,
+        "src/crdk8samazonawscom/v1alpha1/inputs/EniConfigSpecArgs.scala" ->
+          """|package besom.api.kubernetes.crdk8samazonawscom.v1alpha1.inputs
+             |
+             |final case class EniConfigSpecArgs private(
+             |  securityGroups: besom.types.Output[scala.Option[scala.collection.immutable.List[String]]],
+             |  subnet: besom.types.Output[scala.Option[String]]
+             |)
+             |
+             |object EniConfigSpecArgs:
+             |  def apply(
+             |    securityGroups: besom.types.Input.Optional[scala.collection.immutable.List[besom.types.Input[String]]] = scala.None,
+             |    subnet: besom.types.Input.Optional[String] = scala.None
+             |  )(using besom.types.Context): EniConfigSpecArgs =
+             |    new EniConfigSpecArgs(
+             |      securityGroups = securityGroups.asOptionOutput(isSecret = false),
+             |      subnet = subnet.asOptionOutput(isSecret = false)
+             |    )
+             |
+             |  given encoder(using besom.types.Context): besom.types.Encoder[EniConfigSpecArgs] =
+             |    besom.internal.Encoder.derived[EniConfigSpecArgs]
+             |  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[EniConfigSpecArgs] =
+             |    besom.internal.ArgsEncoder.derived[EniConfigSpecArgs]
+             |""".stripMargin
+      )
+    ),
+    Data(
       name = "Error on id property",
       json = """|{
                 |  "name": "fake-provider",
@@ -653,9 +809,9 @@ class CodeGenTest extends munit.FunSuite {
 
       val codegen = new CodeGen
       if (data.expectedError.isDefined)
-        interceptMessage[Exception](data.expectedError.get)(codegen.scalaFiles(pulumiPackage))
+        interceptMessage[Exception](data.expectedError.get)(codegen.scalaFiles(pulumiPackage, packageInfo))
       else
-        codegen.scalaFiles(pulumiPackage).foreach {
+        codegen.scalaFiles(pulumiPackage, packageInfo).foreach {
           case SourceFile(FilePath(f: String), code: String) if data.expected.contains(f) =>
             assertNoDiff(code, data.expected(f))
             code.parse[Source].get
