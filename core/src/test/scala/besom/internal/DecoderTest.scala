@@ -100,6 +100,20 @@ class DecoderTest extends munit.FunSuite:
     }
   }
 
+  test("decode bool/string union") {
+    val d = summon[Decoder[Boolean | String]]
+    d.decode("A".asValue, dummyLabel).verify {
+      case Validated.Invalid(ex)                                   => throw ex.head
+      case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some("A"))
+      case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
+    }
+    d.decode(true.asValue, dummyLabel).verify {
+      case Validated.Invalid(ex)                                   => throw ex.head
+      case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some(true))
+      case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
+    }
+  }
+
   test("decode string/custom resource union") {
     val d = summon[Decoder[Int | String]]
     d.decode("A".asValue, dummyLabel).verify {

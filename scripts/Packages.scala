@@ -19,10 +19,14 @@ import scala.util.*
 import scala.util.control.NonFatal
 
 @main def run(args: String*): Unit =
-  val packagesDir    = os.pwd / ".out" / "packages"
-  val publishLogsDir = os.pwd / ".out" / "publishLocal"
-  val generatedFile  = os.pwd / ".out" / "codegen" / "generated.json"
-  val publishedFile  = os.pwd / ".out" / "publishLocal" / "published.json"
+  val codegenDir      = os.pwd / ".out" / "codegen"
+  val packagesDir     = os.pwd / ".out" / "packages"
+  val publishLocalDir = os.pwd / ".out" / "publishLocal"
+  val publishMavenDir = os.pwd / ".out" / "publishMaven"
+
+  val generatedFile      = codegenDir / "generated.json"
+  val publishedLocalFile = publishLocalDir / "published.json"
+  val publishedMavenFile = publishMavenDir / "published.json"
 
   val pluginDownloadProblemPackages = Vector(
     "aws-miniflux", // lack of darwin/arm64 binary
@@ -44,14 +48,11 @@ import scala.util.control.NonFatal
   val compileProblemPackages = Vector(
     "azure-native", // decoder error
     "alicloud", // schema error, ListenerXforwardedForConfig vs ListenerxForwardedForConfig
-//    "aws-apigateway", // decoder error
     "aws-iam", // id parameter
     "aws-native", // decoder error
     "aws-static-website", // version confusion
     "azure-justrun", // version confusion
     "databricks", // 'scala' symbol in source code
-    "digitalocean", // urn parameter
-//    "eks", // decoder error
     "rootly" // version confusion
   )
 
@@ -61,8 +62,9 @@ import scala.util.control.NonFatal
     case "generate-all" :: Nil      => generateAll(packagesDir)
     case "generate" :: tail         => generateSelected(packagesDir, tail)
     case "publish-local-all" :: Nil => publishLocalAll(generatedFile)
-    case "publish-local" :: tail    => publishSelected(generatedFile, tail)
-    case "publish-maven-all" :: Nil => publishMavenAll(packagesDir)
+    case "publish-local" :: tail    => publishLocalSelected(generatedFile, tail)
+    case "publish-maven-all" :: Nil => publishMavenAll(generatedFile)
+    case "publish-maven" :: tail    => publishMavenSelected(generatedFile, tail)
     case _                          => println(s"Unknown command: $args")
 
   def generateAll(targetPath: os.Path): os.Path = {
@@ -85,17 +87,35 @@ import scala.util.control.NonFatal
       .fromJsonList(os.read(sourceFile: os.Path))
       .filterNot(m => compileProblemPackages.contains(m.name))
     val published = publishLocal(generated)
-    os.write.over(publishedFile, PackageMetadata.toJson(published), createFolders = true)
-    publishedFile
+    os.write.over(publishedLocalFile, PackageMetadata.toJson(published), createFolders = true)
+    publishedLocalFile
   }
 
-  def publishSelected(sourceFile: os.Path, packages: List[String]): os.Path = {
+  def publishLocalSelected(sourceFile: os.Path, packages: List[String]): os.Path = {
     val generated = PackageMetadata
       .fromJsonList(os.read(sourceFile))
       .filter(p => packages.contains(p.name))
     val published = publishLocal(generated)
-    os.write.over(publishedFile, PackageMetadata.toJson(published), createFolders = true)
-    publishedFile
+    os.write.over(publishedLocalFile, PackageMetadata.toJson(published), createFolders = true)
+    publishedLocalFile
+  }
+
+  def publishMavenAll(sourceFile: os.Path): os.Path = {
+    val generated = PackageMetadata
+      .fromJsonList(os.read(sourceFile: os.Path))
+      .filterNot(m => compileProblemPackages.contains(m.name))
+    val published = publishMaven(generated)
+    os.write.over(publishedMavenFile, PackageMetadata.toJson(published), createFolders = true)
+    publishedMavenFile
+  }
+
+  def publishMavenSelected(sourceFile: os.Path, packages: List[String]): os.Path = {
+    val generated = PackageMetadata
+      .fromJsonList(os.read(sourceFile))
+      .filter(p => packages.contains(p.name))
+    val published = publishMaven(generated)
+    os.write.over(publishedMavenFile, PackageMetadata.toJson(published), createFolders = true)
+    publishedMavenFile
   }
 
   type PackageId = (String, Option[String])
@@ -139,8 +159,8 @@ import scala.util.control.NonFatal
     val todo = mutable.Queue.empty[PackageMetadata]
     val done = mutable.ListBuffer.empty[PackageMetadata]
 
-    os.remove.all(publishLogsDir)
-    os.makeDir.all(publishLogsDir)
+    os.remove.all(publishLocalDir) // make sure there is no dirty state from previous runs
+    os.makeDir.all(publishLocalDir)
 
     generated.foreach(m => {
       todo.enqueueAll(m.dependencies) // dependencies first to avoid missing dependencies during compilation
@@ -154,7 +174,7 @@ import scala.util.control.NonFatal
           seen.add(id)
           val version = m.version.getOrElse(throw Exception("Package version must be provided for publishing")).asString
           Progress.report(label = s"${m.name}:${version}")
-          val logFile = publishLogsDir / s"${m.name}-${version}.log"
+          val logFile = publishLocalDir / s"${m.name}-${version}.log"
           try
             os.proc("just", "publish-local-provider", m.name, version).call(stdout = logFile, mergeErrIntoOut = true)
             println(s"[${new Date}] Successfully published locally provider '${m.name}' version '${version}'")
@@ -169,30 +189,39 @@ import scala.util.control.NonFatal
     done.toVector
   }
 
-  def publishMavenAll(targetPath: os.Path): Unit = {
-    val logDir = os.pwd / ".out" / "publishMaven"
-    os.remove.all(logDir)
-    os.makeDir.all(logDir)
+  def publishMaven(generated: Vector[PackageMetadata]): Vector[PackageMetadata] = {
+    val seen = mutable.HashSet.empty[PackageId]
+    val todo = mutable.Queue.empty[PackageMetadata]
+    val done = mutable.ListBuffer.empty[PackageMetadata]
 
-    val metadata = readAllPackagesMetadata(targetPath)
-    withProgress("Publishing packages to Maven", metadata.size) {
-      metadata.foreach {
-        case PackageMetadata(name, Some(version), _, _) =>
-          Progress.report(label = s"$name:$version")
-          val logFile = logDir / s"${name}-${version}.log"
+    os.remove.all(publishMavenDir) // make sure there is no dirty state from previous runs
+    os.makeDir.all(publishMavenDir)
+
+    generated.foreach(m => {
+      todo.enqueueAll(m.dependencies) // dependencies first to avoid missing dependencies during compilation
+      todo.enqueue(m)
+    })
+    withProgress("Publishing packages to Maven", todo.size) {
+      while todo.nonEmpty do
+        val m             = todo.dequeue()
+        val id: PackageId = (m.name, m.version.map(_.asString))
+        if !seen.contains(id) then
+          seen.add(id)
+          val version = m.version.getOrElse(throw Exception("Package version must be provided for publishing")).asString
+          Progress.report(label = s"${m.name}:${version}")
+          val logFile = publishMavenDir / s"${m.name}-${version}.log"
           try
-            os.proc("just", "publish-maven-provider", name, version.asString).call(stdout = logFile, mergeErrIntoOut = true)
-            println(s"[${new Date}] Successfully published provider '${name}' version '${version}'")
+            os.proc("just", "publish-maven-provider", m.name, version).call(stdout = logFile, mergeErrIntoOut = true)
+            println(s"[${new Date}] Successfully published provider '${m.name}' version '${version}'")
+
+            done += m
+            Progress.total(done.size)
           catch
             case NonFatal(_) =>
-              Progress.fail(s"[${new Date}] Publish failed for provider '${name}' version '${version}', logs: ${logFile}")
+              Progress.fail(s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}")
           finally Progress.end
-        case PackageMetadata(name, None, _, _) =>
-          Progress.report(label = s"$name")
-          Progress.fail(s"[${new Date}] Publish failed for provider '${name}', version is not defined")
-          Progress.end
-      }
     }
+    done.toVector
   }
 
   def readAllPackagesMetadata(targetPath: os.Path): Vector[PackageMetadata] = {
@@ -238,54 +267,57 @@ import scala.util.control.NonFatal
 
     // fetch all production schemas
     withProgress(s"Downloading $size packages metadata", size) {
-      packages.map { p =>
+      packages
+        .map { p =>
           val packageName = p.name.stripSuffix(".yaml")
           packageName -> p
-      }.filter { (name, _) =>
-        selected match
-          case Nil => true
-          case selected => selected.contains(name)
-      }.foreach { (packageName: String, p: PackageSource) =>
-        Progress.report(label = packageName)
-
-        val metadataFile = p.name
-        val metadataPath = targetPath / metadataFile
-        val shaPath      = targetPath / s"${p.name}.sha"
-
-        val hasChanged: Boolean =
-          if os.exists(shaPath) then
-            val sha = os.read(shaPath).split(" ").head
-            sha != p.sha
-          else true // no sha file, assume it has changed
-
-        val metadataRaw: Either[Error, String] = {
-          if hasChanged || !os.exists(metadataPath) then
-            val schemaResponse = requests.get(p.download_url, headers = authHeader)
-            schemaResponse.statusCode match
-              case 200 =>
-                val metadata = schemaResponse.text()
-                os.write.over(metadataPath, metadata, createFolders = true)
-                os.write.over(shaPath, s"${p.sha}  $metadataFile", createFolders = true)
-                Right(metadata)
-              case _ =>
-                Left(s"failed to download metadata for package: '${p.name}'")
-          else Right(os.read(metadataPath))
         }
+        .filter { (name, _) =>
+          selected match
+            case Nil      => true
+            case selected => selected.contains(name)
+        }
+        .foreach { (packageName: String, p: PackageSource) =>
+          Progress.report(label = packageName)
 
-        val metadata: Either[Error, PackageMetadata] =
-          metadataRaw.flatMap(_.as[PackageYAML]) match
-            case Left(error) =>
-              Left(s"failed to deserialize metadata for package: '${p.name}', error: $error")
-            case Right(m: PackageYAML) =>
-              Right(PackageMetadata(m.name, m.version).withUrl(m.repo_url))
+          val metadataFile = p.name
+          val metadataPath = targetPath / metadataFile
+          val shaPath      = targetPath / s"${p.name}.sha"
 
-        metadata match
-          case Left(error) => Progress.fail(error)
-          case Right(value) =>
-            os.write.over(targetPath / s"${packageName}.metadata.json", value.toJson, createFolders = true)
+          val hasChanged: Boolean =
+            if os.exists(shaPath) then
+              val sha = os.read(shaPath).split(" ").head
+              sha != p.sha
+            else true // no sha file, assume it has changed
 
-        Progress.end
-      }
+          val metadataRaw: Either[Error, String] = {
+            if hasChanged || !os.exists(metadataPath) then
+              val schemaResponse = requests.get(p.download_url, headers = authHeader)
+              schemaResponse.statusCode match
+                case 200 =>
+                  val metadata = schemaResponse.text()
+                  os.write.over(metadataPath, metadata, createFolders = true)
+                  os.write.over(shaPath, s"${p.sha}  $metadataFile", createFolders = true)
+                  Right(metadata)
+                case _ =>
+                  Left(s"failed to download metadata for package: '${p.name}'")
+            else Right(os.read(metadataPath))
+          }
+
+          val metadata: Either[Error, PackageMetadata] =
+            metadataRaw.flatMap(_.as[PackageYAML]) match
+              case Left(error) =>
+                Left(s"failed to deserialize metadata for package: '${p.name}', error: $error")
+              case Right(m: PackageYAML) =>
+                Right(PackageMetadata(m.name, m.version).withUrl(m.repo_url))
+
+          metadata match
+            case Left(error) => Progress.fail(error)
+            case Right(value) =>
+              os.write.over(targetPath / s"${packageName}.metadata.json", value.toJson, createFolders = true)
+
+          Progress.end
+        }
     }
 
     println(s"Packages directory: '$targetPath'")

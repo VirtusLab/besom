@@ -169,7 +169,8 @@ object Decoder extends DecoderInstancesLowPrio1:
 
     override def mapping(value: Value, label: Label): Option[A] = ???
 
-  given unionIntStringDecoder: Decoder[Int | String] = unionDecoder[Int, String]
+  given unionIntStringDecoder: Decoder[Int | String]         = unionDecoder[Int, String]
+  given unionBooleanStringDecoder: Decoder[Boolean | String] = unionDecoder[Boolean, String]
 
   // this is kinda different from what other pulumi sdks are doing because we disallow nulls in the list
   given listDecoder[A](using innerDecoder: Decoder[A]): Decoder[List[A]] = new Decoder[List[A]]:
