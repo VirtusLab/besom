@@ -137,9 +137,114 @@ class DecoderTest extends munit.FunSuite:
     val d = summon[Decoder[SpecialCaseClass]]
 
     d.decode(v, dummyLabel).verify {
-      case Validated.Invalid(ex)                                   => throw ex.head
-      case Validated.Valid(OutputData.Known(res, isSecret, value)) => assert(value == Some(SpecialCaseClass(10, "abc", "qwerty")))
-      case Validated.Valid(_)                                      => throw Exception("Unexpected unknown!")
+      case Validated.Invalid(ex)                          => throw ex.head
+      case Validated.Valid(OutputData.Known(_, _, value)) => assert(value == Some(SpecialCaseClass(10, "abc", "qwerty")))
+      case Validated.Valid(_)                             => throw Exception("Unexpected unknown!")
+    }
+  }
+
+  test("decode a generic union of 2") {
+    val v1 = Map(
+      "foo" -> 10.asValue,
+      "bar" -> List("qwerty".asValue).asValue,
+      "optNone1" -> Null,
+      "optSome" -> Some("abc").asValue
+    ).asValue
+    val v2 = Map(
+      "equals" -> 10.asValue,
+      "eq" -> "abc".asValue,
+      "normalOne" -> "qwerty".asValue
+    ).asValue
+
+    val d = unionDecoder2[TestCaseClass, SpecialCaseClass]
+    d.decode(v1, dummyLabel).verify {
+      case Validated.Invalid(ex) => throw ex.head
+      case Validated.Valid(OutputData.Known(_, _, value)) =>
+        assert(value == Some(TestCaseClass(10, List("qwerty"), None, None, Some("abc"))))
+      case Validated.Valid(_) => throw Exception("Unexpected unknown!")
+    }
+    d.decode(v2, dummyLabel).verify {
+      case Validated.Invalid(ex) => throw ex.head
+      case Validated.Valid(OutputData.Known(_, _, value)) =>
+        assert(value == Some(SpecialCaseClass(10, "abc", "qwerty")))
+      case Validated.Valid(_) => throw Exception("Unexpected unknown!")
+    }
+  }
+
+  test("decode a generic union of 3") {
+    val v1 = Map(
+      "foo" -> 10.asValue,
+      "bar" -> List("qwerty".asValue).asValue,
+      "optNone1" -> Null,
+      "optSome" -> Some("abc").asValue
+    ).asValue
+    val v2 = Map(
+      "equals" -> 10.asValue,
+      "eq" -> "abc".asValue,
+      "normalOne" -> "qwerty".asValue
+    ).asValue
+    val v3 = "A value".asValue
+
+    val d = unionDecoder3[TestCaseClass, SpecialCaseClass, TestEnum]
+    d.decode(v1, dummyLabel).verify {
+      case Validated.Invalid(ex) => throw ex.head
+      case Validated.Valid(OutputData.Known(_, _, value)) =>
+        assert(value == Some(TestCaseClass(10, List("qwerty"), None, None, Some("abc"))))
+      case Validated.Valid(_) => throw Exception("Unexpected unknown!")
+    }
+    d.decode(v2, dummyLabel).verify {
+      case Validated.Invalid(ex) => throw ex.head
+      case Validated.Valid(OutputData.Known(_, _, value)) =>
+        assert(value == Some(SpecialCaseClass(10, "abc", "qwerty")))
+      case Validated.Valid(_) => throw Exception("Unexpected unknown!")
+    }
+    d.decode(v3, dummyLabel).verify {
+      case Validated.Invalid(ex) => throw ex.head
+      case Validated.Valid(OutputData.Known(_, _, value)) =>
+        assert(value == Some(TestEnum.A))
+      case Validated.Valid(_) => throw Exception("Unexpected unknown!")
+    }
+  }
+
+  test("decode a generic union of 4") {
+    val v1 = Map(
+      "foo" -> 10.asValue,
+      "bar" -> List("qwerty".asValue).asValue,
+      "optNone1" -> Null,
+      "optSome" -> Some("abc").asValue
+    ).asValue
+    val v2 = Map(
+      "equals" -> 10.asValue,
+      "eq" -> "abc".asValue,
+      "normalOne" -> "qwerty".asValue
+    ).asValue
+    val v3 = "A value".asValue
+    val v4 = true.asValue
+
+    val d = unionDecoder4[TestCaseClass, SpecialCaseClass, TestEnum, Boolean]
+    d.decode(v1, dummyLabel).verify {
+      case Validated.Invalid(ex) => throw ex.head
+      case Validated.Valid(OutputData.Known(_, _, value)) =>
+        assert(value == Some(TestCaseClass(10, List("qwerty"), None, None, Some("abc"))))
+      case Validated.Valid(_) => throw Exception("Unexpected unknown!")
+    }
+    d.decode(v2, dummyLabel).verify {
+      case Validated.Invalid(ex) => throw ex.head
+      case Validated.Valid(OutputData.Known(_, _, value)) =>
+        assert(value == Some(SpecialCaseClass(10, "abc", "qwerty")))
+      case Validated.Valid(_) => throw Exception("Unexpected unknown!")
+    }
+    d.decode(v3, dummyLabel).verify {
+      case Validated.Invalid(ex) => throw ex.head
+      case Validated.Valid(OutputData.Known(_, _, value)) =>
+        assert(value == Some(TestEnum.A))
+      case Validated.Valid(_) => throw Exception("Unexpected unknown!")
+    }
+    d.decode(v4, dummyLabel).verify {
+      case Validated.Invalid(ex) => throw ex.head
+      case Validated.Valid(OutputData.Known(_, _, value)) =>
+        assert(value == Some(true))
+      case Validated.Valid(_) => throw Exception("Unexpected unknown!")
     }
   }
 end DecoderTest
