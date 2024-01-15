@@ -312,7 +312,7 @@ trait TypeReferenceProtoLike extends AnonymousTypeProtoLike {
   def maybeAsTypeReference: Option[TypeReference] = {
     if (oneOf.nonEmpty) {
       val underlyingType = this.maybeAsAnonymousType
-      Some(UnionType(oneOf = oneOf, `type` = underlyingType)) // TODO: Handle the discriminator
+      Some(UnionType(oneOf = oneOf, `type` = underlyingType, discriminator))
     } else {
       ref match {
         case Some(typeRefUri) =>

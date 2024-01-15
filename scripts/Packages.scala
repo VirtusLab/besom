@@ -148,7 +148,7 @@ import scala.util.control.NonFatal
             Progress.total(done.size)
           catch
             case NonFatal(_) =>
-              Progress.fail(s" [${new Date}] Code generation failed for provider '${m.name}' version '${versionOrLatest}'")
+              Progress.fail(s"[${new Date}] Code generation failed for provider '${m.name}' version '${versionOrLatest}'")
           finally Progress.end
     }
     done.toVector
@@ -183,7 +183,7 @@ import scala.util.control.NonFatal
             Progress.total(done.size)
           catch
             case NonFatal(_) =>
-              Progress.fail(s" [${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}")
+              Progress.fail(s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}")
           finally Progress.end
     }
     done.toVector

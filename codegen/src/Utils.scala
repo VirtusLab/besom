@@ -183,4 +183,10 @@ object Utils {
 
   def isMethod(functionDefinition: FunctionDefinition): Boolean =
     functionDefinition.inputs.properties.isDefinedAt(Utils.selfParameterName)
+
+  def sha256(value: String): String = java.security.MessageDigest
+    .getInstance("SHA-256")
+    .digest(value.getBytes("UTF-8"))
+    .map("%02x".format(_))
+    .mkString
 }

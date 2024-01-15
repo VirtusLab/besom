@@ -87,6 +87,7 @@ class CodeGenTest extends munit.FunSuite {
               |  given decoder(using besom.types.Context): besom.types.Decoder[Provider] =
               |    besom.internal.Decoder.customResourceDecoder[Provider]
               |
+              |
               |  given outputOps: {} with
               |    extension(output: besom.types.Output[Provider])
               |      def urn : besom.types.Output[besom.types.URN] = output.flatMap(_.urn)
@@ -213,6 +214,7 @@ class CodeGenTest extends munit.FunSuite {
              |  given decoder(using besom.types.Context): besom.types.Decoder[Cluster] =
              |    besom.internal.Decoder.customResourceDecoder[Cluster]
              |
+             |
              |  given outputOps: {} with
              |    extension(output: besom.types.Output[Cluster])
              |      def urn : besom.types.Output[besom.types.URN] = output.flatMap(_.urn)
@@ -268,13 +270,14 @@ class CodeGenTest extends munit.FunSuite {
              |)
              |object ClusterGetKubeconfigResult :
              |
+             |  given decoder(using besom.types.Context): besom.types.Decoder[ClusterGetKubeconfigResult] =
+             |    besom.internal.Decoder.derived[ClusterGetKubeconfigResult]
+             |
+             |
              |
              |  given outputOps: {} with
              |    extension(output: besom.types.Output[ClusterGetKubeconfigResult])
              |      def kubeconfig : besom.types.Output[String] = output.map(_.kubeconfig)
-             |
-             |  given decoder(using besom.types.Context): besom.types.Decoder[ClusterGetKubeconfigResult] =
-             |    besom.internal.Decoder.derived[ClusterGetKubeconfigResult]
              |
              |  given optionOutputOps: {} with
              |    extension(output: besom.types.Output[scala.Option[ClusterGetKubeconfigResult]])
@@ -641,15 +644,16 @@ class CodeGenTest extends munit.FunSuite {
              |)
              |object EniConfig :
              |
+             |  given decoder(using besom.types.Context): besom.types.Decoder[EniConfig] =
+             |    besom.internal.Decoder.derived[EniConfig]
+             |
+             |
              |
              |  given outputOps: {} with
              |    extension(output: besom.types.Output[EniConfig])
              |      def apiVersion : besom.types.Output[String] = output.map(_.apiVersion)
              |      def kind : besom.types.Output[String] = output.map(_.kind)
              |      def spec : besom.types.Output[scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]] = output.map(_.spec)
-             |
-             |  given decoder(using besom.types.Context): besom.types.Decoder[EniConfig] =
-             |    besom.internal.Decoder.derived[EniConfig]
              |
              |  given optionOutputOps: {} with
              |    extension(output: besom.types.Output[scala.Option[EniConfig]])
@@ -696,14 +700,15 @@ class CodeGenTest extends munit.FunSuite {
              |)
              |object EniConfigSpec :
              |
+             |  given decoder(using besom.types.Context): besom.types.Decoder[EniConfigSpec] =
+             |    besom.internal.Decoder.derived[EniConfigSpec]
+             |
+             |
              |
              |  given outputOps: {} with
              |    extension(output: besom.types.Output[EniConfigSpec])
              |      def securityGroups : besom.types.Output[scala.Option[scala.collection.immutable.List[String]]] = output.map(_.securityGroups)
              |      def subnet : besom.types.Output[scala.Option[String]] = output.map(_.subnet)
-             |
-             |  given decoder(using besom.types.Context): besom.types.Decoder[EniConfigSpec] =
-             |    besom.internal.Decoder.derived[EniConfigSpec]
              |
              |  given optionOutputOps: {} with
              |    extension(output: besom.types.Output[scala.Option[EniConfigSpec]])

@@ -447,6 +447,8 @@ class CodeGen(implicit
          |    besom.internal.Decoder.customResourceDecoder[$baseClassName]
          |""".stripMargin
 
+    val unionDecoders = unionDecoderGivens(resourceProperties)
+
     val baseCompanion =
       if (hasOutputExtensions) {
         m"""|object $baseClassName:
@@ -459,6 +461,7 @@ class CodeGen(implicit
             |
             |$resourceDecoderInstance
             |$decoderInstance
+            |${unionDecoders.mkString("\n")}
             |  given outputOps: {} with
             |    extension(output: besom.types.Output[$baseClassName])
             |${baseOutputExtensionMethods.map(meth => s"      ${meth.syntax}").mkString("\n")}
@@ -755,24 +758,29 @@ class CodeGen(implicit
           |    besom.internal.Decoder.derived[$className]
           |""".stripMargin
 
+    val unionDecoders = unionDecoderGivens(properties)
+
     val baseCompanionDef =
       if (hasOutputExtensions) {
         // colon after underscore would be treated as a part of the name so we add a space
         m"""|object ${className} :
             |${jsonFormatExtensionMethod.map("  " + _.syntax).getOrElse("")}
+            |$decoderInstance
+            |${unionDecoders.mkString("\n")}
             |
             |  given outputOps: {} with
             |    extension(output: besom.types.Output[$className])
             |${outputExtensionMethods.map(meth => m"      ${meth.syntax}").mkString("\n")}
             |
-            |$decoderInstance
             |  given optionOutputOps: {} with
             |    extension(output: besom.types.Output[scala.Option[$className]])
             |${optionOutputExtensionMethods.map(meth => m"      ${meth.syntax}").mkString("\n")}
             |""".stripMargin
       } else {
         m"""|object $className:
-            |$decoderInstance""".stripMargin
+            |$decoderInstance
+            |${unionDecoders.mkString("\n")}
+            |""".stripMargin
       }
     val _ = scalameta.parseStatement(baseCompanionDef)
 
@@ -925,6 +933,38 @@ class CodeGen(implicit
         |
         |$derivedTypeclasses
         |""".stripMargin.parse[Stat].get
+  }
+
+  private def unionDecoderGivens(properties: Seq[PropertyInfo]): List[String] = {
+    // meke sure that the name is unique and we don't have collisions
+    def decoderUniqueName(typ: Type) = "uDec" + sha256(typ.syntax)
+    properties
+      .collect {
+        case p: PropertyInfo if p.unionMappings.nonEmpty =>
+          p.unionMappings.map {
+            case TypeMapper.UnionMapping.ByField(unionType, keyPropertyName, keyToType) =>
+              val keyPropertyNameLit = Lit.String(keyPropertyName)
+              val indexesLit = scalameta.Map(keyToType.map { case (key, typ) =>
+                val keyLit: Term  = Lit.String(key)
+                val decoder: Term = scalameta.summon_(scalameta.types.besom.internal.Decoder(typ))
+                Term.Tuple(List(keyLit, decoder))
+              }.toList)
+              val name = decoderUniqueName(unionType)
+              name -> m"""|  given ${name}(using besom.types.Context): besom.types.Decoder[$unionType] =
+                          |    besom.internal.Decoder.discriminatory($keyPropertyNameLit, $indexesLit)
+                          |""".stripMargin
+            case TypeMapper.UnionMapping.ByIndex(unionType, indexToType) =>
+              val indexesLit = scalameta.Map(indexToType.map { case (index, typ) =>
+                val keyLit: Term  = Lit.Int(index)
+                val decoder: Term = scalameta.summon_(scalameta.types.besom.internal.Decoder(typ))
+                Term.Tuple(List(keyLit, decoder))
+              }.toList)
+              val name = decoderUniqueName(unionType)
+              name -> m"""|  given ${name}(using besom.types.Context): besom.types.Decoder[$unionType] =
+                          |    besom.internal.Decoder.nondiscriminatory($indexesLit)
+                          |""".stripMargin
+          }
+      }.map(_.toMap).foldLeft(Map.empty[String, String])(_ ++ _).values.toList // de-duplicate givens
   }
 }
 
