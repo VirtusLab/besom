@@ -55,7 +55,7 @@ object DecoderTest:
       besom.internal.Decoder.derived[DiscriminatedUnionResult]
 
     given discriminatedDecoderValue: besom.types.Decoder[DiscriminatedUnionTypeA | DiscriminatedUnionTypeB | DiscriminatedUnionTypeC] =
-      Decoder.discriminatory(
+      Decoder.discriminated(
         "type",
         Map(
           ("A", summon[Decoder[DiscriminatedUnionTypeA]]),
@@ -72,7 +72,7 @@ object DecoderTest:
       besom.internal.Decoder.derived[NonDiscriminatedUnionResult]
 
     given discriminatedDecoderValue: besom.types.Decoder[String | Double | Int | besom.types.PulumiAny | Boolean] =
-      Decoder.nondiscriminatory(
+      Decoder.nonDiscriminated(
         Map(
           0 -> summon[Decoder[Int]],
           1 -> summon[Decoder[Double]],
@@ -182,7 +182,7 @@ class DecoderTest extends munit.FunSuite:
 
   test("decode crazy union") {
     val a = List("A".asValue, 1.asValue, true.asValue).asValue
-    given ld: Decoder[String | Double | besom.types.PulumiAny | Boolean] = Decoder.nondiscriminatory(
+    given ld: Decoder[String | Double | besom.types.PulumiAny | Boolean] = Decoder.nonDiscriminated(
       Map(
         0 -> summon[Decoder[String]],
         1 -> summon[Decoder[Double]],

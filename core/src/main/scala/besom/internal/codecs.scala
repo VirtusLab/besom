@@ -499,10 +499,11 @@ trait DecoderHelpers:
       case p: Mirror.ProductOf[A] => decoderProduct(p, nameDecoderPairs)
   end derived
 
-  inline def discriminatory[A](
+  def discriminated[A](
     discriminatingPropertyName: String,
-    typeMap: Map[String, Decoder[?]]
+    typeMap: Map[String, Decoder[?]] // in practice, we assume at least one decoder from codegen
   ): Decoder[A] =
+    require(typeMap.nonEmpty, s"Decoder.discriminated requires non-empty 'typeMap' parameter")
     new Decoder[A]:
       private def getDecoder(key: String): Decoder[A] = typeMap(key).asInstanceOf[Decoder[A]]
       private def decodeValue(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[A]] =
@@ -524,16 +525,17 @@ trait DecoderHelpers:
         }
 
       override def mapping(value: Value, label: Label): Validated[DecodingError, A] = ???
-  end discriminatory
+  end discriminated
 
-  inline def nondiscriminatory[A](
-    typeMap: Map[Int, Decoder[?]]
+  def nonDiscriminated[A](
+    typeMap: Map[Int, Decoder[?]] // in practice, we assume at least one decoder from codegen
   ): Decoder[A] =
+    require(typeMap.nonEmpty, s"Decoder.nonDiscriminated requires non-empty 'typeMap' parameter")
     new Decoder[A]:
       private def getDecoder(key: Int): Decoder[A] = typeMap(key).asInstanceOf[Decoder[A]]
       private def decodeValue(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[A]] =
         val dd = for key <- 0 until typeMap.size yield getDecoder(key).decode(value, label)
-        dd.reduce(_ orElse _)
+        dd.reduce(_ orElse _) // we assume that only one of the decoders will succeed
       end decodeValue
 
       override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[A]] =
@@ -542,7 +544,7 @@ trait DecoderHelpers:
         }
 
       override def mapping(value: Value, label: Label): Validated[DecodingError, A] = ???
-  end nondiscriminatory
+  end nonDiscriminated
 
   // this is, effectively, Decoder[Enum]
   def decoderSum[A](s: Mirror.SumOf[A], elems: => List[(String, Decoder[?])]): Decoder[A] =

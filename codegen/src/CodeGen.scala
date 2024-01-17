@@ -951,7 +951,7 @@ class CodeGen(implicit
               }.toList)
               val name = decoderUniqueName(unionType)
               name -> m"""|  given ${name}(using besom.types.Context): besom.types.Decoder[$unionType] =
-                          |    besom.internal.Decoder.discriminatory($keyPropertyNameLit, $indexesLit)
+                          |    besom.internal.Decoder.discriminated($keyPropertyNameLit, $indexesLit)
                           |""".stripMargin
             case TypeMapper.UnionMapping.ByIndex(unionType, indexToType) =>
               val indexesLit = scalameta.Map(indexToType.map { case (index, typ) =>
@@ -961,7 +961,7 @@ class CodeGen(implicit
               }.toList)
               val name = decoderUniqueName(unionType)
               name -> m"""|  given ${name}(using besom.types.Context): besom.types.Decoder[$unionType] =
-                          |    besom.internal.Decoder.nondiscriminatory($indexesLit)
+                          |    besom.internal.Decoder.nonDiscriminated($indexesLit)
                           |""".stripMargin
           }
       }.map(_.toMap).foldLeft(Map.empty[String, String])(_ ++ _).values.toList // de-duplicate givens

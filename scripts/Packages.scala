@@ -46,10 +46,9 @@ import scala.util.control.NonFatal
   val codegenProblemPackages = Vector()
 
   val compileProblemPackages = Vector(
-    "azure-native", // decoder error
+    "azure-native", // takes too long to compile
     "alicloud", // schema error, ListenerXforwardedForConfig vs ListenerxForwardedForConfig
-    "aws-iam", // id parameter
-    "aws-native", // decoder error
+    "aws-iam", // id parameter, schema error - components should make this viable
     "aws-static-website", // version confusion
     "azure-justrun", // version confusion
     "databricks", // 'scala' symbol in source code
