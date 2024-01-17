@@ -39,6 +39,7 @@ import upickle.implicits.key as fieldKey
 case class PulumiPackage(
   name: String,
   version: Option[String] = None,
+  allowedPackageNames: List[String] = List.empty, // TODO: Handle allowedPackageNames
   meta: Meta = Meta(),
   pluginDownloadURL: Option[String] = None,
   types: Map[String, TypeDefinition] = Map.empty,
@@ -312,7 +313,7 @@ trait TypeReferenceProtoLike extends AnonymousTypeProtoLike {
   def maybeAsTypeReference: Option[TypeReference] = {
     if (oneOf.nonEmpty) {
       val underlyingType = this.maybeAsAnonymousType
-      Some(UnionType(oneOf = oneOf, `type` = underlyingType)) // TODO: Handle the discriminator
+      Some(UnionType(oneOf = oneOf, `type` = underlyingType, discriminator))
     } else {
       ref match {
         case Some(typeRefUri) =>

@@ -13,7 +13,8 @@ case class PropertyInfo private (
   inputArgType: Type,
   defaultValue: Option[Term],
   constValue: Option[Term],
-  isSecret: Boolean
+  isSecret: Boolean,
+  unionMappings: List[TypeMapper.UnionMapping]
 )
 
 object PropertyInfo:
@@ -41,6 +42,8 @@ object PropertyInfo:
     def enumDefaultValue(value: ConstValue) =
       typeMapper.enumValue(propertyDefinition.typeReference, value)
 
+    def unionMap = typeMapper.unionMapping(propertyDefinition.typeReference)
+
     val defaultValue: Option[Term] = {
       val propertyDefaultValue =
         propertyDefinition.default
@@ -66,7 +69,8 @@ object PropertyInfo:
       inputArgType = inputArgType,
       defaultValue = defaultValue,
       constValue = constValue,
-      isSecret = propertyDefinition.secret
+      isSecret = propertyDefinition.secret,
+      unionMappings = unionMap
     )
   }
 

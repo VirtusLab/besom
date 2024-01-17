@@ -10,6 +10,8 @@ class TypeMapper(
   val defaultPackageInfo: PulumiPackageInfo,
   schemaProvider: SchemaProvider
 )(implicit logger: Logger) {
+  import TypeMapper.*
+
   private def scalaTypeFromTypeUri(
     typeUri: String,
     asArgsType: Boolean
@@ -204,7 +206,56 @@ class TypeMapper(
       case _ => Vector((None, None))
     }
 
+  def unionMapping(typeRef: TypeReference): List[UnionMapping] =
+    import scala.meta.*
+    typeRef match {
+      case ArrayType(elemType) => unionMapping(elemType)
+      case MapType(elemType)   => unionMapping(elemType)
+      case UnionType(types, _, Some(d)) =>
+        // we need to enforce the the order of types for the de-duplication in CodeGen.unionDecoderGivens to work properly
+        val unionType = scalameta.types.Union(types.map(t => asScalaType(t, asArgsType = false)).sortWith(_.syntax < _.syntax))
+        val mapping = {
+          if d.mapping.isEmpty then Map.empty
+          else
+            d.mapping.map { case (key, typeUri) =>
+              key -> (scalaTypeFromTypeUri(typeUri, asArgsType = false) match {
+                case Some(scalaType) => scalaType
+                case None            => throw TypeMapperError(s"Unrecognized discriminator key '$key' for type: '${typeRef}'")
+              })
+            }
+        }
+        List(UnionMapping.ByField(unionType, "type", mapping)) ++ types.flatMap(unionMapping)
+      case UnionType(types, _, None) =>
+        // we need to enforce the the order of types and decoders for the de-duplication in CodeGen.unionDecoderGivens to work properly
+        val sortingWeights = Map[Type, Int](
+          scalameta.types.Int -> 0, // must be before Double
+          scalameta.types.Double -> 1, // must be after Int
+          scalameta.types.besom.types.PulumiAny -> 1000 // must be last
+        )
+        val defaultWeight = 100
+        def comp(t1: Type, t2: Type): Boolean = {
+          val w1 = sortingWeights.getOrElse(t1, defaultWeight)
+          val w2 = sortingWeights.getOrElse(t2, defaultWeight)
+          if w1 == w2
+          then t1.syntax < t2.syntax // fallback to alphabetic sorting
+          else w1 < w2
+        }
+        // sort both types and indexes by the same order
+        val scalaTypes = types.map(t => asScalaType(t, asArgsType = false)).sortWith(comp)
+        val indexes    = scalaTypes.zipWithIndex.map { case (t, i) => i -> t }.toMap
+        List(UnionMapping.ByIndex(scalameta.types.Union(scalaTypes), indexes)) ++ types.flatMap(unionMapping)
+      case _ => Nil
+    }
+  end unionMapping
+
   private def unescape(value: String) = {
     value.replace("%2F", "/") // TODO: Proper URL un-escaping
   }
 }
+
+object TypeMapper:
+  sealed trait UnionMapping
+  object UnionMapping {
+    case class ByField(unionType: Type, discriminatorField: String, keyToType: Map[String, Type]) extends UnionMapping
+    case class ByIndex(unionType: Type, indexToType: Map[Int, Type]) extends UnionMapping
+  }

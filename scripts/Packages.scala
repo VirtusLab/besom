@@ -46,10 +46,9 @@ import scala.util.control.NonFatal
   val codegenProblemPackages = Vector()
 
   val compileProblemPackages = Vector(
-    "azure-native", // decoder error
+    "azure-native", // takes too long to compile
     "alicloud", // schema error, ListenerXforwardedForConfig vs ListenerxForwardedForConfig
-    "aws-iam", // id parameter
-    "aws-native", // decoder error
+    "aws-iam", // id parameter, schema error - components should make this viable
     "aws-static-website", // version confusion
     "azure-justrun", // version confusion
     "databricks", // 'scala' symbol in source code
@@ -148,7 +147,7 @@ import scala.util.control.NonFatal
             Progress.total(done.size)
           catch
             case NonFatal(_) =>
-              Progress.fail(s" [${new Date}] Code generation failed for provider '${m.name}' version '${versionOrLatest}'")
+              Progress.fail(s"[${new Date}] Code generation failed for provider '${m.name}' version '${versionOrLatest}'")
           finally Progress.end
     }
     done.toVector
@@ -183,7 +182,7 @@ import scala.util.control.NonFatal
             Progress.total(done.size)
           catch
             case NonFatal(_) =>
-              Progress.fail(s" [${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}")
+              Progress.fail(s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}")
           finally Progress.end
     }
     done.toVector
