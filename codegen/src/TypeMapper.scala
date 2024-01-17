@@ -212,7 +212,8 @@ class TypeMapper(
       case ArrayType(elemType) => unionMapping(elemType)
       case MapType(elemType)   => unionMapping(elemType)
       case UnionType(types, _, Some(d)) =>
-        val unionType = scalameta.types.Union(types.map(t => asScalaType(t, asArgsType = false)))
+        // we need to enforce the the order of types for the de-duplication in CodeGen.unionDecoderGivens to work properly
+        val unionType = scalameta.types.Union(types.map(t => asScalaType(t, asArgsType = false)).sortWith(_.syntax < _.syntax))
         val mapping = {
           if d.mapping.isEmpty then Map.empty
           else
@@ -225,11 +226,11 @@ class TypeMapper(
         }
         List(UnionMapping.ByField(unionType, "type", mapping)) ++ types.flatMap(unionMapping)
       case UnionType(types, _, None) =>
-        // we need to enforce the the order of decoders, because some decoders are more specific than others
+        // we need to enforce the the order of types and decoders for the de-duplication in CodeGen.unionDecoderGivens to work properly
         val sortingWeights = Map[Type, Int](
-          scalameta.types.Int    -> 0,
-          scalameta.types.Double -> 1,
-          scalameta.types.besom.types.PulumiAny -> 1000
+          scalameta.types.Int -> 0, // must be before Double
+          scalameta.types.Double -> 1, // must be after Int
+          scalameta.types.besom.types.PulumiAny -> 1000 // must be last
         )
         val defaultWeight = 100
         def comp(t1: Type, t2: Type): Boolean = {
@@ -245,6 +246,7 @@ class TypeMapper(
         List(UnionMapping.ByIndex(scalameta.types.Union(scalaTypes), indexes)) ++ types.flatMap(unionMapping)
       case _ => Nil
     }
+  end unionMapping
 
   private def unescape(value: String) = {
     value.replace("%2F", "/") // TODO: Proper URL un-escaping

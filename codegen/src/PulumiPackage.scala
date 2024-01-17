@@ -39,6 +39,7 @@ import upickle.implicits.key as fieldKey
 case class PulumiPackage(
   name: String,
   version: Option[String] = None,
+  allowedPackageNames: List[String] = List.empty, // TODO: Handle allowedPackageNames
   meta: Meta = Meta(),
   pluginDownloadURL: Option[String] = None,
   types: Map[String, TypeDefinition] = Map.empty,

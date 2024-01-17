@@ -936,7 +936,7 @@ class CodeGen(implicit
   }
 
   private def unionDecoderGivens(properties: Seq[PropertyInfo]): List[String] = {
-    // meke sure that the name is unique and we don't have collisions
+    // make sure that the name is unique and we don't have collisions
     def decoderUniqueName(typ: Type) = "uDec" + sha256(typ.syntax)
     properties
       .collect {
