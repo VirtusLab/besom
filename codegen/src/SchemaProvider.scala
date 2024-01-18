@@ -120,6 +120,20 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
       )
     }
 
+    val reconciledMetadata = pulumiPackage.toPackageMetadata(packageMetadata)
+    val packageInfo = PulumiPackageInfo(
+      name = reconciledMetadata.name,
+      version = reconciledMetadata.version.orDefault,
+      allowedPackageNames = (pulumiPackage.allowedPackageNames :+ packageMetadata.name :+ pulumiPackage.name).toSet,
+      providerTypeToken = pulumiPackage.providerTypeToken,
+      moduleToPackageParts = pulumiPackage.moduleToPackageParts,
+      providerToPackageParts = pulumiPackage.providerToPackageParts,
+      enumTypeTokens = Set.empty, // will be set later
+      objectTypeTokens = Set.empty, // will be set later
+      resourceTypeTokens = Set.empty, // will be set later
+      enumValueToInstances = Map.empty // will be set later
+    )
+
     // pre-process the package to gather information about types, that are used later during various parts of codegen
     // most notable place is TypeMapper.scalaTypeFromTypeUri
     val enumTypeTokensBuffer     = ListBuffer.empty[String]
@@ -141,34 +155,28 @@ class DownloadingSchemaProvider(schemaCacheDirPath: os.Path)(implicit logger: Lo
 
     // Post-process the tokens to unify them to lower case to circumvent inconsistencies in low quality schemas (e.g. aws)
     // This allows us to use case-insensitive matching when looking up tokens
-    pulumiPackage.parsedTypes.foreach {
+    pulumiPackage.parsedTypes(packageInfo).foreach {
       case (coordinates, definition: EnumTypeDefinition) =>
         enumValueToInstancesBuffer += coordinates.token -> valueToInstances(definition)
 
         if (enumTypeTokensBuffer.contains(coordinates.token.asLookupKey))
-          logger.warn(s"Duplicate enum type token '${coordinates.token.asLookupKey}' in package '${packageMetadata.name}'")
+          logger.warn(s"Duplicate enum type token '${coordinates.token.asLookupKey}' in package '${packageInfo.name}'")
         enumTypeTokensBuffer += coordinates.token.asLookupKey
       case (coordinates, _: ObjectTypeDefinition) =>
         if (objectTypeTokensBuffer.contains(coordinates.token.asLookupKey))
-          logger.warn(s"Duplicate object type token '${coordinates.token.asLookupKey}' in package '${packageMetadata.name}'")
+          logger.warn(s"Duplicate object type token '${coordinates.token.asLookupKey}' in package '${packageInfo.name}'")
         objectTypeTokensBuffer += coordinates.token.asLookupKey
     }
-    pulumiPackage.parsedResources.foreach { case (coordinates, _: ResourceDefinition) =>
+    pulumiPackage.parsedResources(packageInfo).foreach { case (coordinates, _: ResourceDefinition) =>
       if (resourceTypeTokensBuffer.contains(coordinates.token.asLookupKey))
-        logger.warn(s"Duplicate resource type token '${coordinates.token.asLookupKey}' in package '${packageMetadata.name}'")
+        logger.warn(s"Duplicate resource type token '${coordinates.token.asLookupKey}' in package '${packageInfo.name}'")
       resourceTypeTokensBuffer += coordinates.token.asLookupKey
     }
 
-    val reconciledMetadata = pulumiPackage.toPackageMetadata(packageMetadata)
-    PulumiPackageInfo(
-      name = reconciledMetadata.name,
-      version = reconciledMetadata.version.orDefault,
+    packageInfo.copy(
       enumTypeTokens = enumTypeTokensBuffer.toSet,
       objectTypeTokens = objectTypeTokensBuffer.toSet,
-      providerTypeToken = pulumiPackage.providerTypeToken,
       resourceTypeTokens = resourceTypeTokensBuffer.toSet,
-      moduleToPackageParts = pulumiPackage.moduleToPackageParts,
-      providerToPackageParts = pulumiPackage.providerToPackageParts,
       enumValueToInstances = enumValueToInstancesBuffer.toMap
     )
   }

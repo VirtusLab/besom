@@ -11,11 +11,9 @@ class TypeMapperTest extends munit.FunSuite {
 
   implicit val logger: Logger = new Logger
 
-  object TestPackageMetadata extends PackageMetadata("test-as-scala-type", Some(PackageVersion.default))
-
   case class Data(
     `type`: TypeReference,
-    metadata: PackageMetadata = TestPackageMetadata,
+    metadataOrName: PackageMetadata | SchemaName = "",
     asArgsType: Boolean = false,
     tags: Set[munit.Tag] = Set()
   )(val expected: Expectations*)
@@ -29,32 +27,34 @@ class TypeMapperTest extends munit.FunSuite {
     Data(UnionType(List(StringType, IntegerType), None))(Expectations("String | Int")),
     Data(
       UnionType(List(StringType, NamedType("aws:iam/documents:PolicyDocument")), Some(StringType)),
-      metadata = PackageMetadata("aws", "6.7.0"),
+      metadataOrName = PackageMetadata("aws", "6.7.0"),
       tags = Set(munit.Slow)
     )(
       Expectations("String")
     ),
     Data(
       UnionType(List(StringType, NamedType("#/types/aws:iam/role:Role")), Some(StringType)),
-      metadata = PackageMetadata("aws", "6.7.0"),
+      metadataOrName = PackageMetadata("aws", "6.7.0"),
       tags = Set(munit.Slow)
     )(
       Expectations("String | besom.api.aws.iam.Role")
     ),
     Data(
       UnionType(List(StringType, ArrayType(NamedType("#/types/abc:xyz/not:There", Some(StringType)))), None),
+      metadataOrName = "abc",
       tags = Set(munit.Slow)
     )(
       Expectations("String | scala.collection.immutable.List[String]")
     ),
     Data(
-      NamedType("#/types/abc:xyz/not:There", Some(StringType))
+      NamedType("#/types/abc:xyz/not:There", Some(StringType)),
+      metadataOrName = "abc"
     )(
       Expectations("String")
     ),
     Data(
       NamedType("#/types/aws-native:index%2Fregion:Region"),
-      metadata = PackageMetadata("aws-native", "0.84.0"),
+      metadataOrName = PackageMetadata("aws-native", "0.84.0"),
       tags = Set(munit.Slow)
     )(
       Expectations("besom.api.awsnative.region.enums.Region")
@@ -79,14 +79,14 @@ class TypeMapperTest extends munit.FunSuite {
     ),
     Data(
       NamedType("#/types/kubernetes:rbac.authorization.k8s.io/v1beta1:RoleRef"),
-      metadata = PackageMetadata("kubernetes", "3.7.0"),
+      metadataOrName = PackageMetadata("kubernetes", "3.7.0"),
       tags = Set(munit.Slow)
     )(
       Expectations("besom.api.kubernetes.rbac.v1beta1.outputs.RoleRef")
     ),
     Data(
       ArrayType(NamedType("#/types/kubernetes:rbac.authorization.k8s.io%2Fv1beta1:Subject")),
-      metadata = PackageMetadata("kubernetes", "3.7.0"),
+      metadataOrName = PackageMetadata("kubernetes", "3.7.0"),
       tags = Set(munit.Slow)
     )(
       Expectations("scala.collection.immutable.List[besom.api.kubernetes.rbac.v1beta1.outputs.Subject]")
@@ -118,9 +118,9 @@ class TypeMapperTest extends munit.FunSuite {
   tests.foreach { data =>
     test(s"${data.`type`.getClass.getSimpleName}".withTags(data.tags)) {
       val schemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
-      val (_, packageInfo) = data.metadata match {
-        case m @ TestPackageMetadata => schemaProvider.packageInfo(m, PulumiPackage(name = m.name))
-        case _                       => schemaProvider.packageInfo(data.metadata)
+      val (_, packageInfo) = data.metadataOrName match {
+        case m: PackageMetadata => schemaProvider.packageInfo(m) // download schema
+        case n: SchemaName      => schemaProvider.packageInfo(PackageMetadata(n), PulumiPackage(name = n))
       }
       implicit val tm: TypeMapper = new TypeMapper(packageInfo, schemaProvider)
 

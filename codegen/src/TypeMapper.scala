@@ -65,11 +65,7 @@ class TypeMapper(
     asArgsType: Boolean
   ): Option[ScalaDefinitionCoordinates] = {
     val (typeToken, packageInfo, isFromTypeUri, isFromResourceUri) = preParseFromTypeUri(typeUri)
-    val typeCoordinates = PulumiDefinitionCoordinates.fromToken(
-      typeToken,
-      packageInfo.moduleToPackageParts,
-      packageInfo.providerToPackageParts
-    )
+    val typeCoordinates                                            = typeToken.toCoordinates(packageInfo)
 
     val uniformedTypeToken           = typeCoordinates.token.asLookupKey
     lazy val hasProviderDefinition   = packageInfo.providerTypeToken == uniformedTypeToken
@@ -209,8 +205,8 @@ class TypeMapper(
   def unionMapping(typeRef: TypeReference): List[UnionMapping] =
     import scala.meta.*
     typeRef match {
-      case ArrayType(elemType) => unionMapping(elemType)
-      case MapType(elemType)   => unionMapping(elemType)
+      case ArrayType(elemType)          => unionMapping(elemType)
+      case MapType(elemType)            => unionMapping(elemType)
       case UnionType(types, _, Some(d)) =>
         // we need to enforce the the order of types for the de-duplication in CodeGen.unionDecoderGivens to work properly
         val unionType = scalameta.types.Union(types.map(t => asScalaType(t, asArgsType = false)).sortWith(_.syntax < _.syntax))

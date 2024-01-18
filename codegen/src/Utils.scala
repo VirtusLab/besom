@@ -110,48 +110,36 @@ object Utils {
       functions
     }
 
-    def parsedFunctions(implicit logger: Logger): Map[PulumiDefinitionCoordinates, FunctionDefinition] = {
+    def parsedFunctions(packageInfo: PulumiPackageInfo)(implicit logger: Logger): Map[PulumiDefinitionCoordinates, FunctionDefinition] = {
       nonOverlayFunctions.map { case (token, function) =>
-        val coordinates = PulumiDefinitionCoordinates.fromRawToken(
-          typeToken = token,
-          moduleToPackageParts = moduleToPackageParts,
-          providerToPackageParts = providerToPackageParts
-        )
+        val coordinates = PulumiToken(token).toCoordinates(packageInfo)
         (coordinates, function)
       }
     }
 
-    def parsedTypes(implicit logger: Logger): Map[PulumiDefinitionCoordinates, TypeDefinition] = {
+    def parsedTypes(packageInfo: PulumiPackageInfo)(implicit logger: Logger): Map[PulumiDefinitionCoordinates, TypeDefinition] = {
       val (overlays, types) = pulumiPackage.types.partition { case (_, d) => d.isOverlay }
       overlays.foreach { case (token, _) =>
         logger.info(s"Type '${token}' was not generated because it was marked as overlay")
       }
       types.collect { case (token, typeRef) =>
-        val coordinates = PulumiDefinitionCoordinates.fromRawToken(
-          typeToken = token,
-          moduleToPackageParts = moduleToPackageParts,
-          providerToPackageParts = providerToPackageParts
-        )
+        val coordinates = PulumiToken(token).toCoordinates(packageInfo)
         (coordinates, typeRef)
       }
     }
 
-    def parsedResources(implicit logger: Logger): Map[PulumiDefinitionCoordinates, ResourceDefinition] = {
+    def parsedResources(packageInfo: PulumiPackageInfo)(implicit logger: Logger): Map[PulumiDefinitionCoordinates, ResourceDefinition] = {
       val (overlays, resources) = pulumiPackage.resources.partition { case (_, d) => d.isOverlay }
       overlays.foreach { case (token, _) =>
         logger.info(s"Resource '${token}' was not generated because it was marked as overlay")
       }
       resources.collect { case (token, resource) =>
-        val coordinates = PulumiDefinitionCoordinates.fromRawToken(
-          typeToken = token,
-          moduleToPackageParts = moduleToPackageParts,
-          providerToPackageParts = providerToPackageParts
-        )
+        val coordinates = PulumiToken(token).toCoordinates(packageInfo)
         (coordinates, resource)
       }
     }
 
-    def parsedMethods(
+    def parsedMethods(packageInfo: PulumiPackageInfo)(
       resourceDefinition: ResourceDefinition
     )(implicit logger: Logger): Map[FunctionName, (PulumiDefinitionCoordinates, FunctionDefinition)] = {
       val (methods, notMethods) = resourceDefinition.methods.toSeq
@@ -160,11 +148,7 @@ object Utils {
           (
             name,
             (
-              PulumiDefinitionCoordinates.fromRawToken(
-                typeToken = token,
-                moduleToPackageParts = pulumiPackage.moduleToPackageParts,
-                providerToPackageParts = pulumiPackage.providerToPackageParts
-              ),
+              PulumiToken(token).toCoordinates(packageInfo),
               pulumiPackage.nonOverlayFunctions.getOrElse(
                 token,
                 throw TypeMapperError(s"Function '${token}' not found in package '${pulumiPackage.name}'")

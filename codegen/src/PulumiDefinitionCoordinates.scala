@@ -83,40 +83,6 @@ case class PulumiDefinitionCoordinates private (
 }
 
 object PulumiDefinitionCoordinates {
-  def fromRawToken(
-    typeToken: String,
-    moduleToPackageParts: String => Seq[String],
-    providerToPackageParts: String => Seq[String]
-  ): PulumiDefinitionCoordinates = {
-    fromToken(
-      typeToken = PulumiToken(typeToken),
-      moduleToPackageParts = moduleToPackageParts,
-      providerToPackageParts = providerToPackageParts
-    )
-  }
-
-  def fromToken(
-    typeToken: PulumiToken,
-    moduleToPackageParts: String => Seq[String],
-    providerToPackageParts: String => Seq[String]
-  ): PulumiDefinitionCoordinates = {
-    typeToken match {
-      case PulumiToken("pulumi", "providers", providerName) =>
-        PulumiDefinitionCoordinates(
-          token = typeToken,
-          providerPackageParts = providerName :: Nil,
-          modulePackageParts = Utils.indexModuleName :: Nil,
-          definitionName = Utils.providerTypeName
-        )
-      case PulumiToken(providerName, moduleName, definitionName) =>
-        PulumiDefinitionCoordinates(
-          token = typeToken,
-          providerPackageParts = providerToPackageParts(providerName),
-          modulePackageParts = moduleToPackageParts(moduleName),
-          definitionName = definitionName
-        )
-    }
-  }
 
   private def inputsPackage  = "inputs"
   private def outputsPackage = "outputs"

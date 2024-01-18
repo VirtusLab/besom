@@ -32,8 +32,7 @@ class CodegenTests extends munit.FunSuite {
   val ignoreList = List(
     "simple-yaml-schema", // YAML is not supported
     "hyphen-url", // depends on azure-native
-    "cyclic-types", // YAML schema is not supported
-    "different-package-name-conflict" // file duplicate issue, caused by anomaly in schema: multiple packages names
+    "cyclic-types" // YAML schema is not supported
   )
 
   val tests =

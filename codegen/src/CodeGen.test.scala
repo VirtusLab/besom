@@ -594,6 +594,9 @@ class CodeGenTest extends munit.FunSuite {
       name = "Type with dots in package segment",
       json = """|{
                 |  "name": "embedded-crd",
+                |  "allowedPackageNames": [
+                |        "kubernetes"
+                |  ],
                 |  "types": {
                 |    "kubernetes:crd.k8s.amazonaws.com/v1alpha1:ENIConfig": {
                 |      "properties": {
@@ -805,10 +808,10 @@ class CodeGenTest extends munit.FunSuite {
       implicit val logger: Logger               = new Logger(config.logLevel)
 
       implicit val schemaProvider: SchemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
-      val (pulumiPackage, packageInfo) = schemaProvider.packageInfo(
-        PackageMetadata(defaultTestSchemaName, "0.0.0"),
-        PulumiPackage.fromString(data.json)
-      )
+      val (pulumiPackage, packageInfo) = {
+        val p = PulumiPackage.fromString(data.json)
+        schemaProvider.packageInfo(PackageMetadata(p.name), p)
+      }
       implicit val providerConfig: ProviderConfig = Config.providersConfigs(packageInfo.name)
       implicit val tm: TypeMapper                 = new TypeMapper(packageInfo, schemaProvider)
 
