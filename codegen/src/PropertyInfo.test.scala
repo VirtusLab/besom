@@ -8,7 +8,6 @@ import scala.meta.dialects.Scala33
 
 //noinspection ScalaFileName,TypeAnnotation
 class PropertyInfoTest extends munit.FunSuite {
-  object TestPackageMetadata extends PackageMetadata("test-as-scala-type", Some(PackageVersion.default))
 
   case class Data(
     name: String,
@@ -17,7 +16,7 @@ class PropertyInfoTest extends munit.FunSuite {
     expectedType: String,
     expectedArgsType: Option[String] = None,
     expectedInputArgsType: Option[String] = None,
-    metadata: PackageMetadata = TestPackageMetadata,
+    metadataOrName: PackageMetadata | SchemaName = "",
     tags: Set[munit.Tag] = Set()
   )
 
@@ -43,7 +42,8 @@ class PropertyInfoTest extends munit.FunSuite {
                 |}
                 |""".stripMargin,
       expectedName = "routingRules",
-      expectedType = "String | scala.collection.immutable.List[String]"
+      expectedType = "String | scala.collection.immutable.List[String]",
+      metadataOrName = "aws"
     ),
     Data(
       name = "property with underlying object",
@@ -55,7 +55,8 @@ class PropertyInfoTest extends munit.FunSuite {
                 |}
                 |""".stripMargin,
       expectedName = "spec",
-      expectedType = "scala.Predef.Map[String, String]"
+      expectedType = "scala.Predef.Map[String, String]",
+      metadataOrName = "kubernetes"
     ),
     Data(
       name = "property with a union with a resource",
@@ -77,7 +78,7 @@ class PropertyInfoTest extends munit.FunSuite {
                 |""".stripMargin,
       expectedName = "restApi",
       expectedType = "String | besom.api.aws.apigateway.RestApi",
-      metadata = PackageMetadata("aws", "6.7.0"),
+      metadataOrName = PackageMetadata("aws", "6.7.0"),
       tags = Set(munit.Ignore) // FIXME: https://github.com/VirtusLab/besom/issues/144
     ),
     Data(
@@ -116,9 +117,9 @@ class PropertyInfoTest extends munit.FunSuite {
 
       implicit val schemaProvider: SchemaProvider =
         new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
-      val (_, packageInfo) = data.metadata match {
-        case m @ TestPackageMetadata => schemaProvider.packageInfo(m, PulumiPackage(name = m.name))
-        case _                       => schemaProvider.packageInfo(data.metadata)
+      val (_, packageInfo) = data.metadataOrName match {
+        case m: PackageMetadata => schemaProvider.packageInfo(m) // download schema
+        case n: SchemaName      => schemaProvider.packageInfo(PackageMetadata(n), PulumiPackage(name = n))
       }
       implicit val tm: TypeMapper = new TypeMapper(packageInfo, schemaProvider)
 

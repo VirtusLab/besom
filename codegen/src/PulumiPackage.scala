@@ -19,6 +19,8 @@ import upickle.implicits.key as fieldKey
   *   Name is the unqualified name of the package
   * @param version
   *   Version is the version of the package
+  * @param allowedPackageNames
+  *   A list of allowed package name in addition to the Name property. This is used to support legacy package names.
   * @param meta
   *   Format metadata about this package
   * @param pluginDownloadURL
@@ -39,7 +41,7 @@ import upickle.implicits.key as fieldKey
 case class PulumiPackage(
   name: String,
   version: Option[String] = None,
-  allowedPackageNames: List[String] = List.empty, // TODO: Handle allowedPackageNames
+  allowedPackageNames: List[String] = List.empty,
   meta: Meta = Meta(),
   pluginDownloadURL: Option[String] = None,
   types: Map[String, TypeDefinition] = Map.empty,

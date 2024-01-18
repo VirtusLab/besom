@@ -40,10 +40,10 @@ class CodeGen(implicit
   ): Seq[SourceFile] = {
     val (configFiles, configDependencies) = sourceFilesForConfig(pulumiPackage, packageInfo)
     configFiles ++
-      sourceFilesForProviderResource(pulumiPackage) ++
-      sourceFilesForNonResourceTypes(pulumiPackage, configDependencies) ++
-      sourceFilesForResources(pulumiPackage) ++
-      sourceFilesForFunctions(pulumiPackage)
+      sourceFilesForProviderResource(pulumiPackage, packageInfo) ++
+      sourceFilesForNonResourceTypes(pulumiPackage, packageInfo, configDependencies) ++
+      sourceFilesForResources(pulumiPackage, packageInfo) ++
+      sourceFilesForFunctions(pulumiPackage, packageInfo)
   }
 
   def projectConfigFile(schemaName: String, packageVersion: PackageVersion): SourceFile = {
@@ -108,23 +108,19 @@ class CodeGen(implicit
     SourceFile(filePath = filePath, sourceCode = fileContent)
   }
 
-  def sourceFilesForProviderResource(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
-    val typeToken              = pulumiPackage.providerTypeToken
-    val moduleToPackageParts   = pulumiPackage.moduleToPackageParts
-    val providerToPackageParts = pulumiPackage.providerToPackageParts
-    val typeCoordinates =
-      PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts)
+  def sourceFilesForProviderResource(pulumiPackage: PulumiPackage, packageInfo: PulumiPackageInfo): Seq[SourceFile] = {
+    val typeCoordinates = PulumiToken(pulumiPackage.providerTypeToken).toCoordinates(packageInfo)
 
     sourceFilesForResource(
       typeCoordinates = typeCoordinates,
       resourceDefinition = pulumiPackage.provider,
-      methods = pulumiPackage.parsedMethods(pulumiPackage.provider),
+      methods = pulumiPackage.parsedMethods(packageInfo)(pulumiPackage.provider),
       isProvider = true
     )
   }
 
-  def sourceFilesForNonResourceTypes(pulumiPackage: PulumiPackage, configDependencies: Seq[ConfigDependency]): Seq[SourceFile] = {
-    pulumiPackage.parsedTypes.flatMap { case (coordinates, typeDefinition) =>
+  def sourceFilesForNonResourceTypes(pulumiPackage: PulumiPackage, packageInfo: PulumiPackageInfo, configDependencies: Seq[ConfigDependency]): Seq[SourceFile] = {
+    pulumiPackage.parsedTypes(packageInfo).flatMap { case (coordinates, typeDefinition) =>
       typeDefinition match {
         case enumDef: EnumTypeDefinition =>
           sourceFilesForEnum(
@@ -255,13 +251,13 @@ class CodeGen(implicit
     Seq(baseClassSourceFile, argsClassSourceFile)
   }
 
-  def sourceFilesForResources(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
-    pulumiPackage.parsedResources
+  def sourceFilesForResources(pulumiPackage: PulumiPackage, packageInfo: PulumiPackageInfo): Seq[SourceFile] = {
+    pulumiPackage.parsedResources(packageInfo)
       .map { case (coordinates, resourceDefinition) =>
         sourceFilesForResource(
           typeCoordinates = coordinates,
           resourceDefinition = resourceDefinition,
-          methods = pulumiPackage.parsedMethods(resourceDefinition),
+          methods = pulumiPackage.parsedMethods(packageInfo)(resourceDefinition),
           isProvider = false
         )
       }
@@ -494,8 +490,8 @@ class CodeGen(implicit
     Seq(baseClassSourceFile, argsClassSourceFile) ++ methodFiles.flatten
   }
 
-  def sourceFilesForFunctions(pulumiPackage: PulumiPackage)(implicit logger: Logger): Seq[SourceFile] = {
-    pulumiPackage.parsedFunctions
+  def sourceFilesForFunctions(pulumiPackage: PulumiPackage, packageInfo: PulumiPackageInfo)(implicit logger: Logger): Seq[SourceFile] = {
+    pulumiPackage.parsedFunctions(packageInfo)
       .filterNot { case (_, f) => isMethod(f) }
       .map { case (coordinates, functionDefinition) =>
         sourceFilesForFunction(
@@ -614,7 +610,7 @@ class CodeGen(implicit
   ): (Seq[SourceFile], Seq[ConfigDependency]) = {
     val PulumiToken(_, _, providerName) = PulumiToken(packageInfo.providerTypeToken)
     val coordinates = PulumiToken(providerName, Utils.configModuleName, Utils.configTypeName)
-      .toCoordinates(pulumiPackage)
+      .toCoordinates(packageInfo)
       .asConfigClass
 
     val configsWithDefault = pulumiPackage.config.defaults
@@ -682,8 +678,8 @@ class CodeGen(implicit
       val sources = Seq(SourceFile(file, code))
       val dependencies: Seq[ConfigDependency] = configVariables.flatMap { case (_, configDefinition) =>
         configDefinition.typeReference.asTokenAndDependency.flatMap {
-          case (Some(token), None)           => ConfigSourceDependency(token.toCoordinates(pulumiPackage)) :: Nil
-          case (Some(token), Some(metadata)) => ConfigRuntimeDependency(token.toCoordinates(pulumiPackage), metadata) :: Nil
+          case (Some(token), None)           => ConfigSourceDependency(token.toCoordinates(packageInfo)) :: Nil
+          case (Some(token), Some(metadata)) => ConfigRuntimeDependency(token.toCoordinates(packageInfo), metadata) :: Nil
           case _                             => Nil
         }
       }

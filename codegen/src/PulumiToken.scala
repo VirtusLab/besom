@@ -1,7 +1,5 @@
 package besom.codegen
 
-import besom.codegen.metaschema.PulumiPackage
-
 import scala.util.matching.Regex
 
 /** The parsed Pulumi type token used in Pulumi schema in a clean, canonical form, that enforces all three parts present
@@ -14,25 +12,46 @@ import scala.util.matching.Regex
   * @param raw
   *   the raw Pulumi type token
   */
-case class PulumiToken private (provider: String, module: String, name: String, raw: String) extends PulumiToken.RawToken {
+case class PulumiToken private (provider: String, module: String, name: String, raw: String) extends PulumiToken.RawToken:
   def asString: String = PulumiToken.concat(provider, module, name)
 
   /** Transform the Pulumi type token to a Pulumi definition coordinates
-    * @param pulumiPackage
-    *   the Pulumi package containing the schema information
+    * @param pulumiPackageInfo
+    *   the Pulumi package schema information
     * @return
-    *   the Pulumi definition coordinates for the given Pulumi type token
+    *   the Pulumi definition coordinates for the given Pulumi type token and Pulumi package schema information
     */
-  def toCoordinates(pulumiPackage: PulumiPackage): PulumiDefinitionCoordinates = {
-    import besom.codegen.Utils.PulumiPackageOps
+  @throws[TypeMapperError]("if the package name is not allowed in the context of the given Pulumi package")
+  def toCoordinates(pulumiPackageInfo: PulumiPackageInfo): PulumiDefinitionCoordinates =
+    this match
+      case t @ PulumiToken("pulumi", "providers", providerName) =>
+        validatePackageName(pulumiPackageInfo.name, pulumiPackageInfo.allowedPackageNames)(providerName)
+        PulumiDefinitionCoordinates(
+          token = t,
+          providerPackageParts = providerName :: Nil,
+          modulePackageParts = Utils.indexModuleName :: Nil,
+          definitionName = Utils.providerTypeName
+        )
+      case t @ PulumiToken(providerName, moduleName, definitionName) =>
+        validatePackageName(pulumiPackageInfo.name, pulumiPackageInfo.allowedPackageNames)(providerName)
+        PulumiDefinitionCoordinates(
+          token = t,
+          providerPackageParts = pulumiPackageInfo.providerToPackageParts(providerName),
+          modulePackageParts = pulumiPackageInfo.moduleToPackageParts(moduleName),
+          definitionName = definitionName
+        )
+  end toCoordinates
 
-    PulumiDefinitionCoordinates.fromToken(
-      typeToken = this,
-      moduleToPackageParts = pulumiPackage.moduleToPackageParts,
-      providerToPackageParts = pulumiPackage.providerToPackageParts
-    )
+  private def validatePackageName(packageName: String, allowedPackageNames: Set[String])(name: String): Unit = {
+    val allNames = allowedPackageNames + packageName
+    if (!allNames.contains(name)) {
+      throw TypeMapperError(
+        s"$this has invalid package name '$name', in context of package '${packageName}', " +
+          s"allowed names for the current package: ${allNames.mkString("'", "', '", "'")}"
+      )
+    }
   }
-}
+end PulumiToken
 
 object PulumiToken {
   private val tokenFmtShort: String    = "([^:]*):([^:]*)" // provider:name

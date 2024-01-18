@@ -60,8 +60,10 @@ class DefinitionCoordinatesTest extends munit.FunSuite {
 
   tests.foreach(data => {
     test(s"Type: ${data.token.asString}".withTags(data.tags.toSet)) {
-      val pulumiPackage = PulumiPackage("test")
-      val coords        = data.token.toCoordinates(pulumiPackage)
+      val schemaProvider: SchemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
+      val (_, packageInfo)               = schemaProvider.packageInfo(PackageMetadata(data.token.provider), PulumiPackage(data.token.provider))
+
+      val coords = data.token.toCoordinates(packageInfo)
 
       data.expected.foreach {
         case ResourceClassExpectations(fullPackageName, fullyQualifiedTypeRef, filePath, asArgsType) =>

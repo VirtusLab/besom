@@ -214,7 +214,11 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
   tests.foreach { data =>
     test(s"Type: ${data.typeToken}".withTags(data.tags)) {
       implicit val providerConfig: ProviderConfig = Config.providersConfigs(data.schemaName)
-      val coords = PulumiToken(data.typeToken).toCoordinates(data.pulumiPackage)
+
+      val schemaProvider: SchemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
+      val (_, packageInfo)               = schemaProvider.packageInfo(PackageMetadata(data.schemaName), data.pulumiPackage)
+
+      val coords = PulumiToken(data.typeToken).toCoordinates(packageInfo)
 
       data.expected.foreach {
         case ResourceClassExpectations(fullPackageName, fullyQualifiedTypeRef, filePath, asArgsType) =>
@@ -259,7 +263,7 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
       "PascalCase" -> "PascalCase",
       "lowercase" -> "Lowercase",
       "UPPERCASE" -> "Uppercase",
-      "ListenerXForwardedForConfig" -> "ListenerxForwardedForConfig",
+      "ListenerXForwardedForConfig" -> "ListenerxForwardedForConfig"
     )
 
     for ((input, expected) <- testCases) {
