@@ -13,4 +13,4 @@ Some Pulumi features are not yet implemented. The most notable ones are:
 * [Function serialization](https://www.pulumi.com/docs/concepts/inputs-outputs/function-serialization/) is supported only in Node.js.
 
 Some Pulumi features are **NOT** planned to be implemented:
-* [Mock-based unit tests](https://www.pulumi.com/docs/guides/testing/) no planned unless we hear strong community feedback it is needed.
+* [Mock-based unit tests](https://www.pulumi.com/docs/guides/testing/) not planned unless we hear strong community feedback it is needed.
