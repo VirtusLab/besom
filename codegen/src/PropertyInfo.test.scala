@@ -78,7 +78,6 @@ class PropertyInfoTest extends munit.FunSuite {
       expectedName = "restApi",
       expectedType = "String | besom.api.aws.apigateway.RestApi",
       metadata = PackageMetadata("aws", "6.7.0"),
-      tags = Set(munit.Ignore) // FIXME: https://github.com/VirtusLab/besom/issues/144
     ),
     Data(
       name = "property with external (downloaded) named type with duplicate object",

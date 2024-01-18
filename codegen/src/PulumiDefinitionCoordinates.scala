@@ -21,7 +21,8 @@ case class PulumiDefinitionCoordinates private (
     )
   }
   def asObjectClass(asArgsType: Boolean)(implicit logger: Logger): ScalaDefinitionCoordinates = {
-    val packageSuffix = if (asArgsType) inputsPackage else outputsPackage
+    // because we have no plain inputs we can simplify and all Args are inputs
+    val packageSuffix = if asArgsType then inputsPackage else outputsPackage
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts :+ packageSuffix,
@@ -32,8 +33,7 @@ case class PulumiDefinitionCoordinates private (
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts :+ enumsPackage,
-      definitionName = Some(mangleTypeName(definitionName)),
-      isEnum = true
+      definitionName = Some(className(asArgsType = false))
     )
   }
 
