@@ -79,7 +79,9 @@ class TypeMapper(
 
     def resourceClassCoordinates: Option[ScalaDefinitionCoordinates] = {
       if (hasResourceDefinition || hasProviderDefinition) {
-        Some(typeCoordinates.asResourceClass(asArgsType = asArgsType))
+        // we assume resource class args will never be used as named type
+        // if we ever observe a case where it is used, we need find a way to distinguish it
+        Some(typeCoordinates.asResourceClass(asArgsType = false))
       } else {
         None
       }
@@ -122,7 +124,7 @@ class TypeMapper(
   }
 
   def asScalaType(typeRef: TypeReference, asArgsType: Boolean, fallbackType: Option[AnonymousType] = None): Type =
-    typeRef match {
+    typeRef match
       case BooleanType         => scalameta.types.Boolean
       case StringType          => scalameta.types.String
       case IntegerType         => scalameta.types.Int
@@ -136,7 +138,7 @@ class TypeMapper(
           if t1.syntax == t2.syntax then t1 else Type.ApplyInfix(t1, Type.Name("|"), t2)
         }
       case namedType: NamedType =>
-        unescape(namedType.typeUri) match {
+        unescape(namedType.typeUri) match
           case "pulumi.json#/Archive" =>
             scalameta.types.besom.types.Archive
           case "pulumi.json#/Asset" =>
@@ -147,26 +149,22 @@ class TypeMapper(
             scalameta.types.besom.types.PulumiJson
 
           case typeUri =>
-            scalaTypeFromTypeUri(typeUri, asArgsType) match {
+            scalaTypeFromTypeUri(typeUri, asArgsType) match
               case Some(scalaType) => scalaType
               case None            =>
                 // try a fallback type if specified, used by UnionType
-                fallbackType match {
+                fallbackType match
                   case Some(primitiveType) => asScalaType(primitiveType, asArgsType)
                   case None                =>
                     // we should ignore namedType.`type` because it is deprecated according to metaschema
                     // but at least aws provider uses it in one weird place
-                    namedType.`type` match {
+                    namedType.`type` match
                       case Some(deprecatedFallbackType) => asScalaType(deprecatedFallbackType, asArgsType)
                       case None =>
                         throw TypeMapperError(
                           s"Unsupported type: '${typeRef}', no corresponding type definition and no fallback type"
                         )
-                    }
-                }
-            }
-        }
-    }
+  end asScalaType
 
   // TODO: This is a temporary solution, we should use a proper type mapping using ADTs
   def enumValue(typeRef: TypeReference, value: ConstValue): Option[Term.Ref] =
@@ -209,8 +207,8 @@ class TypeMapper(
   def unionMapping(typeRef: TypeReference): List[UnionMapping] =
     import scala.meta.*
     typeRef match {
-      case ArrayType(elemType) => unionMapping(elemType)
-      case MapType(elemType)   => unionMapping(elemType)
+      case ArrayType(elemType)          => unionMapping(elemType)
+      case MapType(elemType)            => unionMapping(elemType)
       case UnionType(types, _, Some(d)) =>
         // we need to enforce the the order of types for the de-duplication in CodeGen.unionDecoderGivens to work properly
         val unionType = scalameta.types.Union(types.map(t => asScalaType(t, asArgsType = false)).sortWith(_.syntax < _.syntax))

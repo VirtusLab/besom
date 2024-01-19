@@ -6,11 +6,10 @@ case class ScalaDefinitionCoordinates private (
   private val providerPackageParts: Seq[String],
   private val modulePackageParts: Seq[String],
   definitionName: Option[String],
-  selectionName: Option[String],
-  isEnum: Boolean
+  selectionName: Option[String]
 ) {
   import ScalaDefinitionCoordinates.*
-  
+
   def withSelectionName(selectionName: Option[String]): ScalaDefinitionCoordinates =
     copy(selectionName = selectionName)
 
@@ -91,8 +90,7 @@ object ScalaDefinitionCoordinates {
     providerPackageParts: Seq[String],
     modulePackageParts: Seq[String],
     definitionName: Option[String],
-    selectionName: Option[String] = None,
-    isEnum: Boolean = false // FIXME: refactor to use sealed trait
+    selectionName: Option[String] = None
   ): ScalaDefinitionCoordinates = {
     if definitionName.map(_.isBlank).getOrElse(false)
     then throw ScalaDefinitionCoordinatesError(s"Cannot create ScalaDefinitionCoordinates with blank definitionName: $definitionName")
@@ -100,8 +98,7 @@ object ScalaDefinitionCoordinates {
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
       definitionName = definitionName,
-      selectionName = selectionName,
-      isEnum = isEnum
+      selectionName = selectionName
     )
   }
 }
