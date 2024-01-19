@@ -43,7 +43,7 @@ To start your adventure with infrastructure-as-code with Scala follow these step
     mkdir besom-demo && cd besom-demo
     ```
     ```bash
-    pulumi new https://github.com/VirtusLab/besom/tree/develop/templates/aws
+    pulumi new https://github.com/VirtusLab/besom/tree/v0.1.0-examples/templates/aws
     ```
 
 5. **Deploy to the Cloud**:
