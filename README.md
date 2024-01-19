@@ -16,7 +16,7 @@ using the Scala programming language. Scala support is currently in **Public Bet
 
 * **[Besom Docs](https://virtuslab.github.io/besom/)**: Learn about Besom concepts, follow user-guides, and consult the reference documentation.
 
-* **[Examples](./examples)**: Browse Scala examples across many clouds and scenarios including containers, serverless,
+* **[Examples](https://github.com/VirtusLab/besom/tree/v0.1.0-examples/examples)**: Browse Scala examples across many clouds and scenarios including containers, serverless,
   and infrastructure.
 
 ## <a name="getting-started"></a>Getting Started
@@ -58,7 +58,7 @@ using the Scala programming language. Scala support is currently in **Public Bet
     mkdir besom-demo && cd besom-demo
     ```
     ```bash
-    pulumi new https://github.com/VirtusLab/besom/tree/develop/templates/aws
+    pulumi new https://github.com/VirtusLab/besom/tree/v0.1.0-examples/templates/aws
     ```
 
 5. **Deploy to the Cloud**:
@@ -94,7 +94,7 @@ using the Scala programming language. Scala support is currently in **Public Bet
 To learn more, head over to 
 [virtuslab.github.io/besom](https://virtuslab.github.io/besom/) for much more information, including
 [tutorial](https://virtuslab.github.io/besom/docs/tutorial),
-[examples](./examples),
+[examples](https://github.com/VirtusLab/besom/tree/v0.1.0-examples/examples),
 and [architecture and programming model concepts](https://virtuslab.github.io/besom/docs/architecture).
 
 ## Explaining the project structure
