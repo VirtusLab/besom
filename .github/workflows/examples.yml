@@ -13,12 +13,13 @@ on:
 env:
   PULUMI_CONFIG_PASSPHRASE: 'passphrase'
   PULUMI_SKIP_UPDATE_CHECK: 'true'
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   preview:
     if: "! github.event.pull_request.head.repo.fork"
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: extractions/setup-just@v1
@@ -32,11 +33,13 @@ jobs:
         with:
           jvm: 11
           power: true
+      - name: Prepare dependencies
+        run: |-
+          just publish-local-json publish-local-codegen publish-local-sdk install-language-plugin publish-local-compiler-plugin
+          just cli packages generate  aws docker gcp kubernetes random tls
+          just cli packages publish-local aws docker gcp kubernetes random tls
       - name: Login in to pulumi
         run: pulumi login --local
-      - name: Install language plugin
-        run: |- 
-          pulumi plugin install language scala --server github://api.github.com/VirtusLab/besom
       - name: Test examples
         env:
           AWS_EC2_METADATA_DISABLED: true

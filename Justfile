@@ -263,14 +263,15 @@ test-codegen:
 publish-local-codegen: test-codegen
 	scala-cli --power publish local codegen --project-version {{besom-version}} --suppress-experimental-feature-warning
 
+export-github-token:
+    export GITHUB_TOKEN=$(gh auth token)
+
 # Dowloads Pulumi Packages metadata for all providers in the registry
 get-metadata-all:
-	export GITHUB_TOKEN=$(gh auth token); \
 	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- packages metadata-all
 
 # Generates Scala SDKs for all providers in the registry
 generate-provider-all:
-	export GITHUB_TOKEN=$(gh auth token); \
 	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- packages generate-all
 
 # Publishes locally Scala SDKs for all providers in the registry
