@@ -157,18 +157,33 @@ object PulumiDefinitionCoordinates {
     decapitalized
   }
 
-  private[codegen] def normalize(input: String): String =
-    val head = input.head.toUpper
-    val it   = input.tail.iterator.buffered
-    val tail =
-      for c <- it
-      yield
-        if it.headOption.map(_.isUpper).getOrElse(true)
-        then c.toLower
-        else c
+  private[codegen] def words(input: String): List[String] =
+    import scala.collection.mutable
+    val words = mutable.ArrayBuffer.empty[mutable.ArrayBuffer[Char]]
+    for (c, i) <- input.zipWithIndex do
+      def isWithinBounds(j: Int) = j >= 0 && j < input.length
+      val prev                   = if isWithinBounds(i - 1) then Some(input(i - 1)) else None
+      val next                   = if isWithinBounds(i + 1) then Some(input(i + 1)) else None
 
-    (head +: tail.toArray).mkString
-  end normalize
+      (prev.map(_.isUpper), c.isUpper, next.map(_.isUpper)) match
+        // word boundary - exclusive
+        case _ if c.isWhitespace || !c.isLetterOrDigit /* special character */ =>
+          words += mutable.ArrayBuffer.empty // new word
+        // word boundary - inclusive
+        case (None, _, _) /* first letter */
+            | (Some(false), true, Some(false)) /* down-up-down */
+            | (Some(true), true, Some(false)) /* up-up-down */
+            | (Some(false), true, Some(true)) /* down-up-up */
+            | (Some(false), true, None) /* down-up-nil */ =>
+          words += mutable.ArrayBuffer.empty // new word
+          words(words.length - 1) += c // append to the new word
+        // word continuation
+        case _ => words(words.length - 1) += c // append to the current word
+    end for
+    words.filter(_.nonEmpty).map(_.mkString).toList
+  end words
+
+  private[codegen] def normalize(input: String): String = words(input).map(_.toLowerCase.capitalize).mkString
 
   @throws[PulumiDefinitionCoordinatesError]("if 'definitionName' is empty")
   def apply(

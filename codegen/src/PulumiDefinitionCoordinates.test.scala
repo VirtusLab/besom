@@ -8,6 +8,7 @@ import scala.meta.dialects.Scala33
 
 //noinspection ScalaFileName,TypeAnnotation
 class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
+
   import besom.codegen.metaschema.{Java, Language, Meta, PulumiPackage}
 
   implicit val logger: Logger = new Logger
@@ -57,12 +58,14 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
     args: FunctionClassExpectations.FunctionClassExpectationsArgs,
     result: FunctionClassExpectations.FunctionClassExpectationsResult
   ) extends Expectations
+
   object FunctionClassExpectations {
     case class FunctionClassExpectationsArgs(
       fullPackageName: String,
       fullyQualifiedTypeRef: String,
       filePath: String
     )
+
     case class FunctionClassExpectationsResult(
       fullPackageName: String,
       fullyQualifiedTypeRef: String,
@@ -214,7 +217,7 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
   tests.foreach { data =>
     test(s"Type: ${data.typeToken}".withTags(data.tags)) {
       implicit val providerConfig: ProviderConfig = Config.providersConfigs(data.schemaName)
-      val coords = PulumiToken(data.typeToken).toCoordinates(data.pulumiPackage)
+      val coords                                  = PulumiToken(data.typeToken).toCoordinates(data.pulumiPackage)
 
       data.expected.foreach {
         case ResourceClassExpectations(fullPackageName, fullyQualifiedTypeRef, filePath, asArgsType) =>
@@ -248,18 +251,52 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
       }
     }
   }
+}
+
+class PulumiDefinitionCoordinatesPrivateTest extends munit.FunSuite {
+
+  test("split string to words") {
+    val testCases = Map(
+      "" -> List(),
+      " " -> List(),
+      "A" -> List("A"),
+      "AbC" -> List("Ab", "C"),
+      "ABc" -> List("A", "Bc"),
+      "ID" -> List("ID"),
+      "URL" -> List("URL"),
+      "JSON" -> List("JSON"),
+      "JSONPatch" -> List("JSON", "Patch"),
+      "URLParser" -> List("URL", "Parser"),
+      "camelCase" -> List("camel", "Case"),
+      "PascalCase" -> List("Pascal", "Case"),
+      "lowercase" -> List("lowercase"),
+      "UPPERCASE" -> List("UPPERCASE"),
+      "ListenerXForwardedForConfig" -> List("Listener", "X", "Forwarded", "For", "Config"),
+      "BucketIAMMember" -> List("Bucket", "IAM", "Member"),
+      "Json2Parser" -> List("Json2", "Parser"),
+      "My-Friend.Bob" -> List("My", "Friend", "Bob"),
+      "a-glad-dayTime" -> List("a", "glad", "day", "Time")
+    )
+
+    for ((input, expected) <- testCases) {
+      assertEquals(PulumiDefinitionCoordinates.words(input), expected)
+    }
+  }
 
   test("normalize strings correctly") {
     val testCases = Map(
       "A" -> "A",
       "ID" -> "Id",
+      "URL" -> "Url",
+      "JSON" -> "Json",
       "JSONPatch" -> "JsonPatch",
       "URLParser" -> "UrlParser",
       "camelCase" -> "CamelCase",
       "PascalCase" -> "PascalCase",
       "lowercase" -> "Lowercase",
       "UPPERCASE" -> "Uppercase",
-      "ListenerXForwardedForConfig" -> "ListenerxForwardedForConfig",
+      "ListenerXForwardedForConfig" -> "ListenerXForwardedForConfig",
+      "BucketIAMMember" -> "BucketIamMember"
     )
 
     for ((input, expected) <- testCases) {
