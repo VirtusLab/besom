@@ -19,22 +19,20 @@ trait FutureMonadModule extends BesomModule:
   *
   * Most notable methods exposed by [[besom.Pulumi]] are:
   *   - [[besom.internal.BesomModule.run]] - the Pulumi program function
-  *   - [[besom.internal.BesomSyntax.exports]] - the Pulumi Stack outputs
   *   - [[besom.internal.BesomSyntax.config]] - configuration and secrets
   *   - [[besom.internal.BesomSyntax.log]] - all your logging needs
   *
-  * Inside `Pulumi.run` block you can use all methods without `Pulumi.` prefix. All functions that belong to Besom
-  * program but are defined outside the `Pulumi.run` block should have the following using clause: `(using Context)` or
-  * `(using besom.Context)` using a fully qualified name of the type.
+  * Inside `Pulumi.run` block you can use all methods without `Pulumi.` prefix. All functions that belong to Besom program but are defined
+  * outside the `Pulumi.run` block should have the following using clause: `(using Context)` or `(using besom.Context)` using a fully
+  * qualified name of the type.
   *
   * The hello world example:
   * {{{
   * import besom.*
   *
   * @main def main = Pulumi.run {
-  *   for
-  *     _ <- log.warn("Nothing's here yet, it's waiting for you to write some code!")
-  *   yield exports()
+  *   val message = log.warn("Nothing's here yet, it's waiting for you to write some code!")
+  *   Stack(dependsOn = message)
   * }
   * }}}
   */

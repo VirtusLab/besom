@@ -118,23 +118,14 @@ import besom.api.gcp.storage.inputs.*
       portRange = "80",
       loadBalancingScheme = "EXTERNAL_MANAGED", // will use envoy-based Application Load Balancer
       target = proxy.id,
-      ipAddress = ip.address,
+      ipAddress = ip.address
     )
   )
 
-  for
-    staticWebsite <- staticWebsite
-    _             <- indexPage
-    _             <- errorPage
-    _             <- publicRule
-    _             <- ip
-    _             <- backendBucket
-    _             <- urlPaths
-    _             <- proxy
-    _             <- forwardingRule
-  yield exports(
-    bucketName = staticWebsite.name,
-    bucketUrl = staticWebsite.url,
-    websiteIp = ip.address,
-  )
+  Stack(staticWebsite, indexPage, errorPage, publicRule, ip, backendBucket, urlPaths, proxy, forwardingRule)
+    .exports(
+      bucketName = staticWebsite.name,
+      bucketUrl = staticWebsite.url,
+      websiteIp = ip.address
+    )
 }

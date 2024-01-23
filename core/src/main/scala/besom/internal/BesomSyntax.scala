@@ -71,25 +71,6 @@ trait BesomSyntax:
     */
   def pulumiStack(using ctx: Context): NonEmptyString = ctx.pulumiStack
 
-  /** The [[Export]] instance that exposes [[besom.aliases.Output]] instances as Pulumi Stack outputs.
-    *
-    * All arguments of `exports(...)` must be explicitly named, because [[besom.internal.Exports]] are dynamic, e.g.:
-    *
-    * {{{
-    * import besom.*
-    * import besom.api.aws
-    *
-    * @main def run = Pulumi.run {
-    *   for
-    *     bucket <- aws.s3.Bucket("my-bucket")
-    *   yield exports(
-    *     bucketUrl = bucket.websiteEndpoint
-    *   )
-    * }
-    * }}}
-    */
-  val exports: Export.type = Export
-
   /** Creates a new component resource.
     * @param name
     *   a unique resource name for this component
@@ -134,3 +115,4 @@ trait BesomSyntax:
         }
         .map(OutputData(_))
     }
+end BesomSyntax

@@ -18,10 +18,8 @@ import besom.api.aws.secretsmanager.SecretVersionArgs
     )
   )
 
-  for
-    secret <- secret
-    _      <- secretVersion
-  yield exports(
-    secretId = secret.id // Export secret ID (in this case the ARN)
-  )
+  Stack(secretVersion)
+    .exports(
+      secretId = secret.id // Export secret ID (in this case the ARN)
+    )
 }

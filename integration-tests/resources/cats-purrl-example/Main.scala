@@ -13,6 +13,7 @@ def main(): Unit = Pulumi.run {
     IO.canceled
   }
 
+  // verifying cancelation semantics - we ignore cancelation
   val cancelledIOOutput2 = Output.eval(IO("Don't cancel me")).flatMap { _ =>
     for
       fib <- (IO.sleep(3.seconds) *> IO("A valid result")).uncancelable.start
@@ -26,7 +27,7 @@ def main(): Unit = Pulumi.run {
     yield res
   }
 
-  def purrlCommand(url: String) = Purrl(
+  def purrlCommand(url: Output[String]) = Purrl(
     name = "purrl",
     args = PurrlArgs(
       name = "purrl",
@@ -46,13 +47,10 @@ def main(): Unit = Pulumi.run {
     )
   )
 
-  for
-    urlValue <- url
-    _        <- cancelledIOOutput1
-    out2     <- cancelledIOOutput2
-    _ = assert(out2 == "A valid result")
-    command <- purrlCommand(urlValue)
-  yield Pulumi.exports(
-    purrlCommand = command.response
+  Stack(
+    cancelledIOOutput1,
+    cancelledIOOutput2.map(out => assert(out == "A valid result"))
+  ).exports(
+    purrlCommand = purrlCommand(url).response
   )
 }

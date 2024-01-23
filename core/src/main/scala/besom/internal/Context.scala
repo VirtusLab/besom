@@ -84,7 +84,7 @@ class ContextImpl(
   private[besom] val engine: Engine,
   private[besom] val taskTracker: TaskTracker,
   private[besom] val resources: Resources,
-  private val stackPromise: Promise[Stack]
+  private val stackPromise: Promise[StackResource]
 ) extends Context
     with TaskTracker:
 
@@ -103,7 +103,7 @@ class ContextImpl(
     }
 
   override private[besom] def initializeStack: Result[Unit] =
-    Stack.initializeStack(runInfo)(using this).flatMap(stackPromise.fulfill)
+    StackResource.initializeStack(runInfo)(using this).flatMap(stackPromise.fulfill)
 
   override private[besom] def registerComponentResource(
     name: NonEmptyString,
@@ -184,7 +184,7 @@ object Context:
     engine: Engine,
     taskTracker: TaskTracker,
     resources: Resources,
-    stackPromise: Promise[Stack]
+    stackPromise: Promise[StackResource]
   ): Context =
     new ContextImpl(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, stackPromise)
 
@@ -199,7 +199,7 @@ object Context:
   ): Result[Context] =
     for
       resources    <- Resources()
-      stackPromise <- Promise[Stack]()
+      stackPromise <- Promise[StackResource]()
     yield apply(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, stackPromise)
 
   def apply(

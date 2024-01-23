@@ -31,7 +31,7 @@ import besom.json.*
   })
   val structured = sourceStack.flatMap(_.getOutput("structured"))
 
-  val r =
+  val sanityCheck = Output {
     for
       sku <- sshKeyUrn.getData.map(_.secret)
       v1  <- value1.getData.map(_.secret)
@@ -42,10 +42,9 @@ import besom.json.*
       assert(!v1, "value1 should not be a secret")
       assert(!v2, "value2 should not be a secret")
       assert(s, "structured should be a secret")
+  }
 
-  for {
-    _ <- Output(r)
-  } yield exports(
+  Stack(Output(sanityCheck)).exports(
     sshKeyUrn = sshKeyUrn,
     value1 = value1,
     value2 = value2,

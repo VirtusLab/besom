@@ -39,7 +39,7 @@ To be able to do that, the API has to support **pure, lazy, functional evaluatio
 lowest common denominator. 
 This means that there are some **small differences** in comparison to other Pulumi SDKs that are idiomatic to programs 
 written in functional style, to name two: 
-- Stack exports are the return value of the main function of the program, 
+- Stack along with its exports are the return value of the main function of the program, 
 - smaller chunks of the program have to be composed into the main flow of the program to be executed. 
 
 #### Next steps:

@@ -74,11 +74,7 @@ import docker.inputs.*
     )
   )
 
-  for
-    _ <- redisImage
-    _ <- redisContainer
-    _ <- appContainer
-  yield exports(
+  Stack(redisImage, redisContainer, appContainer).exports(
     redis = p"redis://${redisHost}:${redisPort}",
     url = p"http://localhost:${appPort}"
   )

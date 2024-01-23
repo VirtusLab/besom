@@ -1,6 +1,5 @@
 package besom.internal
 
-import com.google.protobuf.struct.*
 import besom.internal.logging.{LocalBesomLogger => logger, BesomLogger}
 
 /** An abstract effect Besom module, which can be implemented for different effect types.
@@ -20,9 +19,9 @@ trait EffectBesomModule extends BesomSyntax:
 
   /** Run a [[besom.Pulumi]] program in the Besom [[besom.Context]] and export Stack outputs.
     *
-    * Inside `Pulumi.run` block you can use all methods without `Pulumi.` prefix. All functions that belong to Besom program but are defined
-    * outside the `Pulumi.run` block should have the following using clause: `(using Context)` or `(using besom.Context)` using a fully
-    * qualified name of the type.
+    * Inside `Pulumi.run` block you can use all methods without `Pulumi.` prefix. All functions that belong to Besom
+    * program but are defined outside the `Pulumi.run` block should have the following using clause: `(using Context)`
+    * or `(using besom.Context)` using a fully qualified name of the type.
     *
     * Example:
     * {{{
@@ -30,36 +29,35 @@ trait EffectBesomModule extends BesomSyntax:
     * import besom.api.aws
     *
     * @main def run = Pulumi.run {
-    *   for
-    *     bucket <- aws.s3.Bucket("my-bucket")
-    *   yield exports(
-    *     bucketUrl = bucket.websiteEndpoint
-    *   )
+    *   val bucket = aws.s3.Bucket("my-bucket")
+    *
+    *   Stack.exports(bucketUrl = bucket.websiteEndpoint)
     * }
     * }}}
     *
     * @param program
     *   the program to run
     */
-  def run(program: Context ?=> Output[Exports]): Unit =
+  def run(program: Context ?=> Stack): Unit =
     val everything: Result[Unit] = Result.scoped {
       for
-        _              <- BesomLogger.setupLogger()
-        runInfo        <- RunInfo.fromEnv
-        _              <- logger.debug(s"Besom starting up in ${if runInfo.dryRun then "dry run" else "live"} mode.")
-        taskTracker    <- TaskTracker()
-        monitor        <- Result.resource(Monitor(runInfo.monitorAddress))(_.close())
-        engine         <- Result.resource(Engine(runInfo.engineAddress))(_.close())
-        _              <- logger.debug(s"Established connections to monitor and engine, spawning streaming pulumi logger.")
-        logger         <- Result.resource(BesomLogger(engine, taskTracker))(_.close())
-        config         <- Config.forProject(runInfo.project)
+        _           <- BesomLogger.setupLogger()
+        runInfo     <- RunInfo.fromEnv
+        _           <- logger.debug(s"Besom starting up in ${if runInfo.dryRun then "dry run" else "live"} mode.")
+        taskTracker <- TaskTracker()
+        monitor     <- Result.resource(Monitor(runInfo.monitorAddress))(_.close())
+        engine      <- Result.resource(Engine(runInfo.engineAddress))(_.close())
+        _           <- logger.debug(s"Established connections to monitor and engine, spawning streaming pulumi logger.")
+        logger      <- Result.resource(BesomLogger(engine, taskTracker))(_.close())
+        config      <- Config.forProject(runInfo.project)
         featureSupport <- FeatureSupport(monitor)
-        _              <- logger.trace(s"Environment:\n${sys.env.toSeq.sortBy(_._1).map((k, v) => s"$k: $v").mkString("\n")}")
-        _              <- logger.debug(s"Resolved feature support, spawning context and executing user program.")
-        ctx            <- Context(runInfo, taskTracker, monitor, engine, logger, featureSupport, config)
-        userOutputs    <- program(using ctx).map(_.toResult).getValueOrElse(Result.pure(Struct()))
-        _              <- Stack.registerStackOutputs(runInfo, userOutputs)(using ctx)
-        _              <- ctx.waitForAllTasks
+        _     <- logger.trace(s"Environment:\n${sys.env.toSeq.sortBy(_._1).map((k, v) => s"$k: $v").mkString("\n")}")
+        _     <- logger.debug(s"Resolved feature support, spawning context and executing user program.")
+        ctx   <- Context(runInfo, taskTracker, monitor, engine, logger, featureSupport, config)
+        stack <- Result.defer(program(using ctx)) // for formatting ffs
+        _     <- stack.evaluateDependencies(using ctx)
+        _     <- StackResource.registerStackOutputs(runInfo, stack.getExports.result)(using ctx)
+        _     <- ctx.waitForAllTasks
       yield ()
     }
 

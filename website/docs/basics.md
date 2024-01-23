@@ -72,7 +72,7 @@ runtime: scala
 #### Programs
 
 A Pulumi program, written in a general-purpose programming language, is a collection of [resources](#resources)
-that are deployed to a [stack](#stacks).
+that are deployed to form a [stack](#stacks).
 
 A minimal Besom program consists of:
 
@@ -88,9 +88,9 @@ A minimal Besom program consists of:
     import besom.*
     
     @main def main = Pulumi.run {
-      for 
-        _ <- log.warn("Nothing's here yet, it's waiting for you to write some code!")
-      yield exports()
+      Stack(
+        log.warn("Nothing's here yet, it's waiting for you to write some code!")
+      )
     }
     ```
 
@@ -114,6 +114,8 @@ named [`Pulumi.<stackname>.yaml`](https://www.pulumi.com/docs/concepts/projects/
 in the root of the [project](#projects) directory that contains the [configuration](#configuration-and-secrets) specific to this
 stack.
 
+The stack is represented in a Besom program by a `Stack` datatype that user is expected to return from the main `Pulumi.run` function. `Stack` is used to mark resources or values that stack depends on or that user wants to export as stack outputs. You can return a `Stack` that consists of exports only (for instance when everything you depend on is composed into a thing that you export in the final step) using `Stack.export(x = a, y = b)` or a `Stack` that has only dependencies when you don't want to export anything using `Stack(x, y)`. You can also use some resources and export others using `Stack(a, b).export(x = i, y = j)` syntax. 
+
 :::tip
 The recommended practice is to **check stack files into source control** as a means of collaboration.<br/>
 Since secret values are encrypted, it is safe to check in these stack settings.
@@ -134,7 +136,7 @@ Stacks can export values as [Stack Outputs](https://www.pulumi.com/docs/concepts
 These outputs are shown by Pulumi CLI commands, and are displayed in the Pulumi Cloud, and can be accessed
 programmatically using [Stack References](#stack-references).
 
-To export values from a stack in Besom, use the [`Pulumi.exports`](exports.md) function in your program.
+To export values from a stack in Besom, use the [`Stack.exports`](exports.md) function in your program to assign exported values to the final `Stack` value.
 
 ##### Stack References
 

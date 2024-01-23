@@ -81,13 +81,9 @@ val siteDir = "www"
     }
   }
 
-  for
-    bucket <- siteBucket
-    _      <- siteBucketPublicAccessBlock
-    _      <- siteBucketPolicy
-    _      <- uploads
-  yield exports(
-    bucketName = bucket.bucket,
-    websiteUrl = bucket.websiteEndpoint
-  )
+  Stack(siteBucket, siteBucketPublicAccessBlock, siteBucketPolicy, uploads)
+    .exports(
+      bucketName = siteBucket.bucket,
+      websiteUrl = siteBucket.websiteEndpoint
+    )
 }

@@ -21,19 +21,17 @@ import besom.*
 
 // functions used in besom that are outside of `Pulumi.run` 
 // have to have `(using Context)` parameter clause
-def createAComponent(name: String)(using Context) =
+def deployPostgres(dbName: String)(using Context): Output[Postgres] =
 ...
 
 // `Pulumi.run` <- the main entry point to a besom program
 @main def run = Pulumi.run {
   ...
-  val component = createAComponent("Stanley")
+  val component = deployPostgres("my-db")
   ...
 
-  for
-    _ <- component
-  yield Pulumi.exports(
-    aComponentUrn = component.urn
+  Stack.exports(
+    aComponentUrn = component.map(_.urn)
   )
 }
 ```

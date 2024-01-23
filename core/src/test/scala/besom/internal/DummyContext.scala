@@ -36,7 +36,7 @@ object DummyContext:
   ): Result[Context] =
     for
       taskTracker  <- TaskTracker()
-      stackPromise <- Promise[Stack]()
+      stackPromise <- Promise[StackResource]()
       logger       <- BesomLogger.local()
       config       <- Config(runInfo.project, isProjectName = true, configMap = configMap, configSecretKeys = configSecretKeys)
       resources    <- Resources()

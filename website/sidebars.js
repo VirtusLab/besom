@@ -74,6 +74,11 @@ const sidebars = {
       id: 'templates',
       label: 'Pulumi templates',
     },
+    {
+      type: 'doc',
+      id: 'changelog',
+      label: 'Changelog',
+    },
     // {
     //   type: 'doc',
     //   id: 'intro',

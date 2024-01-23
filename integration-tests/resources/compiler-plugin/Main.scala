@@ -8,10 +8,5 @@ def main = Pulumi.run {
     s"Joe ${name}"
   )
 
-  for
-    _ <- stringOut
-  yield
-    Pulumi.exports(
-      stringOut = stringOut
-    )
+  Stack.exports(stringOut = stringOut)
 }

@@ -33,6 +33,8 @@ object aliases:
   object StackReferenceArgs extends besom.internal.StackReferenceArgsFactory
   type StackReferenceResourceOptions = besom.internal.StackReferenceResourceOptions
   object StackReferenceResourceOptions extends besom.internal.StackReferenceResourceOptionsFactory
+  type Stack = besom.internal.Stack
+  object Stack extends besom.internal.StackFactory
 
   export besom.internal.InvokeOptions
 end aliases

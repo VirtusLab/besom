@@ -20,17 +20,15 @@ import besom.*
 
   val foo = config.requireObject[Foo]("foo")
 
-  Output(
-    exports(
-      name = name,
-      hush = hush,
-      notThere = notThere,
-      codeSecret = codeSecret,
-      viral1 = viral1,
-      viral2 = viral2,
-      viral3 = viral3,
-      names = names,
-      foo = foo
-    )
+  Stack.exports(
+    name = name,
+    hush = hush,
+    notThere = notThere,
+    codeSecret = codeSecret,
+    viral1 = viral1,
+    viral2 = viral2,
+    viral3 = viral3,
+    names = names,
+    foo = foo
   )
 }
