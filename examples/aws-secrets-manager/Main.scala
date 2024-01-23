@@ -4,7 +4,7 @@ import besom.api.aws.secretsmanager.SecretVersionArgs
 
 @main def main = Pulumi.run {
   // Get the Pulumi secret value
-  val mySecret = config.getSecret("aws-secrets-manager:mySecret")
+  val mySecret = config.requireString("aws-secrets-manager:mySecret")
 
   // Create an AWS secret
   val secret = aws.secretsmanager.Secret("mySecret")

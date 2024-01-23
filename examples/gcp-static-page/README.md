@@ -22,7 +22,7 @@ These values are indicated with `***`.
 2. Set the required configuration variables for this program:
 
     ```bash
-    pulumi config set gcp:project [your-gcp-project-here]
+    pulumi config set gcp:project $(gcloud config get-value project)
     pulumi config set gcp:zone us-west1-a # any valid GCP zone here
     ```
 

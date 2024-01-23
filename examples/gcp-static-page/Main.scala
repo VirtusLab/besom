@@ -52,9 +52,9 @@ import besom.api.gcp.storage.inputs.*
   )
 
   // Make bucket public by granting all users read access
-  val publicRule = gcp.storage.BucketIAMMember(
+  val publicRule = gcp.storage.BucketIamMember(
     "allUsers",
-    BucketIAMMemberArgs(
+    BucketIamMemberArgs(
       bucket = staticWebsite.name,
       role = "roles/storage.objectViewer",
       member = "allUsers"
@@ -62,11 +62,12 @@ import besom.api.gcp.storage.inputs.*
   )
 
   // Create HTTP(s) proxy-based Layer 7 external Application Load Balancer resources
+  // please note that this is a global load balancer, not regional
 
-  // Reserve a public IP address that your audience uses to reach your load balancer
+  // Reserve a global public IP address that your audience uses to reach your global load balancer
   val ip = gcp.compute.GlobalAddress("website-ip")
 
-  // Setup load balancer backend that understands buckets
+  // Setup global load balancer backend that understands buckets (static content)
   val backendBucket = gcp.compute.BackendBucket(
     "website-backend",
     BackendBucketArgs(
@@ -76,22 +77,22 @@ import besom.api.gcp.storage.inputs.*
   )
 
   // Define requests routing rules to map host and path of an incoming URL to a load balancer backend
-  val paths = gcp.compute.URLMap(
+  val urlPaths = gcp.compute.UrlMap(
     "website-urlmap",
-    URLMapArgs(
+    UrlMapArgs(
       defaultService = backendBucket.id,
       hostRules = List(
-        URLMapHostRuleArgs(
+        UrlMapHostRuleArgs(
           hosts = List("*"),
           pathMatcher = "allpaths"
         )
       ),
       pathMatchers = List(
-        URLMapPathMatcherArgs(
+        UrlMapPathMatcherArgs(
           name = "allpaths",
           defaultService = backendBucket.id,
           pathRules = List(
-            URLMapPathMatcherPathRuleArgs(
+            UrlMapPathMatcherPathRuleArgs(
               paths = List("/*"),
               service = backendBucket.id
             )
@@ -105,14 +106,14 @@ import besom.api.gcp.storage.inputs.*
   val proxy = gcp.compute.TargetHttpProxy(
     "website-proxy",
     TargetHttpProxyArgs(
-      urlMap = paths.id
+      urlMap = urlPaths.id
     )
   )
 
   // Finally create a global forwarding rule to map the IP & port our target proxy
-  val forwardingRule = gcp.compute.ForwardingRule(
+  val forwardingRule = gcp.compute.GlobalForwardingRule(
     "website-http-forwarding-rule",
-    ForwardingRuleArgs(
+    GlobalForwardingRuleArgs(
       ipProtocol = "TCP",
       portRange = "80",
       loadBalancingScheme = "EXTERNAL_MANAGED", // will use envoy-based Application Load Balancer
@@ -128,7 +129,7 @@ import besom.api.gcp.storage.inputs.*
     _             <- publicRule
     _             <- ip
     _             <- backendBucket
-    _             <- paths
+    _             <- urlPaths
     _             <- proxy
     _             <- forwardingRule
   yield exports(

@@ -1,6 +1,6 @@
 import besom.*
 import besom.api.docker
-import docker.inputs._
+import docker.inputs.*
 
 @main def main = Pulumi.run {
   // Set defaults for redis
@@ -43,18 +43,6 @@ import docker.inputs._
       )
     )
   )
-
-  // Build image from local app directory
-/*  val appImage = docker.Image(
-    "appImage",
-    docker.ImageArgs(
-      build = DockerBuildArgs(
-        context = "../app"
-      ),
-      imageName = "app",
-      skipPush = true
-    )
-  )*/
 
   // Set external port for app url
   val appPort = 3000

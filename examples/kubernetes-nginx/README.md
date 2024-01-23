@@ -30,8 +30,8 @@ These values are indicated with `***`.
     pulumi up
     ```
 
-   After a couple of minutes, your deployment will be ready, then you can run commands like `kubectl get pods`
-   to see the application's resources.
+   After a couple of minutes, your deployment will be ready, Pulumi will wait for it to become ready.
+   You can run commands like `kubectl get pods` to see the application's resources.
 
    The stack's replica count is configurable. By default, it will scale up to three instances, but we can easily change
    that to five, by running the `pulumi config` command followed by another `pulumi up`:
