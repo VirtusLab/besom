@@ -1,76 +1,101 @@
-//> using scala 3.3.1
-
-//> using dep com.lihaoyi::os-lib:0.9.2
+package besom.scripts
 
 import scala.sys.exit
 import scala.util.CommandLineParser.FromString
 import scala.util.matching.Regex
 
-@main def main(command: String, other: String*): Unit =
-  if os.pwd.last != "besom" then
-    println("You have to run this command from besom project root directory!")
-    sys.exit(1)
+object Version:
+  def main(args: String*): Unit =
+    val cwd               = besomDir
+    lazy val besomVersion = os.read(cwd / "version.txt").trim
 
-  val besomVersion = os.read(os.pwd / "version.txt").trim
+    lazy val besomDependencyPattern: Regex =
+      ("""^(//> using (?:test\.)?(?:dep|lib|plugin) +"?\S+::besom-)([^"]+)("?)$""").r
 
-  val besomDependencyPattern: Regex =
-    ("""^(//> using (?:test\.)?(?:dep|lib|plugin)[ ]+["]{0,1}org.virtuslab::besom-[a-z]+:(?:[0-9\.]+-core\.)?)[a-zA-Z0-9\.\-]+(["]{0,1})$""").r
+    val expectedFileNames = Vector("project.scala", "project-test.scala", "run.scala")
 
-  val expectedFileNames = Vector("project.scala", "project-test.scala", "run.scala")
+    lazy val projectFiles: Map[os.Path, String] =
+      println(s"Searching for project files in $cwd")
+      os.walk(cwd)
+        .filter(f => expectedFileNames.contains(f.last))
+        .filterNot(_.startsWith(cwd / ".out"))
+        .map((f: os.Path) => f -> os.read(f))
+        .toMap
 
-  val projectFiles: Map[os.Path, String] =
-    os.walk(os.pwd)
-      .filter(f => expectedFileNames.contains(f.last))
-      .filterNot(_.startsWith(os.pwd / ".out"))
-      .map((f: os.Path) => f -> os.read(f))
-      .toMap
+    def changeVersion(version: String, newBesomVersion: String, packageVersion: String => Option[String] = _ => None): String =
+      version match
+        case s"$a:$b-core.$_" => s"$a:${packageVersion(a).getOrElse(b)}-core.$newBesomVersion"
+        case s"$a:$_"         => s"$a:$newBesomVersion"
+    end changeVersion
 
-  command match
-    case "show" =>
-      projectFiles
-        .foreachEntry { case (f, content) =>
-          content.linesIterator.zipWithIndex.foreach { case (line, index) =>
-            if besomDependencyPattern.matches(line) then
-              println(s"$f:$index:\n$line\n")
-          }
-        }
-    case "bump" =>
-      val newBesomVersion =
-        if other.isDefinedAt(0) then other.toVector(0)
-        else {
-          println("You have to provide new besom version as the second argument.")
-          sys.exit(1)
-        }
-
-      println(s"Bumping Besom version from '$besomVersion' to '$newBesomVersion'")
-
-      projectFiles
-        .collect { case (path, content) if content.linesIterator.exists(besomDependencyPattern.matches) => path -> content }
-        .foreachEntry { case (path, content) =>
-          val newContent = content.linesIterator
-            .map {
-              case besomDependencyPattern(prefix, suffix) => prefix + newBesomVersion + suffix
-              case line                                   => line
+    args match
+      case "show" :: Nil =>
+        println(s"Showing all Besom dependencies")
+        projectFiles
+          .foreachEntry { case (f, content) =>
+            content.linesIterator.zipWithIndex.foreach { case (line, index) =>
+              line match
+                case besomDependencyPattern(prefix, version, suffix) =>
+                  val changedLine = prefix + changeVersion(version, besomVersion) + suffix
+                  println(s"$f:$index:\n$changedLine\n")
+                case _ => // ignore
             }
-            .mkString("\n") + "\n"
+          }
+      case "bump" :: newBesomVersion :: Nil =>
+        println(s"Bumping Besom core version from '$besomVersion' to '$newBesomVersion'")
+        projectFiles
+          .collect { case (path, content) if content.linesIterator.exists(besomDependencyPattern.matches) => path -> content }
+          .foreachEntry { case (path, content) =>
+            val newContent = content.linesIterator
+              .map {
+                case besomDependencyPattern(prefix, version, suffix) =>
+                  prefix + changeVersion(version, besomVersion) + suffix
+                case line => line // pass through
+              }
+              .mkString("\n") + "\n"
+            os.write.over(path, newContent)
+            println(s"Updated $path")
+          }
 
-          os.write.over(path, newContent)
-          println(s"Updated $path")
-        }
+        os.write.over(cwd / "version.txt", newBesomVersion)
+        println(s"Updated version.txt")
+      case "update" :: Nil =>
+        println(s"Bumping Besom packages version to latest")
+        val latestPackages = latestPackageVersions()
+        projectFiles
+          .collect { case (path, content) if content.linesIterator.exists(besomDependencyPattern.matches) => path -> content }
+          .foreachEntry { case (path, content) =>
+            val newContent = content.linesIterator
+              .map {
+                case besomDependencyPattern(prefix, version, suffix) =>
+                  prefix + changeVersion(version, besomVersion, latestPackages.get) + suffix
+                case line => line // pass through
+              }
+              .mkString("\n") + "\n"
+            os.write.over(path, newContent)
+            println(s"Updated $path")
+          }
+      case _ =>
+        println(
+          s"""Usage: version <command>
+           |
+           |Commands:
+           |  show               - show all project.scala files with besom dependency
+           |  bump <new_version> - bump besom version in all project.scala files
+           |  update             - update all provider dependencies in project.scala files to latest
+           |""".stripMargin
+        )
+        exit(1)
+    end match
+  end main
 
-      // TODO: automatically update provider versions based on Packages.scala
-
-      os.write.over(os.pwd / "version.txt", newBesomVersion)
-      println(s"Updated version.txt")
-    case _ =>
-      println(
-        s"""Usage: version <command>
-         |
-         |Commands:
-         |  show               - show all project.scala files with besom dependency
-         |  bump <new_version> - bump besom version in all project.scala files
-         |""".stripMargin
-      )
-      exit(1)
-  end match
-end main
+  private def latestPackageVersions(): Map[String, String] =
+    println(s"Searching for latest package versions")
+    Packages
+      .readPackagesMetadata(Packages.packagesDir)
+      .map { metadata =>
+        metadata.name -> metadata.version.getOrElse(throw Exception("Package version must be present after generating")).asString
+      }
+      .toMap
+  end latestPackageVersions
+end Version

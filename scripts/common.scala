@@ -8,6 +8,12 @@ import java.util.concurrent.atomic.AtomicInteger
 import scala.annotation.tailrec
 import scala.concurrent.duration.Duration
 
+def besomDir: os.Path =
+  if os.pwd.last != "besom" then
+    println("You have to run this command from besom project root directory")
+    sys.exit(1)
+  os.pwd
+
 def git(command: Shellable*)(wd: os.Path): CommandResult =
   val cmd = os.proc("git", command)
   println(s"[${wd.last}] " + cmd.commandChunks.mkString(" "))
@@ -182,7 +188,7 @@ def withProgress[A](title: String, initialTotal: Int)(f: Progress ?=> A): A =
   def failure(lbl: String, start: Temporal, end: Temporal, error: String) = 
     failed.put(lbl, s"\r$lbl: ERROR [${elapsed(start, end)}]: $error")
 
-  def total(amount: Int): Unit = realTotal.set(amount)
+  def total(amount: Int): Unit = realTotal.getAndUpdate(Math.max(_, amount))
 
   def report(lbl: String, amount: Int, time: Temporal): Unit =
     val current = counter.addAndGet(amount)

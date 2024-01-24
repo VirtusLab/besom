@@ -93,7 +93,7 @@ import besom.api.tls
     "web-server-www",
     ec2.InstanceArgs(
       ami = ami.id,
-      instanceType = ec2.enums.InstanceType.T2_Micro.value, // t2.micro is available in the AWS free tier
+      instanceType = ec2.enums.InstanceType.T2_Micro, // t2.micro is available in the AWS free tier
       vpcSecurityGroupIds = List(securityGroup.id), // reference the group object above
       keyName = keyPair.keyName,
       userData = userData,
@@ -126,8 +126,5 @@ def getExternalIp(using Context): Output[String] = {
   val source = Source.fromURL("https://checkip.amazonaws.com")
   Using(source) { response => response.mkString.trim } match
     case scala.util.Success(ip) => Output(ip)
-    case scala.util.Failure(e)  => OutputThrow(new Exception("Failed to get external IP address", e))
+    case scala.util.Failure(e)  => Output.fail(Exception("Failed to get external IP address", e))
 }
-
-def OutputThrow[A](ex: Exception)(using Context): Output[A] =
-  Output(null).map(_ => throw ex)

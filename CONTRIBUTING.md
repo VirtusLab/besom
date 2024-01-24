@@ -120,30 +120,27 @@ therefore might need to manipulate `PATH` to prefer the local version.
 
 Publish locally and install necessary Besom packages:
 ```bash
+just publish-local-json
 just publish-local-core
+just publish-local-codegen
 just publish-local-compiler-plugin
 just install-language-plugin
 ```
 
 #### Publish additional SDKs
 
-You have to generate an SDK for a provider of your choice, to do that run:
-```bash
-just generate-provider ${provider_name} ${provider_version}
-just publish-local-provider ${provider_name} ${provider_version}
-```
-
-e.g.:
+You have to generate an SDK for a provider of your choice, use `just cli`, e.g.:
 
 ```bash
-just generate-provider kubernetes 4.2.0
-just publish-local-provider kubernetes 4.2.0
+export GITHUB_TOKEN=$(gh auth token)
+just cli packages generate kubernetes
+just cli packages publish-local kubernetes
 ```
 
 ### Working with published dependencies
 
 Release builds of the Besom SDK are published to Maven Central 
-as `org.virtuslab::besom-core:x.x.x`.
+as `org.virtuslab::besom-core:x.y.z` and `org.virtuslab::besom-[package]:a.b.c-core.x.y.z`.
 
 ### Adding examples and testing them locally
 

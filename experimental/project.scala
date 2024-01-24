@@ -1,5 +1,5 @@
 //> using scala "3.3.0"
 //> using plugin "org.virtuslab::besom-compiler-plugin:0.1.1-SNAPSHOT"
 //> using dep "org.virtuslab::besom-core:0.1.1-SNAPSHOT"
-//> using dep "org.virtuslab::besom-kubernetes:4.2.0-core.0.1.1-SNAPSHOT"
+//> using dep "org.virtuslab::besom-kubernetes:4.7.1-core.0.1.1-SNAPSHOT"
 //> using dep "io.github.iltotore::iron:2.1.0"

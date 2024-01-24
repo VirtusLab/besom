@@ -1,12 +1,3 @@
-//> using scala 3.3.1
-
-//> using dep com.lihaoyi::os-lib:0.9.3
-//> using dep com.lihaoyi::requests:0.8.0
-//> using dep com.lihaoyi::upickle:3.1.3
-//> using dep org.virtuslab::scala-yaml:0.0.8
-//> using dep org.virtuslab::besom-codegen:0.1.1-SNAPSHOT
-//> using file common.scala
-
 package besom.scripts
 
 import besom.codegen.Config.CodegenConfig
@@ -18,17 +9,33 @@ import scala.collection.mutable
 import scala.util.*
 import scala.util.control.NonFatal
 
-@main def run(args: String*): Unit =
-  val codegenDir      = os.pwd / ".out" / "codegen"
-  val packagesDir     = os.pwd / ".out" / "packages"
-  val publishLocalDir = os.pwd / ".out" / "publishLocal"
-  val publishMavenDir = os.pwd / ".out" / "publishMaven"
+//noinspection ScalaWeakerAccess,TypeAnnotation
+object Packages:
+  def main(args: String*): Unit =
+    args match
+      case "metadata-all" :: Nil => downloadPackagesMetadata(packagesDir)
+      case "metadata" :: tail => downloadPackagesMetadata(packagesDir, selected = tail)
+      case "generate-all" :: Nil => generateAll(packagesDir)
+      case "generate" :: tail => generateSelected(packagesDir, tail)
+      case "publish-local-all" :: Nil => publishLocalAll(generatedFile)
+      case "publish-local" :: tail => publishLocalSelected(generatedFile, tail)
+      case "publish-maven-all" :: Nil => publishMavenAll(generatedFile)
+      case "publish-maven" :: tail => publishMavenSelected(generatedFile, tail)
+      case _ => println(s"Unknown command: $args, expected one of: " +
+        s"metadata-all, metadata, generate-all, generate, publish-local-all, publish-local, publish-maven-all, publish-maven")
+  end main
 
-  val generatedFile      = codegenDir / "generated.json"
+  val cwd = besomDir
+  val codegenDir = cwd / ".out" / "codegen"
+  val packagesDir = cwd / ".out" / "packages"
+  val publishLocalDir = cwd / ".out" / "publishLocal"
+  val publishMavenDir = cwd / ".out" / "publishMaven"
+
+  val generatedFile = codegenDir / "generated.json"
   val publishedLocalFile = publishLocalDir / "published.json"
   val publishedMavenFile = publishMavenDir / "published.json"
 
-  val pluginDownloadProblemPackages = Vector(
+  private val pluginDownloadProblemPackages = Vector(
     "aws-miniflux", // lack of darwin/arm64 binary
     "aws-s3-replicated-bucket", // lack of darwin/arm64 binary
     "aws-quickstart-aurora-postgres", // lack of darwin/arm64 binary
@@ -43,9 +50,9 @@ import scala.util.control.NonFatal
     "packet" // deprecated, lack of darwin/arm64 binary
   )
 
-  val codegenProblemPackages = Vector()
+  private val codegenProblemPackages = Vector()
 
-  val compileProblemPackages = Vector(
+  private val compileProblemPackages = Vector(
     "azure-native", // takes too long to compile
     "alicloud", // schema error, ListenerXforwardedForConfig vs ListenerxForwardedForConfig
     "aws-iam", // id parameter, schema error - components should make this viable
@@ -55,26 +62,15 @@ import scala.util.control.NonFatal
     "rootly" // version confusion
   )
 
-  args match
-    case "metadata-all" :: Nil      => downloadPackagesMetadata(packagesDir)
-    case "metadata" :: tail         => downloadPackagesMetadata(packagesDir, selected = tail)
-    case "generate-all" :: Nil      => generateAll(packagesDir)
-    case "generate" :: tail         => generateSelected(packagesDir, tail)
-    case "publish-local-all" :: Nil => publishLocalAll(generatedFile)
-    case "publish-local" :: tail    => publishLocalSelected(generatedFile, tail)
-    case "publish-maven-all" :: Nil => publishMavenAll(generatedFile)
-    case "publish-maven" :: tail    => publishMavenSelected(generatedFile, tail)
-    case _                          => println(s"Unknown command: $args")
-
   def generateAll(targetPath: os.Path): os.Path = {
-    val metadata = generate(readAllPackagesMetadata(targetPath))
+    val metadata = generate(readPackagesMetadata(targetPath))
       .filterNot(m => codegenProblemPackages.contains(m.name))
     os.write.over(generatedFile, PackageMetadata.toJson(metadata), createFolders = true)
     generatedFile
   }
 
   def generateSelected(targetPath: os.Path, packages: List[String]): os.Path = {
-    val selectedPackages = readAllPackagesMetadata(targetPath)
+    val selectedPackages = readPackagesMetadata(targetPath, selected = packages)
       .filter(p => packages.contains(p.name))
     val metadata = generate(selectedPackages)
     os.write.over(generatedFile, PackageMetadata.toJson(metadata), createFolders = true)
@@ -144,7 +140,7 @@ import scala.util.control.NonFatal
 
             todo.enqueueAll(result.metadata.dependencies)
             done += result.metadata
-            Progress.total(done.size)
+            Progress.total(todo.size)
           catch
             case NonFatal(_) =>
               Progress.fail(s"[${new Date}] Code generation failed for provider '${m.name}' version '${versionOrLatest}'")
@@ -179,7 +175,7 @@ import scala.util.control.NonFatal
             println(s"[${new Date}] Successfully published locally provider '${m.name}' version '${version}'")
 
             done += m
-            Progress.total(done.size)
+            Progress.total(todo.size)
           catch
             case NonFatal(_) =>
               Progress.fail(s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}")
@@ -214,7 +210,7 @@ import scala.util.control.NonFatal
             println(s"[${new Date}] Successfully published provider '${m.name}' version '${version}'")
 
             done += m
-            Progress.total(done.size)
+            Progress.total(todo.size)
           catch
             case NonFatal(_) =>
               Progress.fail(s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}")
@@ -223,9 +219,11 @@ import scala.util.control.NonFatal
     done.toVector
   }
 
-  def readAllPackagesMetadata(targetPath: os.Path): Vector[PackageMetadata] = {
+  def readPackagesMetadata(targetPath: os.Path, selected: List[String] = Nil): Vector[PackageMetadata] = {
+    if !os.exists(targetPath) then downloadPackagesMetadata(targetPath, selected)
     val metadataFiles = os.list(targetPath).filter(_.last.endsWith("metadata.json"))
     val metadata = metadataFiles
+      .filter(p => selected.contains(p.last.stripSuffix(".metadata.json")))
       .map(PackageMetadata.fromJsonFile)
       .collect {
         case metadata if !pluginDownloadProblemPackages.contains(metadata.name) => metadata
@@ -241,7 +239,10 @@ import scala.util.control.NonFatal
 
     val packagesRepoApi = "https://api.github.com/repos/pulumi/registry/contents/themes/default/data/registry/packages"
 
-    val token      = sys.env.getOrElse("GITHUB_TOKEN", sys.error("Expected GITHUB_TOKEN environment variable to be set"))
+    val token      = sys.env.getOrElse("GITHUB_TOKEN", {
+      System.err.println("\nExpected GITHUB_TOKEN environment variable to be set, hint: export GITHUB_TOKEN=$(gh auth token)")
+      sys.exit(1)
+    })
     val authHeader = Map("Authorization" -> s"token $token")
 
     val packagesResponse = requests.get(packagesRepoApi, headers = authHeader)
@@ -321,5 +322,3 @@ import scala.util.control.NonFatal
 
     println(s"Packages directory: '$targetPath'")
   }
-
-end run

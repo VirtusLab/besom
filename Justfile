@@ -60,7 +60,7 @@ before-commit: compile-all test-all
 
 # Compiles the protobufs for the language SDK
 compile-pulumi-protobufs:
-	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts/Proto.scala -- all
+	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- proto all
 
 # Compiles core besom SDK
 compile-core: publish-local-json
@@ -263,19 +263,20 @@ test-codegen:
 publish-local-codegen: test-codegen
 	scala-cli --power publish local codegen --project-version {{besom-version}} --suppress-experimental-feature-warning
 
+export-github-token:
+    export GITHUB_TOKEN=$(gh auth token)
+
 # Dowloads Pulumi Packages metadata for all providers in the registry
 get-metadata-all:
-	export GITHUB_TOKEN=$(gh auth token); \
-	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts/Packages.scala -- metadata-all
+	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- packages metadata-all
 
 # Generates Scala SDKs for all providers in the registry
 generate-provider-all:
-	export GITHUB_TOKEN=$(gh auth token); \
-	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts/Packages.scala -- generate-all
+	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- packages generate-all
 
 # Publishes locally Scala SDKs for all providers in the registry
 publish-local-provider-all:
-    scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts/Packages.scala -- publish-local-all
+	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- packages publish-local-all
 
 # Download the schema for a specific provider, e.g. `just get-schema kubernetes 4.0.0`
 get-schema schema-name schema-version:
@@ -341,7 +342,7 @@ clean-test-integration-codegen:
 
 # Copies test schemas from pulumi repo to the testdata directory
 copy-test-schemas:
-	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts/Schemas.scala -- all
+	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- schemas all
 
 ####################
 # Templates and examples
@@ -417,9 +418,9 @@ compile-scripts: publish-local-codegen
 clean-scripts:
     scala-cli --power clean scripts
 
-# Update Besom version
-bump-version new-version:
-    scala-cli run scripts/Version.scala -- bump {{new-version}}
+# Use Besom scripts directly
+cli *ARGS:
+	scala-cli run scripts --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- {{ARGS}}
 
 ####################
 # Troubleshooting
@@ -479,3 +480,4 @@ clean-slate-liftoff: clean-sdk
 setup-intellij:
 	for file in `ls */project.scala | cut -f1 -d'/'`; do scala-cli setup-ide $file --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning; done
 	for file in `ls */*/project.scala | cut -f1,2 -d'/'`; do scala-cli setup-ide $file --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning; done
+	for file in `ls */*/*/project.scala | cut -f1,2,3 -d'/'`; do scala-cli setup-ide $file --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning; done

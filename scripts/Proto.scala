@@ -1,45 +1,32 @@
-//> using scala 3.3.1
-
-//> using dep com.lihaoyi::os-lib:0.9.2
-//> using dep com.lihaoyi::requests:0.8.0
-//> using dep com.lihaoyi::upickle:3.1.3
-//> using dep org.apache.commons:commons-lang3:3.14.0
-//> using file common.scala
-
 package besom.scripts
 
 import org.apache.commons.lang3.SystemUtils
 import os.*
 
-@main def proto(command: String): Unit =
-  val cwd = os.pwd
-  if cwd.last != "besom" then
-    println("You have to run this command from besom project root directory!")
-    sys.exit(1)
-
-  val protoPath = cwd / "proto"
-  command match
-    case "fetch" => fetchProto(cwd, protoPath)
-    case "compile" => compileProto(cwd, protoPath)
-    case "all" =>
-      fetchProto(cwd, protoPath)
-      compileProto(cwd, protoPath)
-      println("fetched & compiled")
-
-    case "check" =>
-      if !isProtocInstalled then
-        println("You need `protoc` protobuffer compiler installed for this to work!")
+object Proto:
+  def main(args: String*): Unit =
+    val cwd = besomDir
+    val protoPath = cwd / "proto"
+    args match
+      case "fetch" :: Nil => fetchProto(cwd, protoPath)
+      case "compile" :: Nil => compileProto(cwd, protoPath)
+      case "all" :: Nil =>
+        fetchProto(cwd, protoPath)
+        compileProto(cwd, protoPath)
+        println("fetched & compiled")
+      case "check" :: Nil =>
+        if !isProtocInstalled then
+          println("You need `protoc` protobuffer compiler installed for this to work!")
+          sys.exit(1)
+        if !isGitInstalled then
+          println("You need `git` installed for this to work!")
+          sys.exit(1)
+        if !isUnzipAvailable then
+          println("You need `unzip` installed for this to work!")
+          sys.exit(1)
+      case other =>
+        println(s"unknown command: $other")
         sys.exit(1)
-      if !isGitInstalled then
-        println("You need `git` installed for this to work!")
-        sys.exit(1)
-      if !isUnzipAvailable then
-        println("You need `unzip` installed for this to work!")
-        sys.exit(1)
-
-    case other =>
-      println(s"unknown command: $other")
-      sys.exit(1)
 
 private def fetchProto(cwd: os.Path, targetPath: os.Path): Unit =
   val pulumiRepoPath = cwd / "target" / "pulumi-proto"

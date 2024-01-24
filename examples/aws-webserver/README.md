@@ -47,6 +47,10 @@ These values are indicated with `***`.
     ```
     Hello, World!
     ```
+   
+    ```bash
+    open http://$(pulumi stack output publicHostName)
+    ```
 
 6. From there, feel free to experiment. Simply making edits and running pulumi up will incrementally update your infrastructure.
 

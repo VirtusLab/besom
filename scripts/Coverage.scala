@@ -1,10 +1,3 @@
-//> using scala "3.3.1"
-
-//> using dep "com.lihaoyi::os-lib:0.9.2"
-//> using dep "org.scoverage::scalac-scoverage-reporter:2.0.11"
-//> using dep "org.scoverage::scalac-scoverage-domain:2.0.11"
-//> using dep "org.scoverage::scalac-scoverage-serializer:2.0.11"
-
 package besom.scripts
 
 import scoverage.domain.{ Constants, Coverage }
@@ -16,7 +9,7 @@ given scala.util.CommandLineParser.FromString[File] with
   def fromString(str: String): File = File(str)
 
 object Coverage:
-  def main(args: Array[String]): Unit = args.toList match
+  def main(args: String*): Unit = args.toList match
     case "report" :: pathToSourceRoot :: reportsHTMLOutDir :: reportsXMLOutDir :: pathToCoverageData :: Nil =>
       report(File(pathToSourceRoot), File(pathToCoverageData), File(reportsHTMLOutDir), File(reportsXMLOutDir))
     case "report-module" :: modulePath :: Nil => // very specific to our project
