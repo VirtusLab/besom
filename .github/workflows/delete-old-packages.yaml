@@ -1,0 +1,39 @@
+name: Delete old JAR snapshots
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 */3 * *'
+
+concurrency:
+  group: packages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  delete-old-jars:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: delete
+    strategy:
+      matrix:
+        package-name:
+          - 'org.virtuslab.besom-json_3'
+          - 'com.virtuslab.besom-core_3'
+          - 'com.virtuslab.besom-cats_3'
+          - 'com.virtuslab.besom-zio_3'
+          - 'org.virtuslab.besom-codegen_3'
+          - 'org.virtuslab.besom-compiler-plugin_3'
+          - 'com.virtuslab.besom-aws_3'
+          - 'com.virtuslab.besom-azure_3'
+          - 'com.virtuslab.besom-docker_3'
+          - 'com.virtuslab.besom-gcp_3'
+          - 'com.virtuslab.besom-kubernetes_3'
+          - 'com.virtuslab.besom-random_3'
+          - 'com.virtuslab.besom-tls_3'
+    steps:
+      - uses: actions/delete-package-versions@v5.0.0
+        with:
+          min-versions-to-keep: 1
+          package-name: {{ matrix.package-name }}
+          package-type: 'maven'
