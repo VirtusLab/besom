@@ -9,4 +9,13 @@ package besom.scripts
     case "proto"    => Proto.main(args.tail*)
     case "coverage" => Coverage.main(args.tail*)
     case "version"  => Version.main(args.tail*)
-    case cmd        => println(s"Unknown command: '$cmd', expected one of: schemas, packages, proto, coverage, version")
+    case cmd =>
+      println(
+        s"""Unknown command: '$cmd', expected one of:
+           |  schemas  - fetch upstream test schemas
+           |  packages - generate and publish Besom packages
+           |  proto    - fetch and compile Pulumi gRPC proto files
+           |  coverage - generate test coverage report
+           |  version  - bump and update version in project.scala files
+           |""".stripMargin
+      )

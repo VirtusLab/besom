@@ -1,6 +1,7 @@
 name: Verify upstream protobuf compatibility
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '0 0 */3 * *'
 
@@ -22,8 +23,8 @@ jobs:
         power: true
     - uses: arduino/setup-protoc@v1
 
-    - name: Fetch & compile protobuf 
-      run: just compile-pulumi-protobufs
+    - name: Fetch & generate protobuf 
+      run: just generate-pulumi-protobufs
     
     - name: Compile SDK with rebuilt protobufs
       run: just compile-sdk

@@ -120,6 +120,14 @@ def githubToken: Option[String] =
     case (true, None) => sys.error("Expected GITHUB_TOKEN environment variable to be defined in CI")
     case (_, t)       => t // None is usually fine, we'll just use the public API
 
+def envOrExit(key: String): String =
+  sys.env.getOrElse(
+    key, {
+      System.err.println(s"\nExpected '$key' environment variable to be set\n")
+      sys.exit(1)
+    }
+  )
+
 class Progress(
   var label: String,
   val report: (String, Int, Temporal) => Unit,

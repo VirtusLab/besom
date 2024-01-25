@@ -57,7 +57,7 @@ You will want to install the following on your machine:
 
 - [Pulumi CLI](https://www.pulumi.com/docs/install/) 3.30.0 or higher
 - [Scala-CLI](https://scala-cli.virtuslab.org/install/) 1.0.4 or higher
-- JDK 11 or higher
+- JDK 11 or higher (GraalVM version is recommended)
 - Scala 3.3.1 or higher
 - Go 1.20 or higher
 - [protoc](https://grpc.io/docs/protoc-installation/) 24.3 or higher
@@ -116,31 +116,63 @@ As for Go changes, Pulumi CLI will respect the version of
 ships with. When testing changes to the language provider, you
 therefore might need to manipulate `PATH` to prefer the local version.
 
-#### Publish necessary packages
+#### Publish locally necessary packages
 
 Publish locally and install necessary Besom packages:
 ```bash
-just publish-local-json
-just publish-local-core
-just publish-local-codegen
-just publish-local-compiler-plugin
-just install-language-plugin
+just publish-local-all 
 ```
 
-#### Publish additional SDKs
+#### Publish locally additional SDKs
 
 You have to generate an SDK for a provider of your choice, use `just cli`, e.g.:
 
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
+just cli packages metadata kubernetes
 just cli packages generate kubernetes
 just cli packages publish-local kubernetes
 ```
 
+To generate all Provider SDKs (takes a very long time):
+```bash
+export GITHUB_TOKEN=$(gh auth token)
+just cli packages metadata-all
+just cli packages generate-all
+just cli packages publish-local-all
+```
+
 ### Working with published dependencies
 
-Release builds of the Besom SDK are published to Maven Central 
-as `org.virtuslab::besom-core:x.y.z` and `org.virtuslab::besom-[package]:a.b.c-core.x.y.z`.
+Release builds of the Besom SDK are published to Maven Central, and snapshots to GitHub Packages
+as `org.virtuslab::besom-core:X.Y.Z` and `org.virtuslab::besom-[package]:A.B.C-core.X.Y.Z`.
+
+Language host provider is published to GitHub Packages as `pulumi-language-scala-vX.Y.Z-OS-ARCH.tar.gz`.
+
+#### Create a release draft
+
+```bash
+just upsert-gh-release
+```
+
+#### Publish packages
+
+Publish a package to GitHub Packages:
+```bash
+export GITHUB_TOKEN=$(gh auth token)
+just cli packages metadata kubernetes
+just cli packages generate kubernetes
+just cli packages publish-github kubernetes
+```
+
+Publish all packages to GitHub Packages:
+```bash
+export GITHUB_TOKEN=$(gh auth token)
+just publish-language-plugins-all
+just cli packages metadata-all
+just cli packages generate-all
+just cli packages publish-github-all
+```
 
 ### Adding examples and testing them locally
 
@@ -189,7 +221,7 @@ just copy-test-schemas
 Protobuf/gRPC codegen is tested by running:
 
 ```bash
-just compile-pulumi-protobufs compile-core
+just generate-pulumi-protobufs compile-core
 ```
 
 ## Setting up the code editor
