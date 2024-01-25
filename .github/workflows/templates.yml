@@ -15,11 +15,14 @@ env:
   PULUMI_SKIP_UPDATE_CHECK: 'true'
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   preview:
     if: "! github.event.pull_request.head.repo.fork"
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: extractions/setup-just@v1
@@ -31,13 +34,8 @@ jobs:
       - uses: coursier/cache-action@v6.4.3
       - uses: VirtusLab/scala-cli-setup@v1.1.0
         with:
-          jvm: 11
+          jvm: graalvm-java11:22.3.1
           power: true
-      - name: Prepare dependencies
-        run: |-
-          just publish-local-json publish-local-codegen publish-local-sdk install-language-plugin publish-local-compiler-plugin
-          just cli packages generate  aws docker gcp kubernetes random tls
-          just cli packages publish-local aws docker gcp kubernetes random tls
       - name: Login in to pulumi
         run: pulumi login --local
       - name: Test templates

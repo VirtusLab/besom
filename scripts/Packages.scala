@@ -13,27 +13,86 @@ import scala.util.control.NonFatal
 object Packages:
   def main(args: String*): Unit =
     args match
-      case "metadata-all" :: Nil => downloadPackagesMetadata(packagesDir)
-      case "metadata" :: tail => downloadPackagesMetadata(packagesDir, selected = tail)
-      case "generate-all" :: Nil => generateAll(packagesDir)
-      case "generate" :: tail => generateSelected(packagesDir, tail)
-      case "publish-local-all" :: Nil => publishLocalAll(generatedFile)
-      case "publish-local" :: tail => publishLocalSelected(generatedFile, tail)
-      case "publish-maven-all" :: Nil => publishMavenAll(generatedFile)
-      case "publish-maven" :: tail => publishMavenSelected(generatedFile, tail)
-      case _ => println(s"Unknown command: $args, expected one of: " +
-        s"metadata-all, metadata, generate-all, generate, publish-local-all, publish-local, publish-maven-all, publish-maven")
+      case "metadata-all" :: Nil       => downloadPackagesMetadata(packagesDir)
+      case "metadata" :: tail          => downloadPackagesMetadata(packagesDir, selected = tail)
+      case "generate-all" :: Nil       => generateAll(packagesDir)
+      case "generate" :: tail          => generateSelected(packagesDir, tail)
+      case "publish-local-all" :: Nil  => publishLocalAll(generatedFile)
+      case "publish-local" :: tail     => publishLocalSelected(generatedFile, tail)
+      case "publish-maven-all" :: Nil  => publishMavenAll(generatedFile)
+      case "publish-maven" :: tail     => publishMavenSelected(generatedFile, tail)
+      case "publish-github-all" :: Nil => publishGithubAll(generatedFile)
+      case "publish-github" :: tail    => publishGithubSelected(generatedFile, tail)
+      case _ =>
+        println(
+          s"""Unknown command: $args, expected one of:
+             |  metadata-all                - download all packages metadata
+             |  metadata <package>...       - download selected packages metadata
+             |  generate-all                - generate all packages source code
+             |  generate <package>...       - generate selected packages source code
+             |  publish-local-all           - publish all packages locally
+             |  publish-local <package>...  - publish selected packages locally
+             |  publish-maven-all           - publish all packages to Maven
+             |  publish-maven <package>...  - publish selected packages to Maven
+             |  publish-github-all          - publish all packages to Github
+             |  publish-github <package>... - publish selected packages to Github
+             |""".stripMargin
+        )
   end main
 
-  val cwd = besomDir
-  val codegenDir = cwd / ".out" / "codegen"
-  val packagesDir = cwd / ".out" / "packages"
-  val publishLocalDir = cwd / ".out" / "publishLocal"
-  val publishMavenDir = cwd / ".out" / "publishMaven"
+  val cwd              = besomDir
+  val codegenDir       = cwd / ".out" / "codegen"
+  val packagesDir      = cwd / ".out" / "packages"
+  val publishLocalDir  = cwd / ".out" / "publishLocal"
+  val publishMavenDir  = cwd / ".out" / "publishMaven"
+  val publishGithubDir = cwd / ".out" / "publishGithub"
 
-  val generatedFile = codegenDir / "generated.json"
-  val publishedLocalFile = publishLocalDir / "published.json"
-  val publishedMavenFile = publishMavenDir / "published.json"
+  val generatedFile       = codegenDir / "generated.json"
+  val publishedLocalFile  = publishLocalDir / "published.json"
+  val publishedMavenFile  = publishMavenDir / "published.json"
+  val publishedGithubFile = publishGithubDir / "published.json"
+
+  def publishOpts(heapMaxGb: Int = 32, jarCompression: Int = 1, sources: Boolean = false, docs: Boolean = false): Vector[os.Shellable] =
+    Vector(
+      "--server=false",
+      "--javac-opt=-verbose",
+      s"--javac-opt=-J-XX:MaxHeapSize=${heapMaxGb}G",
+      "--javac-opt=-J-XX:+UseParallelGC",
+      s"--scala-opt=-Yjar-compression-level=$jarCompression",
+      s"--sources=$sources",
+      s"--doc=$docs"
+    )
+
+  def mavenAuthOpts(pgpKey: String): Vector[os.Shellable] = Vector(
+    "--user=env:OSSRH_USERNAME",
+    "--password=env:OSSRH_PASSWORD",
+    s"--gpg-key=$pgpKey",
+    "--gpg-option=--pinentry-mode=loopback",
+    "--gpg-option=--passphrase-fd=0" // read passphrase from stdin
+  )
+
+  val ghAuthOpts: Vector[os.Shellable] = Vector(
+    "--publish-repository=github",
+    "--password=env:GITHUB_TOKEN",
+    "--repository=https://github.com/VirtusLab/besom.git"
+  )
+
+  lazy val localOpts: Vector[os.Shellable] =
+    if isCI
+    then publishOpts(heapMaxGb = 16, jarCompression = 1)
+    else publishOpts(heapMaxGb = 32, jarCompression = 1)
+
+  lazy val mavenOpts: Vector[os.Shellable] = {
+    if isCI
+    then publishOpts(heapMaxGb = 16, jarCompression = 9, sources = true, docs = true)
+    else publishOpts(heapMaxGb = 32, jarCompression = 9, sources = true, docs = true)
+  } ++ mavenAuthOpts(pgpKey = envOrExit("PGP_KEY_ID"))
+
+  lazy val ghOpts: Vector[os.Shellable] = {
+    if isCI
+    then publishOpts(heapMaxGb = 16, jarCompression = 9, sources = true, docs = true)
+    else publishOpts(heapMaxGb = 32, jarCompression = 9, sources = true, docs = true)
+  } ++ ghAuthOpts
 
   private val pluginDownloadProblemPackages = Vector(
     "aws-miniflux", // lack of darwin/arm64 binary
@@ -113,6 +172,24 @@ object Packages:
     publishedMavenFile
   }
 
+  def publishGithubAll(sourceFile: os.Path): os.Path = {
+    val generated = PackageMetadata
+      .fromJsonList(os.read(sourceFile))
+      .filterNot(m => compileProblemPackages.contains(m.name))
+    val published = publishGithub(generated)
+    os.write.over(publishedGithubFile, PackageMetadata.toJson(published), createFolders = true)
+    publishedGithubFile
+  }
+
+  def publishGithubSelected(sourceFile: os.Path, packages: List[String]): os.Path = {
+    val generated = PackageMetadata
+      .fromJsonList(os.read(sourceFile))
+      .filter(p => packages.contains(p.name))
+    val published = publishGithub(generated)
+    os.write.over(publishedGithubFile, PackageMetadata.toJson(published), createFolders = true)
+    publishedGithubFile
+  }
+
   type PackageId = (String, Option[String])
 
   def generate(metadata: Vector[PackageMetadata]): Vector[PackageMetadata] = {
@@ -171,7 +248,16 @@ object Packages:
           Progress.report(label = s"${m.name}:${version}")
           val logFile = publishLocalDir / s"${m.name}-${version}.log"
           try
-            os.proc("just", "publish-local-provider", m.name, version).call(stdout = logFile, mergeErrIntoOut = true)
+            val args: Seq[os.Shellable] = Seq(
+              "scala-cli",
+              "--power",
+              "publish",
+              "local",
+              codegenDir / m.name / version,
+              "--suppress-experimental-feature-warning",
+              "--suppress-directives-in-multiple-files-warning"
+            )
+            os.proc(args ++ localOpts).call(stdout = logFile, mergeErrIntoOut = true)
             println(s"[${new Date}] Successfully published locally provider '${m.name}' version '${version}'")
 
             done += m
@@ -206,7 +292,58 @@ object Packages:
           Progress.report(label = s"${m.name}:${version}")
           val logFile = publishMavenDir / s"${m.name}-${version}.log"
           try
-            os.proc("just", "publish-maven-provider", m.name, version).call(stdout = logFile, mergeErrIntoOut = true)
+            val args: Seq[os.Shellable] = Seq(
+              "scala-cli",
+              "--power",
+              "publish",
+              codegenDir / m.name / version,
+              "--suppress-experimental-feature-warning",
+              "--suppress-directives-in-multiple-files-warning"
+            )
+            os.proc(args ++ mavenOpts).call(stdin = envOrExit("PGP_PASSWORD"), stdout = logFile, mergeErrIntoOut = true)
+            println(s"[${new Date}] Successfully published provider '${m.name}' version '${version}'")
+
+            done += m
+            Progress.total(todo.size)
+          catch
+            case NonFatal(_) =>
+              Progress.fail(s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}")
+          finally Progress.end
+    }
+    done.toVector
+  }
+
+  def publishGithub(generated: Vector[PackageMetadata]): Vector[PackageMetadata] = {
+    val seen = mutable.HashSet.empty[PackageId]
+    val todo = mutable.Queue.empty[PackageMetadata]
+    val done = mutable.ListBuffer.empty[PackageMetadata]
+
+    os.remove.all(publishGithubDir) // make sure there is no dirty state from previous runs
+    os.makeDir.all(publishGithubDir)
+
+    generated.foreach(m => {
+      todo.enqueueAll(m.dependencies) // dependencies first to avoid missing dependencies during compilation
+      todo.enqueue(m)
+    })
+    withProgress("Publishing packages to GitHub", todo.size) {
+      while todo.nonEmpty do
+        val m             = todo.dequeue()
+        val id: PackageId = (m.name, m.version.map(_.asString))
+        if !seen.contains(id) then
+          seen.add(id)
+          val version = m.version.getOrElse(throw Exception("Package version must be provided for publishing")).asString
+          Progress.report(label = s"${m.name}:${version}")
+          val logFile = publishGithubDir / s"${m.name}-${version}.log"
+          try
+            val args: Seq[os.Shellable] = Seq(
+              "scala-cli",
+              "--power",
+              "publish",
+              codegenDir / m.name / version,
+              "--suppress-experimental-feature-warning",
+              "--suppress-directives-in-multiple-files-warning"
+            )
+            os.proc(args ++ ghOpts).call(stdout = logFile, mergeErrIntoOut = true)
             println(s"[${new Date}] Successfully published provider '${m.name}' version '${version}'")
 
             done += m
@@ -239,10 +376,7 @@ object Packages:
 
     val packagesRepoApi = "https://api.github.com/repos/pulumi/registry/contents/themes/default/data/registry/packages"
 
-    val token      = sys.env.getOrElse("GITHUB_TOKEN", {
-      System.err.println("\nExpected GITHUB_TOKEN environment variable to be set, hint: export GITHUB_TOKEN=$(gh auth token)")
-      sys.exit(1)
-    })
+    val token      = envOrExit("GITHUB_TOKEN")
     val authHeader = Map("Authorization" -> s"token $token")
 
     val packagesResponse = requests.get(packagesRepoApi, headers = authHeader)
@@ -322,3 +456,4 @@ object Packages:
 
     println(s"Packages directory: '$targetPath'")
   }
+end Packages

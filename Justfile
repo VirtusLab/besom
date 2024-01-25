@@ -12,9 +12,6 @@ coverage-output-dir-zio := coverage-output-dir + "/zio"
 
 coverage := "false"
 
-# use bloop for publishing locally
-bloop := "false"
-
 # replace with a function when https://github.com/casey/just/pull/1069 is merged
 scala-cli-coverage-options-core := if coverage == "true" { "-O -coverage-out:" + coverage-output-dir-core } else { "" }
 scala-cli-test-options-core := scala-cli-coverage-options-core
@@ -26,10 +23,7 @@ scala-cli-coverage-options-zio := if coverage == "true" { "-O -coverage-out:" + 
 scala-cli-test-options-zio := scala-cli-coverage-options-zio
 
 publish-maven-auth-options := "--user env:OSSRH_USERNAME --password env:OSSRH_PASSWORD --gpg-key $PGP_KEY_ID --gpg-option --pinentry-mode --gpg-option loopback --gpg-option --passphrase --gpg-option $PGP_PASSWORD"
-
-scala-cli-bloop-opts := "--jvm=17 --bloop-jvm=17 --bloop-java-opt=-XX:MaxHeapSize=32G --bloop-java-opt=-XX:+UseParallelGC --bloop-java-opt=-XX:-UseZGC"
-scala-cli-direct-opts := "--server=false --javac-opt=-verbose --javac-opt=-J-XX:MaxHeapSize=32G --javac-opt=-J-XX:+UseParallelGC"
-scala-cli-publish-local-opts := if bloop == "true" { scala-cli-bloop-opts } else { scala-cli-direct-opts }
+publish-gh-opts := "--publish-repository=github --password env:GITHUB_TOKEN"
 
 # This list of available targets
 default:
@@ -49,7 +43,13 @@ compile-all: compile-json compile-sdk compile-codegen compile-compiler-plugin bu
 test-all: test-json test-sdk test-codegen test-integration test-templates test-examples test-markdown
 
 # Publishes everything locally
-publish-local-all: publish-local-json publish-local-sdk publish-local-codegen publish-local-compiler-plugin install-language-plugin
+publish-local-all: publish-local-json publish-local-sdk publish-local-codegen install-language-plugin
+
+# Publishes everything to Maven
+publish-maven-all: publish-maven-json publish-maven-sdk publish-maven-codegen
+
+# Publishes everything to GitHub Packages
+publish-gh-all: publish-gh-json publish-gh-sdk publish-gh-codegen
 
 # Runs all necessary checks before committing
 before-commit: compile-all test-all
@@ -58,8 +58,8 @@ before-commit: compile-all test-all
 # Language SDK
 ####################
 
-# Compiles the protobufs for the language SDK
-compile-pulumi-protobufs:
+# Generates the protobufs for the language SDK
+generate-pulumi-protobufs:
 	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- proto all
 
 # Compiles core besom SDK
@@ -97,7 +97,16 @@ test-zio: publish-local-core
 	scala-cli --power test besom-zio {{ scala-cli-test-options-zio }} --suppress-experimental-feature-warning
 
 # Runs all tests
-test-sdk: compile-sdk test-core test-cats test-zio
+test-sdk: test-core test-cats test-zio
+
+# Publishes locally all SDK modules
+publish-local-sdk: publish-local-core publish-local-cats publish-local-zio publish-local-compiler-plugin
+
+# Publishes to maven all SDK modules
+publish-maven-sdk: publish-maven-core publish-maven-cats publish-maven-zio publish-maven-compiler-plugin
+
+# Publishes to GitHub Packages all SDK modules
+publish-gh-sdk: publish-gh-core publish-gh-cats publish-gh-zio publish-gh-compiler-plugin
 
 # Publishes locally core besom SDK
 publish-local-core: test-core
@@ -111,28 +120,41 @@ publish-local-cats: publish-local-core
 publish-local-zio: publish-local-core
 	scala-cli --power publish local besom-zio --project-version {{besom-version}} --suppress-experimental-feature-warning
 
-# Publishes locally all SDK modules: core, cats-effect extension, zio extension
-publish-local-sdk: publish-local-core publish-local-cats publish-local-zio
-
 # Publishes locally besom compiler plugin
 publish-local-compiler-plugin:
 	scala-cli --power publish local compiler-plugin --project-version {{besom-version}} --suppress-experimental-feature-warning
 
-# Publishes core besom SDK
+# Publishes core besom SDK to Maven
 publish-maven-core:
-	scala-cli --power publish core --project-version {{besom-version}} {{publish-maven-auth-options}}
+	scala-cli --power publish core --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
-# Publishes besom cats-effect extension
+# Publishes besom cats-effect extension to Maven
 publish-maven-cats:
-	scala-cli --power publish besom-cats --project-version {{besom-version}} {{publish-maven-auth-options}}
+	scala-cli --power publish besom-cats --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
-# Publishes besom zio extension
+# Publishes besom zio extension to Maven
 publish-maven-zio:
-	scala-cli --power publish besom-zio --project-version {{besom-version}} {{publish-maven-auth-options}}
+	scala-cli --power publish besom-zio --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
-# Publishes besom compiler plugin
+# Publishes besom compiler plugin to Maven
 publish-maven-compiler-plugin:
-	scala-cli --power publish compiler-plugin --project-version {{besom-version}} {{publish-maven-auth-options}}
+	scala-cli --power publish compiler-plugin --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+
+# Publishes core besom SDK to GitHub Packages
+publish-gh-core:
+	scala-cli --power publish core --project-version {{besom-version}} {{publish-gh-opts}} --suppress-experimental-feature-warning || echo "Could not publish core to GitHub Packages"
+
+# Publishes Besom cats-effect extension to GitHub Packages
+publish-gh-cats:
+	scala-cli --power publish besom-cats --project-version {{besom-version}} {{publish-gh-opts}} --suppress-experimental-feature-warning || echo "Could not publish cats to GitHub Packages"
+
+# Publishes Besom zio extension to GitHub Packages
+publish-gh-zio:
+	scala-cli --power publish besom-zio --project-version {{besom-version}} {{publish-gh-opts}} --suppress-experimental-feature-warning || echo "Could not publish zio to GitHub Packages"
+
+# Publishes Besom compiler plugin to GitHub Packages
+publish-gh-compiler-plugin:
+	scala-cli --power publish compiler-plugin --project-version {{besom-version}} {{publish-gh-opts}} --suppress-experimental-feature-warning || echo "Could not publish compiler plugin to GitHub Packages"
 
 # Cleans core build
 clean-core: 
@@ -171,23 +193,27 @@ clean-coverage: clean-sdk
 
 # Compiles json module
 compile-json:
-    scala-cli --power compile besom-json --suppress-experimental-feature-warning
+	scala-cli --power compile besom-json --suppress-experimental-feature-warning
 
 # Runs tests for json module
 test-json:
-    scala-cli --power test besom-json --suppress-experimental-feature-warning
+	scala-cli --power test besom-json --suppress-experimental-feature-warning
 
 # Cleans json module
 clean-json:
-    scala-cli --power clean besom-json
+	scala-cli --power clean besom-json
 
 # Publishes locally json module
 publish-local-json:
-    scala-cli --power publish local besom-json --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish local besom-json --project-version {{besom-version}} --suppress-experimental-feature-warning
 
-# Publishes json module
+# Publishes json module to Maven
 publish-maven-json:
-    scala-cli --power publish besom-json --project-version {{besom-version}} {{publish-maven-auth-options}}
+	scala-cli --power publish besom-json --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+
+# Publishes json module to GitHub Packages
+publish-gh-json:
+	scala-cli --power publish besom-json --project-version {{besom-version}} {{publish-gh-opts}} --suppress-experimental-feature-warning || echo "Could not publish json to GitHub Packages"
 
 ####################
 # Language plugin
@@ -198,26 +224,23 @@ tidy-language-plugin:
     cd language-plugin/pulumi-language-scala && \
     go mod tidy
 
-# Builds .jar file with language plugin bootstrap library
-build-language-plugin-bootstrap:
+# Packages .jar file with language plugin bootstrap library
+package-language-plugin-bootstrap:
 	mkdir -p {{language-plugin-output-dir}} && \
 	scala-cli --power package language-plugin/bootstrap --suppress-experimental-feature-warning --assembly -o {{language-plugin-output-dir}}/bootstrap.jar -f
 
 # Builds pulumi-language-scala binary
-build-language-host $GOOS="" $GOARCH="":
+build-language-plugin $GOOS="" $GOARCH="":
 	mkdir -p {{language-plugin-output-dir}} && \
 	cd language-plugin/pulumi-language-scala && \
 	go build -o {{language-plugin-output-dir}}/pulumi-language-scala \
 	  -ldflags "-X github.com/pulumi/pulumi/sdk/v3/go/common/version.Version={{besom-version}}"
 
-# Builds the entire scala language plugin
-build-language-plugin: build-language-plugin-bootstrap build-language-host
-
 # Installs the scala language plugin locally
 install-language-plugin: build-language-plugin
 	#!/usr/bin/env sh
-	just build-language-plugin-bootstrap
-	just build-language-host
+	just package-language-plugin-bootstrap
+	just build-language-plugin
 	output_dir={{language-plugin-output-dir}}/local
 	rm -rf $output_dir
 	mkdir -p $output_dir
@@ -232,14 +255,14 @@ package-language-plugin $GOOS $GOARCH:
 	subdir={{ "dist/" + GOOS + "-" + GOARCH }}
 	output_dir={{language-plugin-output-dir}}/$subdir
 	mkdir -p $output_dir
-	just build-language-host $GOOS $GOARCH
+	just build-language-plugin $GOOS $GOARCH
 	cp {{language-plugin-output-dir}}/bootstrap.jar $output_dir/
 	cp {{language-plugin-output-dir}}/pulumi-language-scala $output_dir/
 	cd $output_dir
 	tar czvf pulumi-language-scala-v{{besom-version}}-{{GOOS}}-{{GOARCH}}.tar.gz *
 
-# Package the scala language plugin for all supported architectures
-package-language-plugins-all: build-language-plugin-bootstrap
+# Package the Besom scala language plugin for all supported architectures
+package-language-plugins-all: package-language-plugin-bootstrap
 	just package-language-plugin darwin arm64
 	just package-language-plugin darwin amd64
 	just package-language-plugin linux arm64
@@ -247,61 +270,45 @@ package-language-plugins-all: build-language-plugin-bootstrap
 	just package-language-plugin windows arm64
 	just package-language-plugin windows amd64
 
+# Publishes the scala language plugin to GitHub Packages
+publish-language-plugin $GOOS $GOARCH:
+	#!/usr/bin/env sh
+	subdir={{ "dist/" + GOOS + "-" + GOARCH }}
+	output_dir={{language-plugin-output-dir}}/$subdir
+	gh release upload v{{besom-version}} $output_dir/pulumi-language-scala-v{{besom-version}}-{{GOOS}}-{{GOARCH}}.tar.gz --clobber
+
+# Publishes the scala language plugin to GitHub Packages for all supported architectures
+publish-language-plugins-all: package-language-plugins-all
+	just publish-language-plugin darwin arm64
+	just publish-language-plugin darwin amd64
+	just publish-language-plugin linux arm64
+	just publish-language-plugin linux amd64
+	just publish-language-plugin windows arm64
+	just publish-language-plugin windows amd64
+
 ####################
 # Codegen
 ####################
 
-# Compiles codegen module
+# Compiles Besom codegen module
 compile-codegen:
 	scala-cli --power compile codegen --suppress-experimental-feature-warning
 
-# Runs tests for codegen
+# Runs tests for Besom codegen
 test-codegen:
 	scala-cli --power test codegen --suppress-experimental-feature-warning
 
-# Publishes locally besom codegen
+# Publishes locally Besom codegen
 publish-local-codegen: test-codegen
 	scala-cli --power publish local codegen --project-version {{besom-version}} --suppress-experimental-feature-warning
 
-export-github-token:
-    export GITHUB_TOKEN=$(gh auth token)
+# Publishes Besom codegen
+publish-maven-codegen: test-codegen
+	scala-cli --power publish codegen --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
-# Dowloads Pulumi Packages metadata for all providers in the registry
-get-metadata-all:
-	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- packages metadata-all
-
-# Generates Scala SDKs for all providers in the registry
-generate-provider-all:
-	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- packages generate-all
-
-# Publishes locally Scala SDKs for all providers in the registry
-publish-local-provider-all:
-	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- packages publish-local-all
-
-# Download the schema for a specific provider, e.g. `just get-schema kubernetes 4.0.0`
-get-schema schema-name schema-version:
-	#!/usr/bin/env sh
-	pulumi --non-interactive --logtostderr plugin install resource {{schema-name}} {{schema-version}};
-	schema_source={{ if schema-version == "" { schema-name } else { schema-name + "@" + schema-version } }}
-	schema_dir="{{schemas-output-dir}}/{{schema-name}}/{{schema-version}}"
-	mkdir -p $schema_dir
-	pulumi --non-interactive --logtostderr package get-schema $schema_source > $schema_dir/schema.json
-
-# Generate scala API code for the given provider, e.g. `just generate-provider kubernetes 4.0.0`
-generate-provider schema-name schema-version:
-	scala-cli --power run codegen --suppress-experimental-feature-warning -- named {{schema-name}} {{schema-version}}
-
-# Compiles the previously generated scala API code for the given provider, e.g. `just compile-provider kubernetes 4.0.0`
-compile-provider schema-name schema-version:
-	scala-cli --power compile {{scala-cli-publish-local-opts}} {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning --interactive=false
-
-# Compiles and publishes locally the previously generated scala API code for the given provider, e.g. `just publish-local-provider kubernetes 4.0.0`
-publish-local-provider schema-name schema-version:
-	scala-cli --power publish local --sources=false --doc=false {{scala-cli-publish-local-opts}} {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} --suppress-experimental-feature-warning
-
-# Compiles and publishes the previously generated scala API code for the given provider, e.g. `just publish-maven-provider kubernetes 4.0.0`
-publish-maven-provider schema-name schema-version:
-	scala-cli --power publish {{codegen-output-dir}}/{{schema-name}}/{{schema-version}} {{publish-maven-auth-options}}
+# Publishes Besom codegen to GitHub Packages
+publish-gh-codegen: test-codegen
+	scala-cli --power publish codegen --project-version {{besom-version}} {{publish-gh-opts}} --suppress-experimental-feature-warning || echo "Could not publish codegen to GitHub Packages"
 
 ####################
 # Integration testing
@@ -416,11 +423,22 @@ compile-scripts: publish-local-codegen
 
 # Clean scripts module
 clean-scripts:
-    scala-cli --power clean scripts
+	scala-cli --power clean scripts
 
 # Use Besom scripts directly
 cli *ARGS:
 	scala-cli run scripts --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- {{ARGS}}
+
+# Create or Update GitHub release
+upsert-gh-release:
+	#!/usr/bin/env sh
+	if [[ "{{besom-version}}" =~ '.*-SNAPSHOT' ]]; then
+		echo "Not a snapshot version, refusing to delete a release"
+	else
+		gh release delete v{{besom-version}} --yes || echo "Nothing to delete"
+	fi
+	echo Creating release v{{besom-version}}
+	gh release create v{{besom-version}} --title v{{besom-version}} --notes "" --prerelease --draft
 
 ####################
 # Troubleshooting

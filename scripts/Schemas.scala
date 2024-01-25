@@ -2,10 +2,8 @@ package besom.scripts
 
 import os.*
 
-import scala.annotation.tailrec
-
 object Schemas:
-  val cwd = besomDir
+  val cwd: os.Path = besomDir
 
   def main(args: String*): Unit =
     args match
