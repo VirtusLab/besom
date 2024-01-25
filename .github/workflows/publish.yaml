@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: delete
+      packages: write
     strategy:
       matrix:
         package-name:
@@ -28,11 +28,13 @@ jobs:
     steps:
       - uses: actions/delete-package-versions@v5.0.0
         with:
-          min-versions-to-keep: 0
-          package-name: {{ matrix.package-name }}
+          package-name: ${{ matrix.package-name }}
           package-type: maven
+          min-versions-to-keep: 0
+          delete-only-pre-release-versions: true
 
   publish-core:
+    needs: delete-core-packages
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -88,10 +90,10 @@ jobs:
       - uses: actions/delete-package-versions@v5.0.0
         with:
           min-versions-to-keep: 0
-          package-name: com.virtuslab.besom-{{ matrix.provider }}_3
+          package-name: com.virtuslab.besom-${{ matrix.provider }}_3
           package-type: maven
       - name: Publish providers
         run: |-
-          just cli packages metadata {{ matrix.provider }}
-          just cli packages generate {{ matrix.provider }}
-          just cli packages publish-github {{ matrix.provider }}
+          just cli packages metadata ${{ matrix.provider }}
+          just cli packages generate ${{ matrix.provider }}
+          just cli packages publish-github ${{ matrix.provider }}
