@@ -2,6 +2,11 @@ name: Delete old JAR snapshots
 
 on:
   workflow_dispatch:
+    inputs:
+      min-versions-to-keep:
+        description: 'Minimum number of versions to keep'
+        required: true
+        default: 1
   schedule:
     - cron: '0 0 */3 * *'
 
@@ -34,7 +39,7 @@ jobs:
     steps:
       - uses: actions/delete-package-versions@v5.0.0
         with:
-          min-versions-to-keep: 1
+          min-versions-to-keep: ${{ github.event.inputs.min-versions-to-keep || 1 }}
           delete-only-pre-release-versions: true
           package-name: ${{ matrix.package-name }}
           package-type: 'maven'
