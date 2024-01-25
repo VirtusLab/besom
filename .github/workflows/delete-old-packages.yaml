@@ -35,5 +35,5 @@ jobs:
       - uses: actions/delete-package-versions@v5.0.0
         with:
           min-versions-to-keep: 1
-          package-name: {{ matrix.package-name }}
+          package-name: ${{ matrix.package-name }}
           package-type: 'maven'
