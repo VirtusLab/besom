@@ -1,6 +1,7 @@
 name: Examples smoke tests
 
 on:
+  workflow_dispatch:
   push:
     branches: [ 'main', 'develop' ]
     paths:
