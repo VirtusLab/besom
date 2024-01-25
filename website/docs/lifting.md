@@ -12,7 +12,7 @@ import besom.api.aws
 @main def main = Pulumi.run {
   val s3Bucket: Output[aws.s3.Bucket] = aws.s3.Bucket("my-bucket")
 
-  Output(Pulumi.exports(s3Url = s3Bucket.map(_.websiteEndpoint)))
+  Stack.exports(s3Url = s3Bucket.map(_.websiteEndpoint))
 }
 ```
 As you can see here we're accessing the property `websiteEndpoint` on `aws.s3.Bucket` class by first `map`ping over the 
@@ -26,7 +26,7 @@ extension (o: Output[aws.s3.Bucket])
 This allows for this syntax:
 
 ```scala
-Output(Pulumi.exports(s3Url = s3Bucket.websiteEndpoint))
+Stack.exports(s3Url = s3Bucket.websiteEndpoint)
 ```
 
 These lifted syntaxes cover more cases and work recursively, so you can access even the properties 

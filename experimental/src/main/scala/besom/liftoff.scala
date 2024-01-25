@@ -5,15 +5,7 @@ import k8s.core.v1.inputs.*
 import k8s.apps.v1.inputs.*
 import k8s.meta.v1.inputs.*
 import k8s.apps.v1.{Deployment, DeploymentArgs, StatefulSet, StatefulSetArgs}
-import k8s.core.v1.{
-  ConfigMap,
-  ConfigMapArgs,
-  Namespace,
-  Service,
-  ServiceArgs,
-  PersistentVolume,
-  PersistentVolumeArgs
-}
+import k8s.core.v1.{ConfigMap, ConfigMapArgs, Namespace, Service, ServiceArgs, PersistentVolume, PersistentVolumeArgs}
 
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.numeric.*
@@ -252,8 +244,9 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
     ServiceArgs(
       spec = ServiceSpecArgs(
         selector = labels,
+        `type` = "NodePort",
         ports = List(
-          ServicePortArgs(name = "http", port = 1337)
+          ServicePortArgs(name = "http", port = 30001, targetPort = 80, nodePort = 30001)
         )
       ),
       metadata = ObjectMetaArgs(
@@ -263,15 +256,13 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
     )
   )
 
-  for
-    nginx   <- nginxDeployment
-    service <- nginxService
-    redis   <- redisCluster("cache", 3)
-  yield Pulumi.exports(
+  val redis = redisCluster("cache", 3)
+
+  Stack.exports(
     namespace = appNamespace.metadata.name,
-    nginxDeploymentName = nginx.metadata.name,
+    nginxDeploymentName = nginxDeployment.metadata.name,
     serviceName = nginxService.metadata.name,
     serviceClusterIp = nginxService.spec.clusterIP,
-    redisConnString = redis.connectionString
+    redisConnString = redis.map(_.connectionString)
   )
 }

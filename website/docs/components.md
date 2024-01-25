@@ -43,11 +43,11 @@ def ZooVisit(date: OffsetDateTime)(using Context): Output[ZooVisit] =
   }
 
 @main def main = Pulumi.run {
-	ZooVisit(OffsetDateTime.now()).map { visit =>
-		Pulumi.exports(
-		  cats    = visit.catPicsUrl,
-		  parrots = visit.parrotPicsUrl
-		)
-	}
+  val visit = ZooVisit(OffsetDateTime.now())
+
+  Stack.exports(
+    cats    = visit.map(_.catPicsUrl),
+    parrots = visit.map(_.parrotPicsUrl)
+  )
 }
 ```

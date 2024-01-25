@@ -101,7 +101,7 @@ import besom.api.tls
     )
   )
 
-  for {
+  val displayInformation = for
     server: ec2.Instance <- server
     _                    <- sshKey
     _                    <- keyPair
@@ -110,7 +110,9 @@ import besom.api.tls
         .flatMap(log.info(_))
     _ <- log.info("Connect to SSH: ssh -i key_rsa ec2-user@$(pulumi stack output publicIp)")
     _ <- log.info("Connect to HTTP: open http://$(pulumi stack output publicHostName)")
-  } yield Pulumi.exports(
+  yield ()
+
+  Stack(displayInformation).exports(
     publicKey = publicKey,
     privateKey = privateKey,
     publicIp = server.publicIp,

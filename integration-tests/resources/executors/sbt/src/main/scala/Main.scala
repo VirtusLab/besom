@@ -8,6 +8,7 @@ import besom.*
   val y = besom.languageplugin.test.resourceplugin.external.customVal
 
   // Show that we were executed for tests to read
-  for _ <- log.warn("scala executor test got executed")
-  yield exports()
+  Stack(
+    log.warn("scala executor test got executed")
+  )
 }

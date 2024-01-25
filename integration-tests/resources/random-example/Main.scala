@@ -11,12 +11,14 @@ def main(): Unit = Pulumi.run {
     )
   )
 
-  for
-    str  <- strOutput
-    str2 <- strOutput // checks memoization too
-  yield exports(
-    randomString = str.result,
-    resourceName = str.pulumiResourceName,
+  val str = strOutput
+
+  Stack(
+    strOutput,
+    strOutput // checking memoization
+  ).exports(
+    randomString = str.map(_.result),
+    resourceName = str.map(_.pulumiResourceName),
     org = Pulumi.pulumiOrganization,
     proj = Pulumi.pulumiProject,
     stack = Pulumi.pulumiStack

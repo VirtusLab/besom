@@ -39,9 +39,7 @@ import besom.api.kubernetes.meta.v1.inputs.*
     )
   )
 
-  for {
-    _ <- nginxDeployment
-  } yield exports(
+  Stack.exports(
     nginx = nginxDeployment.metadata.name
   )
 }

@@ -89,9 +89,9 @@ Go ahead and open the `Main.scala` file. Inside you will see this snippet:
 import besom.*
 
 @main def main: Unit = Pulumi.run {
-  for 
-    _ <- log.warn("Nothing's here yet, it's waiting for you to write some code!")
-  yield Pulumi.exports()
+  val warning = log.warn("Nothing's here yet, it's waiting for you to write some code!")
+  
+  Stack(warning)
 }
 ```
 
@@ -119,20 +119,18 @@ val feedBucket = s3.Bucket(
 )
 ```
 
-You still need to add this resource to programs main flow so change this:
+You still need to add this resource to program's main flow so change this:
 
 ```scala
-for 
-  _ <- log.warn("Nothing's here yet, it's waiting for you to write some code!")
-yield Pulumi.exports()
+val warning = log.warn("Nothing's here yet, it's waiting for you to write some code!")
+
+Stack(warning)
 ```
 
 into this:
 
 ```scala
-for 
-  _ <- feedBucket
-yield Pulumi.exports()
+Stack(feedBucket)
 ```
 
 Simple enough. Notice that what is done here is that you provide a name for Pulumi resource, not a name for the bucket
@@ -241,13 +239,9 @@ has to be created before a public policy is actually applied to the bucket. Shou
 everything in parallel AWS API would return a `403 Forbidden` error. More about this topic can be found in
 [Resource constructors, outputs and asynchronicity](./constructors.md) section of the docs.
 
-Please don't forget to add both resources to the final `for/yield`:
+Please don't forget to add both resources to your `Stack`:
 ```scala
-  for
-    _ <- feedBucket
-    _ <- feedBucketPublicAccessBlock
-    _ <- feedBucketPolicy
-  yield Pulumi.exports()
+Stack(feedBucket, feedBucketPublicAccessBlock, feedBucketPolicy)
 ```
 
 If you run your program now you will have an empty but publicly accessible S3 bucket!
@@ -297,7 +291,7 @@ val catPostTable = dynamodb.Table(
 )
 ```
 
-That's all! DynamoDB is that easy to set up. Add the resource to the final `for/yield` and run it.
+That's all! DynamoDB is that easy to set up. Add the resource to the final `Stack` and run it.
 
 ### AWS Lambdas
 
@@ -383,7 +377,7 @@ The path is relative and points to pre-built packages by default.
 
 If you chose to rebuild the lambdas on your own you have to adjust the path so that it points to the relevant packages.
 
-Add this to your program, add both lambdas to the final `for/yield`, run `pulumi up` and that's it, AWS Lambdas deployed.
+Add this to your program, add both lambdas to the `Stack` at the end of your program, run `pulumi up` and that's it, AWS Lambdas deployed.
 
 ### AWS API Gateway
 
@@ -546,12 +540,11 @@ Two things that need attention here is that API deployment has to be sequenced w
 [`deleteBeforeReplace` resource option](https://www.pulumi.com/docs/concepts/options/deletebeforereplace/) makes 
 an appearance. These are necessary for AWS to correctly handle the deployment of these resources.
 
-Ok, that's it. Add *all* of these resources to the final `for/yield` block and then modify
-the [`exports`](./exports.md))
-block so that it matches this:
+Ok, that's it. Add *all* of these resources to Stack and then modify
+the [`exports`](./exports.md) so that it matches this:
 ```scala
-Pulumi.exports(
-  feedBucket = bucket.bucket,
+Stack(...).exports(
+  feedBucket = feedBucket.bucket,
   endpointURL = apiStage.invokeUrl
 )
 ```
@@ -600,34 +593,34 @@ val addLambdaLogs = addLambda.name.flatMap { addName =>
   )
 }
 ```
-Again, remember to add them to the final `for/yield` block.
+Again, remember to add them to the Stack at the end of the program.
 
-### Addendum B - final `for/yield` block:
+### Addendum B - final `Stack` block:
 
-Here's how the final `for/yield` block looks like in a complete deployment:
+Here's how the final `Stack` block looks like in a complete deployment:
 ```scala
-for
-  bucket   <- feedBucket
-  _        <- feedBucketPolicy
-  _        <- feedBucketPublicAccessBlock 
-  _        <- catPostTable
-  _        <- feedLambdaLogs
-  _        <- addLambdaLogs
-  _        <- feedLambda
-  _        <- addLambda
-  _        <- api
-  _        <- feedLambdaPermission
-  _        <- addLambdaPermission
-  _        <- feedMethod
-  _        <- addResource
-  _        <- addMethod
-  _        <- feedIntegration
-  _        <- addIntegration
-  _        <- apiDeployment
-  apiStage <- apiStage
-  _        <- apiStageSettings
-yield Pulumi.exports(
-  feedBucket = bucket.bucket,
+Stack(
+  feedBucket, 
+  feedBucketPolicy, 
+  feedBucketPublicAccessBlock,
+  catPostTable,
+  feedLambdaLogs, 
+  addLambdaLogs,
+  feedLambda,
+  addLambda,
+  api,
+  feedLambdaPermission,
+  addLambdaPermission,
+  feedMethod,
+  addResource,
+  addMethod,
+  feedIntegration,
+  addIntegration,
+  apiDeployment,
+  apiStage,
+  apiStageSettings
+).exports(
+  feedBucket = feedBucket.bucket,
   endpointURL = apiStage.invokeUrl
 )
 ```

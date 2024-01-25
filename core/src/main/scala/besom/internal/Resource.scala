@@ -50,8 +50,8 @@ trait ProviderResource extends CustomResource:
 
 case class DependencyResource(urn: Output[URN]) extends Resource derives ResourceDecoder
 
-case class Stack()(using ComponentBase) extends ComponentResource
-object Stack:
+case class StackResource()(using ComponentBase) extends ComponentResource
+object StackResource:
   val RootPulumiStackTypeName: ResourceType = "pulumi:pulumi:Stack"
 
   def stackName(runInfo: RunInfo): NonEmptyString =
@@ -67,8 +67,8 @@ object Stack:
       userOutputs
     )
 
-  def initializeStack(runInfo: RunInfo)(using ctx: Context): Result[Stack] =
+  def initializeStack(runInfo: RunInfo)(using ctx: Context): Result[StackResource] =
     for given ComponentBase <- ctx.registerComponentResource(stackName(runInfo), RootPulumiStackTypeName)
-    yield Stack()
+    yield StackResource()
 
 case class ComponentBase(urn: Output[URN]) extends Resource derives ResourceDecoder

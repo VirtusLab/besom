@@ -32,7 +32,7 @@ Following sections explain and showcase said differences:
 
 - [Resource constructors](constructors.md) - resource constructors are pure functions that return Outputs
 - [Context](context.md) - context is passed around implicitly via Scala's Context Function
-- [Exports](exports.md) - your program is a function that returns Stack Outputs
+- [Exports](exports.md) - your program is a function that returns Stack along with its Stack Outputs
 - [Laziness](laziness.md) - dangling resources are possible and resource constructors are memoized
 - [Apply method](apply_methods.md) - use `map` and `flatMap` to compose Outputs, not `apply`
 - [Logging](logging.md) - all logging statements need to be composed into the main flow

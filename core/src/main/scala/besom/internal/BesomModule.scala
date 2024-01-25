@@ -1,6 +1,5 @@
 package besom.internal
 
-import com.google.protobuf.struct.*
 import besom.internal.logging.{LocalBesomLogger => logger, BesomLogger}
 
 /** An abstract effect Besom module, which can be implemented for different effect types.
@@ -30,18 +29,16 @@ trait EffectBesomModule extends BesomSyntax:
     * import besom.api.aws
     *
     * @main def run = Pulumi.run {
-    *   for
-    *     bucket <- aws.s3.Bucket("my-bucket")
-    *   yield exports(
-    *     bucketUrl = bucket.websiteEndpoint
-    *   )
+    *   val bucket = aws.s3.Bucket("my-bucket")
+    *
+    *   Stack.exports(bucketUrl = bucket.websiteEndpoint)
     * }
     * }}}
     *
     * @param program
     *   the program to run
     */
-  def run(program: Context ?=> Output[Exports]): Unit =
+  def run(program: Context ?=> Stack): Unit =
     val everything: Result[Unit] = Result.scoped {
       for
         _              <- BesomLogger.setupLogger()
@@ -57,8 +54,9 @@ trait EffectBesomModule extends BesomSyntax:
         _              <- logger.trace(s"Environment:\n${sys.env.toSeq.sortBy(_._1).map((k, v) => s"$k: $v").mkString("\n")}")
         _              <- logger.debug(s"Resolved feature support, spawning context and executing user program.")
         ctx            <- Context(runInfo, taskTracker, monitor, engine, logger, featureSupport, config)
-        userOutputs    <- program(using ctx).map(_.toResult).getValueOrElse(Result.pure(Struct()))
-        _              <- Stack.registerStackOutputs(runInfo, userOutputs)(using ctx)
+        stack          <- Result.defer(program(using ctx)) // for formatting ffs
+        _              <- stack.evaluateDependencies(using ctx)
+        _              <- StackResource.registerStackOutputs(runInfo, stack.getExports.result)(using ctx)
         _              <- ctx.waitForAllTasks
       yield ()
     }

@@ -2,10 +2,10 @@ import besom.*
 import besom.api.random.*
 
 @main def main = Pulumi.run {
-  for 
-    randomPet <- RandomPet("randomPetServer")
-    name <- randomPet.id
-  yield exports(
+  val randomPet = RandomPet("randomPetServer")
+  val name      = randomPet.map(_.id)
+
+  Stack.exports(
     name = name
   )
 }

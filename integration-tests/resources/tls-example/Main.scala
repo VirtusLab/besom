@@ -11,21 +11,20 @@ import besom.api.tls.GetPublicKeyResult
       rsaBits = 4096
     )
   )
-  
+
   val public1: Output[GetPublicKeyResult] = tls.getPublicKey(
     tls.GetPublicKeyArgs(
       privateKeyOpenssh = sshKey.privateKeyOpenssh
     )
   )
 
-  for
-    p <- sshKey.publicKeyOpenssh
+  val sanityCheck = for
+    p  <- sshKey.publicKeyOpenssh
     p1 <- public1.publicKeyOpenssh
-  yield {
-    require(p.trim == p1.trim)
-    exports(
-      p = p.trim,
-      p1 = p1.trim,
-    )
-  }
+  yield require(p.trim == p1.trim)
+
+  Stack(sanityCheck).exports(
+    p = sshKey.publicKeyOpenssh.map(_.trim),
+    p1 = public1.publicKeyOpenssh.map(_.trim)
+  )
 }

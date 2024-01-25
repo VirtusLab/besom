@@ -16,12 +16,10 @@ case class DummyStructuredOutput(
     )
   )
 
-  Output {
-    exports(
-      sshKeyUrn = sshKey.urn,
-      value1 = 23,
-      value2 = "Hello world!",
-      structured = DummyStructuredOutput(Output.secret("ABCDEF"), 42.0)
-    )
-  }
+  Stack.exports(
+    sshKeyUrn = sshKey.urn,
+    value1 = 23,
+    value2 = "Hello world!",
+    structured = DummyStructuredOutput(Output.secret("ABCDEF"), 42.0)
+  )
 }

@@ -453,7 +453,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
   // This method returns an Option of Resource because for Stack there is no parent resource,
   // for any other resource the parent is either explicitly set in ResourceOptions or the stack is the parent.
   private def resolveParentUrn(typ: ResourceType, resourceOptions: ResourceOptions): Result[Option[URN]] =
-    if typ == Stack.RootPulumiStackTypeName then Result.pure(None)
+    if typ == StackResource.RootPulumiStackTypeName then Result.pure(None)
     else
       resourceOptions.parent match
         case Some(parent) =>
