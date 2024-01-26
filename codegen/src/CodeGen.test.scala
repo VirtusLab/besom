@@ -769,7 +769,7 @@ class CodeGenTest extends munit.FunSuite {
       expectedError = Some(
         "invalid property for 'fake-provider:index:typ': property name 'id' is reserved"
       ),
-      tags = Set(munit.Ignore) // FIXME: un-ignore when this is fixed: https://github.com/pulumi/pulumi-kubernetes/issues/2683
+      tags = Set(munit.Ignore) // FIXME: un-ignore when this is fixed: https://github.com/pulumi/pulumi/issues/15024
     ),
     Data(
       name = "Error on urn property",
@@ -797,7 +797,7 @@ class CodeGenTest extends munit.FunSuite {
       expectedError = Some(
         "invalid property for 'fake-provider:index:typ': property name 'urn' is reserved"
       ),
-      tags = Set(munit.Ignore) // FIXME: un-ignore when this is fixed: https://github.com/pulumi/pulumi-kubernetes/issues/2683
+      tags = Set(munit.Ignore) // FIXME: un-ignore when this is fixed: https://github.com/pulumi/pulumi/issues/15024
     )
   ).foreach(data =>
     test(data.name.withTags(data.tags)) {
