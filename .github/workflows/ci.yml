@@ -74,5 +74,11 @@ jobs:
     - name: Compile everything
       run: just compile-all
 
-    - name: Test most of the things
-      run: just test-json test-sdk test-codegen test-integration-ci
+    - name: Unit test most of the things
+      run: just test-json test-sdk test-codegen
+
+    - name: Publish local for integration tests
+      run: just publish-local-all
+
+    - name: Integration test
+      run: scala-cli --power test integration-tests

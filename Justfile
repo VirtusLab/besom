@@ -316,9 +316,6 @@ publish-gh-codegen: test-codegen
 test-integration: test-integration-core test-integration-compiler-plugin test-integration-codegen test-integration-language-plugin
 	scala-cli --power test integration-tests
 
-test-integration-ci: publish-local-codegen publish-local-sdk install-language-plugin publish-local-compiler-plugin
-	scala-cli --power test integration-tests
-
 # Cleans after integration tests
 clean-test-integration: clean-test-integration-codegen
 	scala-cli --power clean integration-tests
@@ -445,6 +442,7 @@ upsert-gh-release:
 # Cleans everything, including the local ivy, git untracked files, and kills all java processes
 power-wash: clean-all
 	rm -rf ~/.ivy2/local/org.virtuslab/
+	rm -rf ~/.m2/repository/org/virtuslab/
 	git clean -i -d -x -e ".idea"
 	killall -9 java
 

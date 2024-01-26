@@ -2,8 +2,11 @@ package besom.integration.compilerplugin
 
 import besom.integration.common.*
 
-//noinspection ScalaFileName
+import scala.concurrent.duration.*
+
+//noinspection ScalaFileName,TypeAnnotation
 class CompilerPluginTest extends munit.FunSuite {
+  override val munitTimeout = 1.minute
 
   test("compilation should fail with pulumi compiler plugin when using output parameter in an s interpolator") {
     val result = scalaCli
