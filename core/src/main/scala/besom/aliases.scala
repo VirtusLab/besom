@@ -35,6 +35,7 @@ object aliases:
   object StackReferenceResourceOptions extends besom.internal.StackReferenceResourceOptionsFactory
   type Stack = besom.internal.Stack
   object Stack extends besom.internal.StackFactory
+  type ResourceCompanion[A <: besom.internal.Resource] = besom.internal.ResourceCompanion[A]
 
   export besom.internal.InvokeOptions
 end aliases
