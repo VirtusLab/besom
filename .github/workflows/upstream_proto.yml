@@ -24,7 +24,9 @@ jobs:
     - uses: arduino/setup-protoc@v1
 
     - name: Fetch & generate protobuf 
-      run: just generate-pulumi-protobufs
-    
+      run: |-
+        scala-cli --power config repositories.credentials maven.pkg.github.com env:GITHUB_ACTOR env:GITHUB_TOKEN
+        just cli proto all
+
     - name: Compile SDK with rebuilt protobufs
       run: just compile-sdk
