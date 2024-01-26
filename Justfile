@@ -359,7 +359,7 @@ copy-test-schemas:
 test-template template-name:
 	@echo "Testing template {{template-name}}"
 	pulumi --non-interactive --logtostderr --color=never --emoji=false new -y --force --dir target/test/{{template-name}} -n templates-test-{{template-name}} --stack templates-test-{{template-name}} ../../../templates/{{template-name}}/
-	scala-cli compile target/test/{{template-name}} --repository=https://github.com/VirtusLab/besom.git --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+	scala-cli compile target/test/{{template-name}} --repository=https://maven.pkg.github.com/VirtusLab/besom --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 	@echo "----------------------------------------"
 
 # Cleans after a template test
@@ -382,7 +382,7 @@ clean-test-templates:
 # Runs an example test
 test-example example-name:
 	@echo "Testing example {{example-name}}"
-	scala-cli compile examples/{{example-name}} --repository=https://github.com/VirtusLab/besom.git --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+	scala-cli compile examples/{{example-name}} --repository=https://maven.pkg.github.com/VirtusLab/besom --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 	@echo "----------------------------------------"
 
 # Cleans after an example test

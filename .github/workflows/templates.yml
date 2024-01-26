@@ -1,6 +1,7 @@
 name: Templates smoke tests
 
 on:
+  workflow_dispatch:
   push:
     branches: [ 'main', 'develop' ]
     paths:
@@ -42,4 +43,6 @@ jobs:
       - name: Login in to pulumi
         run: pulumi login --local
       - name: Test templates
-        run: just test-templates
+        run: |-
+          scala-cli --power config repositories.credentials maven.pkg.github.com env:GITHUB_ACTOR env:GITHUB_TOKEN
+          just test-templates
