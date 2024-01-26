@@ -145,7 +145,7 @@ val feedBucket = s3.Bucket(
 )
 ```
 
-Unfortunately bucket names in AWS are globally unique, and therefore it would be very easy to have a name clash with 
+Unfortunately bucket names in AWS are **globally unique**, and therefore it would be very easy to have a name clash with 
 another user. When you omit the explicit name of a resource via it's resource arguments Pulumi uses the name of Pulumi 
 resource and suffixes it with a random string to generate a unique name. This distinction is quite important 
 because Pulumi resource name is a part of [Pulumi URN](https://www.pulumi.com/docs/concepts/resources/names/), but
@@ -153,13 +153,20 @@ the actual bucket name is a part of its resource ID in AWS infrastructure. For n
 argument of Besom resource constructor function is always the Pulumi resource name and resource names for cloud 
 provider to use are always provided via resource arguments.
 
-You can try and create your bucket now. To do this execute `pulumi up` in `./besom` directory. Pulumi will ask you 
-to create a [stack](https://www.pulumi.com/docs/concepts/stack/). Name it however you want, we named it `dev` because
+You can try and create your bucket now. To do this execute `pulumi up` in `./besom` directory: 
+```bash
+cd besom
+pulumi up
+```
+
+Pulumi will ask you to create a [stack](https://www.pulumi.com/docs/concepts/stack/). Name it however you want, we named it `dev` because
 stacks commonly match application environments. You might be also asked to provide a password for this stack. This is 
 actually quite important because Pulumi uses that password to encrypt sensitive data related to your deployment. As 
 you are just playing you can use an empty password, but it's *very important* to use a proper password for actual work.
 Pulumi will subsequently print a preview of changes between current state of affairs and the changes your code will 
-introduce to the cloud environment. Select `yes` when asked whether you want to deploy this set of changes to cloud.
+introduce to the cloud environment. 
+
+Select `yes` when asked whether you want to deploy this set of changes to cloud.
 
 To work faster you can also use these shorthand commands:
 * `pulumi up --stack dev -y` - tells Pulumi to use stack named `dev` and not to ask for confirmation of deployment 
@@ -171,8 +178,9 @@ Remember that in actual production environment you can't just `pulumi destroy` t
 out it will be handy however because it's a tutorial. If you get into any trouble you can just start over by 
 destroying everything and then applying your program from ground up.
 
-There's one huge problem with our bucket now - all S3 buckets are private by default. Let's make it public. Making
-an S3 bucket public is quite involved because turning a private bucket public can deal an enormous amount of damage
+There's one huge problem with our bucket now - all S3 buckets are private by default. Let's make it public. 
+
+Making an S3 bucket public is quite involved because turning a private bucket public can deal an enormous amount of damage
 to a company. To achieve this you will need to create two new resources - a `BucketPublicAccessBlock` and a `BucketPolicy`.
 This will also allow us to introduce two new concepts.
 
@@ -229,11 +237,13 @@ val feedBucketPolicy = bucketName.flatMap(name =>
 ```
 
 First of all, the dynamically generated unique bucket name is used again to name this resource too, and then 
-its ID is used once more to inform `BucketPolicy` about the bucket it should be applied to. The policy itself
-is expressed here using JSON AST of [spray-json](https://github.com/spray/spray-json) library and rendered to string. 
-Alternatively, it could be just an interpolated string literal, it could also be loaded from a file and interpolated 
-using regular expression. The last new step is the use of `dependsOn` property of 
-[resource options](https://www.pulumi.com/docs/concepts/options/). We use it here to inform Pulumi about the
+its ID is used once more to inform `BucketPolicy` about the bucket it should be applied to. 
+
+The policy itself is expressed here using JSON AST of [spray-json](https://github.com/spray/spray-json) library and rendered to string. 
+Alternatively, it could be just an interpolated string literal, it could also be loaded from a file 
+and interpolated using regular expression. 
+
+The last new step is the use of `dependsOn` property of [resource options](https://www.pulumi.com/docs/concepts/options/). We use it here to inform Pulumi about the
 necessity of ordered creation of resources - the `BucketPublicAccessBlock` with `blockPublicPolicy = false` 
 has to be created before a public policy is actually applied to the bucket. Should we allow Pulumi to run 
 everything in parallel AWS API would return a `403 Forbidden` error. More about this topic can be found in
@@ -485,6 +495,72 @@ val addIntegration = apigateway.Integration(
 )
 ```
 
+Now we have one more thing to do, create API Gateway account settings (region wide) and associate it with the API:
+
+```scala
+val cloudwatchRole = iam.Role(
+  "cloudwatchRole",
+  iam.RoleArgs(
+    assumeRolePolicy = """{
+        |  "Version": "2012-10-17",
+        |  "Statement": [
+        |    {
+        |      "Effect": "Allow",
+        |      "Action": "sts:AssumeRole",
+        |      "Principal": {
+        |        "Service": [
+        |           "apigateway.amazonaws.com"
+        |        ]
+        |      }
+        |    }
+        |  ]
+        |}
+        |""".stripMargin.parseJson.prettyPrint,
+    managedPolicyArns = List(
+      "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+    )
+  )
+)
+
+val cloudwatchRolePolicy = iam.RolePolicy(
+  "cloudwatchRolePolicy",
+  iam.RolePolicyArgs(
+    role = cloudwatchRole.id,
+    policy = """{
+        |  "Version": "2012-10-17",
+        |  "Statement": [
+        |    {
+        |      "Effect": "Allow",
+        |      "Action": [
+        |        "logs:CreateLogGroup",
+        |        "logs:CreateLogStream",
+        |        "logs:DescribeLogGroups",
+        |        "logs:DescribeLogStreams",
+        |        "logs:PutLogEvents",
+        |        "logs:GetLogEvents",
+        |        "logs:FilterLogEvents"
+        |      ],
+        |      "Resource": "*"
+        |    }
+        |  ]
+        |}
+        |""".stripMargin.parseJson.prettyPrint
+  )
+)
+
+val apiAccount = apigateway.Account(
+  "apiAccount",
+  apigateway.AccountArgs(
+    cloudwatchRoleArn = cloudwatchRole.arn
+  )
+)
+```
+
+:::caution
+As there is no API method for deleting account settings or resetting it to defaults, 
+destroying this resource will keep your account settings intact!
+:::
+
 Finally, you have to create a deployment of the API with its stage (here's where we reuse the `stageName` value from
 Lambdas section):
 
@@ -531,14 +607,17 @@ val apiStageSettings = apigateway.MethodSettings(
       metricsEnabled = true,
       loggingLevel = "ERROR"
     )
+  ),
+  CustomResourceOptions(
+    dependsOn = apiAccount.map(List(_))
   )
 )
 ```
 
-Two things that need attention here is that API deployment has to be sequenced with Lambdas creation so the
+Two things that need attention here is that API deployment has to be sequenced with Lambdas and IAM creation so the
 `dependsOn` property is used again. Another thing is that 
-[`deleteBeforeReplace` resource option](https://www.pulumi.com/docs/concepts/options/deletebeforereplace/) makes 
-an appearance. These are necessary for AWS to correctly handle the deployment of these resources.
+[`deleteBeforeReplace` resource option](https://www.pulumi.com/docs/concepts/options/deletebeforereplace/) makes an appearance. 
+These are necessary for AWS to correctly handle the deployment of these resources.
 
 Ok, that's it. Add *all* of these resources to Stack and then modify
 the [`exports`](./exports.md) so that it matches this:
