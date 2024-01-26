@@ -58,10 +58,6 @@ before-commit: compile-all test-all
 # Language SDK
 ####################
 
-# Generates the protobufs for the language SDK
-generate-pulumi-protobufs:
-	scala-cli run --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- proto all
-
 # Compiles core besom SDK
 compile-core: publish-local-json
 	scala-cli --power compile core --suppress-experimental-feature-warning

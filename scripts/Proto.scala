@@ -25,7 +25,15 @@ object Proto:
           println("You need `unzip` installed for this to work!")
           sys.exit(1)
       case other =>
-        println(s"unknown command: $other")
+        println(s"Unknown command: $other")
+        println(
+          """Usage: proto <command>
+            |
+            |Commands:
+            |  fetch   - fetches protobuf declaration files from pulumi repo(s)
+            |  compile - compiles protobuf declaration files to scala code (codegen)
+            |  all     - fetches & compiles
+            |""".stripMargin)
         sys.exit(1)
 
 private def fetchProto(cwd: os.Path, targetPath: os.Path): Unit =

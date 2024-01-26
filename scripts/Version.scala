@@ -14,9 +14,9 @@ object Version:
 
     val expectedFileNames = Vector("project.scala", "project-test.scala", "run.scala")
 
-    lazy val projectFiles: Map[os.Path, String] =
-      println(s"Searching for project files in $cwd")
-      os.walk(cwd)
+    def projectFiles(path: os.Path = cwd): Map[os.Path, String] =
+      println(s"Searching for project files in $path")
+      os.walk(path)
         .filter(f => expectedFileNames.contains(f.last))
         .filterNot(_.startsWith(cwd / ".out"))
         .map((f: os.Path) => f -> os.read(f))
@@ -31,7 +31,7 @@ object Version:
     args match
       case "show" :: Nil =>
         println(s"Showing all Besom dependencies")
-        projectFiles
+        projectFiles()
           .foreachEntry { case (f, content) =>
             content.linesIterator.zipWithIndex.foreach { case (line, index) =>
               line match
@@ -41,9 +41,26 @@ object Version:
                 case _ => // ignore
             }
           }
+      case "summary" :: maybePath =>
+        val path = maybePath.headOption.map(cwd / os.RelPath(_)).getOrElse(cwd)
+        println(s"Showing all dependencies in $path")
+        projectFiles(path)
+          .flatMap { case (_, content) =>
+            content.linesIterator.flatMap {
+              case besomDependencyPattern(_, version, _) =>
+                version match
+                  case s"$a:$b-core.$c" => Seq(a -> b, "core" -> c)
+                  case s"$a:$b"         => Seq(a -> b)
+              case _ => Seq.empty
+            }
+          }
+          .toSet
+          .foreach { case (a, b) =>
+            println(s"$a $b")
+          }
       case "bump" :: newBesomVersion :: Nil =>
         println(s"Bumping Besom core version from '$besomVersion' to '$newBesomVersion'")
-        projectFiles
+        projectFiles()
           .collect { case (path, content) if content.linesIterator.exists(besomDependencyPattern.matches) => path -> content }
           .foreachEntry { case (path, content) =>
             val newContent = content.linesIterator
@@ -62,7 +79,7 @@ object Version:
       case "update" :: Nil =>
         println(s"Bumping Besom packages version to latest")
         val latestPackages = latestPackageVersions()
-        projectFiles
+        projectFiles()
           .collect { case (path, content) if content.linesIterator.exists(besomDependencyPattern.matches) => path -> content }
           .foreachEntry { case (path, content) =>
             val newContent = content.linesIterator
@@ -75,15 +92,17 @@ object Version:
             os.write.over(path, newContent)
             println(s"Updated $path")
           }
-      case _ =>
+      case cmd =>
+        println(s"Unknown command: $cmd\n")
         println(
           s"""Usage: version <command>
-           |
-           |Commands:
-           |  show               - show all project.scala files with besom dependency
-           |  bump <new_version> - bump besom version in all project.scala files
-           |  update             - update all provider dependencies in project.scala files to latest
-           |""".stripMargin
+             |
+             |Commands:
+             |  show               - show all project.scala files with besom dependency
+             |  bump <new_version> - bump besom version in all project.scala files
+             |  update             - update all provider dependencies in project.scala files to latest
+             |  summary <path>     - summarize all dependencies in <path> (default: .)
+             |""".stripMargin
         )
         exit(1)
     end match

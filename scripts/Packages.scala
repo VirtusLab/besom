@@ -6,6 +6,7 @@ import org.virtuslab.yaml.*
 
 import java.util.Date
 import scala.collection.mutable
+import scala.sys.exit
 import scala.util.*
 import scala.util.control.NonFatal
 
@@ -13,19 +14,23 @@ import scala.util.control.NonFatal
 object Packages:
   def main(args: String*): Unit =
     args match
-      case "metadata-all" :: Nil       => downloadPackagesMetadata(packagesDir)
-      case "metadata" :: tail          => downloadPackagesMetadata(packagesDir, selected = tail)
-      case "generate-all" :: Nil       => generateAll(packagesDir)
-      case "generate" :: tail          => generateSelected(packagesDir, tail)
-      case "publish-local-all" :: Nil  => publishLocalAll(generatedFile)
-      case "publish-local" :: tail     => publishLocalSelected(generatedFile, tail)
-      case "publish-maven-all" :: Nil  => publishMavenAll(generatedFile)
-      case "publish-maven" :: tail     => publishMavenSelected(generatedFile, tail)
-      case "publish-github-all" :: Nil => publishGithubAll(generatedFile)
-      case "publish-github" :: tail    => publishGithubSelected(generatedFile, tail)
-      case _ =>
+      case "metadata-all" :: Nil                 => downloadPackagesMetadata(packagesDir)
+      case "metadata" :: tail                    => downloadPackagesMetadata(packagesDir, selected = tail)
+      case "generate-all" :: Nil                 => generateAll(packagesDir)
+      case "generate" :: tail                    => generateSelected(packagesDir, tail)
+      case "publish-local-all" :: Nil            => publishLocalAll(generatedFile)
+      case "publish-local" :: tail               => publishLocalSelected(generatedFile, tail)
+      case "publish-maven-all" :: Nil            => publishMavenAll(generatedFile)
+      case "publish-maven" :: tail               => publishMavenSelected(generatedFile, tail)
+      case "publish-github-all" :: Nil           => publishGithubAll(generatedFile)
+      case "publish-github" :: tail              => publishGithubSelected(generatedFile, tail)
+      case "delete-github" :: packageName :: Nil => deleteGithubPackage(packageName)
+      case cmd =>
+        println(s"Unknown command: $cmd\n")
         println(
-          s"""Unknown command: $args, expected one of:
+          s"""Usage: packages <command>
+             |
+             |Commands:
              |  metadata-all                - download all packages metadata
              |  metadata <package>...       - download selected packages metadata
              |  generate-all                - generate all packages source code
@@ -34,10 +39,12 @@ object Packages:
              |  publish-local <package>...  - publish selected packages locally
              |  publish-maven-all           - publish all packages to Maven
              |  publish-maven <package>...  - publish selected packages to Maven
-             |  publish-github-all          - publish all packages to Github
-             |  publish-github <package>... - publish selected packages to Github
+             |  publish-github-all          - publish all packages to Github Packages
+             |  publish-github <package>... - publish selected packages to Github Packages
+             |  delete-github <package>...  - delete selected packages from Github Packages
              |""".stripMargin
         )
+        exit(1)
   end main
 
   val cwd              = besomDir
@@ -73,8 +80,7 @@ object Packages:
 
   val ghAuthOpts: Vector[os.Shellable] = Vector(
     "--publish-repository=github",
-    "--password=env:GITHUB_TOKEN",
-    "--repository=https://github.com/VirtusLab/besom.git"
+    "--password=env:GITHUB_TOKEN"
   )
 
   lazy val localOpts: Vector[os.Shellable] =
@@ -360,10 +366,15 @@ object Packages:
     if !os.exists(targetPath) then downloadPackagesMetadata(targetPath, selected)
     val metadataFiles = os.list(targetPath).filter(_.last.endsWith("metadata.json"))
     val metadata = metadataFiles
-      .filter(p => selected.contains(p.last.stripSuffix(".metadata.json")))
+      .filter { p =>
+        selected match
+            case Nil      => true
+            case selected => selected.contains(p.last.stripSuffix(".metadata.json")) // filter out selected packages only if selected is not empty
+      }
       .map(PackageMetadata.fromJsonFile)
       .collect {
-        case metadata if !pluginDownloadProblemPackages.contains(metadata.name) => metadata
+        case metadata if selected.nonEmpty => metadata
+        case metadata if !pluginDownloadProblemPackages.contains(metadata.name) => metadata // filter out packages with known problems only if selected is not empty
       }
       .toVector
 
@@ -456,4 +467,18 @@ object Packages:
 
     println(s"Packages directory: '$targetPath'")
   }
+
+  def deleteGithubPackage(packageName: String): Unit =
+    val packagesRepoApi = s"https://api.github.com/orgs/VirtusLab/packages/maven/org.virtuslab.besom-${packageName}_3"
+    val token = envOrExit("GITHUB_TOKEN")
+    val headers = Map(
+      "Authorization" -> s"Bearer $token",
+      "Accept" -> "application/vnd.github+json"
+    )
+
+    // please not that this call requires
+    val packagesResponse = requests.delete(packagesRepoApi, headers = headers)
+    if packagesResponse.statusCode != 204
+    then throw Exception(s"Failed to delete package using: '$packagesRepoApi'")
+
 end Packages
