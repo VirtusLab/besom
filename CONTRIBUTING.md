@@ -149,13 +149,46 @@ as `org.virtuslab::besom-core:X.Y.Z` and `org.virtuslab::besom-[package]:A.B.C-c
 
 Language host provider is published to GitHub Packages as `pulumi-language-scala-vX.Y.Z-OS-ARCH.tar.gz`.
 
-#### Create a release draft
+To use our internal GitHub Packages version:
+
+```bash
+pulumi --logtostderr plugin install language scala $(cat version.txt) --server github://api.github.com/VirtusLab/besom
+```
+```bash
+scala-cli --power config repositories.credentials maven.pkg.github.com env:GITHUB_ACTOR env:GITHUB_TOKEN
+scala-cli --power config 
+export GITHUB_TOKEN=$(gh auth token)
+export GITHUB_ACTOR=<your_gh_user_name_here> # you can check it using `gh auth status`
+```
+
+### Bump Besom version
+
+To bump Besom version in all `project.scala` and `version.txt` files:
+
+```bash
+just cli version bump X.Y.Z
+```
+
+### Updating dependencies versions in all `project.scala` files
+
+This is most useful for `examples` and `templates`, and integration tests:
+
+```bash
+just cli version update
+```
+
+### Create a release draft
 
 ```bash
 just upsert-gh-release
 ```
 
-#### Publish packages
+### Publish core
+```bash
+just publish-gh-all publish-language-plugins-all
+```
+
+### Publish packages
 
 Publish a package to GitHub Packages:
 ```bash
@@ -172,6 +205,14 @@ just publish-language-plugins-all
 just cli packages metadata-all
 just cli packages generate-all
 just cli packages publish-github-all
+```
+
+### Delete packages
+
+To delete GitHub Packages package:
+```bash
+gh auth refresh -s delete:packages -s read:packages
+just cli packages delete-github <package>
 ```
 
 ### Adding examples and testing them locally
@@ -221,7 +262,8 @@ just copy-test-schemas
 Protobuf/gRPC codegen is tested by running:
 
 ```bash
-just generate-pulumi-protobufs compile-core
+just cli proto all
+just compile-core
 ```
 
 ## Setting up the code editor

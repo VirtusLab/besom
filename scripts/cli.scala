@@ -10,8 +10,9 @@ package besom.scripts
     case "coverage" => Coverage.main(args.tail*)
     case "version"  => Version.main(args.tail*)
     case cmd =>
+      println(s"Unknown command: $cmd\n")
       println(
-        s"""Unknown command: '$cmd', expected one of:
+        s"""Usage: cli <command>
            |  schemas  - fetch upstream test schemas
            |  packages - generate and publish Besom packages
            |  proto    - fetch and compile Pulumi gRPC proto files
