@@ -355,7 +355,7 @@ copy-test-schemas:
 test-template template-name:
 	@echo "----------------------------------------"
 	@echo "Testing template {{template-name}}"
-	pulumi --non-interactive --logtostderr --color=never --emoji=false new -y --force --dir target/test/{{template-name}} -n templates-test-{{template-name}} --stack templates-test-{{template-name}} ../../../templates/{{template-name}}/
+	pulumi --non-interactive --logtostderr --color=never --emoji=false new -y --force --generate-only --dir target/test/{{template-name}} -n templates-test-{{template-name}} --stack templates-test-{{template-name}} ../../../templates/{{template-name}}/
 	scala-cli compile target/test/{{template-name}} --repository=https://maven.pkg.github.com/VirtusLab/besom --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 
 # Cleans after a template test
