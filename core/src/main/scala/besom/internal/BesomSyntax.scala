@@ -115,4 +115,13 @@ trait BesomSyntax:
         }
         .map(OutputData(_))
     }
+
+  /** Shortcut function allowing for uniform resource options syntax everywhere.
+    *
+    * @param variant
+    *
+    * @return
+    */
+  def opts(using variant: ResourceOptsVariant): variant.Constructor = variant.constructor
+
 end BesomSyntax
