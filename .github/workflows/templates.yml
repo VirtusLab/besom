@@ -44,5 +44,6 @@ jobs:
         run: pulumi login --local
       - name: Test templates
         run: |-
+          pulumi --logtostderr plugin install language scala $(cat version.txt) --server github://api.github.com/VirtusLab/besom
           scala-cli --power config repositories.credentials maven.pkg.github.com env:GITHUB_ACTOR env:GITHUB_TOKEN
           just test-templates
