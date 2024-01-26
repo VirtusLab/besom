@@ -697,7 +697,9 @@ Stack(
   addIntegration,
   apiDeployment,
   apiStage,
-  apiStageSettings
+  apiAccount,
+  apiStageSettings,
+  cloudwatchRolePolicy
 ).exports(
   feedBucket = feedBucket.bucket,
   endpointURL = apiStage.invokeUrl
