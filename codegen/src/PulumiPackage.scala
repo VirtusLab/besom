@@ -270,7 +270,6 @@ sealed trait ConstValue
 
 //noinspection TypeAnnotation
 object ConstValue {
-  // TODO: Handle other possible data types?
   implicit val reader: Reader[ConstValue] = new SimpleReader[ConstValue] {
     override def expectedMsg                              = "expected string, boolean or integer"
     override def visitString(s: CharSequence, index: Int) = StringConstValue(s.toString)
@@ -541,8 +540,6 @@ case class DefaultInfo(environment: List[String])
 object DefaultInfo {
   implicit val reader: Reader[DefaultInfo] = macroR
 }
-
-// TODO Handle `value`s of other primitive types
 
 /** Describes a Pulumi metaschema enum value
   * @param value

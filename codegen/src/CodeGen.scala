@@ -304,7 +304,7 @@ class CodeGen(implicit
     resourceDefinition.properties.foreach {
       case (name, _) => {
         if (name == "urn" || name == "id") {
-          // TODO: throw an exception once 'kubernetes' is fixed: https://github.com/pulumi/pulumi-kubernetes/issues/2683
+          // TODO: throw an exception once 'kubernetes' is fixed: https://github.com/pulumi/pulumi/issues/15024
           logger.error(s"invalid property for '${token.asString}': property name '${name}' is reserved")
         }
       }
