@@ -373,7 +373,7 @@ clean-test-template template-name:
 
 # Runs all template tests
 test-templates:
-	for file in `ls -d templates/*/ | cut -f2 -d'/'`; do just test-template $file; done
+	for file in `ls -d templates/*/ | cut -f2 -d'/'`; do just test-template $file || exit 1; done
 
 # Cleans after template tests
 clean-test-templates:
@@ -393,7 +393,7 @@ clean-test-example example-name:
 
 # Runs all template tests
 test-examples:
-	for file in `ls -d examples/*/ | cut -f2 -d'/'`; do just test-example $file; done
+	for file in `ls -d examples/*/ | cut -f2 -d'/'`; do just test-example $file || exit 1; done
 
 # Cleans after template tests
 clean-test-examples:
