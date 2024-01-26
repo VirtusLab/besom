@@ -452,7 +452,7 @@ class CodeGen(implicit
 
     val baseCompanion =
       if (hasOutputExtensions) {
-        m"""|object $baseClassName:
+        m"""|object $baseClassName extends besom.ResourceCompanion[$baseClassName]:
             |  def apply(using ctx: besom.types.Context)(
             |    name: besom.util.NonEmptyString,
             |    args: ${argsClassName}${argsDefault},

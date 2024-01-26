@@ -73,7 +73,7 @@ class CodeGenTest extends munit.FunSuite {
               |  id: besom.types.Output[besom.types.ResourceId]
               |) extends besom.ProviderResource
               |
-              |object Provider:
+              |object Provider extends besom.ResourceCompanion[Provider]:
               |  def apply(using ctx: besom.types.Context)(
               |    name: besom.util.NonEmptyString,
               |    args: ProviderArgs = ProviderArgs(),
@@ -200,7 +200,7 @@ class CodeGenTest extends munit.FunSuite {
              |  ): besom.types.Output[besom.api.googlenative.container.v1.ClusterGetKubeconfigResult] =
              |     ctx.call[besom.api.googlenative.container.v1.ClusterGetKubeconfigArgs, besom.api.googlenative.container.v1.ClusterGetKubeconfigResult, besom.api.googlenative.container.v1.Cluster]("google-native:container/v1:Cluster/getKubeconfig", args, this, opts)
              |
-             |object Cluster:
+             |object Cluster extends besom.ResourceCompanion[Cluster]:
              |  def apply(using ctx: besom.types.Context)(
              |    name: besom.util.NonEmptyString,
              |    args: ClusterArgs = ClusterArgs(),
