@@ -98,7 +98,11 @@ object Packages:
     if isCI
     then publishOpts(heapMaxGb = 16, jarCompression = 9, sources = true, docs = true)
     else publishOpts(heapMaxGb = 32, jarCompression = 9, sources = true, docs = true)
-  } ++ ghAuthOpts
+  } ++ ghAuthOpts ++ {
+    if isCI
+    then Vector("--repository=https://maven.pkg.github.com/VirtusLab/besom")
+    else Vector.empty
+  }
 
   private val pluginDownloadProblemPackages = Vector(
     "aws-miniflux", // lack of darwin/arm64 binary
@@ -368,13 +372,15 @@ object Packages:
     val metadata = metadataFiles
       .filter { p =>
         selected match
-            case Nil      => true
-            case selected => selected.contains(p.last.stripSuffix(".metadata.json")) // filter out selected packages only if selected is not empty
+          case Nil => true
+          case selected =>
+            selected.contains(p.last.stripSuffix(".metadata.json")) // filter out selected packages only if selected is not empty
       }
       .map(PackageMetadata.fromJsonFile)
       .collect {
         case metadata if selected.nonEmpty => metadata
-        case metadata if !pluginDownloadProblemPackages.contains(metadata.name) => metadata // filter out packages with known problems only if selected is not empty
+        case metadata if !pluginDownloadProblemPackages.contains(metadata.name) =>
+          metadata // filter out packages with known problems only if selected is not empty
       }
       .toVector
 
@@ -470,7 +476,7 @@ object Packages:
 
   def deleteGithubPackage(packageName: String): Unit =
     val packagesRepoApi = s"https://api.github.com/orgs/VirtusLab/packages/maven/org.virtuslab.besom-${packageName}_3"
-    val token = envOrExit("GITHUB_TOKEN")
+    val token           = envOrExit("GITHUB_TOKEN")
     val headers = Map(
       "Authorization" -> s"Bearer $token",
       "Accept" -> "application/vnd.github+json"
