@@ -41,4 +41,5 @@ jobs:
           just cli packages metadata ${{ matrix.provider }}
           just cli packages generate ${{ matrix.provider }}
           just cli packages delete-github ${{ matrix.provider }}
+          scala-cli --power config repositories.credentials maven.pkg.github.com env:GITHUB_ACTOR env:GITHUB_TOKEN
           just cli packages publish-github ${{ matrix.provider }}
