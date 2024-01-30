@@ -14,7 +14,7 @@ case class Redis(connectionString: Output[String])(using ComponentBase) extends 
     derives RegistersOutputs
 
 def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): Output[Redis] =
-  component(name, "besom:liftoff:Redis") {
+  component(name, "besom:liftoff:Redis", ComponentResourceOptions()) {
     val redisNamespace = Namespace(s"redis-cluster-namespace-$name")
 
     val labels = Map("app" -> name)
