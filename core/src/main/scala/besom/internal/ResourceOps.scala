@@ -34,7 +34,8 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     typ: ResourceType,
     name: NonEmptyString,
     args: A,
-    options: ResourceOptions
+    options: ResourceOptions,
+    remote: Boolean
   ): Result[R] =
     summon[ResourceDecoder[R]].makeResolver.flatMap { (resource, resolver) =>
       // this order is then repeated in registerReadOrGetResource
@@ -49,7 +50,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
               for
                 options <- options.resolve
                 _       <- log.debug(s"$mode resource, added to cache...")
-                state   <- createResourceState(typ, name, resource, options)
+                state   <- createResourceState(typ, name, resource, options, remote)
                 _       <- log.debug(s"Created resource state")
                 _       <- ctx.resources.add(resource, state)
                 _       <- log.debug(s"Added resource to resources")
@@ -57,7 +58,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
                 _       <- log.debug(s"Prepared inputs for resource")
                 _       <- addChildToParentResource(resource, options.parent)
                 _       <- log.debug(s"Added child to parent (isDefined: ${options.parent.isDefined})")
-                _       <- registerReadOrGetResource(resource, state, resolver, inputs, options)
+                _       <- registerReadOrGetResource(resource, state, resolver, inputs, options, remote)
               yield resource
             else ctx.resources.getCachedResource(typ, name, args, options).map(_.asInstanceOf[R])
           }
@@ -143,7 +144,8 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     state: ResourceState,
     resolver: ResourceResolver[R],
     inputs: PreparedInputs,
-    options: ResolvedResourceOptions
+    options: ResolvedResourceOptions,
+    remote: Boolean
   ): Result[Unit] =
     options.urn match
       case Some(urn) =>
@@ -170,7 +172,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
           case None =>
             val execRegisterResourceRequestAndComplete =
               for
-                eitherErrorOrResult <- executeRegisterResourceRequest(resource, state, inputs)
+                eitherErrorOrResult <- executeRegisterResourceRequest(resource, state, inputs, remote)
                 _                   <- completeResource(eitherErrorOrResult, resolver, state)
               yield ()
 
@@ -234,17 +236,23 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         }
 
     findAllReachableResources(resources, Set.empty).flatMap { allReachableResources =>
-      Result
-        .sequence {
-          allReachableResources
-            .filter {
-              case _: ComponentResource => false // TODO remote components - if remote it's reachable
-              case _: CustomResource    => true
-              case _                    => false
-            }
-            .map(_.urn.getValue)
-        }
-        .map(_.flatten) // this drops all URNs that are not present (given getValue returns Option[URN])
+      val reachableResourcesWithKeepDependency =
+        Result.sequence(allReachableResources.map(r => ctx.resources.getStateFor(r).map(state => r -> state.keepDependency)))
+
+      reachableResourcesWithKeepDependency.flatMap { allReachableResourcesWithKeepDep =>
+        Result
+          .sequence {
+            allReachableResourcesWithKeepDep
+              .filter {
+                case (_: ComponentResource, keepDep) => keepDep // TODO remote components - if remote it's reachable
+                case (_: CustomResource, _)          => true
+                case (_, _)                          => false
+              }
+              .map(_._1)
+              .map(_.urn.getValue)
+          }
+          .map(_.flatten) // this drops all URNs that are not present (given getValue returns Option[URN])
+      }
     }
 
   case class AggregatedDependencyUrns(
@@ -367,7 +375,8 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
   private def executeRegisterResourceRequest[R <: Resource](
     resource: Resource,
     state: ResourceState,
-    inputs: PreparedInputs
+    inputs: PreparedInputs,
+    remote: Boolean
   ): Result[Either[Throwable, RawResourceResult]] =
     ctx.registerTask {
       // X `type`: _root_.scala.Predef.String = "",
@@ -433,7 +442,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
             aliases = inputs.aliases.map { alias =>
               pulumirpc.alias.Alias(pulumirpc.alias.Alias.Alias.Urn(alias))
             }.toList,
-            remote = false, // TODO remote components
+            remote = remote,
             customTimeouts = Some(
               RegisterResourceRequest.CustomTimeouts(
                 create = inputs.options.customTimeouts.flatMap(_.create).map(CustomTimeouts.toGoDurationString).getOrElse(""),
@@ -564,7 +573,8 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     typ: ResourceType,
     name: NonEmptyString,
     resource: Resource,
-    resourceOptions: ResolvedResourceOptions
+    resourceOptions: ResolvedResourceOptions,
+    remote: Boolean
   ): Result[ResourceState] =
     for
       _                     <- log.debug(s"createResourceState")
@@ -582,7 +592,8 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         pluginDownloadUrl = resourceOptions.pluginDownloadUrl.getOrElse(""),
         name = name,
         typ = typ,
-        remoteComponent = false // TODO remote components pulumi-go: context.go:819-822
+        // keepDependency is true for remote components rehydrated components
+        keepDependency = !resource.isCustom && (remote || resourceOptions.urn.isDefined) // pulumi-go: context.go:819-822
       )
 
       resource match
@@ -605,6 +616,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         case ComponentBase(urn) =>
           ComponentResourceState(common = commonRS) // TODO: ComponentBase should not be registered"
     }
+  end createResourceState
 
   extension (invokeOpts: InvokeOptions)
     def getNestedProvider(token: FunctionToken)(using Context): Result[Option[ProviderResource]] =

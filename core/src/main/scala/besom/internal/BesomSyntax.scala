@@ -85,12 +85,16 @@ trait BesomSyntax:
     * @return
     *   the component resource instance
     */
-  def component[A <: ComponentResource & Product: RegistersOutputs: Typeable](name: NonEmptyString, typ: ResourceType)(
+  def component[A <: ComponentResource & Product: RegistersOutputs: Typeable](using ctx: Context)(
+    name: NonEmptyString,
+    typ: ResourceType,
+    opts: ComponentResourceOptions = ComponentResourceOptions()
+  )(
     f: Context ?=> ComponentBase ?=> A | Output[A]
-  )(using ctx: Context): Output[A] =
+  ): Output[A] =
     Output.ofData {
       ctx
-        .registerComponentResource(name, typ)
+        .registerComponentResource(name, typ, opts)
         .flatMap { componentBase =>
           val urnRes: Result[URN] = componentBase.urn.getValueOrFail {
             s"Urn for component resource $name is not available. This should not happen."

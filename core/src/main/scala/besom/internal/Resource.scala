@@ -68,7 +68,7 @@ object StackResource:
     )
 
   def initializeStack(runInfo: RunInfo)(using ctx: Context): Result[StackResource] =
-    for given ComponentBase <- ctx.registerComponentResource(stackName(runInfo), RootPulumiStackTypeName)
+    for given ComponentBase <- ctx.registerComponentResource(stackName(runInfo), RootPulumiStackTypeName, ComponentResourceOptions())
     yield StackResource()
 
 case class ComponentBase(urn: Output[URN]) extends Resource derives ResourceDecoder

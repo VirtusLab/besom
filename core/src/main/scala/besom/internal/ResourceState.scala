@@ -13,7 +13,7 @@ sealed trait ResourceState:
   def name: NonEmptyString
   def typ: ResourceType
   // def transformations: List[ResourceTransformation]
-  def remoteComponent: Boolean
+  def keepDependency: Boolean
 
   def addChild(child: Resource): ResourceState = this match
     case crs: CustomResourceState =>
@@ -35,7 +35,7 @@ case class CommonResourceState(
   name: NonEmptyString,
   typ: ResourceType,
   // transformations: List[ResourceTransformation],
-  remoteComponent: Boolean
+  keepDependency: Boolean
 )
 
 case class CustomResourceState(
