@@ -607,6 +607,8 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
           )
         case compr: ComponentResource =>
           ComponentResourceState(common = commonRS)
+        case rcompr: RemoteComponentResource =>
+          ComponentResourceState(common = commonRS)
         case cr: CustomResource =>
           CustomResourceState(
             id = cr.id,

@@ -394,9 +394,24 @@ class CodeGen(implicit
 
     val isRemoteComponent = resourceDefinition.isComponent
     val (resourceBaseClass, resourceOptsClass, resourceRegisterMethodName) =
-      if isProvider then ("besom.ProviderResource".parse[Type].get, "besom.CustomResourceOptions".parse[Type].get, "readOrRegisterResource")
-      else if isRemoteComponent then ("besom.ComponentResource".parse[Type].get, "besom.ComponentResourceOptions".parse[Type].get, "registerRemoteComponentResource")
-      else ("besom.CustomResource".parse[Type].get, "besom.CustomResourceOptions".parse[Type].get, "readOrRegisterResource")
+      if isProvider then
+        (
+          "besom.ProviderResource".parse[Type].get,
+          "besom.CustomResourceOptions".parse[Type].get,
+          "readOrRegisterResource"
+        )
+      else if isRemoteComponent then
+        (
+          "besom.RemoteComponentResource".parse[Type].get,
+          "besom.ComponentResourceOptions".parse[Type].get,
+          "registerRemoteComponentResource"
+        )
+      else
+        (
+          "besom.CustomResource".parse[Type].get,
+          "besom.CustomResourceOptions".parse[Type].get,
+          "readOrRegisterResource"
+        )
 
     val baseClass =
       m"""|final case class $baseClassName private(

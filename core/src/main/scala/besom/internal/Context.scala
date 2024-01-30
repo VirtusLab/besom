@@ -29,19 +29,25 @@ trait Context extends TaskTracker:
   private[besom] def pulumiProject: NonEmptyString
   private[besom] def pulumiStack: NonEmptyString
 
+  /** This is only called by user's component constructor functions. see [[BesomSyntax#component]].
+    */
   private[besom] def registerComponentResource(
     name: NonEmptyString,
     typ: ResourceType,
     options: ComponentResourceOptions
   )(using Context): Result[ComponentBase]
 
-  private[besom] def registerRemoteComponentResource[R <: ComponentResource: ResourceDecoder, A: ArgsEncoder](
+  /** This is only called by codegened remote component constructor functions.
+    */
+  private[besom] def registerRemoteComponentResource[R <: RemoteComponentResource: ResourceDecoder, A: ArgsEncoder](
     typ: ResourceType,
     name: NonEmptyString,
     args: A,
     options: ComponentResourceOptions
-  )(using Context): Result[ComponentBase]
+  )(using Context): Result[R]
 
+  /** This is only called by codegened provider constructor functions.
+    */
   private[besom] def registerProvider[R <: Resource: ResourceDecoder, A: ProviderArgsEncoder](
     typ: ProviderType,
     name: NonEmptyString,
@@ -49,6 +55,8 @@ trait Context extends TaskTracker:
     options: CustomResourceOptions
   )(using Context): Output[R]
 
+  /** This is called by codegened custom resource & stack reference constructor functions, get functions and rehydrated resources decoders.
+    */
   private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
     typ: ResourceType,
     name: NonEmptyString,
@@ -56,6 +64,8 @@ trait Context extends TaskTracker:
     options: ResourceOptions
   )(using Context): Output[R]
 
+  /** This is only called by Component API, see [[BesomSyntax#component]]
+    */
   private[besom] def registerResourceOutputs(
     name: NonEmptyString,
     typ: ResourceType,
@@ -63,12 +73,16 @@ trait Context extends TaskTracker:
     outputs: Result[Struct]
   )(using Context): Result[Unit]
 
+  /** This is only called by codegened functions.
+    */
   private[besom] def invoke[A: ArgsEncoder, R: Decoder](
     token: FunctionToken,
     args: A,
     opts: InvokeOptions
   )(using Context): Output[R]
 
+  /** This is only called by codegened methods.
+    */
   private[besom] def call[A: ArgsEncoder, R: Decoder, T <: Resource](
     token: FunctionToken,
     args: A,
@@ -130,16 +144,16 @@ class ContextImpl(
       )
     }
 
-  override private[besom] def registerRemoteComponentResource[R <: ComponentResource: ResourceDecoder, A: ArgsEncoder](
+  override private[besom] def registerRemoteComponentResource[R <: RemoteComponentResource: ResourceDecoder, A: ArgsEncoder](
     typ: ResourceType,
     name: NonEmptyString,
     args: A,
     options: ComponentResourceOptions
-  )(using Context): Result[ComponentBase] =
+  )(using Context): Result[R] =
     val label = Label.fromNameAndType(name, typ)
 
     BesomMDC(Key.LabelKey, label) {
-      ResourceOps().readOrRegisterResourceInternal[ComponentBase, EmptyArgs](
+      ResourceOps().readOrRegisterResourceInternal[R, EmptyArgs](
         typ,
         name,
         EmptyArgs(),

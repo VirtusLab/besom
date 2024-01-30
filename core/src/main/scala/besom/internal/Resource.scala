@@ -30,6 +30,8 @@ trait CustomResource extends Resource:
     */
   def id: Output[ResourceId]
 
+trait RemoteComponentResource extends Resource
+
 trait ComponentResource(using
   @implicitNotFound(
     "A component resource class should have a `(using ComponentBase)` parameter clause at the end of its constructor"

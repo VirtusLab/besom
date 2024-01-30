@@ -24,6 +24,7 @@ object aliases:
   type ResourceDecoder[A <: besom.internal.Resource] = besom.internal.ResourceDecoder[A]
   type ProviderResource                              = besom.internal.ProviderResource
   type CustomResource                                = besom.internal.CustomResource
+  type RemoteComponentResource                       = besom.internal.RemoteComponentResource
   type CustomResourceOptions                         = besom.internal.CustomResourceOptions
   type ComponentResourceOptions                      = besom.internal.ComponentResourceOptions
   object CustomResourceOptions extends besom.internal.CustomResourceOptionsFactory
