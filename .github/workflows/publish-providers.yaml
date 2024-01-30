@@ -1,0 +1,44 @@
+name: Publish Besom providers to GitHub Packages
+
+on:
+  workflow_dispatch:
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+concurrency:
+  group: gh-packages
+  cancel-in-progress: false
+
+jobs:
+  publish-provider:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        provider:
+          - aws
+          - azure
+          - docker
+          - gcp
+          - kubernetes
+          - random
+          - tls
+    steps:
+      - uses: actions/checkout@v4
+      - uses: extractions/setup-just@v1
+        with:
+          just-version: '1.14.0' # just for sanity
+      - uses: coursier/cache-action@v6.4.3
+      - uses: VirtusLab/scala-cli-setup@v1.1.0
+        with:
+          jvm: graalvm-java11:22.3.1
+          power: true
+      - name: Publish providers
+        run: |-
+          just cli packages metadata ${{ matrix.provider }}
+          just cli packages generate ${{ matrix.provider }}
+          just cli packages delete-github ${{ matrix.provider }}
+          just cli packages publish-github ${{ matrix.provider }}
