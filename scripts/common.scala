@@ -112,7 +112,9 @@ def copyFilteredFiles(
       println(s"copied ${source.relativeTo(sourcePath)} into ${target.relativeTo(targetPath)}")
     }
 
-def isCI: Boolean = sys.env.get("CI").contains("true")
+lazy val isCI: Boolean = 
+  println(s"CI: ${sys.env.get("CI")}")
+  sys.env.get("CI").contains("true")
 
 def githubToken: Option[String] =
   val token = sys.env.get("GITHUB_TOKEN")

@@ -116,7 +116,7 @@ As for Go changes, Pulumi CLI will respect the version of
 ships with. When testing changes to the language provider, you
 therefore might need to manipulate `PATH` to prefer the local version.
 
-#### Publish locally necessary packages
+#### Publish locally core SDK packages
 
 Publish locally and install necessary Besom packages:
 ```bash
@@ -129,9 +129,9 @@ You have to generate an SDK for a provider of your choice, use `just cli`, e.g.:
 
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
-just cli packages metadata kubernetes
-just cli packages generate kubernetes
-just cli packages publish-local kubernetes
+just cli packages metadata azure docker gcp kubernetes random tls
+just cli packages generate azure docker gcp kubernetes random tls
+just cli packages publish-local azure docker gcp kubernetes random tls
 ```
 
 To generate all Provider SDKs (takes a very long time):
@@ -140,6 +140,14 @@ export GITHUB_TOKEN=$(gh auth token)
 just cli packages metadata-all
 just cli packages generate-all
 just cli packages publish-local-all
+```
+
+#### Test locally
+
+To test locally, you need to install the packages into your local `~/.ivy` repo. This was done in previous steps.
+
+```bash
+just test-all
 ```
 
 ### Working with published dependencies
@@ -190,12 +198,12 @@ just publish-gh-all publish-language-plugins-all
 
 ### Publish packages
 
-Publish a package to GitHub Packages:
+Publish a package(s) to GitHub Packages:
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
-just cli packages metadata kubernetes
-just cli packages generate kubernetes
-just cli packages publish-github kubernetes
+just cli packages metadata aws azure docker gcp kubernetes random tls
+just cli packages generate aws azure docker gcp kubernetes random tls
+just cli packages publish-github aws azure docker gcp kubernetes random tls
 ```
 
 Publish all packages to GitHub Packages:

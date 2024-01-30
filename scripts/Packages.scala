@@ -483,8 +483,10 @@ object Packages:
     )
 
     // please not that this call requires
-    val packagesResponse = requests.delete(packagesRepoApi, headers = headers)
-    if packagesResponse.statusCode != 204
-    then throw Exception(s"Failed to delete package using: '$packagesRepoApi'")
+    val packagesResponse = requests.delete(packagesRepoApi, headers = headers, check = false /* ignore 404 */)
+    packagesResponse.statusCode match
+      case 204 => println(s"Deleted package: '$packageName'")
+      case 404 => println(s"Not found: '$packageName', ignoring.")
+      case code => throw Exception(s"[$code] Failed to delete package using: '$packagesRepoApi'; ${packagesResponse.text()}")
 
 end Packages

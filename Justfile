@@ -1,6 +1,7 @@
 # Big idea behind using a Justfile is so that we can have modules like in sbt.
 
 besom-version := `cat version.txt`
+is-snapshot := if "{{besom-version}}" =~ '.*-SNAPSHOT' { "true" } else { "false" }
 
 language-plugin-output-dir := justfile_directory() + "/.out/language-plugin"
 codegen-output-dir := justfile_directory() + "/.out/codegen"
@@ -24,6 +25,7 @@ scala-cli-test-options-zio := scala-cli-coverage-options-zio
 
 publish-maven-auth-options := "--user env:OSSRH_USERNAME --password env:OSSRH_PASSWORD --gpg-key $PGP_KEY_ID --gpg-option --pinentry-mode --gpg-option loopback --gpg-option --passphrase --gpg-option $PGP_PASSWORD"
 publish-gh-opts := "--publish-repository=github --password env:GITHUB_TOKEN"
+ci-opts := if env_var_or_default('CI', "") == "true" { "--repository=https://maven.pkg.github.com/VirtusLab/besom" } else { "" }
 
 # This list of available targets
 default:
@@ -356,7 +358,7 @@ test-template template-name:
 	@echo "----------------------------------------"
 	@echo "Testing template {{template-name}}"
 	pulumi --non-interactive --logtostderr --color=never --emoji=false new -y --force --generate-only --dir target/test/{{template-name}} -n templates-test-{{template-name}} --stack templates-test-{{template-name}} ../../../templates/{{template-name}}/
-	scala-cli compile target/test/{{template-name}} --repository=https://maven.pkg.github.com/VirtusLab/besom --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+	scala-cli compile target/test/{{template-name}} {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 
 # Cleans after a template test
 clean-test-template template-name:
@@ -379,7 +381,7 @@ clean-test-templates:
 test-example example-name:
 	@echo "----------------------------------------"
 	@echo "Testing example {{example-name}}"
-	scala-cli compile examples/{{example-name}} --repository=https://maven.pkg.github.com/VirtusLab/besom --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+	scala-cli compile examples/{{example-name}} {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 
 # Cleans after an example test
 clean-test-example example-name:
@@ -423,12 +425,12 @@ clean-scripts:
 
 # Use Besom scripts directly
 cli *ARGS:
-	scala-cli run scripts --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- {{ARGS}}
+	scala-cli run scripts {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- {{ARGS}}
 
 # Create or Update GitHub release
 upsert-gh-release:
-	#!/usr/bin/env bash
-	if [[ "{{besom-version}}" =~ '.*-SNAPSHOT' ]]; then
+	#!/usr/bin/env sh
+	if {{is-snapshot}}; then
 		echo "Not a snapshot version, refusing to delete a release"
 	else
 		gh release delete v{{besom-version}} --yes || echo "Nothing to delete"

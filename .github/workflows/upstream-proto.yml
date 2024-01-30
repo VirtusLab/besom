@@ -22,9 +22,6 @@ jobs:
         jvm: graalvm-java11:22.3.1
         power: true
     - uses: arduino/setup-protoc@v1
-    - name: Publish dependencies
-      run: |-
-        just publish-local-codegen
     - name: Fetch & generate protobuf 
       run: |-
         just cli proto all
