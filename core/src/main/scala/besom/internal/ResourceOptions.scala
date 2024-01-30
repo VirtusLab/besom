@@ -297,10 +297,40 @@ object CustomResourceOptions:
     )
 end CustomResourceOptions
 
+trait ComponentResourceOptionsFactory:
+  def apply(using Context)(
+    providers: Input.OneOrList[ProviderResource] = List.empty,
+    parent: Input.Optional[Resource] = None,
+    dependsOn: Input.OneOrList[Resource] = List.empty,
+    protect: Input[Boolean] = false,
+    ignoreChanges: Input.OneOrList[String] = List.empty,
+    version: Input.Optional[NonEmptyString] = None,
+    customTimeouts: Input.Optional[CustomTimeouts] = None,
+    // resourceTransformations: List[ResourceTransformation], // TODO
+    // aliases: List[Output[Alias]], // TODO
+    urn: Input.Optional[URN] = None,
+    replaceOnChanges: Input.OneOrList[String] = List.empty,
+    retainOnDelete: Input[Boolean] = false,
+    pluginDownloadUrl: Input.Optional[String] = None,
+    deletedWith: Input.Optional[Resource] = None
+  ): ComponentResourceOptions = ComponentResourceOptions.apply(
+    providers = providers.asManyOutput(),
+    parent = parent.asOptionOutput(),
+    dependsOn = dependsOn.asManyOutput(),
+    protect = protect.asOutput(),
+    ignoreChanges = ignoreChanges.asManyOutput(),
+    version = version.asOptionOutput(),
+    customTimeouts = customTimeouts.asOptionOutput(),
+    urn = urn.asOptionOutput(),
+    replaceOnChanges = replaceOnChanges.asManyOutput(),
+    retainOnDelete = retainOnDelete.asOutput(),
+    pluginDownloadUrl = pluginDownloadUrl.asOptionOutput(),
+    deletedWith = deletedWith.asOptionOutput()
+  )
+
 object ComponentResourceOptions:
   def apply(using Context)(
     providers: Input.OneOrList[ProviderResource] = List.empty,
-    id: Input.Optional[NonEmptyString] = None,
     parent: Input.Optional[Resource] = None,
     dependsOn: Input.OneOrList[Resource] = List.empty,
     protect: Input[Boolean] = false,

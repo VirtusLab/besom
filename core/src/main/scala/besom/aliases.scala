@@ -25,7 +25,9 @@ object aliases:
   type ProviderResource                              = besom.internal.ProviderResource
   type CustomResource                                = besom.internal.CustomResource
   type CustomResourceOptions                         = besom.internal.CustomResourceOptions
+  type ComponentResourceOptions                      = besom.internal.ComponentResourceOptions
   object CustomResourceOptions extends besom.internal.CustomResourceOptionsFactory
+  object ComponentResourceOptions extends besom.internal.ComponentResourceOptionsFactory
   type ComponentBase                                      = besom.internal.ComponentBase
   type ComponentResource                                  = besom.internal.ComponentResource
   type RegistersOutputs[A <: ComponentResource & Product] = besom.internal.RegistersOutputs[A]
