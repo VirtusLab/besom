@@ -81,6 +81,8 @@ class CodeGenTest extends munit.FunSuite {
               |  ): besom.types.Output[Provider] =
               |    ctx.readOrRegisterResource[Provider, ProviderArgs]("pulumi:providers:example", name, args, opts)
               |
+              |  private[besom] def typeToken: besom.types.ResourceType = "pulumi:providers:example"
+              |
               |  given resourceDecoder(using besom.types.Context): besom.types.ResourceDecoder[Provider] =
               |    besom.internal.ResourceDecoder.derived[Provider]
               |
@@ -207,6 +209,8 @@ class CodeGenTest extends munit.FunSuite {
              |    opts: besom.CustomResourceOptions = besom.CustomResourceOptions()
              |  ): besom.types.Output[Cluster] =
              |    ctx.readOrRegisterResource[Cluster, ClusterArgs]("google-native:container/v1:Cluster", name, args, opts)
+             |
+             |  private[besom] def typeToken: besom.types.ResourceType = "google-native:container/v1:Cluster"
              |
              |  given resourceDecoder(using besom.types.Context): besom.types.ResourceDecoder[Cluster] =
              |    besom.internal.ResourceDecoder.derived[Cluster]
@@ -769,7 +773,9 @@ class CodeGenTest extends munit.FunSuite {
       expectedError = Some(
         "invalid property for 'fake-provider:index:typ': property name 'id' is reserved"
       ),
-      tags = Set(munit.Ignore) // FIXME: un-ignore when this is fixed: https://github.com/pulumi/pulumi/issues/15024
+      tags = Set(
+        munit.Ignore
+      ) // FIXME: un-ignore when this is fixed: https://github.com/pulumi/pulumi-kubernetes/issues/2683
     ),
     Data(
       name = "Error on urn property",
@@ -797,14 +803,17 @@ class CodeGenTest extends munit.FunSuite {
       expectedError = Some(
         "invalid property for 'fake-provider:index:typ': property name 'urn' is reserved"
       ),
-      tags = Set(munit.Ignore) // FIXME: un-ignore when this is fixed: https://github.com/pulumi/pulumi/issues/15024
+      tags = Set(
+        munit.Ignore
+      ) // FIXME: un-ignore when this is fixed: https://github.com/pulumi/pulumi-kubernetes/issues/2683
     )
   ).foreach(data =>
     test(data.name.withTags(data.tags)) {
       implicit val config: Config.CodegenConfig = CodegenConfig()
       implicit val logger: Logger               = new Logger(config.logLevel)
 
-      implicit val schemaProvider: SchemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
+      implicit val schemaProvider: SchemaProvider =
+        new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
       val (pulumiPackage, packageInfo) = schemaProvider.packageInfo(
         PackageMetadata(defaultTestSchemaName, "0.0.0"),
         PulumiPackage.fromString(data.json)

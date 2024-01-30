@@ -1,3 +1,6 @@
 package besom.internal
 
-trait ResourceCompanion[A <: Resource]
+import besom.types.ResourceType
+
+trait ResourceCompanion[A <: Resource]:
+  private[besom] def typeToken: ResourceType

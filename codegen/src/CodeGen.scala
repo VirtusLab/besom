@@ -124,7 +124,10 @@ class CodeGen(implicit
     )
   }
 
-  def sourceFilesForNonResourceTypes(pulumiPackage: PulumiPackage, configDependencies: Seq[ConfigDependency]): Seq[SourceFile] = {
+  def sourceFilesForNonResourceTypes(
+    pulumiPackage: PulumiPackage,
+    configDependencies: Seq[ConfigDependency]
+  ): Seq[SourceFile] = {
     pulumiPackage.parsedTypes.flatMap { case (coordinates, typeDefinition) =>
       typeDefinition match {
         case enumDef: EnumTypeDefinition =>
@@ -172,15 +175,16 @@ class CodeGen(implicit
       val caseRawName = valueDefinition.name.getOrElse {
         valueDefinition.value match {
           case StringConstValue(value) => value
-          case const                   => throw GeneralCodegenException(s"The name of enum cannot be derived from value ${const}")
+          case const => throw GeneralCodegenException(s"The name of enum cannot be derived from value ${const}")
         }
       }
       val caseName       = Term.Name(caseRawName)
       val caseStringName = Lit.String(caseRawName)
       val caseValue      = valueDefinition.value.asScala
 
-      val definition = m"""object ${caseName} extends ${enumClassName}(${caseStringName}, ${caseValue})""".parse[Stat].get
-      val reference  = caseName
+      val definition =
+        m"""object ${caseName} extends ${enumClassName}(${caseStringName}, ${caseValue})""".parse[Stat].get
+      val reference = caseName
       (definition, reference)
     }
 
@@ -354,7 +358,9 @@ class CodeGen(implicit
 
     val stateInputs = resourceDefinition.stateInputs.properties.toSeq.sortBy(_._1)
     if (stateInputs.nonEmpty) {
-      logger.warn(s"State inputs are not supported yet, ignoring ${stateInputs.size} state inputs for ${token.asString}")
+      logger.warn(
+        s"State inputs are not supported yet, ignoring ${stateInputs.size} state inputs for ${token.asString}"
+      )
     }
 
     val baseClassParams = resourceProperties.map { propertyInfo =>
@@ -459,6 +465,8 @@ class CodeGen(implicit
             |    opts: besom.CustomResourceOptions = besom.CustomResourceOptions()
             |  ): besom.types.Output[$baseClassName] =
             |    ctx.readOrRegisterResource[$baseClassName, $argsClassName](${tokenLit}, name, args, opts)
+            |
+            |  private[besom] def typeToken: besom.types.ResourceType = ${tokenLit}
             |
             |$resourceDecoderInstance
             |$decoderInstance
@@ -683,9 +691,10 @@ class CodeGen(implicit
       val sources = Seq(SourceFile(file, code))
       val dependencies: Seq[ConfigDependency] = configVariables.flatMap { case (_, configDefinition) =>
         configDefinition.typeReference.asTokenAndDependency.flatMap {
-          case (Some(token), None)           => ConfigSourceDependency(token.toCoordinates(pulumiPackage)) :: Nil
-          case (Some(token), Some(metadata)) => ConfigRuntimeDependency(token.toCoordinates(pulumiPackage), metadata) :: Nil
-          case _                             => Nil
+          case (Some(token), None) => ConfigSourceDependency(token.toCoordinates(pulumiPackage)) :: Nil
+          case (Some(token), Some(metadata)) =>
+            ConfigRuntimeDependency(token.toCoordinates(pulumiPackage), metadata) :: Nil
+          case _ => Nil
         }
       }
 
@@ -729,7 +738,9 @@ class CodeGen(implicit
         else propertyInfo.baseType
 
       // colon after underscore would be treated as a part of the name so we add a space
-      m"""def ${propertyInfo.name} : besom.types.Output[$innerType] = output.map(_.${propertyInfo.name})""".parse[Stat].get
+      m"""def ${propertyInfo.name} : besom.types.Output[$innerType] = output.map(_.${propertyInfo.name})"""
+        .parse[Stat]
+        .get
     }
     val optionOutputExtensionMethods = properties.map { propertyInfo =>
       val innerMethodName =
@@ -965,7 +976,11 @@ class CodeGen(implicit
                           |    besom.internal.Decoder.nonDiscriminated($indexesLit)
                           |""".stripMargin
           }
-      }.map(_.toMap).foldLeft(Map.empty[String, String])(_ ++ _).values.toList // de-duplicate givens
+      }
+      .map(_.toMap)
+      .foldLeft(Map.empty[String, String])(_ ++ _)
+      .values
+      .toList // de-duplicate givens
   }
 }
 

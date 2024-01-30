@@ -4,6 +4,7 @@ import scala.reflect.Typeable
 import besom.util.NonEmptyString
 import besom.types.ResourceType
 import besom.types.URN
+import besom.types.ResourceId
 
 /** This trait is the main export point that exposes Besom specific functions and types to the user. The only exception is the [[Output]]
   * object which is exposed in [[BesomModule]] which extends this trait.
@@ -115,4 +116,14 @@ trait BesomSyntax:
         }
         .map(OutputData(_))
     }
+  end component
+
+  extension [A <: Resource: ResourceDecoder](companion: ResourceCompanion[A])
+    def get(name: Input[NonEmptyString], id: Input[ResourceId])(using ctx: Context): Output[A] =
+      for
+        name <- name.asOutput()
+        id   <- id.asOutput()
+        res  <- ctx.readOrRegisterResource[A, EmptyArgs](companion.typeToken, name, EmptyArgs(), CustomResourceOptions(importId = id))
+      yield res
+
 end BesomSyntax
