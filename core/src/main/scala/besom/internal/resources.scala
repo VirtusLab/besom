@@ -13,11 +13,16 @@ class Resources private (
   def add(resource: ComponentBase, state: ComponentResourceState): Result[Unit] =
     resources.update(_ + (resource -> state))
 
+  def add(resource: RemoteComponentResource, state: CustomResourceState): Result[Unit] =
+    resources.update(_ + (resource -> state))
+
   def add(resource: Resource, state: ResourceState): Result[Unit] = (resource, state) match
     case (pr: ProviderResource, prs: ProviderResourceState) =>
       add(pr, prs)
     case (cr: CustomResource, crs: CustomResourceState) =>
       add(cr, crs)
+    case (rc: RemoteComponentResource, rcs: ComponentResourceState) =>
+      add(rc, rcs)
     case (compb: ComponentBase, comprs: ComponentResourceState) =>
       add(compb, comprs)
     case _ => Result.fail(new Exception(s"resource ${resource} and state ${state} don't match"))

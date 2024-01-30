@@ -124,7 +124,10 @@ class CodeGen(implicit
     )
   }
 
-  def sourceFilesForNonResourceTypes(pulumiPackage: PulumiPackage, configDependencies: Seq[ConfigDependency]): Seq[SourceFile] = {
+  def sourceFilesForNonResourceTypes(
+    pulumiPackage: PulumiPackage,
+    configDependencies: Seq[ConfigDependency]
+  ): Seq[SourceFile] = {
     pulumiPackage.parsedTypes.flatMap { case (coordinates, typeDefinition) =>
       typeDefinition match {
         case enumDef: EnumTypeDefinition =>
@@ -172,15 +175,16 @@ class CodeGen(implicit
       val caseRawName = valueDefinition.name.getOrElse {
         valueDefinition.value match {
           case StringConstValue(value) => value
-          case const                   => throw GeneralCodegenException(s"The name of enum cannot be derived from value ${const}")
+          case const => throw GeneralCodegenException(s"The name of enum cannot be derived from value ${const}")
         }
       }
       val caseName       = Term.Name(caseRawName)
       val caseStringName = Lit.String(caseRawName)
       val caseValue      = valueDefinition.value.asScala
 
-      val definition = m"""object ${caseName} extends ${enumClassName}(${caseStringName}, ${caseValue})""".parse[Stat].get
-      val reference  = caseName
+      val definition =
+        m"""object ${caseName} extends ${enumClassName}(${caseStringName}, ${caseValue})""".parse[Stat].get
+      val reference = caseName
       (definition, reference)
     }
 
@@ -236,7 +240,7 @@ class CodeGen(implicit
     }
 
     // Config types need to be serialized to JSON for structured configs
-    val outputRequiresJsonFormat = typeToken.module == Utils.configModuleName | {
+    val outputRequiresJsonFormat = typeToken.module.startsWith(Utils.configModuleName) | {
       configDependencies.map(_.coordinates.token.asLookupKey).contains(typeToken.asLookupKey)
     }
 
@@ -354,7 +358,9 @@ class CodeGen(implicit
 
     val stateInputs = resourceDefinition.stateInputs.properties.toSeq.sortBy(_._1)
     if (stateInputs.nonEmpty) {
-      logger.warn(s"State inputs are not supported yet, ignoring ${stateInputs.size} state inputs for ${token.asString}")
+      logger.warn(
+        s"State inputs are not supported yet, ignoring ${stateInputs.size} state inputs for ${token.asString}"
+      )
     }
 
     val baseClassParams = resourceProperties.map { propertyInfo =>
@@ -386,14 +392,29 @@ class CodeGen(implicit
     // TODO: Implement comments
     val baseClassComment = ""
 
-    val resourceBaseClass =
-      if isProvider
-      then "besom.ProviderResource".parse[Type].get
-      else "besom.CustomResource".parse[Type].get
-
-    if (resourceDefinition.isComponent) {
-      logger.warn(s"Component resources are not supported yet, generating incorrect resource ${token.asString}")
-    }
+    val isRemoteComponent = resourceDefinition.isComponent
+    val (resourceBaseClass, resourceOptsClass, variant, resourceRegisterMethodName) =
+      if isProvider then
+        (
+          "besom.ProviderResource".parse[Type].get,
+          "besom.CustomResourceOptions".parse[Type].get,
+          "Custom",
+          "readOrRegisterResource"
+        )
+      else if isRemoteComponent then
+        (
+          "besom.RemoteComponentResource".parse[Type].get,
+          "besom.ComponentResourceOptions".parse[Type].get,
+          "Component",
+          "registerRemoteComponentResource"
+        )
+      else
+        (
+          "besom.CustomResource".parse[Type].get,
+          "besom.CustomResourceOptions".parse[Type].get,
+          "Custom",
+          "readOrRegisterResource"
+        )
 
     val baseClass =
       m"""|final case class $baseClassName private(
@@ -443,9 +464,11 @@ class CodeGen(implicit
          |    besom.internal.ResourceDecoder.derived[$baseClassName]
          |""".stripMargin
 
+    val decoderInstanceName = if isRemoteComponent then "remoteComponentResourceDecoder" else "customResourceDecoder"
+
     val decoderInstance =
       m"""  given decoder(using besom.types.Context): besom.types.Decoder[$baseClassName] =
-         |    besom.internal.Decoder.customResourceDecoder[$baseClassName]
+         |    besom.internal.Decoder.$decoderInstanceName[$baseClassName]
          |""".stripMargin
 
     val unionDecoders = unionDecoderGivens(resourceProperties)
@@ -456,9 +479,9 @@ class CodeGen(implicit
             |  def apply(using ctx: besom.types.Context)(
             |    name: besom.util.NonEmptyString,
             |    args: ${argsClassName}${argsDefault},
-            |    opts: besom.CustomResourceOptions = besom.CustomResourceOptions()
+            |    opts: besom.ResourceOptsVariant.$variant ?=> ${resourceOptsClass} = ${resourceOptsClass}()
             |  ): besom.types.Output[$baseClassName] =
-            |    ctx.readOrRegisterResource[$baseClassName, $argsClassName](${tokenLit}, name, args, opts)
+            |    ctx.${resourceRegisterMethodName}[$baseClassName, $argsClassName](${tokenLit}, name, args, opts(using besom.ResourceOptsVariant.$variant))
             |
             |$resourceDecoderInstance
             |$decoderInstance
@@ -683,9 +706,10 @@ class CodeGen(implicit
       val sources = Seq(SourceFile(file, code))
       val dependencies: Seq[ConfigDependency] = configVariables.flatMap { case (_, configDefinition) =>
         configDefinition.typeReference.asTokenAndDependency.flatMap {
-          case (Some(token), None)           => ConfigSourceDependency(token.toCoordinates(pulumiPackage)) :: Nil
-          case (Some(token), Some(metadata)) => ConfigRuntimeDependency(token.toCoordinates(pulumiPackage), metadata) :: Nil
-          case _                             => Nil
+          case (Some(token), None) => ConfigSourceDependency(token.toCoordinates(pulumiPackage)) :: Nil
+          case (Some(token), Some(metadata)) =>
+            ConfigRuntimeDependency(token.toCoordinates(pulumiPackage), metadata) :: Nil
+          case _ => Nil
         }
       }
 
@@ -729,7 +753,9 @@ class CodeGen(implicit
         else propertyInfo.baseType
 
       // colon after underscore would be treated as a part of the name so we add a space
-      m"""def ${propertyInfo.name} : besom.types.Output[$innerType] = output.map(_.${propertyInfo.name})""".parse[Stat].get
+      m"""def ${propertyInfo.name} : besom.types.Output[$innerType] = output.map(_.${propertyInfo.name})"""
+        .parse[Stat]
+        .get
     }
     val optionOutputExtensionMethods = properties.map { propertyInfo =>
       val innerMethodName =
@@ -965,7 +991,11 @@ class CodeGen(implicit
                           |    besom.internal.Decoder.nonDiscriminated($indexesLit)
                           |""".stripMargin
           }
-      }.map(_.toMap).foldLeft(Map.empty[String, String])(_ ++ _).values.toList // de-duplicate givens
+      }
+      .map(_.toMap)
+      .foldLeft(Map.empty[String, String])(_ ++ _)
+      .values
+      .toList // de-duplicate givens
   }
 }
 

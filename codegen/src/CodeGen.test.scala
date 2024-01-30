@@ -77,9 +77,9 @@ class CodeGenTest extends munit.FunSuite {
               |  def apply(using ctx: besom.types.Context)(
               |    name: besom.util.NonEmptyString,
               |    args: ProviderArgs = ProviderArgs(),
-              |    opts: besom.CustomResourceOptions = besom.CustomResourceOptions()
+              |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
               |  ): besom.types.Output[Provider] =
-              |    ctx.readOrRegisterResource[Provider, ProviderArgs]("pulumi:providers:example", name, args, opts)
+              |    ctx.readOrRegisterResource[Provider, ProviderArgs]("pulumi:providers:example", name, args, opts(using besom.ResourceOptsVariant.Custom))
               |
               |  given resourceDecoder(using besom.types.Context): besom.types.ResourceDecoder[Provider] =
               |    besom.internal.ResourceDecoder.derived[Provider]
@@ -204,9 +204,9 @@ class CodeGenTest extends munit.FunSuite {
              |  def apply(using ctx: besom.types.Context)(
              |    name: besom.util.NonEmptyString,
              |    args: ClusterArgs = ClusterArgs(),
-             |    opts: besom.CustomResourceOptions = besom.CustomResourceOptions()
+             |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
              |  ): besom.types.Output[Cluster] =
-             |    ctx.readOrRegisterResource[Cluster, ClusterArgs]("google-native:container/v1:Cluster", name, args, opts)
+             |    ctx.readOrRegisterResource[Cluster, ClusterArgs]("google-native:container/v1:Cluster", name, args, opts(using besom.ResourceOptsVariant.Custom))
              |
              |  given resourceDecoder(using besom.types.Context): besom.types.ResourceDecoder[Cluster] =
              |    besom.internal.ResourceDecoder.derived[Cluster]
@@ -804,7 +804,8 @@ class CodeGenTest extends munit.FunSuite {
       implicit val config: Config.CodegenConfig = CodegenConfig()
       implicit val logger: Logger               = new Logger(config.logLevel)
 
-      implicit val schemaProvider: SchemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
+      implicit val schemaProvider: SchemaProvider =
+        new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
       val (pulumiPackage, packageInfo) = schemaProvider.packageInfo(
         PackageMetadata(defaultTestSchemaName, "0.0.0"),
         PulumiPackage.fromString(data.json)

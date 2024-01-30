@@ -229,8 +229,8 @@ val feedBucketPolicy = bucketName.flatMap(name =>
         )
       ).prettyPrint
     ),
-    CustomResourceOptions(
-      dependsOn = feedBucketPublicAccessBlock.map(List(_))
+    opts(
+      dependsOn = feedBucketPublicAccessBlock
     )
   )
 )
@@ -579,8 +579,8 @@ val apiDeployment = apigateway.Deployment(
       "addIntegrationId" -> addIntegration.id,
     )
   ),
-  CustomResourceOptions(
-    dependsOn = Output.sequence(List(feedLambda, addLambda)),
+  opts(
+    dependsOn = List(feedLambda, addLambda),
     deleteBeforeReplace = false
   )
 )
@@ -592,7 +592,7 @@ val apiStage = apigateway.Stage(
     deployment = apiDeployment.id,
     stageName = stageName
   ),
-  CustomResourceOptions(
+  opts(
     deleteBeforeReplace = true
   )
 )
@@ -608,8 +608,8 @@ val apiStageSettings = apigateway.MethodSettings(
       loggingLevel = "ERROR"
     )
   ),
-  CustomResourceOptions(
-    dependsOn = apiAccount.map(List(_))
+  opts(
+    dependsOn = apiAccount
   )
 )
 ```

@@ -71,7 +71,7 @@ trait StackReferenceFactory:
 
         val mergedOpts = new StackReferenceResourceOptions( // use constructor directly to avoid apply
           opts.common,
-          Some(importId)
+          Output(Some(importId))
         )
 
         Context().readOrRegisterResource[StackReference, StackReferenceArgs]("pulumi:pulumi:StackReference", name, stackRefArgs, mergedOpts)

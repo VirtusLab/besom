@@ -54,8 +54,8 @@ val siteDir = "www"
           )
         ).prettyPrint
       ),
-      CustomResourceOptions(
-        dependsOn = siteBucketPublicAccessBlock.map(List(_))
+      opts(
+        dependsOn = siteBucketPublicAccessBlock
       )
     )
   )
@@ -74,8 +74,8 @@ val siteDir = "www"
           source = FileAsset(file.getAbsolutePath), // use FileAsset to point to a file
           contentType = Files.probeContentType(file.toPath) // set the MIME type of the file
         ),
-        CustomResourceOptions(
-          dependsOn = siteBucket.map(List(_))
+        opts(
+          dependsOn = siteBucket
         )
       )
     }

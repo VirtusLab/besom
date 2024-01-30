@@ -151,7 +151,7 @@ to adequate resource constructors with `dependsOn` property set to resource to a
 ```scala
 for 
   a <- Bucket("first")
-  b <- Bucket("second", BucketArgs(), CustomResourceOptions(dependsOn = a.map(List(_))))
+  b <- Bucket("second", BucketArgs(), opts(dependsOn = a))
 yield ()
 ```
 
