@@ -255,6 +255,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
   case class PreparedInputs(
     serializedArgs: Struct,
     parentUrn: Option[URN],
+    deletedWithUrn: Option[URN],
     providerId: Option[String],
     providerRefs: Map[String, String],
     depUrns: AggregatedDependencyUrns,
@@ -278,6 +279,9 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         AggregatedDependencyUrns(allDeps, allDepsByProperty)
       }
     }
+
+  private def resolveDeletedWithUrn(options: ResolvedResourceOptions): Result[Option[URN]] =
+    options.deletedWith.map(_.urn.getValue).getOrElse(Result.pure(None))
 
   private def resolveAliases(@unused resource: Resource): Result[List[String]] =
     Result.pure(List.empty) // TODO aliases
@@ -304,21 +308,23 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
   ): Result[PreparedInputs] =
     val directDeps = options.dependsOn.toSet
     for
-      _            <- log.trace(s"Preparing inputs: gathering direct dependencies")
-      _            <- log.trace(s"Preparing inputs: serializing resource properties")
-      serResult    <- PropertiesSerializer.serializeResourceProperties(args)
-      _            <- log.trace(s"Preparing inputs: serialized resource properties, getting parent URN")
-      parentUrnOpt <- resolveParentUrn(state.typ, options)
-      _            <- log.trace(s"Preparing inputs: got parent URN, getting provider reg ID")
-      provIdOpt    <- resolveProviderRegistrationId(state)
-      _            <- log.trace(s"Preparing inputs: got provider reg ID, resolving provider references")
-      providerRefs <- resolveProviderReferences(state)
-      _            <- log.trace(s"Preparing inputs: resolved provider refs, aggregating dep URNs")
-      depUrns      <- aggregateDependencyUrns(directDeps, serResult.propertyToDependentResources)
-      _            <- log.trace(s"Preparing inputs: aggregated dep URNs, resolving aliases")
-      aliases      <- resolveAliases(resource)
-      _            <- log.trace(s"Preparing inputs: resolved aliases, done")
-    yield PreparedInputs(serResult.serialized, parentUrnOpt, provIdOpt, providerRefs, depUrns, aliases, options)
+      _                 <- log.trace(s"Preparing inputs: gathering direct dependencies")
+      _                 <- log.trace(s"Preparing inputs: serializing resource properties")
+      serResult         <- PropertiesSerializer.serializeResourceProperties(args)
+      _                 <- log.trace(s"Preparing inputs: serialized resource properties, getting parent URN")
+      parentUrnOpt      <- resolveParentUrn(state.typ, options)
+      _                 <- log.trace(s"Preparing inputs: got parent URN, getting deletedWith URN")
+      deletedWithUrnOpt <- resolveDeletedWithUrn(options)
+      _                 <- log.trace(s"Preparing inputs: got deletedWith URN, getting provider reg ID")
+      provIdOpt         <- resolveProviderRegistrationId(state)
+      _                 <- log.trace(s"Preparing inputs: got provider reg ID, resolving provider references")
+      providerRefs      <- resolveProviderReferences(state)
+      _                 <- log.trace(s"Preparing inputs: resolved provider refs, aggregating dep URNs")
+      depUrns           <- aggregateDependencyUrns(directDeps, serResult.propertyToDependentResources)
+      _                 <- log.trace(s"Preparing inputs: aggregated dep URNs, resolving aliases")
+      aliases           <- resolveAliases(resource)
+      _                 <- log.trace(s"Preparing inputs: resolved aliases, done")
+    yield PreparedInputs(serResult.serialized, parentUrnOpt, deletedWithUrnOpt, provIdOpt, providerRefs, depUrns, aliases, options)
 
   private def executeReadResourceRequest[R <: Resource](
     state: ResourceState,
@@ -428,10 +434,17 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
               pulumirpc.alias.Alias(pulumirpc.alias.Alias.Alias.Urn(alias))
             }.toList,
             remote = false, // TODO remote components
-            customTimeouts = None, // TODO custom timeouts
+            customTimeouts = Some(
+              RegisterResourceRequest.CustomTimeouts(
+                create = inputs.options.customTimeouts.flatMap(_.create).map(CustomTimeouts.toGoDurationString).getOrElse(""),
+                update = inputs.options.customTimeouts.flatMap(_.update).map(CustomTimeouts.toGoDurationString).getOrElse(""),
+                delete = inputs.options.customTimeouts.flatMap(_.delete).map(CustomTimeouts.toGoDurationString).getOrElse("")
+              )
+            ),
             pluginDownloadURL = inputs.options.pluginDownloadUrl.getOrElse(""),
             retainOnDelete = inputs.options.retainOnDelete,
-            supportsPartialValues = false // TODO partial values
+            supportsPartialValues = false, // TODO partial values
+            deletedWith = inputs.deletedWithUrn.getOrElse(URN.empty).asString
           )
         }
         .flatMap { req =>

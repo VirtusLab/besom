@@ -134,7 +134,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
               spec = PersistentVolumeClaimSpecArgs(
                 accessModes = List("ReadWriteOnce"),
                 storageClassName = "manual",
-                resources = ResourceRequirementsArgs(
+                resources = VolumeResourceRequirementsArgs(
                   requests = Map("storage" -> "128Mi")
                 )
               )
@@ -253,7 +253,8 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
         namespace = appNamespace.metadata.name,
         labels = labels
       )
-    )
+    ),
+    opts(dependsOn = nginxDeployment)
   )
 
   val redis = redisCluster("cache", 3)
