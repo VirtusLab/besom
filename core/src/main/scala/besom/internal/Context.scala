@@ -44,7 +44,7 @@ trait Context extends TaskTracker:
     name: NonEmptyString,
     args: A,
     options: ComponentResourceOptions
-  )(using Context): Result[R]
+  )(using Context): Output[R]
 
   /** This is only called by codegened provider constructor functions.
     */
@@ -149,17 +149,21 @@ class ContextImpl(
     name: NonEmptyString,
     args: A,
     options: ComponentResourceOptions
-  )(using Context): Result[R] =
+  )(using Context): Output[R] =
     val label = Label.fromNameAndType(name, typ)
 
     BesomMDC(Key.LabelKey, label) {
-      ResourceOps().readOrRegisterResourceInternal[R, EmptyArgs](
-        typ,
-        name,
-        EmptyArgs(),
-        options, // TODO pass initial ResourceTransformations here
-        remote = true // all codegened components are remote components
-      )
+      Output.ofData {
+        ResourceOps()
+          .readOrRegisterResourceInternal[R, EmptyArgs](
+            typ,
+            name,
+            EmptyArgs(),
+            options, // TODO pass initial ResourceTransformations here
+            remote = true // all codegened components are remote components
+          )
+          .map(OutputData(_))
+      }
     }
 
   override private[besom] def registerProvider[R <: Resource: ResourceDecoder, A: ProviderArgsEncoder](
