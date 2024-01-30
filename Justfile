@@ -427,7 +427,7 @@ cli *ARGS:
 
 # Create or Update GitHub release
 upsert-gh-release:
-	#!/usr/bin/env sh
+	#!/usr/bin/env bash
 	if [[ "{{besom-version}}" =~ '.*-SNAPSHOT' ]]; then
 		echo "Not a snapshot version, refusing to delete a release"
 	else
