@@ -392,14 +392,11 @@ class CodeGen(implicit
     // TODO: Implement comments
     val baseClassComment = ""
 
-    val resourceBaseClass =
-      if isProvider
-      then "besom.ProviderResource".parse[Type].get
-      else "besom.CustomResource".parse[Type].get
-
-    if (resourceDefinition.isComponent) {
-      logger.warn(s"Component resources are not supported yet, generating incorrect resource ${token.asString}")
-    }
+    val isRemoteComponent = resourceDefinition.isComponent
+    val (resourceBaseClass, resourceOptsClass, resourceRegisterMethodName) =
+      if isProvider then ("besom.ProviderResource".parse[Type].get, "besom.CustomResourceOptions".parse[Type].get, "readOrRegisterResource")
+      else if isRemoteComponent then ("besom.ComponentResource".parse[Type].get, "besom.ComponentResourceOptions".parse[Type].get, "registerRemoteComponentResource")
+      else ("besom.CustomResource".parse[Type].get, "besom.CustomResourceOptions".parse[Type].get, "readOrRegisterResource")
 
     val baseClass =
       m"""|final case class $baseClassName private(
@@ -462,9 +459,9 @@ class CodeGen(implicit
             |  def apply(using ctx: besom.types.Context)(
             |    name: besom.util.NonEmptyString,
             |    args: ${argsClassName}${argsDefault},
-            |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
+            |    opts: besom.ResourceOptsVariant.Custom ?=> ${resourceOptsClass} = ${resourceOptsClass}()
             |  ): besom.types.Output[$baseClassName] =
-            |    ctx.readOrRegisterResource[$baseClassName, $argsClassName](${tokenLit}, name, args, opts(using besom.ResourceOptsVariant.Custom))
+            |    ctx.${resourceRegisterMethodName}[$baseClassName, $argsClassName](${tokenLit}, name, args, opts(using besom.ResourceOptsVariant.Custom))
             |
             |$resourceDecoderInstance
             |$decoderInstance
