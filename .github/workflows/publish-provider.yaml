@@ -1,0 +1,46 @@
+name: Publish Besom provider to GitHub Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: 'Provider(s) to publish'
+        required: true
+  workflow_call:
+    inputs:
+      provider:
+        description: 'Provider(s) to publish'
+        required: true
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+concurrency:
+  group: gh-packages
+  cancel-in-progress: false
+
+jobs:
+  publish-provider:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: extractions/setup-just@v1
+        with:
+          just-version: '1.14.0' # just for sanity
+      - uses: coursier/cache-action@v6.4.3
+      - uses: VirtusLab/scala-cli-setup@v1.1.0
+        with:
+          jvm: graalvm-java11:22.3.1
+          power: true
+      - name: GitHub Packages auth
+        run: |-
+          scala-cli --power config repositories.credentials maven.pkg.github.com env:GITHUB_ACTOR env:GITHUB_TOKEN
+      - name: Publish providers
+        run: |-
+          just cli packages metadata ${{ inputs.provider }}
+          just cli packages generate ${{ inputs.provider }}
+          just cli packages delete-github ${{ inputs.provider }}
+          just cli packages publish-github ${{ inputs.provider }}

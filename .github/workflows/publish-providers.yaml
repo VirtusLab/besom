@@ -27,21 +27,6 @@ jobs:
           - random
           - tls
     steps:
-      - uses: actions/checkout@v4
-      - uses: extractions/setup-just@v1
+      - uses: VirtusLab/besom/.github/workflows/publish-provider.yaml@develop
         with:
-          just-version: '1.14.0' # just for sanity
-      - uses: coursier/cache-action@v6.4.3
-      - uses: VirtusLab/scala-cli-setup@v1.1.0
-        with:
-          jvm: graalvm-java11:22.3.1
-          power: true
-      - name: GitHub Packages auth
-        run: |-
-          scala-cli --power config repositories.credentials maven.pkg.github.com env:GITHUB_ACTOR env:GITHUB_TOKEN
-      - name: Publish providers
-        run: |-
-          just cli packages metadata ${{ matrix.provider }}
-          just cli packages generate ${{ matrix.provider }}
-          just cli packages delete-github ${{ matrix.provider }}
-          just cli packages publish-github ${{ matrix.provider }}
+          provider: ${{ matrix.provider }}
