@@ -240,7 +240,7 @@ class CodeGen(implicit
     }
 
     // Config types need to be serialized to JSON for structured configs
-    val outputRequiresJsonFormat = typeToken.module == Utils.configModuleName | {
+    val outputRequiresJsonFormat = typeToken.module.startsWith(Utils.configModuleName) | {
       configDependencies.map(_.coordinates.token.asLookupKey).contains(typeToken.asLookupKey)
     }
 
