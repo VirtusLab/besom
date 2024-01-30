@@ -22,8 +22,12 @@ jobs:
         jvm: graalvm-java11:22.3.1
         power: true
     - uses: arduino/setup-protoc@v1
-    - name: Fetch & generate protobuf 
+    - name: GitHub Packages auth
+      run: |-
+        scala-cli --power config repositories.credentials maven.pkg.github.com env:GITHUB_ACTOR env:GITHUB_TOKEN
+    - name: Fetch & generate protobuf
       run: |-
         just cli proto all
     - name: Compile SDK with rebuilt protobufs
-      run: just compile-sdk
+      run: |-
+        just compile-sdk

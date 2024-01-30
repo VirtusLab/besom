@@ -36,10 +36,12 @@ jobs:
         with:
           jvm: graalvm-java11:22.3.1
           power: true
+      - name: GitHub Packages auth
+        run: |-
+          scala-cli --power config repositories.credentials maven.pkg.github.com env:GITHUB_ACTOR env:GITHUB_TOKEN
       - name: Publish providers
         run: |-
           just cli packages metadata ${{ matrix.provider }}
           just cli packages generate ${{ matrix.provider }}
           just cli packages delete-github ${{ matrix.provider }}
-          scala-cli --power config repositories.credentials maven.pkg.github.com env:GITHUB_ACTOR env:GITHUB_TOKEN
           just cli packages publish-github ${{ matrix.provider }}
