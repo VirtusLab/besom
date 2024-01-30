@@ -393,23 +393,26 @@ class CodeGen(implicit
     val baseClassComment = ""
 
     val isRemoteComponent = resourceDefinition.isComponent
-    val (resourceBaseClass, resourceOptsClass, resourceRegisterMethodName) =
+    val (resourceBaseClass, resourceOptsClass, variant, resourceRegisterMethodName) =
       if isProvider then
         (
           "besom.ProviderResource".parse[Type].get,
           "besom.CustomResourceOptions".parse[Type].get,
+          "Custom",
           "readOrRegisterResource"
         )
       else if isRemoteComponent then
         (
           "besom.RemoteComponentResource".parse[Type].get,
           "besom.ComponentResourceOptions".parse[Type].get,
+          "Component",
           "registerRemoteComponentResource"
         )
       else
         (
           "besom.CustomResource".parse[Type].get,
           "besom.CustomResourceOptions".parse[Type].get,
+          "Custom",
           "readOrRegisterResource"
         )
 
@@ -461,9 +464,11 @@ class CodeGen(implicit
          |    besom.internal.ResourceDecoder.derived[$baseClassName]
          |""".stripMargin
 
+    val decoderInstanceName = if isRemoteComponent then "remoteComponentResourceDecoder" else "customResourceDecoder"
+
     val decoderInstance =
       m"""  given decoder(using besom.types.Context): besom.types.Decoder[$baseClassName] =
-         |    besom.internal.Decoder.customResourceDecoder[$baseClassName]
+         |    besom.internal.Decoder.$decoderInstanceName[$baseClassName]
          |""".stripMargin
 
     val unionDecoders = unionDecoderGivens(resourceProperties)
@@ -474,9 +479,9 @@ class CodeGen(implicit
             |  def apply(using ctx: besom.types.Context)(
             |    name: besom.util.NonEmptyString,
             |    args: ${argsClassName}${argsDefault},
-            |    opts: besom.ResourceOptsVariant.Custom ?=> ${resourceOptsClass} = ${resourceOptsClass}()
+            |    opts: besom.ResourceOptsVariant.$variant ?=> ${resourceOptsClass} = ${resourceOptsClass}()
             |  ): besom.types.Output[$baseClassName] =
-            |    ctx.${resourceRegisterMethodName}[$baseClassName, $argsClassName](${tokenLit}, name, args, opts(using besom.ResourceOptsVariant.Custom))
+            |    ctx.${resourceRegisterMethodName}[$baseClassName, $argsClassName](${tokenLit}, name, args, opts(using besom.ResourceOptsVariant.$variant))
             |
             |$resourceDecoderInstance
             |$decoderInstance

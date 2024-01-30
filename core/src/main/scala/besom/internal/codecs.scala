@@ -54,7 +54,13 @@ trait Decoder[A]:
         ValidatedResult(
           odv
             .traverseValidated(mapping(_, label))
-            .lmap(exception => DecodingError(s"$label: Encountered an error - possible secret - ${odv}", label = label, cause = exception))
+            .lmap(exception =>
+              DecodingError(
+                s"$label: Encountered an error - possible secret - ${odv}",
+                label = label,
+                cause = exception
+              )
+            )
         )
       )
 
@@ -72,6 +78,7 @@ trait Decoder[A]:
           .lmap(exception => DecodingError(s"$label: Encountered an error", label = label, cause = exception))
       }
     override def mapping(value: Value, label: Label): Validated[DecodingError, B] = ???
+end Decoder
 
 object NameUnmangler:
   private val mangledAnyRefMethodNames = Set(
@@ -108,7 +115,8 @@ object Decoder extends DecoderInstancesLowPrio1:
 
   given Decoder[Double] with
     def mapping(v: Value, label: Label): Validated[DecodingError, Double] =
-      if v.kind.isNumberValue then v.getNumberValue.valid else error(s"$label: Expected a number, got: '${v.kind}'", label).invalid
+      if v.kind.isNumberValue then v.getNumberValue.valid
+      else error(s"$label: Expected a number, got: '${v.kind}'", label).invalid
 
   given intDecoder(using dblDecoder: Decoder[Double]): Decoder[Int] =
     dblDecoder.emap { (dbl, label) =>
@@ -118,7 +126,8 @@ object Decoder extends DecoderInstancesLowPrio1:
 
   given stringDecoder: Decoder[String] with
     def mapping(v: Value, label: Label): Validated[DecodingError, String] =
-      if v.kind.isStringValue then v.getStringValue.valid else error(s"$label: Expected a string, got: '${v.kind}'", label).invalid
+      if v.kind.isStringValue then v.getStringValue.valid
+      else error(s"$label: Expected a string, got: '${v.kind}'", label).invalid
 
   given urnDecoder: Decoder[URN] with
     def mapping(value: Value, label: Label): Validated[DecodingError, URN] =
@@ -130,7 +139,8 @@ object Decoder extends DecoderInstancesLowPrio1:
 
   given Decoder[Boolean] with
     def mapping(v: Value, label: Label): Validated[DecodingError, Boolean] =
-      if v.kind.isBoolValue then v.getBoolValue.valid else error(s"$label: Expected a boolean, got: '${v.kind}'", label).invalid
+      if v.kind.isBoolValue then v.getBoolValue.valid
+      else error(s"$label: Expected a boolean, got: '${v.kind}'", label).invalid
 
   given jsonDecoder: Decoder[JsValue] with
     def convertToJsValue(value: Value): JsValue =
@@ -237,7 +247,9 @@ object Decoder extends DecoderInstancesLowPrio1:
                 .map { (k, v) =>
                   innerDecoder.decode(v, label.withKey(k)).map(_.map(nv => (k, nv)))
                 }
-                .foldLeft[ValidatedResult[DecodingError, Vector[OutputData[(String, A)]]]](ValidatedResult.valid(Vector.empty))(
+                .foldLeft[ValidatedResult[DecodingError, Vector[OutputData[(String, A)]]]](
+                  ValidatedResult.valid(Vector.empty)
+                )(
                   accumulatedOutputDatasOrErrors(_, _, "struct", label)
                 )
                 .map(OutputData.sequence)
@@ -249,8 +261,7 @@ object Decoder extends DecoderInstancesLowPrio1:
       }
     def mapping(value: Value, label: Label): Validated[DecodingError, Map[String, A]] = ???
 
-  // handles ProviderResources too as they extend CustomResource
-  given customResourceDecoder[R <: CustomResource: ResourceDecoder](using Context): Decoder[R] = new Decoder[R]:
+  private def getResourceBasedResourceDecoder[R <: Resource: ResourceDecoder](using Context): Decoder[R] = new Decoder[R]:
     override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[R]] =
       decodeAsPossibleSecret(value, label).flatMap { odv =>
         odv
@@ -265,13 +276,17 @@ object Decoder extends DecoderInstancesLowPrio1:
                   structValue.fields
                     .get(Constants.ResourceUrnName)
                     .map(_.getStringValue)
-                    .toValidatedResultOrError(error(s"$label: Expected a resource urn in resource struct, not found", label))
+                    .toValidatedResultOrError(
+                      error(s"$label: Expected a resource urn in resource struct, not found", label)
+                    )
                     .flatMap(urnString => URN.from(urnString).toEither.toValidatedResult)
                     .flatMap { urn =>
                       NonEmptyString(urn.resourceName) match
-                        case None => error(s"$label: Expected a non-empty resource name in resource urn", label).invalidResult
+                        case None =>
+                          error(s"$label: Expected a non-empty resource name in resource urn", label).invalidResult
                         case Some(resourceName) =>
-                          val opts = CustomResourceOptions(urn = urn) // triggers GetResource instead of RegisterResource
+                          val opts =
+                            CustomResourceOptions(urn = urn) // triggers GetResource instead of RegisterResource
                           Context()
                             .readOrRegisterResource[R, EmptyArgs](urn.resourceType, resourceName, EmptyArgs(), opts)
                             .getData
@@ -296,6 +311,13 @@ object Decoder extends DecoderInstancesLowPrio1:
 
     override def mapping(value: Value, label: Label): Validated[DecodingError, R] = ???
 
+  // handles ProviderResources too as they extend CustomResource
+  given customResourceDecoder[R <: CustomResource: ResourceDecoder](using Context): Decoder[R] =
+    getResourceBasedResourceDecoder[R]
+
+  given remoteComponentResourceDecoder[R <: RemoteComponentResource: ResourceDecoder](using Context): Decoder[R] =
+    getResourceBasedResourceDecoder[R]
+
   // wondering if this works, it's a bit of a hack
   given dependencyResourceDecoder(using Context): Decoder[DependencyResource] = new Decoder[DependencyResource]:
     override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[DependencyResource]] =
@@ -312,7 +334,9 @@ object Decoder extends DecoderInstancesLowPrio1:
                   structValue.fields
                     .get(Constants.ResourceUrnName)
                     .map(_.getStringValue)
-                    .toValidatedResultOrError(error(s"$label: Expected a resource urn in resource struct, not found", label))
+                    .toValidatedResultOrError(
+                      error(s"$label: Expected a resource urn in resource struct, not found", label)
+                    )
                     .flatMap(urnString => URN.from(urnString).toEither.toValidatedResult)
                     .map(urn => OutputData(DependencyResource(Output(urn))))
           }
@@ -328,8 +352,6 @@ object Decoder extends DecoderInstancesLowPrio1:
 
     override def mapping(value: Value, label: Label): Validated[DecodingError, DependencyResource] = ???
 
-  // TODO remoteComponentResourceDecoder
-
   def assetArchiveDecoder[A](
     specialSig: String,
     handle: (Label, Struct) => ValidatedResult[DecodingError, OutputData[A]]
@@ -342,7 +364,10 @@ object Decoder extends DecoderInstancesLowPrio1:
               case None => error(s"$label: Expected a special struct signature", label).invalidResult
               case Some(extractedSpecialSig) =>
                 if extractedSpecialSig != specialSig then
-                  error(s"$label: Expected a special asset signature, got: '${extractedSpecialSig}'", label).invalidResult
+                  error(
+                    s"$label: Expected a special asset signature, got: '${extractedSpecialSig}'",
+                    label
+                  ).invalidResult
                 else
                   val structValue = innerValue.getStructValue
                   handle(label, structValue)
@@ -409,7 +434,9 @@ object Decoder extends DecoderInstancesLowPrio1:
       val nested = structValue.fields
         .get(Constants.ArchiveAssetsName)
         .map(_.getStructValue)
-        .toValidatedResultOrError(DecodingError(s"$label: Expected an assets field in archive struct, not found", label = label))
+        .toValidatedResultOrError(
+          DecodingError(s"$label: Expected an assets field in archive struct, not found", label = label)
+        )
 
       val outputDataVecV = nested.flatMap { nestedVal =>
         nestedVal.fields.toVector.traverseVR { (name, value) =>
@@ -447,7 +474,9 @@ object Decoder extends DecoderInstancesLowPrio1:
         .decode(value, label)
         .orElse(remoteArchiveDecoder.decode(value, label))
         .orElse(assetArchiveDecoder.decode(value, label))
-        .orElse(error(s"$label: Found value is neither a FileArchive, AssetArchive nor RemoteArchive", label).invalidResult)
+        .orElse(
+          error(s"$label: Found value is neither a FileArchive, AssetArchive nor RemoteArchive", label).invalidResult
+        )
     override def mapping(value: Value, label: Label): Validated[DecodingError, Archive] = ???
 
   given assetOrArchiveDecoder: Decoder[AssetOrArchive] = new Decoder[AssetOrArchive]:
@@ -516,7 +545,11 @@ trait DecoderHelpers:
 
           discriminatingValue match
             case Some(key) => getDecoder(key).decode(value, label.withKey(key))
-            case None      => error(s"$label: Expected a discriminator string in field '$discriminatingPropertyName'", label).invalidResult
+            case None =>
+              error(
+                s"$label: Expected a discriminator string in field '$discriminatingPropertyName'",
+                label
+              ).invalidResult
       end decodeValue
 
       override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[A]] =
@@ -572,12 +605,13 @@ trait DecoderHelpers:
               if innerValue.kind.isStructValue then
                 val fields = innerValue.getStructValue.fields
                 elems
-                  .foldLeft[ValidatedResult[DecodingError, OutputData[Tuple]]](ValidatedResult.valid(OutputData(EmptyTuple))) {
-                    case (validatedAcc, (name -> decoder)) =>
-                      val fieldValue: Value = fields.getOrElse(name, Null)
-                      validatedAcc.zipWith(decoder.decode(fieldValue, label.withKey(name))) { (acc, odField) =>
-                        acc.zip(odField)
-                      }
+                  .foldLeft[ValidatedResult[DecodingError, OutputData[Tuple]]](
+                    ValidatedResult.valid(OutputData(EmptyTuple))
+                  ) { case (validatedAcc, (name -> decoder)) =>
+                    val fieldValue: Value = fields.getOrElse(name, Null)
+                    validatedAcc.zipWith(decoder.decode(fieldValue, label.withKey(name))) { (acc, odField) =>
+                      acc.zip(odField)
+                    }
                   }
                   .map(_.map(p.fromProduct(_)))
               else
