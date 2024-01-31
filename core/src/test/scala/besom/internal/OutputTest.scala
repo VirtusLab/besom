@@ -123,4 +123,19 @@ class OutputTest extends munit.FunSuite:
     Context().waitForAllTasks.unsafeRunSync()
   }
 
+  test("multiple evaluations of traverse") {
+    given Context = DummyContext().unsafeRunSync()
+
+    import besom.aliases.OutputExtensions.*
+    val out: Output[List[String]] = List("value", "value2").traverse(Output(_))
+
+    val firstEval = out.getData.unsafeRunSync()
+    assertEquals(firstEval, OutputData(List("value", "value2")))
+
+    val secondEval = out.getData.unsafeRunSync()
+    assertEquals(secondEval, OutputData(List("value", "value2")))
+
+    Context().waitForAllTasks.unsafeRunSync()
+  }
+
 end OutputTest
