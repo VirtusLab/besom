@@ -54,7 +54,9 @@ trait EffectBesomModule extends BesomSyntax:
         _              <- logger.trace(s"Environment:\n${sys.env.toSeq.sortBy(_._1).map((k, v) => s"$k: $v").mkString("\n")}")
         _              <- logger.debug(s"Resolved feature support, spawning context and executing user program.")
         ctx            <- Context(runInfo, taskTracker, monitor, engine, logger, featureSupport, config)
+        _              <- logger.debug(s"Context established, executing user program.")
         stack          <- Result.defer(program(using ctx)) // for formatting ffs
+        _              <- logger.debug(s"User program executed, evaluating returned Stack.")
         _              <- stack.evaluateDependencies(using ctx)
         _              <- StackResource.registerStackOutputs(runInfo, stack.getExports.result)(using ctx)
         _              <- ctx.waitForAllTasks
@@ -63,6 +65,7 @@ trait EffectBesomModule extends BesomSyntax:
 
     rt.unsafeRunSync(everything.run(using rt)) match
       case Left(err) =>
+        scribe.error(err)
         throw err
       case Right(_) =>
         sys.exit(0)
