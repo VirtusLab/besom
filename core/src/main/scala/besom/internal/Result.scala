@@ -317,12 +317,16 @@ object Result:
     Result
       .defer {
         coll.iterator
-          .foldLeft(pure(bf.newBuilder(coll))) { (acc, curr) =>
-            acc.product(curr).map { case (b, r) =>
-              b += r
+          .foldLeft(pure(Vector.empty[A])) { (acc, curr) =>
+            acc.product(curr).map { case (vec, a) =>
+              vec :+ a
             }
           }
-          .map(_.result())
+          .map { vec =>
+            val b = bf.newBuilder(coll)
+            b.addAll(vec)
+            b.result()
+          }
       }
       .flatMap(identity)
 

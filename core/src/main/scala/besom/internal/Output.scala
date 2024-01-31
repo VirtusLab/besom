@@ -119,12 +119,16 @@ object Output:
     Output {
       Result.defer {
         coll.iterator
-          .foldLeft(Output(bf.newBuilder(coll))) { (acc, curr) =>
-            acc.zip(curr).map { case (b, r) =>
-              b += r
+          .foldLeft(Output(Vector.empty[A])) { (acc, curr) =>
+            acc.zip(curr).map { case (vec, a) =>
+              vec :+ a
             }
           }
-          .map(_.result())
+          .map { vec =>
+            val b = bf.newBuilder(coll)
+            b.addAll(vec)
+            b.result()
+          }
       }
     }.flatten
 
