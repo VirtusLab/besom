@@ -241,9 +241,9 @@ class LanguagePluginTest extends munit.FunSuite {
   end testExecutor
 
   def publishLocalResourcePlugin(pluginName: String) =
-    scalaCli.publishLocal(".").call(cwd = resourcesDir / pluginName)
+    scalaCli.publishLocal(resourcesDir / pluginName).call()
     // publish to ~/.m2 for gradle and maven
-    scalaCli.publishLocalMaven(".").call(cwd = resourcesDir / pluginName)
+    scalaCli.publishLocalMaven(resourcesDir / pluginName).call()
 
   def publishLocalResourcePlugins() =
     publishLocalResourcePlugin("fake-standard-resource-plugin")
@@ -252,8 +252,9 @@ class LanguagePluginTest extends munit.FunSuite {
   override def beforeAll(): Unit =
     publishLocalResourcePlugins()
     // publish to ~/.m2 for gradle and maven
-    scalaCli.publishLocalMaven("besom-json")
-    scalaCli.publishLocalMaven("core")
+    scalaCli.publishLocalMaven("besom-json", s"--project-version=${coreVersion}").call()
+    scalaCli.publishLocalMaven("core", s"--project-version=${coreVersion}").call()
+  end beforeAll
 
   FunFixture[pulumi.FixtureContext](
     setup = pulumi.fixture.setup(

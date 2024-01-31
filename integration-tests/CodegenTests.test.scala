@@ -11,13 +11,10 @@ import scala.concurrent.duration.*
 class CodegenTests extends munit.FunSuite {
   override val munitTimeout = 30.minutes
 
-  val isSlowExclude = false
   override def munitTests(): Seq[Test] = super
     .munitTests()
+    .filterNot(tags(Slow)) // to run slow tests you need to explicitly enable them with `--include-categories=Slow`
     .filterNot(tagsWhen(isCI)(LocalOnly))
-    .filterNot(
-      tagsWhen(isCI || isSlowExclude)(Slow)
-    )
 
   val testdata = os.pwd / "integration-tests" / "resources" / "testdata"
 
