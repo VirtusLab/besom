@@ -5,8 +5,12 @@ import besom.integration.common.*
 import besom.integration.common.pulumi.{FixtureArgs, FixtureOpts}
 import os.*
 
+import scala.concurrent.duration.*
+
 //noinspection ScalaWeakerAccess,TypeAnnotation,ScalaFileName
 class CoreTests extends munit.FunSuite {
+  override val munitTimeout = 5.minutes
+
   val wd = os.pwd / "integration-tests"
 
   FunFixture[pulumi.FixtureContext](
@@ -165,8 +169,8 @@ class CoreTests extends munit.FunSuite {
 
   FunFixture[pulumi.FixtureContext](
     setup = {
-      val schemaName                 = "purrl"
-      val result                     = codegen.generatePackage(PackageMetadata(schemaName, providerPurrlSchemaVersion))
+      val schemaName = "purrl"
+      val result     = codegen.generatePackage(PackageMetadata(schemaName, providerPurrlSchemaVersion))
       scalaCli.publishLocal(result.outputDir).call()
       pulumi.fixture.setup(
         wd / "resources" / "cats-purrl-example",

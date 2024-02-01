@@ -14,7 +14,7 @@ case class Redis(connectionString: Output[String])(using ComponentBase) extends 
     derives RegistersOutputs
 
 def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): Output[Redis] =
-  component(name, "besom:liftoff:Redis") {
+  component(name, "besom:liftoff:Redis", ComponentResourceOptions()) {
     val redisNamespace = Namespace(s"redis-cluster-namespace-$name")
 
     val labels = Map("app" -> name)
@@ -134,7 +134,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
               spec = PersistentVolumeClaimSpecArgs(
                 accessModes = List("ReadWriteOnce"),
                 storageClassName = "manual",
-                resources = ResourceRequirementsArgs(
+                resources = VolumeResourceRequirementsArgs(
                   requests = Map("storage" -> "128Mi")
                 )
               )
@@ -253,7 +253,8 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
         namespace = appNamespace.metadata.name,
         labels = labels
       )
-    )
+    ),
+    opts(dependsOn = nginxDeployment)
   )
 
   val redis = redisCluster("cache", 3)

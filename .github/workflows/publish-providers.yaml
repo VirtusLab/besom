@@ -12,7 +12,6 @@ concurrency:
 
 jobs:
   publish-provider:
-    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
@@ -26,7 +25,6 @@ jobs:
           - kubernetes
           - random
           - tls
-    steps:
-      - uses: VirtusLab/besom/.github/workflows/publish-provider.yaml@develop
-        with:
-          provider: ${{ matrix.provider }}
+    uses: VirtusLab/besom/.github/workflows/publish-provider.yaml@develop
+    with:
+      provider: ${{ matrix.provider }}

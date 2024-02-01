@@ -29,11 +29,25 @@ trait Context extends TaskTracker:
   private[besom] def pulumiProject: NonEmptyString
   private[besom] def pulumiStack: NonEmptyString
 
+  /** This is only called by user's component constructor functions. see [[BesomSyntax#component]].
+    */
   private[besom] def registerComponentResource(
     name: NonEmptyString,
-    typ: ResourceType
+    typ: ResourceType,
+    options: ComponentResourceOptions
   )(using Context): Result[ComponentBase]
 
+  /** This is only called by codegened remote component constructor functions.
+    */
+  private[besom] def registerRemoteComponentResource[R <: RemoteComponentResource: ResourceDecoder, A: ArgsEncoder](
+    typ: ResourceType,
+    name: NonEmptyString,
+    args: A,
+    options: ComponentResourceOptions
+  )(using Context): Output[R]
+
+  /** This is only called by codegened provider constructor functions.
+    */
   private[besom] def registerProvider[R <: Resource: ResourceDecoder, A: ProviderArgsEncoder](
     typ: ProviderType,
     name: NonEmptyString,
@@ -41,6 +55,8 @@ trait Context extends TaskTracker:
     options: CustomResourceOptions
   )(using Context): Output[R]
 
+  /** This is called by codegened custom resource & stack reference constructor functions, get functions and rehydrated resources decoders.
+    */
   private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
     typ: ResourceType,
     name: NonEmptyString,
@@ -48,6 +64,8 @@ trait Context extends TaskTracker:
     options: ResourceOptions
   )(using Context): Output[R]
 
+  /** This is only called by Component API, see [[BesomSyntax#component]]
+    */
   private[besom] def registerResourceOutputs(
     name: NonEmptyString,
     typ: ResourceType,
@@ -55,12 +73,16 @@ trait Context extends TaskTracker:
     outputs: Result[Struct]
   )(using Context): Result[Unit]
 
+  /** This is only called by codegened functions.
+    */
   private[besom] def invoke[A: ArgsEncoder, R: Decoder](
     token: FunctionToken,
     args: A,
     opts: InvokeOptions
   )(using Context): Output[R]
 
+  /** This is only called by codegened methods.
+    */
   private[besom] def call[A: ArgsEncoder, R: Decoder, T <: Resource](
     token: FunctionToken,
     args: A,
@@ -107,8 +129,8 @@ class ContextImpl(
 
   override private[besom] def registerComponentResource(
     name: NonEmptyString,
-    typ: ResourceType
-    // TODO missing component resource options from user here
+    typ: ResourceType,
+    options: ComponentResourceOptions
   )(using Context): Result[ComponentBase] =
     val label = Label.fromNameAndType(name, typ)
 
@@ -117,8 +139,31 @@ class ContextImpl(
         typ,
         name,
         EmptyArgs(),
-        ComponentResourceOptions() // TODO pass initial ResourceTransformations here
+        options, // TODO pass initial ResourceTransformations here
+        remote = false // all user components are local components
       )
+    }
+
+  override private[besom] def registerRemoteComponentResource[R <: RemoteComponentResource: ResourceDecoder, A: ArgsEncoder](
+    typ: ResourceType,
+    name: NonEmptyString,
+    args: A,
+    options: ComponentResourceOptions
+  )(using Context): Output[R] =
+    val label = Label.fromNameAndType(name, typ)
+
+    BesomMDC(Key.LabelKey, label) {
+      Output.ofData {
+        ResourceOps()
+          .readOrRegisterResourceInternal[R, EmptyArgs](
+            typ,
+            name,
+            EmptyArgs(),
+            options, // TODO pass initial ResourceTransformations here
+            remote = true // all codegened components are remote components
+          )
+          .map(OutputData(_))
+      }
     }
 
   override private[besom] def registerProvider[R <: Resource: ResourceDecoder, A: ProviderArgsEncoder](
@@ -128,7 +173,7 @@ class ContextImpl(
     options: CustomResourceOptions
   )(using Context): Output[R] =
     BesomMDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
-      Output.ofData(ResourceOps().readOrRegisterResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
+      Output.ofData(ResourceOps().readOrRegisterResourceInternal[R, A](typ, name, args, options, remote = false).map(OutputData(_)))
     }
 
   override private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
@@ -138,7 +183,7 @@ class ContextImpl(
     options: ResourceOptions
   )(using Context): Output[R] =
     BesomMDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
-      Output.ofData(ResourceOps().readOrRegisterResourceInternal[R, A](typ, name, args, options).map(OutputData(_)))
+      Output.ofData(ResourceOps().readOrRegisterResourceInternal[R, A](typ, name, args, options, remote = false).map(OutputData(_)))
     }
 
   override private[besom] def registerResourceOutputs(

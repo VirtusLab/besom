@@ -7,7 +7,14 @@ import scala.concurrent.*
   */
 trait FutureMonadModule extends BesomModule:
   override final type Eff[+A] = scala.concurrent.Future[A]
-  given ExecutionContext                 = scala.concurrent.ExecutionContext.global
+  given ExecutionContext = ExecutionContext.fromExecutorService(
+    null, // FJP does seem to swallow fatals
+    (t: Throwable) =>
+      // TODO this has to contain a link to github issue tracker to allow user to easily create a bug report, this is EXTREMELY IMPORTANT
+      scribe.error("Uncaught fatal error in Future Runtime", t)
+      t.printStackTrace()
+      sys.exit(1)
+  )
   protected lazy val rt: Runtime[Future] = FutureRuntime()
 
   implicit val toFutureFuture: Result.ToFuture[Eff] = new Result.ToFuture[Future]:

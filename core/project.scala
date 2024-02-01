@@ -15,7 +15,7 @@
 
 //> using dep "com.outr::scribe:3.11.3"
 //> using dep "com.outr::scribe-file:3.11.3"
-//> using dep "com.lihaoyi::pprint:0.6.6" // TODO BALEET
+//> using dep "com.lihaoyi::pprint:0.6.6"
 
 //> using test.dep "org.scalameta::munit:1.0.0-M10"
 

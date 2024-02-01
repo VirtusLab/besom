@@ -240,7 +240,7 @@ class CodeGen(implicit
     }
 
     // Config types need to be serialized to JSON for structured configs
-    val outputRequiresJsonFormat = typeToken.module == Utils.configModuleName | {
+    val outputRequiresJsonFormat = typeToken.module.startsWith(Utils.configModuleName) | {
       configDependencies.map(_.coordinates.token.asLookupKey).contains(typeToken.asLookupKey)
     }
 
@@ -392,14 +392,29 @@ class CodeGen(implicit
     // TODO: Implement comments
     val baseClassComment = ""
 
-    val resourceBaseClass =
-      if isProvider
-      then "besom.ProviderResource".parse[Type].get
-      else "besom.CustomResource".parse[Type].get
-
-    if (resourceDefinition.isComponent) {
-      logger.warn(s"Component resources are not supported yet, generating incorrect resource ${token.asString}")
-    }
+    val isRemoteComponent = resourceDefinition.isComponent
+    val (resourceBaseClass, resourceOptsClass, variant, resourceRegisterMethodName) =
+      if isProvider then
+        (
+          "besom.ProviderResource".parse[Type].get,
+          "besom.CustomResourceOptions".parse[Type].get,
+          "Custom",
+          "readOrRegisterResource"
+        )
+      else if isRemoteComponent then
+        (
+          "besom.RemoteComponentResource".parse[Type].get,
+          "besom.ComponentResourceOptions".parse[Type].get,
+          "Component",
+          "registerRemoteComponentResource"
+        )
+      else
+        (
+          "besom.CustomResource".parse[Type].get,
+          "besom.CustomResourceOptions".parse[Type].get,
+          "Custom",
+          "readOrRegisterResource"
+        )
 
     val baseClass =
       m"""|final case class $baseClassName private(
@@ -449,9 +464,11 @@ class CodeGen(implicit
          |    besom.internal.ResourceDecoder.derived[$baseClassName]
          |""".stripMargin
 
+    val decoderInstanceName = if isRemoteComponent then "remoteComponentResourceDecoder" else "customResourceDecoder"
+
     val decoderInstance =
       m"""  given decoder(using besom.types.Context): besom.types.Decoder[$baseClassName] =
-         |    besom.internal.Decoder.customResourceDecoder[$baseClassName]
+         |    besom.internal.Decoder.$decoderInstanceName[$baseClassName]
          |""".stripMargin
 
     val unionDecoders = unionDecoderGivens(resourceProperties)
@@ -462,9 +479,9 @@ class CodeGen(implicit
             |  def apply(using ctx: besom.types.Context)(
             |    name: besom.util.NonEmptyString,
             |    args: ${argsClassName}${argsDefault},
-            |    opts: besom.CustomResourceOptions = besom.CustomResourceOptions()
+            |    opts: besom.ResourceOptsVariant.$variant ?=> ${resourceOptsClass} = ${resourceOptsClass}()
             |  ): besom.types.Output[$baseClassName] =
-            |    ctx.readOrRegisterResource[$baseClassName, $argsClassName](${tokenLit}, name, args, opts)
+            |    ctx.${resourceRegisterMethodName}[$baseClassName, $argsClassName](${tokenLit}, name, args, opts(using besom.ResourceOptsVariant.$variant))
             |
             |  private[besom] def typeToken: besom.types.ResourceType = ${tokenLit}
             |

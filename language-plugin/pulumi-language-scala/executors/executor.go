@@ -63,13 +63,15 @@ func NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, error) {
 	e, err := combineScalaExecutorFactories(
 		&jarexec{},
 		&sbt{},
+		&gradle{},
+		&maven{},
 		&scalacli{},
 	).NewScalaExecutor(opts)
 	if err != nil {
 		return nil, err
 	}
 	if e == nil {
-		return nil, fmt.Errorf("failed to configure executor, tried: jar, sbt, scala-cli")
+		return nil, fmt.Errorf("failed to configure executor, tried: jar, sbt, scala-cli, gradle, maven")
 	}
 	return e, nil
 }

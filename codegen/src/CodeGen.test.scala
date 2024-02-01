@@ -77,9 +77,9 @@ class CodeGenTest extends munit.FunSuite {
               |  def apply(using ctx: besom.types.Context)(
               |    name: besom.util.NonEmptyString,
               |    args: ProviderArgs = ProviderArgs(),
-              |    opts: besom.CustomResourceOptions = besom.CustomResourceOptions()
+              |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
               |  ): besom.types.Output[Provider] =
-              |    ctx.readOrRegisterResource[Provider, ProviderArgs]("pulumi:providers:example", name, args, opts)
+              |    ctx.readOrRegisterResource[Provider, ProviderArgs]("pulumi:providers:example", name, args, opts(using besom.ResourceOptsVariant.Custom))
               |
               |  private[besom] def typeToken: besom.types.ResourceType = "pulumi:providers:example"
               |
@@ -206,9 +206,9 @@ class CodeGenTest extends munit.FunSuite {
              |  def apply(using ctx: besom.types.Context)(
              |    name: besom.util.NonEmptyString,
              |    args: ClusterArgs = ClusterArgs(),
-             |    opts: besom.CustomResourceOptions = besom.CustomResourceOptions()
+             |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
              |  ): besom.types.Output[Cluster] =
-             |    ctx.readOrRegisterResource[Cluster, ClusterArgs]("google-native:container/v1:Cluster", name, args, opts)
+             |    ctx.readOrRegisterResource[Cluster, ClusterArgs]("google-native:container/v1:Cluster", name, args, opts(using besom.ResourceOptsVariant.Custom))
              |
              |  private[besom] def typeToken: besom.types.ResourceType = "google-native:container/v1:Cluster"
              |

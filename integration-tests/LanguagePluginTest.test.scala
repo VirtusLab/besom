@@ -5,8 +5,12 @@ import besom.integration.common.*
 import munit.Slow
 import os.*
 
+import scala.concurrent.duration.*
+
 //noinspection ScalaWeakerAccess,TypeAnnotation,ScalaFileName
 class LanguagePluginTest extends munit.FunSuite {
+  override val munitTimeout = 5.minutes
+
   override def munitTests(): Seq[Test] = super
     .munitTests()
     .filterNot(tagsWhen(envVarOpt("CI").contains("true"))(LocalOnly))
@@ -41,12 +45,124 @@ class LanguagePluginTest extends munit.FunSuite {
         |  )
         |""".stripMargin
 
-  def publishLocalResourcePlugin(pluginName: String) =
-    scalaCli.publishLocal(".").call(cwd = resourcesDir / pluginName)
+  val gradleBuildFile =
+    s"""|plugins {
+        |    scala
+        |    application
+        |}
+        |
+        |repositories {
+        |    mavenLocal()
+        |    mavenCentral()
+        |}
+        |
+        |dependencies {
+        |    implementation("org.scala-lang:scala3-library_3:$scalaVersion")
+        |    implementation("org.virtuslab:besom-core_3:$coreVersion")
+        |    implementation("org.virtuslab:besom-fake-standard-resource_3:1.2.3-TEST")
+        |    implementation("org.virtuslab:besom-fake-external-resource_3:2.3.4-TEST")
+        |    if (project.hasProperty("besomBootstrapJar")) runtimeOnly(files(project.property("besomBootstrapJar") as String))
+        |}
+        |
+        |application {
+        |    mainClass.set(
+        |            if (project.hasProperty("mainClass")) {
+        |                project.property("mainClass") as String
+        |            } else {
+        |                "besom.languageplugin.test.pulumiapp.run"
+        |            }
+        |    )
+        |}
+        |""".stripMargin
 
-  def publishLocalResourcePlugins() =
-    publishLocalResourcePlugin("fake-standard-resource-plugin")
-    publishLocalResourcePlugin("fake-external-resource-plugin")
+  val mavenPomFile =
+    s"""|<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        |         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+        |    <modelVersion>4.0.0</modelVersion>
+        |
+        |    <groupId>org.virtuslab.example</groupId>
+        |    <artifactId>infra</artifactId>
+        |    <version>1.0-SNAPSHOT</version>
+        |
+        |    <properties>
+        |        <encoding>UTF-8</encoding>
+        |        <maven.compiler.target>$javaVersion</maven.compiler.target>
+        |        <maven.compiler.release>$javaVersion</maven.compiler.release>
+        |        <mainClass>$${project.groupId}.$${project.artifactId}.run</mainClass>
+        |    </properties>
+        |
+        |    <profiles>
+        |        <profile>
+        |            <!-- This profile is used to run the project with the besom bootstrap jar -->
+        |            <id>default-pulumi-java-sdk-dependency</id>
+        |            <activation>
+        |                <property>
+        |                    <name>besomBootstrapJar</name>
+        |                </property>
+        |            </activation>
+        |            <dependencies>
+        |                <dependency>
+        |                    <groupId>org.virtuslab</groupId>
+        |                    <artifactId>besom-bootstrap_3</artifactId>
+        |                    <version>$coreVersion</version>
+        |                    <scope>system</scope>
+        |                    <systemPath>$${besomBootstrapJar}</systemPath>
+        |                </dependency>
+        |            </dependencies>
+        |        </profile>
+        |    </profiles>
+        |
+        |    <dependencies>
+        |        <dependency>
+        |            <groupId>org.scala-lang</groupId>
+        |            <artifactId>scala3-library_3</artifactId>
+        |            <version>$scalaVersion</version>
+        |        </dependency>
+        |        <dependency>
+        |            <groupId>org.virtuslab</groupId>
+        |            <artifactId>besom-core_3</artifactId>
+        |            <version>$coreVersion</version>
+        |        </dependency>
+        |        <dependency>
+        |            <groupId>org.virtuslab</groupId>
+        |            <artifactId>besom-fake-standard-resource_3</artifactId>
+        |            <version>1.2.3-TEST</version>
+        |        </dependency>
+        |        <dependency>
+        |            <groupId>org.virtuslab</groupId>
+        |            <artifactId>besom-fake-external-resource_3</artifactId>
+        |            <version>2.3.4-TEST</version>
+        |        </dependency>
+        |    </dependencies>
+        |
+        |    <build>
+        |        <sourceDirectory>src/main/scala</sourceDirectory>
+        |        <plugins>
+        |            <plugin>
+        |                <groupId>net.alchim31.maven</groupId>
+        |                <artifactId>scala-maven-plugin</artifactId>
+        |                <version>4.8.1</version>
+        |                <executions>
+        |                    <execution>
+        |                        <goals>
+        |                            <goal>compile</goal>
+        |                            <goal>testCompile</goal>
+        |                        </goals>
+        |                    </execution>
+        |                </executions>
+        |            </plugin>
+        |            <plugin>
+        |                <groupId>org.apache.maven.plugins</groupId>
+        |                <artifactId>maven-wrapper-plugin</artifactId>
+        |                <version>3.2.0</version>
+        |                <configuration>
+        |                    <mavenVersion>3.9.6</mavenVersion>
+        |                </configuration>
+        |            </plugin>
+        |        </plugins>
+        |    </build>
+        |</project>
+        |""".stripMargin
 
   val expectedBootstrapPluginsJson = List(
     PulumiPluginJSON(
@@ -73,7 +189,7 @@ class LanguagePluginTest extends munit.FunSuite {
     )
   )
 
-  def testExecutor(ctx: pulumi.FixtureContext, pluginsJson: String) =
+  def testExecutor(ctx: pulumi.FixtureContext, pluginsJson: String = "") =
     if pluginsJson.nonEmpty then
       val actual = PulumiPluginJSON.listFrom(pluginsJson)
       assert {
@@ -124,8 +240,21 @@ class LanguagePluginTest extends munit.FunSuite {
     }
   end testExecutor
 
+  def publishLocalResourcePlugin(pluginName: String) =
+    scalaCli.publishLocal(resourcesDir / pluginName).call()
+    // publish to ~/.m2 for gradle and maven
+    scalaCli.publishLocalMaven(resourcesDir / pluginName).call()
+
+  def publishLocalResourcePlugins() =
+    publishLocalResourcePlugin("fake-standard-resource-plugin")
+    publishLocalResourcePlugin("fake-external-resource-plugin")
+
   override def beforeAll(): Unit =
     publishLocalResourcePlugins()
+    // publish to ~/.m2 for gradle and maven
+    scalaCli.publishLocalMaven("besom-json", s"--project-version=${coreVersion}").call()
+    scalaCli.publishLocalMaven("core", s"--project-version=${coreVersion}").call()
+  end beforeAll
 
   FunFixture[pulumi.FixtureContext](
     setup = pulumi.fixture.setup(
@@ -154,7 +283,27 @@ class LanguagePluginTest extends munit.FunSuite {
     ),
     teardown = pulumi.fixture.teardown
   ).test("sbt".tag(LocalOnly)) { ctx =>
-    testExecutor(ctx, "") // we skip bootstrap test for sbt due to practical reasons for now
+    testExecutor(ctx)
+  }
+
+  FunFixture[pulumi.FixtureContext](
+    setup = pulumi.fixture.setup(
+      executorsDir / "gradle",
+      projectFiles = Map("build.gradle.kts" -> gradleBuildFile)
+    ),
+    teardown = pulumi.fixture.teardown
+  ).test("gradle") { ctx =>
+    testExecutor(ctx)
+  }
+
+  FunFixture[pulumi.FixtureContext](
+    setup = pulumi.fixture.setup(
+      executorsDir / "maven",
+      projectFiles = Map("pom.xml" -> mavenPomFile)
+    ),
+    teardown = pulumi.fixture.teardown
+  ).test("maven") { ctx =>
+    testExecutor(ctx)
   }
 
   FunFixture[pulumi.FixtureContext](

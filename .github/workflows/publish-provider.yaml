@@ -11,6 +11,7 @@ on:
       provider:
         description: 'Provider(s) to publish'
         required: true
+        type: string
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -69,8 +69,8 @@ import docker.inputs.*
         )
       )
     ),
-    besom.CustomResourceOptions(
-      dependsOn = redisContainer.map(List(_))
+    opts(
+      dependsOn = redisContainer
     )
   )
 

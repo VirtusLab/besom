@@ -3,7 +3,8 @@ package besom.internal
 opaque type Input[+A] >: A | Output[A] = A | Output[A]
 
 object Input:
-  opaque type Optional[+A] >: Input[A | Option[A]] = Input[A | Option[A]]
+  opaque type Optional[+A] >: Input[A | Option[A]]              = Input[A | Option[A]]
+  opaque type OneOrList[+A] >: Input[A] | Input[List[Input[A]]] = Input[A] | Input[List[Input[A]]]
 
   extension [A](optional: A | Option[A])
     private def asOption: Option[A] =
@@ -52,6 +53,13 @@ object Input:
     private def inputListToListOutput[A](inputList: List[Input[A]], isSecret: Boolean)(using ctx: Context): Output[List[A]] =
       val outputList = inputList.map(simpleInputOps.asOutput(_)(isSecret = isSecret))
       Output.sequence(outputList)
+
+    extension [A](input: Input.OneOrList[A])
+      def asManyOutput(isSecret: Boolean = false)(using ctx: Context): Output[List[A]] =
+        input.wrappedAsOutput(isSecret).flatMap {
+          case list: List[Input[A]] @unchecked => inputListToListOutput(list, isSecret = isSecret)
+          case a: A @unchecked                 => Output(List(a))
+        }
 
     extension [A](input: Input[List[Input[A]]])
       def asOutput(isSecret: Boolean = false)(using ctx: Context): Output[List[A]] =

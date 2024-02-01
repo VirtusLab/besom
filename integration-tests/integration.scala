@@ -14,9 +14,9 @@ val javaVersion                 = Config.DefaultJavaVersion
 val scalaVersion                = Config.DefaultScalaVersion
 val coreVersion                 = os.read(os.pwd / "version.txt").trim
 val scalaPluginVersion          = coreVersion
-val providerRandomSchemaVersion = "4.14.0"
-val providerTlsSchemaVersion    = "4.11.1"
-val providerPurrlSchemaVersion  = "0.4.1"
+val providerRandomSchemaVersion = "4.15.1"
+val providerTlsSchemaVersion    = "5.0.0"
+val providerPurrlSchemaVersion  = "0.5.0"
 val providerRandomVersion       = s"$providerRandomSchemaVersion-core.$coreVersion"
 val providerTlsVersion          = s"$providerTlsSchemaVersion-core.$coreVersion"
 val providerPurrlVersion        = s"$providerPurrlSchemaVersion-core.$coreVersion"
@@ -256,6 +256,22 @@ object scalaCli {
     "--power",
     "publish",
     "local",
+    "--sources=false",
+    "--doc=false",
+    "--suppress-experimental-feature-warning",
+    "--suppress-directives-in-multiple-files-warning",
+    "--server=false",
+    "--javac-opt=-verbose",
+    "--javac-opt=-J-XX:MaxHeapSize=32G",
+    "--javac-opt=-J-XX:+UseParallelGC",
+    additional
+  )
+
+  def publishLocalMaven(additional: os.Shellable*) = pproc(
+    "scala-cli",
+    "--power",
+    "publish",
+    s"--publish-repository=file://${os.home}/.m2/repository",
     "--sources=false",
     "--doc=false",
     "--suppress-experimental-feature-warning",

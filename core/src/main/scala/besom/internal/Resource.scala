@@ -30,6 +30,8 @@ trait CustomResource extends Resource:
     */
   def id: Output[ResourceId]
 
+trait RemoteComponentResource extends Resource
+
 trait ComponentResource(using
   @implicitNotFound(
     "A component resource class should have a `(using ComponentBase)` parameter clause at the end of its constructor"
@@ -68,7 +70,7 @@ object StackResource:
     )
 
   def initializeStack(runInfo: RunInfo)(using ctx: Context): Result[StackResource] =
-    for given ComponentBase <- ctx.registerComponentResource(stackName(runInfo), RootPulumiStackTypeName)
+    for given ComponentBase <- ctx.registerComponentResource(stackName(runInfo), RootPulumiStackTypeName, ComponentResourceOptions())
     yield StackResource()
 
 case class ComponentBase(urn: Output[URN]) extends Resource derives ResourceDecoder

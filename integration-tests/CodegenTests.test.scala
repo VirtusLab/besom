@@ -5,19 +5,16 @@ import besom.integration.common.*
 import munit.{Slow, TestOptions}
 import os.*
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.*
 
 //noinspection ScalaWeakerAccess,TypeAnnotation,ScalaFileName
 class CodegenTests extends munit.FunSuite {
-  val isSlowExclude = false
+  override val munitTimeout = 30.minutes
+
   override def munitTests(): Seq[Test] = super
     .munitTests()
+    .filterNot(tags(Slow)) // to run slow tests you need to explicitly enable them with `--include-categories=Slow`
     .filterNot(tagsWhen(isCI)(LocalOnly))
-    .filterNot(
-      tagsWhen(isCI || isSlowExclude)(Slow)
-    )
-
-  override val munitTimeout = Duration(20, "min")
 
   val testdata = os.pwd / "integration-tests" / "resources" / "testdata"
 

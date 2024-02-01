@@ -107,7 +107,7 @@ publish-maven-sdk: publish-maven-core publish-maven-cats publish-maven-zio publi
 publish-gh-sdk: publish-gh-core publish-gh-cats publish-gh-zio publish-gh-compiler-plugin
 
 # Publishes locally core besom SDK
-publish-local-core: test-core
+publish-local-core: publish-local-json
 	scala-cli --power publish local core --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes locally besom cats-effect extension
@@ -156,7 +156,7 @@ publish-gh-compiler-plugin:
 
 # Cleans core build
 clean-core: 
-	scala-cli clean core 
+	scala-cli clean core
 
 # Cleans besom cats-effect extension build
 clean-cats:
@@ -168,10 +168,6 @@ clean-zio:
 
 # Cleans all SDK builds, sets up all modules for IDE again
 clean-sdk: clean-core clean-cats clean-zio clean-compiler-plugin
-
-# Cleans codegen build
-clean-codegen:
-	scala-cli clean codegen
 
 # Cleans besom compiler plugin build
 clean-compiler-plugin:
@@ -296,6 +292,10 @@ compile-codegen:
 test-codegen:
 	scala-cli --power test codegen --suppress-experimental-feature-warning
 
+# Cleans codegen build
+clean-codegen:
+	scala-cli clean codegen
+
 # Publishes locally Besom codegen
 publish-local-codegen: test-codegen
 	scala-cli --power publish local codegen --project-version {{besom-version}} --suppress-experimental-feature-warning
@@ -316,9 +316,6 @@ publish-gh-codegen: test-codegen
 test-integration: test-integration-core test-integration-compiler-plugin test-integration-codegen test-integration-language-plugin
 	scala-cli --power test integration-tests
 
-test-integration-ci: publish-local-codegen publish-local-sdk install-language-plugin publish-local-compiler-plugin
-	scala-cli --power test integration-tests
-
 # Cleans after integration tests
 clean-test-integration: clean-test-integration-codegen
 	scala-cli --power clean integration-tests
@@ -336,10 +333,15 @@ test-integration-language-plugin: publish-local-codegen publish-local-core insta
 	export GITHUB_TOKEN=$(gh auth token); \
 	scala-cli --power test integration-tests --test-only 'besom.integration.languageplugin*'
 
-# Runs integration tests for codegen
-test-integration-codegen: publish-local-codegen
+# Runs fast integration tests for codegen
+test-integration-codegen: publish-local-core publish-local-codegen
 	export GITHUB_TOKEN=$(gh auth token); \
 	scala-cli --power test integration-tests --test-only 'besom.integration.codegen*'
+
+# Runs fast&slow integration tests for codegen
+test-integration-codegen-slow: publish-local-core publish-local-codegen
+	export GITHUB_TOKEN=$(gh auth token); \
+	scala-cli --power test integration-tests --test-only 'besom.integration.codegen*' -- --include-categories=Slow
 
 # Cleans after the codegen integration tests
 clean-test-integration-codegen:
@@ -445,6 +447,7 @@ upsert-gh-release:
 # Cleans everything, including the local ivy, git untracked files, and kills all java processes
 power-wash: clean-all
 	rm -rf ~/.ivy2/local/org.virtuslab/
+	rm -rf ~/.m2/repository/org/virtuslab/
 	git clean -i -d -x -e ".idea"
 	killall -9 java
 
@@ -455,6 +458,7 @@ power-wash: clean-all
 # Run the sample kubernetes Pulumi app that resides in ./experimental directory
 liftoff:
 	#!/usr/bin/env sh
+	export PULUMI_SKIP_UPDATE_CHECK=true
 	export PULUMI_CONFIG_PASSPHRASE=""
 	cd experimental
 	pulumi --non-interactive --logtostderr up --stack liftoff -y
@@ -462,6 +466,7 @@ liftoff:
 # Reverts the deployment of experimental sample kubernetes Pulumi app from ./experimental directory
 destroy-liftoff:
 	#!/usr/bin/env sh
+	export PULUMI_SKIP_UPDATE_CHECK=true
 	cd experimental
 	if (pulumi --non-interactive --logtostderr stack ls | grep liftoff > /dev/null); then
 		export PULUMI_CONFIG_PASSPHRASE=""
@@ -471,6 +476,7 @@ destroy-liftoff:
 # Cleans the deployment of experimental sample kubernetes Pulumi app from ./experimental directory to the ground
 clean-liftoff: destroy-liftoff
 	#!/usr/bin/env sh
+	export PULUMI_SKIP_UPDATE_CHECK=true
 	cd experimental
 	if (pulumi --non-interactive --logtostderr stack ls | grep liftoff > /dev/null); then
 		pulumi --non-interactive --logtostderr stack rm liftoff -y
@@ -481,10 +487,10 @@ clean-liftoff: destroy-liftoff
 # Cleans the deployment of ./experimental app completely, rebuilds core and kubernetes provider SDKs, deploys the app again
 clean-slate-liftoff: clean-sdk
 	#!/usr/bin/env sh
-	just generate-provider kubernetes 4.2.0
 	just publish-local-core
 	just publish-local-compiler-plugin
-	just publish-local-provider kubernetes 4.2.0
+	scala-cli run codegen -- named kubernetes 4.2.0
+	scala-cli --power publish local .out/codegen/kubernetes/4.2.0/ --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 	just clean-liftoff
 	just liftoff
 
