@@ -11,7 +11,7 @@ on:
     - cron: '0 0 */3 * *'
 
 concurrency:
-  group: gh-packages
+  group: besom-gh-packages
   cancel-in-progress: false
 
 jobs:
@@ -32,12 +32,14 @@ jobs:
           - 'com.virtuslab.besom-aws_3'
           - 'com.virtuslab.besom-azure_3'
           - 'com.virtuslab.besom-docker_3'
+          - 'com.virtuslab.besom-eks_3'
           - 'com.virtuslab.besom-gcp_3'
           - 'com.virtuslab.besom-kubernetes_3'
           - 'com.virtuslab.besom-random_3'
           - 'com.virtuslab.besom-tls_3'
     steps:
       - uses: actions/delete-package-versions@v5.0.0
+        continue-on-error: true
         with:
           min-versions-to-keep: ${{ github.event.inputs.min-versions-to-keep || 1 }}
           delete-only-pre-release-versions: true
