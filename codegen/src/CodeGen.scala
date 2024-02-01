@@ -475,13 +475,15 @@ class CodeGen(implicit
 
     val baseCompanion =
       if (hasOutputExtensions) {
-        m"""|object $baseClassName:
+        m"""|object $baseClassName extends besom.ResourceCompanion[$baseClassName]:
             |  def apply(using ctx: besom.types.Context)(
             |    name: besom.util.NonEmptyString,
             |    args: ${argsClassName}${argsDefault},
             |    opts: besom.ResourceOptsVariant.$variant ?=> ${resourceOptsClass} = ${resourceOptsClass}()
             |  ): besom.types.Output[$baseClassName] =
             |    ctx.${resourceRegisterMethodName}[$baseClassName, $argsClassName](${tokenLit}, name, args, opts(using besom.ResourceOptsVariant.$variant))
+            |
+            |  private[besom] def typeToken: besom.types.ResourceType = ${tokenLit}
             |
             |$resourceDecoderInstance
             |$decoderInstance

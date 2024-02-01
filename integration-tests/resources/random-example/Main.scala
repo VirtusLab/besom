@@ -13,9 +13,21 @@ def main(): Unit = Pulumi.run {
 
   val str = strOutput
 
+  // tests whether Get Functions feature work!
+  val fetchedString = RandomString.get(
+    name = "random-string-xd",
+    id = str.id
+  )
+
+  val assertion = (str zip fetchedString).flatMap { case (a, b) => a.result zip b.result }.flatMap { case (a, b) =>
+    assert(a == b, "fetched string should be the same as the created one")
+    log.info(s"random-example: assertion passed: $a == $b")
+  }
+
   Stack(
     strOutput,
-    strOutput // checking memoization
+    strOutput, // checking memoization
+    assertion
   ).exports(
     randomString = str.map(_.result),
     resourceName = str.map(_.pulumiResourceName),
