@@ -278,7 +278,7 @@ object Decoder extends DecoderInstancesLowPrio1:
               extractSpecialStructSignature(innerValue) match
                 case None => error(s"$label: Expected a special struct signature", label).invalidResult
                 case Some(specialSig) =>
-                  if specialSig != Constants.SpecialSecretSig then
+                  if specialSig != Constants.SpecialResourceSig then
                     error(s"$label: Expected a special resource signature, got: '$specialSig'", label).invalidResult
                   else
                     val structValue = innerValue.getStructValue
@@ -311,7 +311,7 @@ object Decoder extends DecoderInstancesLowPrio1:
             .map(_.flatten)
             .lmap(exception =>
               DecodingError(
-                s"$label: Encountered an error when deserializing a resource",
+                s"$label: Encountered an error when deserializing a resource: ${exception.getMessage}",
                 label = label,
                 cause = exception
               )
@@ -336,7 +336,7 @@ object Decoder extends DecoderInstancesLowPrio1:
             extractSpecialStructSignature(innerValue) match
               case None => error(s"$label: Expected a special struct signature", label).invalidResult
               case Some(specialSig) =>
-                if specialSig != Constants.SpecialSecretSig then
+                if specialSig != Constants.SpecialResourceSig then
                   error(s"$label: Expected a special resource signature, got: '$specialSig'", label).invalidResult
                 else
                   val structValue = innerValue.getStructValue
