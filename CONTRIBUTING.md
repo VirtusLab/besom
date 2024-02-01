@@ -153,7 +153,7 @@ just test-all
 ### Working with published dependencies
 
 Release builds of the Besom SDK are published to Maven Central, and snapshots to GitHub Packages
-as `org.virtuslab::besom-core:X.Y.Z` and `org.virtuslab::besom-[package]:A.B.C-core.X.Y.Z`.
+as `org.virtuslab::besom-core:X.Y.Z` and `org.virtuslab::besom-<package>:A.B.C-core.X.Y`.
 
 Language host provider is published to GitHub Packages as `pulumi-language-scala-vX.Y.Z-OS-ARCH.tar.gz`.
 
