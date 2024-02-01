@@ -1,9 +1,9 @@
 //> using scala 3.3.1
 //> using options -release:11 -deprecation -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement -language:noAutoTupling
 
-//> using dep org.scalameta:scalameta_2.13:4.8.14
-//> using dep com.lihaoyi::upickle:3.1.3
-//> using dep com.lihaoyi::os-lib:0.9.2
+//> using dep org.scalameta:scalameta_2.13:4.8.15
+//> using dep com.lihaoyi::upickle:3.1.4
+//> using dep com.lihaoyi::os-lib:0.9.3
 //> using test.dep org.scalameta::munit::1.0.0-M10
 
 //> using publish.name "besom-codegen"

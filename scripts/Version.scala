@@ -4,6 +4,8 @@ import scala.sys.exit
 import scala.util.CommandLineParser.FromString
 import scala.util.matching.Regex
 
+import besom.model.SemanticVersion
+
 object Version:
   def main(args: String*): Unit =
     val cwd               = besomDir
@@ -23,8 +25,14 @@ object Version:
         .toMap
 
     def changeVersion(version: String, newBesomVersion: String, packageVersion: String => Option[String] = _ => None): String =
+      lazy val coreShortVersion = SemanticVersion
+         .parseTolerant(besomVersion)
+         .fold(
+           e => throw Exception(s"Invalid besom version: ${besomVersion}", e),
+           _.copy(patch = 0).toShortString
+         )
       version match
-        case s"$a:$b-core.$_" => s"$a:${packageVersion(a).getOrElse(b)}-core.$newBesomVersion"
+        case s"$a:$b-core.$_" => s"$a:${packageVersion(a).getOrElse(b)}-core.$coreShortVersion"
         case s"$a:$_"         => s"$a:$newBesomVersion"
     end changeVersion
 
@@ -80,10 +88,13 @@ object Version:
         println(s"Bumping Besom packages version to latest")
         val latestPackages = latestPackageVersions()
         projectFiles()
-          .collect { case (path, content) if content.linesIterator.exists(besomDependencyPattern.matches) => path -> content }
+          .collect {
+            case (path, content) if content.linesIterator.exists(besomDependencyPattern.matches) => path -> content 
+          }
           .foreachEntry { case (path, content) =>
             val newContent = content.linesIterator
               .map {
+                case line if line.contains("besom-fake-") => line // ignore
                 case besomDependencyPattern(prefix, version, suffix) =>
                   prefix + changeVersion(version, besomVersion, latestPackages.get) + suffix
                 case line => line // pass through

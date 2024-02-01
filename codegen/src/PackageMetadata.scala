@@ -4,7 +4,6 @@ import besom.codegen.UpickleApi.*
 
 type SchemaName    = String
 type SchemaVersion = String
-type SchemaFile    = os.Path
 
 private case class PackageMetadataProtocol(
   name: String,
@@ -68,7 +67,7 @@ object PackageMetadata {
   def toJson(ms: Vector[PackageMetadata]): String = write[Vector[PackageMetadata]](ms)
 }
 
-opaque type PackageVersion = SchemaVersion
+opaque type PackageVersion <: String = SchemaVersion
 object PackageVersion {
 
   private val DefaultVersion  = "0.0.0"

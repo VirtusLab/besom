@@ -7,6 +7,8 @@ import besom.codegen.{PackageVersion, SchemaFile, SchemaName}
 
 import scala.collection.mutable.ListBuffer
 
+type SchemaFile = os.Path
+
 trait SchemaProvider {
   def packageInfo(metadata: PackageMetadata, schema: Option[SchemaFile] = None): (PulumiPackage, PulumiPackageInfo)
   def packageInfo(metadata: PackageMetadata, pulumiPackage: PulumiPackage): (PulumiPackage, PulumiPackageInfo)

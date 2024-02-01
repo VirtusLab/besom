@@ -17,9 +17,6 @@ val scalaPluginVersion          = coreVersion
 val providerRandomSchemaVersion = "4.15.1"
 val providerTlsSchemaVersion    = "5.0.0"
 val providerPurrlSchemaVersion  = "0.5.0"
-val providerRandomVersion       = s"$providerRandomSchemaVersion-core.$coreVersion"
-val providerTlsVersion          = s"$providerTlsSchemaVersion-core.$coreVersion"
-val providerPurrlVersion        = s"$providerPurrlSchemaVersion-core.$coreVersion"
 
 val languagePluginDir = os.pwd / ".out" / "language-plugin"
 
