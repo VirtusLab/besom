@@ -13,7 +13,7 @@ class Resources private (
   def add(resource: ComponentBase, state: ComponentResourceState): Result[Unit] =
     resources.update(_ + (resource -> state))
 
-  def add(resource: RemoteComponentResource, state: CustomResourceState): Result[Unit] =
+  def add(resource: RemoteComponentResource, state: ComponentResourceState): Result[Unit] =
     resources.update(_ + (resource -> state))
 
   def add(resource: Resource, state: ResourceState): Result[Unit] = (resource, state) match
