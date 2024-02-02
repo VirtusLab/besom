@@ -8,4 +8,4 @@
 //> using dep "org.scoverage::scalac-scoverage-domain:2.0.11"
 //> using dep "org.scoverage::scalac-scoverage-serializer:2.0.11"
 //> using dep org.virtuslab::scala-yaml:0.0.8
-//> using dep org.virtuslab::besom-codegen:0.1.1-SNAPSHOT
+//> using dep org.virtuslab::besom-codegen:0.2.0-SNAPSHOT
