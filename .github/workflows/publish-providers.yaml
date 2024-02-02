@@ -6,10 +6,6 @@ on:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-concurrency:
-  group: besom-gh-packages
-  cancel-in-progress: false
-
 jobs:
   publish-provider:
     permissions:
