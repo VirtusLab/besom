@@ -394,19 +394,4 @@ object Packages:
     println(s"Packages directory: '$targetPath'")
   }
 
-  def deleteGithubPackage(packageName: String): Unit =
-    val packagesRepoApi = s"https://api.github.com/orgs/VirtusLab/packages/maven/org.virtuslab.besom-${packageName}_3"
-    val token           = envOrExit("GITHUB_TOKEN")
-    val headers = Map(
-      "Authorization" -> s"Bearer $token",
-      "Accept" -> "application/vnd.github+json"
-    )
-
-    // please not that this call requires
-    val packagesResponse = requests.delete(packagesRepoApi, headers = headers, check = false /* ignore 404 */)
-    packagesResponse.statusCode match
-      case 204 => println(s"Deleted package: '$packageName'")
-      case 404 => println(s"Not found: '$packageName', ignoring.")
-      case code => throw Exception(s"[$code] Failed to delete package using: '$packagesRepoApi'; ${packagesResponse.text()}")
-
 end Packages

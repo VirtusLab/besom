@@ -16,7 +16,7 @@ using the Scala programming language. Scala support is currently in **Public Bet
 
 * **[Besom Docs](https://virtuslab.github.io/besom/)**: Learn about Besom concepts, follow user-guides, and consult the reference documentation.
 
-* **[Examples](https://github.com/VirtusLab/besom/tree/v0.1.0-examples/examples)**: Browse Scala examples across many clouds and scenarios including containers, serverless,
+* **[Examples](https://github.com/VirtusLab/besom/tree/develop/examples)**: Browse Scala examples across many clouds and scenarios including containers, serverless,
   and infrastructure.
 
 ## <a name="getting-started"></a>Getting Started
@@ -44,7 +44,7 @@ using the Scala programming language. Scala support is currently in **Public Bet
     To install the latest Scala Language Plugin release, run the following:
 
     ```bash
-    pulumi plugin install language scala --server github://api.github.com/VirtusLab/besom
+    pulumi plugin install language scala 0.2.0-SNAPSHOT --server github://api.github.com/VirtusLab/besom
     ```
 
 4. **Create a new project**:
@@ -58,7 +58,7 @@ using the Scala programming language. Scala support is currently in **Public Bet
     mkdir besom-demo && cd besom-demo
     ```
     ```bash
-    pulumi new https://github.com/VirtusLab/besom/tree/v0.1.0-examples/templates/aws
+    pulumi new https://github.com/VirtusLab/besom/tree/develop/templates/aws
     ```
 
 5. **Deploy to the Cloud**:
@@ -94,7 +94,7 @@ using the Scala programming language. Scala support is currently in **Public Bet
 To learn more, head over to 
 [virtuslab.github.io/besom](https://virtuslab.github.io/besom/) for much more information, including
 [tutorial](https://virtuslab.github.io/besom/docs/tutorial),
-[examples](https://github.com/VirtusLab/besom/tree/v0.1.0-examples/examples),
+[examples](https://github.com/VirtusLab/besom/tree/develop/examples),
 and [architecture and programming model concepts](https://virtuslab.github.io/besom/docs/architecture).
 
 ## Explaining the project structure
@@ -109,9 +109,10 @@ Resources created in `Pulumi.run { ... }` block will be created by Pulumi.
 A simple example using Scala CLI:
 ```scala
 //> using scala "3.3.1"
-//> using plugin "org.virtuslab::besom-compiler-plugin:0.1.0"
-//> using dep "org.virtuslab::besom-core:0.1.0"
-//> using dep "org.virtuslab::besom-aws:6.2.1-core.0.1.0"
+//> using plugin "org.virtuslab::besom-compiler-plugin:0.2.0-SNAPSHOT"
+//> using dep "org.virtuslab::besom-core:0.2.0-SNAPSHOT"
+//> using dep "org.virtuslab::besom-aws:6.2.1-core.0.2-SNAPSHOT"
+//> using repository sonatype:snapshots
 
 import besom.*
 import besom.api.aws

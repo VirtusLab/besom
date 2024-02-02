@@ -4,3 +4,4 @@
 //> using dep org.virtuslab::besom-core:0.2.0-SNAPSHOT
 //> using dep org.virtuslab::besom-aws:6.19.0-core.0.2-SNAPSHOT
 //> using dep org.virtuslab::besom-tls:5.0.0-core.0.2-SNAPSHOT
+//> using repository sonatype:snapshots
