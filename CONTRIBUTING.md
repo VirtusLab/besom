@@ -155,7 +155,7 @@ just test-all
 Release builds of the Besom SDK are published to Maven Central, and snapshots to GitHub Packages
 as `org.virtuslab::besom-core:X.Y.Z` and `org.virtuslab::besom-<package>:A.B.C-core.X.Y`.
 
-Language host provider is published to GitHub Packages as `pulumi-language-scala-vX.Y.Z-OS-ARCH.tar.gz`.
+Language host provider is published to Maven as `pulumi-language-scala-vX.Y.Z-OS-ARCH.tar.gz`.
 
 
 To use development version of the language host provider:
@@ -163,18 +163,14 @@ To use development version of the language host provider:
 pulumi --logtostderr plugin install language scala $(cat version.txt) --server github://api.github.com/VirtusLab/besom
 ```
 
-To use development version of the Besom SDKs, first authenticate with GitHub Packages:
-
-```bash
-scala-cli --power config repositories.credentials maven.pkg.github.com env:GITHUB_ACTOR env:GITHUB_TOKEN
-export GITHUB_TOKEN=$(gh auth token)
-export GITHUB_ACTOR=<your_gh_user_name_here> # you can check it using `gh auth status`
-```
-
-And add repository in your `project.scala`:
+To use development version of the Besom SDKs add repository in your `project.scala`:
 
 ```scala
-//> using repository https://maven.pkg.github.com/VirtusLab/besom
+//> using repository sonatype:snapshots
+```
+or use a command line option:
+```bash
+--repository=sonatype:snapshots
 ```
 
 To use development version of an example:
@@ -183,7 +179,11 @@ To use development version of an example:
 pulumi --logtostderr new https://github.com/VirtusLab/besom/tree/develop/templates/aws
 ```
 
-### Bump Besom version
+### Publishing a release
+
+After all the testing is done, you can publish a release.
+
+#### Bump Besom version
 
 To bump Besom version in all `project.scala` and `version.txt` files:
 
@@ -191,7 +191,7 @@ To bump Besom version in all `project.scala` and `version.txt` files:
 just cli version bump X.Y.Z
 ```
 
-### Updating dependencies versions in all `project.scala` files
+#### Update dependencies versions in all `project.scala` files
 
 This is most useful for `examples` and `templates`, and integration tests:
 
@@ -199,42 +199,45 @@ This is most useful for `examples` and `templates`, and integration tests:
 just cli version update
 ```
 
-### Create a release draft
+#### Create a release draft on GitHub
 
 ```bash
 just upsert-gh-release
 ```
 
-### Publish core
+#### Publish core and language host
 ```bash
-just publish-gh-all publish-language-plugins-all
+just publish-maven-all
+just publish-language-plugins-all
 ```
 
-### Publish packages
+#### Publish packages
 
-Publish a package(s) to GitHub Packages:
+Publish all packages:
+```bash
+export GITHUB_TOKEN=$(gh auth token)
+just cli packages metadata-all
+just cli packages generate-all
+just cli packages publish-maven-all
+```
+
+To publish selected package(s):
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
 just cli packages metadata aws azure docker gcp kubernetes random tls
 just cli packages generate aws azure docker gcp kubernetes random tls
-just cli packages publish-github aws azure docker gcp kubernetes random tls
+just cli packages publish-maven aws azure docker gcp kubernetes random tls
 ```
 
-Publish all packages to GitHub Packages:
-```bash
-export GITHUB_TOKEN=$(gh auth token)
-just publish-language-plugins-all
-just cli packages metadata-all
-just cli packages generate-all
-just cli packages publish-github-all
-```
+#### Finish the release
 
-### Delete packages
+Finish the release on GitHub manually, make sure the changelog is correct and correct git tag was created.
 
-To delete GitHub Packages package:
+According to our Git branching and versioning strategy, the release branch should be created after the tag is created.
+
 ```bash
-gh auth refresh -s delete:packages -s read:packages
-just cli packages delete-github <package>
+git checkout -b release/v$(cat version.txt)
+git push --set-upstream origin release/v$(cat version.txt)
 ```
 
 ### Adding examples and testing them locally

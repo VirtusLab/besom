@@ -22,8 +22,6 @@ object Packages:
       case "publish-local" :: tail               => publishLocalSelected(generatedFile, tail)
       case "publish-maven-all" :: Nil            => publishMavenAll(generatedFile)
       case "publish-maven" :: tail               => publishMavenSelected(generatedFile, tail)
-      case "publish-github-all" :: Nil           => publishGithubAll(generatedFile)
-      case "publish-github" :: tail              => publishGithubSelected(generatedFile, tail)
       case "delete-github" :: packageName :: Nil => deleteGithubPackage(packageName)
       case cmd =>
         println(s"Unknown command: $cmd\n")
@@ -39,8 +37,6 @@ object Packages:
              |  publish-local <package>...  - publish selected packages locally
              |  publish-maven-all           - publish all packages to Maven
              |  publish-maven <package>...  - publish selected packages to Maven
-             |  publish-github-all          - publish all packages to Github Packages
-             |  publish-github <package>... - publish selected packages to Github Packages
              |  delete-github <package>...  - delete selected packages from Github Packages
              |""".stripMargin
         )
@@ -78,11 +74,6 @@ object Packages:
     "--gpg-option=--passphrase-fd=0" // read passphrase from stdin
   )
 
-  val ghAuthOpts: Vector[os.Shellable] = Vector(
-    "--publish-repository=github",
-    "--password=env:GITHUB_TOKEN"
-  )
-
   lazy val localOpts: Vector[os.Shellable] =
     if isCI
     then publishOpts(heapMaxGb = 16, jarCompression = 1)
@@ -93,16 +84,6 @@ object Packages:
     then publishOpts(heapMaxGb = 16, jarCompression = 9, sources = true, docs = true)
     else publishOpts(heapMaxGb = 32, jarCompression = 9, sources = true, docs = true)
   } ++ mavenAuthOpts(pgpKey = envOrExit("PGP_KEY_ID"))
-
-  lazy val ghOpts: Vector[os.Shellable] = {
-    if isCI
-    then publishOpts(heapMaxGb = 16, jarCompression = 9, sources = true, docs = true)
-    else publishOpts(heapMaxGb = 32, jarCompression = 9, sources = true, docs = true)
-  } ++ ghAuthOpts ++ {
-    if isCI
-    then Vector("--repository=https://maven.pkg.github.com/VirtusLab/besom")
-    else Vector.empty
-  }
 
   private val pluginDownloadProblemPackages = Vector(
     "aws-miniflux", // lack of darwin/arm64 binary
@@ -180,24 +161,6 @@ object Packages:
     val published = publishMaven(generated)
     os.write.over(publishedMavenFile, PackageMetadata.toJson(published), createFolders = true)
     publishedMavenFile
-  }
-
-  def publishGithubAll(sourceFile: os.Path): os.Path = {
-    val generated = PackageMetadata
-      .fromJsonList(os.read(sourceFile))
-      .filterNot(m => compileProblemPackages.contains(m.name))
-    val published = publishGithub(generated)
-    os.write.over(publishedGithubFile, PackageMetadata.toJson(published), createFolders = true)
-    publishedGithubFile
-  }
-
-  def publishGithubSelected(sourceFile: os.Path, packages: List[String]): os.Path = {
-    val generated = PackageMetadata
-      .fromJsonList(os.read(sourceFile))
-      .filter(p => packages.contains(p.name))
-    val published = publishGithub(generated)
-    os.write.over(publishedGithubFile, PackageMetadata.toJson(published), createFolders = true)
-    publishedGithubFile
   }
 
   type PackageId = (String, Option[String])
@@ -311,49 +274,6 @@ object Packages:
               "--suppress-directives-in-multiple-files-warning"
             )
             os.proc(args ++ mavenOpts).call(stdin = envOrExit("PGP_PASSWORD"), stdout = logFile, mergeErrIntoOut = true)
-            println(s"[${new Date}] Successfully published provider '${m.name}' version '${version}'")
-
-            done += m
-            Progress.total(todo.size)
-          catch
-            case NonFatal(_) =>
-              Progress.fail(s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}")
-          finally Progress.end
-    }
-    done.toVector
-  }
-
-  def publishGithub(generated: Vector[PackageMetadata]): Vector[PackageMetadata] = {
-    val seen = mutable.HashSet.empty[PackageId]
-    val todo = mutable.Queue.empty[PackageMetadata]
-    val done = mutable.ListBuffer.empty[PackageMetadata]
-
-    os.remove.all(publishGithubDir) // make sure there is no dirty state from previous runs
-    os.makeDir.all(publishGithubDir)
-
-    generated.foreach(m => {
-      todo.enqueueAll(m.dependencies) // dependencies first to avoid missing dependencies during compilation
-      todo.enqueue(m)
-    })
-    withProgress("Publishing packages to GitHub", todo.size) {
-      while todo.nonEmpty do
-        val m             = todo.dequeue()
-        val id: PackageId = (m.name, m.version.map(_.asString))
-        if !seen.contains(id) then
-          seen.add(id)
-          val version = m.version.getOrElse(throw Exception("Package version must be provided for publishing")).asString
-          Progress.report(label = s"${m.name}:${version}")
-          val logFile = publishGithubDir / s"${m.name}-${version}.log"
-          try
-            val args: Seq[os.Shellable] = Seq(
-              "scala-cli",
-              "--power",
-              "publish",
-              codegenDir / m.name / version,
-              "--suppress-experimental-feature-warning",
-              "--suppress-directives-in-multiple-files-warning"
-            )
-            os.proc(args ++ ghOpts).call(stdout = logFile, mergeErrIntoOut = true)
             println(s"[${new Date}] Successfully published provider '${m.name}' version '${version}'")
 
             done += m

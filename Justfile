@@ -24,8 +24,7 @@ scala-cli-coverage-options-zio := if coverage == "true" { "-O -coverage-out:" + 
 scala-cli-test-options-zio := scala-cli-coverage-options-zio
 
 publish-maven-auth-options := "--user env:OSSRH_USERNAME --password env:OSSRH_PASSWORD --gpg-key $PGP_KEY_ID --gpg-option --pinentry-mode --gpg-option loopback --gpg-option --passphrase --gpg-option $PGP_PASSWORD"
-publish-gh-opts := "--publish-repository=github --password env:GITHUB_TOKEN"
-ci-opts := if env_var_or_default('CI', "") == "true" { "--repository=https://maven.pkg.github.com/VirtusLab/besom" } else { "" }
+ci-opts := if env_var_or_default('CI', "") == "true" { "--repository=sonatype:snapshots" } else { "" }
 
 # This list of available targets
 default:
@@ -49,9 +48,6 @@ publish-local-all: publish-local-json publish-local-sdk publish-local-codegen in
 
 # Publishes everything to Maven
 publish-maven-all: publish-maven-json publish-maven-sdk publish-maven-codegen
-
-# Publishes everything to GitHub Packages
-publish-gh-all: publish-gh-json publish-gh-sdk publish-gh-codegen
 
 # Runs all necessary checks before committing
 before-commit: compile-all test-all
@@ -103,9 +99,6 @@ publish-local-sdk: publish-local-core publish-local-cats publish-local-zio publi
 # Publishes to maven all SDK modules
 publish-maven-sdk: publish-maven-core publish-maven-cats publish-maven-zio publish-maven-compiler-plugin
 
-# Publishes to GitHub Packages all SDK modules
-publish-gh-sdk: publish-gh-core publish-gh-cats publish-gh-zio publish-gh-compiler-plugin
-
 # Publishes locally core besom SDK
 publish-local-core: publish-local-json
 	scala-cli --power publish local core --project-version {{besom-version}} --suppress-experimental-feature-warning
@@ -137,22 +130,6 @@ publish-maven-zio:
 # Publishes besom compiler plugin to Maven
 publish-maven-compiler-plugin:
 	scala-cli --power publish compiler-plugin --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
-
-# Publishes core besom SDK to GitHub Packages
-publish-gh-core:
-	scala-cli --power publish core --project-version {{besom-version}} {{publish-gh-opts}} --suppress-experimental-feature-warning || echo "Could not publish core to GitHub Packages"
-
-# Publishes Besom cats-effect extension to GitHub Packages
-publish-gh-cats:
-	scala-cli --power publish besom-cats --project-version {{besom-version}} {{publish-gh-opts}} --suppress-experimental-feature-warning || echo "Could not publish cats to GitHub Packages"
-
-# Publishes Besom zio extension to GitHub Packages
-publish-gh-zio:
-	scala-cli --power publish besom-zio --project-version {{besom-version}} {{publish-gh-opts}} --suppress-experimental-feature-warning || echo "Could not publish zio to GitHub Packages"
-
-# Publishes Besom compiler plugin to GitHub Packages
-publish-gh-compiler-plugin:
-	scala-cli --power publish compiler-plugin --project-version {{besom-version}} {{publish-gh-opts}} --suppress-experimental-feature-warning || echo "Could not publish compiler plugin to GitHub Packages"
 
 # Cleans core build
 clean-core: 
@@ -204,10 +181,6 @@ publish-local-json:
 # Publishes json module to Maven
 publish-maven-json:
 	scala-cli --power publish besom-json --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
-
-# Publishes json module to GitHub Packages
-publish-gh-json:
-	scala-cli --power publish besom-json --project-version {{besom-version}} {{publish-gh-opts}} --suppress-experimental-feature-warning || echo "Could not publish json to GitHub Packages"
 
 ####################
 # Language plugin
@@ -303,10 +276,6 @@ publish-local-codegen: test-codegen
 # Publishes Besom codegen
 publish-maven-codegen: test-codegen
 	scala-cli --power publish codegen --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
-
-# Publishes Besom codegen to GitHub Packages
-publish-gh-codegen: test-codegen
-	scala-cli --power publish codegen --project-version {{besom-version}} {{publish-gh-opts}} --suppress-experimental-feature-warning || echo "Could not publish codegen to GitHub Packages"
 
 ####################
 # Integration testing
