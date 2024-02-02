@@ -22,7 +22,6 @@ object Packages:
       case "publish-local" :: tail               => publishLocalSelected(generatedFile, tail)
       case "publish-maven-all" :: Nil            => publishMavenAll(generatedFile)
       case "publish-maven" :: tail               => publishMavenSelected(generatedFile, tail)
-      case "delete-github" :: packageName :: Nil => deleteGithubPackage(packageName)
       case cmd =>
         println(s"Unknown command: $cmd\n")
         println(
@@ -100,7 +99,11 @@ object Packages:
     "packet" // deprecated, lack of darwin/arm64 binary
   )
 
-  private val codegenProblemPackages = Vector()
+  private val codegenProblemPackages = Vector(
+    "aquasec", // ???
+    "artifactory", // ???
+    "azapi" // ???
+  )
 
   private val compileProblemPackages = Vector(
     "azure-native", // takes too long to compile
