@@ -73,6 +73,7 @@ object Version:
           .foreachEntry { case (path, content) =>
             val newContent = content.linesIterator
               .map {
+                case line if line.contains("besom-fake-") => line // ignore
                 case besomDependencyPattern(prefix, version, suffix) =>
                   prefix + changeVersion(version, besomVersion) + suffix
                 case line => line // pass through
