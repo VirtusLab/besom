@@ -17,7 +17,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 concurrency:
-  group: besom-gh-packages-{{ github.event.inputs.provider }}
+  group: besom-gh-packages-${{ github.event.inputs.provider }}
   cancel-in-progress: false
 
 jobs:
