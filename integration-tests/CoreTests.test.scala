@@ -1,6 +1,6 @@
 package besom.integration.core
 
-import besom.codegen.PackageMetadata
+import besom.codegen.{CodeGen, Config, PackageMetadata}
 import besom.integration.common.*
 import besom.integration.common.pulumi.{FixtureArgs, FixtureOpts}
 import os.*
@@ -10,6 +10,8 @@ import scala.concurrent.duration.*
 //noinspection ScalaWeakerAccess,TypeAnnotation,ScalaFileName
 class CoreTests extends munit.FunSuite {
   override val munitTimeout = 5.minutes
+  
+  implicit val codegenConfig: Config.CodegenConfig = Config.CodegenConfig()
 
   val wd = os.pwd / "integration-tests"
 
@@ -77,7 +79,7 @@ class CoreTests extends munit.FunSuite {
         wd / "resources" / "random-example",
         projectFiles = Map(
           "project.scala" ->
-            (defaultProjectFile + s"""//> using dep org.virtuslab::besom-$schemaName:$providerRandomVersion""")
+            (defaultProjectFile + CodeGen.packageDependency(schemaName, providerRandomSchemaVersion))
         )
       )
     },
@@ -97,7 +99,7 @@ class CoreTests extends munit.FunSuite {
         wd / "resources" / "tls-example",
         projectFiles = Map(
           "project.scala" ->
-            (defaultProjectFile + s"""//> using dep org.virtuslab::besom-$schemaName:$providerTlsVersion""")
+            (defaultProjectFile + CodeGen.packageDependency(schemaName, providerTlsSchemaVersion))
         )
       )
     },
@@ -117,7 +119,7 @@ class CoreTests extends munit.FunSuite {
           wd / "resources" / "references" / "source-stack",
           projectFiles = Map(
             "project.scala" ->
-              (defaultProjectFile + s"""//> using dep org.virtuslab::besom-$schemaName:$providerTlsVersion""")
+              (defaultProjectFile + CodeGen.packageDependency(schemaName, providerTlsSchemaVersion))
           )
         ),
         FixtureArgs(
@@ -158,7 +160,7 @@ class CoreTests extends munit.FunSuite {
           "project.scala" ->
             (defaultProjectFile
               + s"""//> using dep org.virtuslab::besom-zio:$coreVersion\n"""
-              + s"""//> using dep org.virtuslab::besom-$schemaName:$providerTlsVersion\n""")
+              + CodeGen.packageDependency(schemaName, providerTlsSchemaVersion))
         )
       )
     },
@@ -178,7 +180,7 @@ class CoreTests extends munit.FunSuite {
           "project.scala" ->
             (defaultProjectFile
               + s"""//> using dep org.virtuslab::besom-cats:$coreVersion\n"""
-              + s"""//> using dep org.virtuslab::besom-$schemaName:$providerPurrlVersion\n""")
+              + CodeGen.packageDependency(schemaName, providerPurrlSchemaVersion))
         )
       )
     },

@@ -17,6 +17,7 @@ class CodeGen(implicit
   schemaProvider: SchemaProvider,
   logger: Logger
 ) {
+  import CodeGen.*
 
   def sourcesFromPulumiPackage(
     pulumiPackage: PulumiPackage,
@@ -47,17 +48,12 @@ class CodeGen(implicit
   }
 
   def projectConfigFile(schemaName: String, packageVersion: PackageVersion): SourceFile = {
-    val besomVersion = codegenConfig.besomVersion
-    val scalaVersion = codegenConfig.scalaVersion
-    val javaVersion  = codegenConfig.javaVersion
+    val besomVersion     = codegenConfig.besomVersion
+    val scalaVersion     = codegenConfig.scalaVersion
+    val javaVersion      = codegenConfig.javaVersion
+    val coreShortVersion = codegenConfig.coreShortVersion
 
-    val dependencies = schemaProvider
-      .dependencies(schemaName, packageVersion)
-      .map { case (name, version) =>
-        s"""|//> using dep "org.virtuslab::besom-${name}:${version}-core.${besomVersion}"
-            |""".stripMargin
-      }
-      .mkString("\n")
+    val dependencies = packageDependencies(schemaProvider.dependencies(schemaName, packageVersion))
 
     val fileContent =
       s"""|//> using scala "$scalaVersion"
@@ -70,7 +66,7 @@ class CodeGen(implicit
           |
           |//> using publish.name "besom-${schemaName}"
           |//> using publish.organization "org.virtuslab"
-          |//> using publish.version "${packageVersion}-core.${besomVersion}"
+          |//> using publish.version "${packageVersion}-core.${coreShortVersion}"
           |//> using publish.url "https://github.com/VirtusLab/besom"
           |//> using publish.vcs "github:VirtusLab/besom"
           |//> using publish.license "Apache-2.0"
@@ -175,7 +171,7 @@ class CodeGen(implicit
       val caseRawName = valueDefinition.name.getOrElse {
         valueDefinition.value match {
           case StringConstValue(value) => value
-          case const => throw GeneralCodegenException(s"The name of enum cannot be derived from value ${const}")
+          case const                   => throw GeneralCodegenException(s"The name of enum cannot be derived from value ${const}")
         }
       }
       val caseName       = Term.Name(caseRawName)
@@ -1000,6 +996,17 @@ class CodeGen(implicit
       .toList // de-duplicate givens
   }
 }
+
+object CodeGen:
+  def packageDependency(name: SchemaName, version: SchemaVersion)(implicit codegenConfig: CodegenConfig): String =
+    packageDependencies(List((name, version)))
+  def packageDependencies(dependencies: List[(SchemaName, SchemaVersion)])(implicit codegenConfig: CodegenConfig): String =
+    dependencies
+      .map { case (name, version) =>
+        s"""|//> using dep "org.virtuslab::besom-${name}:${version}-core.${codegenConfig.coreShortVersion}"
+            |""".stripMargin
+      }
+      .mkString("\n")
 
 case class FilePath(pathParts: Seq[String]) {
   require(

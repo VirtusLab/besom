@@ -1,5 +1,7 @@
 package besom.codegen
 
+import besom.model.SemanticVersion
+
 // noinspection ScalaWeakerAccess
 object Config {
 
@@ -28,7 +30,13 @@ object Config {
     scalaVersion: String = DefaultScalaVersion,
     javaVersion: String = DefaultJavaVersion,
     logLevel: Logger.Level = Logger.Level.Info
-  )
+  ):
+    val coreShortVersion: String = SemanticVersion
+      .parseTolerant(besomVersion)
+      .fold(
+        e => throw GeneralCodegenException(s"Invalid besom version: ${besomVersion}", e),
+        _.copy(patch = 0).toShortString
+      )
 
   case class ProviderConfig(
     noncompiledModules: Seq[String] = Seq.empty
