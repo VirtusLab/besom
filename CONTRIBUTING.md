@@ -157,16 +157,30 @@ as `org.virtuslab::besom-core:X.Y.Z` and `org.virtuslab::besom-<package>:A.B.C-c
 
 Language host provider is published to GitHub Packages as `pulumi-language-scala-vX.Y.Z-OS-ARCH.tar.gz`.
 
-To use our internal GitHub Packages version:
 
+To use development version of the language host provider:
 ```bash
 pulumi --logtostderr plugin install language scala $(cat version.txt) --server github://api.github.com/VirtusLab/besom
 ```
+
+To use development version of the Besom SDKs, first authenticate with GitHub Packages:
+
 ```bash
 scala-cli --power config repositories.credentials maven.pkg.github.com env:GITHUB_ACTOR env:GITHUB_TOKEN
-scala-cli --power config 
 export GITHUB_TOKEN=$(gh auth token)
 export GITHUB_ACTOR=<your_gh_user_name_here> # you can check it using `gh auth status`
+```
+
+And add repository in your `project.scala`:
+
+```scala
+//> using repository https://maven.pkg.github.com/VirtusLab/besom
+```
+
+To use development version of an example:
+
+```bash
+pulumi --logtostderr new https://github.com/VirtusLab/besom/tree/develop/templates/aws
 ```
 
 ### Bump Besom version
