@@ -83,6 +83,7 @@ object Packages:
     then publishOpts(heapMaxGb = 16, jarCompression = 9, sources = true, docs = true)
     else publishOpts(heapMaxGb = 32, jarCompression = 9, sources = true, docs = true)
   } ++ mavenAuthOpts(pgpKey = envOrExit("PGP_KEY_ID"))
+    ++ Vector("--repository=sonatype:snapshots")
 
   private val pluginDownloadProblemPackages = Vector(
     "aws-miniflux", // lack of darwin/arm64 binary
@@ -101,18 +102,20 @@ object Packages:
 
   private val codegenProblemPackages = Vector(
     "aquasec", // ???
-    "artifactory", // ???
+    "artifactory", // deprecation message, new line escaping needed
     "azapi" // ???
   )
 
   private val compileProblemPackages = Vector(
     "azure-native", // takes too long to compile
-    "alicloud", // schema error, ListenerXforwardedForConfig vs ListenerxForwardedForConfig
     "aws-iam", // id parameter, schema error - components should make this viable
+    "nuage", // id parameter, schema error - components should make this viable
     "aws-static-website", // version confusion
     "azure-justrun", // version confusion
     "databricks", // 'scala' symbol in source code
-    "rootly" // version confusion
+    "rootly", // version confusion
+    "snowflake", // config - No given instance of type besom.internal.ConfigValueReader[Map[String, besom.types.PulumiAny]]
+    "openstack", // config - No given instance of type besom.internal.ConfigValueReader[Map[String, besom.types.PulumiAny]]
   )
 
   def generateAll(targetPath: os.Path): os.Path = {
