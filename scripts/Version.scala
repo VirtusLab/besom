@@ -18,19 +18,20 @@ object Version:
 
     def projectFiles(path: os.Path = cwd): Map[os.Path, String] =
       println(s"Searching for project files in $path")
-      os.walk(path)
-        .filter(f => expectedFileNames.contains(f.last))
-        .filterNot(_.startsWith(cwd / ".out"))
+      os.walk(
+        path,
+        skip = (p: os.Path) => p.last == ".git" || p.last == ".out" || p.last == ".bsp" || p.last == ".scala-build" || p.last == ".idea"
+      ).filter(f => expectedFileNames.contains(f.last))
         .map((f: os.Path) => f -> os.read(f))
         .toMap
 
     def changeVersion(version: String, newBesomVersion: String, packageVersion: String => Option[String] = _ => None): String =
       lazy val coreShortVersion = SemanticVersion
-         .parseTolerant(besomVersion)
-         .fold(
-           e => throw Exception(s"Invalid besom version: ${besomVersion}", e),
-           _.copy(patch = 0).toShortString
-         )
+        .parseTolerant(besomVersion)
+        .fold(
+          e => throw Exception(s"Invalid besom version: ${besomVersion}", e),
+          _.copy(patch = 0).toShortString
+        )
       version match
         case s"$a:$b-core.$_" => s"$a:${packageVersion(a).getOrElse(b)}-core.$coreShortVersion"
         case s"$a:$_"         => s"$a:$newBesomVersion"
@@ -90,7 +91,7 @@ object Version:
         val latestPackages = latestPackageVersions()
         projectFiles()
           .collect {
-            case (path, content) if content.linesIterator.exists(besomDependencyPattern.matches) => path -> content 
+            case (path, content) if content.linesIterator.exists(besomDependencyPattern.matches) => path -> content
           }
           .foreachEntry { case (path, content) =>
             val newContent = content.linesIterator

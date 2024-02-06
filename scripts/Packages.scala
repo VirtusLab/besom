@@ -125,27 +125,10 @@ object Packages:
     generatedFile
   }
 
-  def generateSelected(targetPath: os.Path, packages: List[String]): os.Path = {
-    val selectedPackages = readPackagesMetadata(targetPath, selected = packages)
-      .filter(p => packages.contains(p.name))
-    val metadata = generate(selectedPackages)
-    os.write.over(generatedFile, PackageMetadata.toJson(metadata), createFolders = true)
-    generatedFile
-  }
-
   def publishLocalAll(sourceFile: os.Path): os.Path = {
     val generated = PackageMetadata
       .fromJsonList(os.read(sourceFile: os.Path))
       .filterNot(m => compileProblemPackages.contains(m.name))
-    val published = publishLocal(generated)
-    os.write.over(publishedLocalFile, PackageMetadata.toJson(published), createFolders = true)
-    publishedLocalFile
-  }
-
-  def publishLocalSelected(sourceFile: os.Path, packages: List[String]): os.Path = {
-    val generated = PackageMetadata
-      .fromJsonList(os.read(sourceFile))
-      .filter(p => packages.contains(p.name))
     val published = publishLocal(generated)
     os.write.over(publishedLocalFile, PackageMetadata.toJson(published), createFolders = true)
     publishedLocalFile
@@ -160,11 +143,35 @@ object Packages:
     publishedMavenFile
   }
 
+  def generateSelected(targetPath: os.Path, packages: List[String]): os.Path = {
+    val readPackages = readPackagesMetadata(targetPath, selected = packages)
+    val selectedPackages = packages.map { p =>
+      readPackages.find(_.name == p).getOrElse(throw Exception(s"Package '$p' not found"))
+    }.toVector
+
+    val metadata = generate(selectedPackages)
+    os.write.over(generatedFile, PackageMetadata.toJson(metadata), createFolders = true)
+    generatedFile
+  }
+
+  def publishLocalSelected(sourceFile: os.Path, packages: List[String]): os.Path = {
+    val generated = PackageMetadata
+      .fromJsonList(os.read(sourceFile))
+    val selectedPackages = packages.map { p =>
+      generated.find(_.name == p).getOrElse(throw Exception(s"Package '$p' not found"))
+    }.toVector
+    val published = publishLocal(selectedPackages)
+    os.write.over(publishedLocalFile, PackageMetadata.toJson(published), createFolders = true)
+    publishedLocalFile
+  }
+
   def publishMavenSelected(sourceFile: os.Path, packages: List[String]): os.Path = {
     val generated = PackageMetadata
       .fromJsonList(os.read(sourceFile))
-      .filter(p => packages.contains(p.name))
-    val published = publishMaven(generated)
+    val selectedPackages = packages.map { p =>
+      generated.find(_.name == p).getOrElse(throw Exception(s"Package '$p' not found"))
+    }.toVector
+    val published = publishMaven(selectedPackages)
     os.write.over(publishedMavenFile, PackageMetadata.toJson(published), createFolders = true)
     publishedMavenFile
   }
