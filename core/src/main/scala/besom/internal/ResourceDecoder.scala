@@ -34,12 +34,12 @@ object ResourceDecoder:
               .decode(value, propertyLabel)
               .map(_.withDependency(resource))
               .tapBoth(
-                err => log.debug(s"failed to extract custom property $propertyName from $value: $err"),
-                value => log.debug(s"extracted custom property $propertyName from $value")
+                err => log.debug(s"failed to extract custom property '$propertyName' from '$value': '$err'"),
+                value => log.debug(s"extracted custom property '$propertyName' from '$value'")
               )
 
             ValidatedResult.transparent(decoded).in { result =>
-              log.debug(s"extracting custom property $propertyName from $value using decoder $decoder") *> result
+              log.debug(s"extracting custom property '$propertyName' from '$value' using decoder '$decoder'") *> result
             }
           }
           .getOrElse {
@@ -47,7 +47,7 @@ object ResourceDecoder:
             // TODO: formatted DecodingError
             else
               ValidatedResult.invalid(
-                DecodingError(s"Missing property $propertyName in resource $resourceLabel", label = propertyLabel)
+                DecodingError(s"Missing property '$propertyName' in resource '$resourceLabel'", label = propertyLabel)
               )
           }
           .map(_.withDependencies(fieldDependencies))
@@ -86,7 +86,7 @@ object ResourceDecoder:
             errorOrResourceResult match
               case Left(err) =>
                 val message =
-                  s"Resolve resource: received error from gRPC call: ${err.getMessage()}, failing resolution"
+                  s"Resolve resource: received error from gRPC call: '${err.getMessage}', failing resolution"
 
                 ctx.logger.error(message) *> failAllPromises(err)
 

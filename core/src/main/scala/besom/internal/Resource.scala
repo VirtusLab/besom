@@ -24,6 +24,8 @@ sealed trait Resource:
     case _: CustomResource => true
     case _                 => false
 
+  private[internal] def asString: Result[Option[String]] = urn.getValue.map(_.map(v => s"${this.getClass.getSimpleName}($v)"))
+
 trait CustomResource extends Resource:
   /** @return
     *   the [[ResourceId]] of the resource
