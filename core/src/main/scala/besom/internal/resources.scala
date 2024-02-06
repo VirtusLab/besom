@@ -89,6 +89,8 @@ class Resources private (
   def getCachedResource(typ: String, name: String, args: Any, opts: ResourceOptions): Result[Resource] =
     cache.get.flatMap(_((typ, name)).get)
 
+end Resources
+
 object Resources:
   def apply(): Result[Resources] =
     for
