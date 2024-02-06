@@ -96,7 +96,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
   ): Output[R] =
     ???
 
-  private def executeInvoke(tok: FunctionToken, invokeArgs: SerializationResult, opts: InvokeOptions): Result[Value] =
+  private[internal] def executeInvoke(tok: FunctionToken, invokeArgs: SerializationResult, opts: InvokeOptions): Result[Value] =
     def buildInvokeRequest(args: Struct, provider: Option[String], version: Option[String]): Result[ResourceInvokeRequest] =
       Result {
         ResourceInvokeRequest(
@@ -139,7 +139,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     yield parsed
   end executeInvoke
 
-  private def registerReadOrGetResource[R <: Resource](
+  private[internal] def registerReadOrGetResource[R <: Resource](
     resource: Resource,
     state: ResourceState,
     resolver: ResourceResolver[R],
@@ -181,7 +181,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
 
   case class GetResourceArgs(urn: URN) derives ArgsEncoder
 
-  private def getResourceByUrn(urn: URN): Result[Either[Throwable, RawResourceResult]] =
+  private[internal] def getResourceByUrn(urn: URN): Result[Either[Throwable, RawResourceResult]] =
     val req                = GetResourceArgs(urn)
     val tok: FunctionToken = "pulumi:pulumi:getResource"
 
@@ -194,7 +194,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
 
     rawResourceResult.either
 
-  private def completeResource[R <: Resource](
+  private[internal] def completeResource[R <: Resource](
     eitherErrorOrResult: Either[Throwable, RawResourceResult],
     resolver: ResourceResolver[R],
     state: ResourceState
@@ -211,7 +211,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       _ <- log.debug(s"Resolved resource ${state.asLabel} $errOrUnitMsg") *> failResult
     yield ()
 
-  private def resolveProviderReferences(state: ResourceState): Result[Map[String, String]] =
+  private[internal] def resolveProviderReferences(state: ResourceState): Result[Map[String, String]] =
     Result
       .sequence(
         state.providers.map { case (pkg, provider) =>
@@ -220,40 +220,67 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       )
       .map(_.toMap)
 
-  private def resolveTransitivelyReferencedComponentResourceUrns(
-    resources: Set[Resource]
+  // resolveTransitiveDependencies adds a dependency on the given resource to the set of deps.
+  //
+  // The behavior of this method depends on whether or not the resource is a custom resource, a local component resource,
+  // a remote component resource, a dependency resource, or a rehydrated component resource:
+  //
+  //   - Custom resources are added directly to the set, as they are "real" nodes in the dependency graph.
+  //   - Local component resources act as aggregations of their descendents. Rather than adding the component resource
+  //     itself, each child resource is added as a dependency.
+  //   - Remote component resources are added directly to the set, as they naturally act as aggregations of their children
+  //     with respect to dependencies: the construction of a remote component always waits on the construction of its
+  //     children.
+  //   - Dependency resources are added directly to the set.
+  //   - Rehydrated component resources are added directly to the set.
+  //
+  // In other words, if we had:
+  //
+  //			     Comp1   -   Dep2
+  //		     /   |   \
+  //	  Cust1  Comp2  Remote1
+  //			     /   \     \
+  //		   Cust2  Comp3   Comp4
+  //	      /        \      \
+  //	  Cust3        Dep1    Cust4
+  //
+  // Then the transitively reachable resources of Comp1 will be [Cust1, Cust2, Dep1, Remote1, Dep2].
+  // It will *not* include:
+  // * Cust3 because it is a child of a custom resource
+  // * Comp2 and Comp3 because they are a non-remote component resource
+  // * Comp4 and Cust4 because Comp4 is a child of a remote component resource
+  private[internal] def resolveTransitiveDependencies(
+    roots: Set[Resource],
+    resources: Resources
   ): Result[Set[URN]] =
-    def findAllReachableResources(left: Set[Resource], acc: Set[Resource]): Result[Set[Resource]] =
-      if left.isEmpty then Result.pure(acc)
+    def findReachableResources(roots: Set[Resource], acc: Set[Resource]): Result[Set[Resource]] =
+      if roots.isEmpty then Result.pure(acc)
       else
-        val current = left.head
+        val current = roots.head
+
         val childrenResult = current match
-          case cr: ComponentResource => ctx.resources.getStateFor(cr).map(_.children)
-          case _                     => Result.pure(Set.empty)
+          case cb: ComponentBase => resources.getStateFor(cb).map(_.children.filterNot(_ == current))
+          case _                 => Result.pure(Set.empty)
 
         childrenResult.flatMap { children =>
-          findAllReachableResources((left - current) ++ children, acc + current)
+          val updatedAcc =
+            current match
+              case dr: DependencyResource => // Dependency resources are added directly to the set, they don't have a state.
+                Result.pure(acc + current)
+              case _ =>
+                resources.getStateFor(current).map { rs =>
+                  if current.isCustom then acc + current
+                  else if !rs.keepDependency then acc
+                  else acc + current
+                }
+          updatedAcc.flatMap { acc => findReachableResources((roots - current) ++ children, acc) }
         }
 
-    findAllReachableResources(resources, Set.empty).flatMap { allReachableResources =>
-      val reachableResourcesWithKeepDependency =
-        Result.sequence(allReachableResources.map(r => ctx.resources.getStateFor(r).map(state => r -> state.keepDependency)))
+    findReachableResources(roots, Set.empty).flatMap(resources =>
+      Result.sequence(resources.map(_.urn.getValueOrFail("URN is missing unexpectedly, this is a bug!")).toSet)
+    )
 
-      reachableResourcesWithKeepDependency.flatMap { allReachableResourcesWithKeepDep =>
-        Result
-          .sequence {
-            allReachableResourcesWithKeepDep
-              .filter {
-                case (_: ComponentResource, keepDep) => keepDep // TODO remote components - if remote it's reachable
-                case (_: CustomResource, _)          => true
-                case (_, _)                          => false
-              }
-              .map(_._1)
-              .map(_.urn.getValue)
-          }
-          .map(_.flatten) // this drops all URNs that are not present (given getValue returns Option[URN])
-      }
-    }
+  end resolveTransitiveDependencies
 
   case class AggregatedDependencyUrns(
     allDeps: Set[URN],
@@ -271,13 +298,14 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     options: ResolvedResourceOptions
   )
 
-  private def aggregateDependencyUrns(
+  private[internal] def aggregateDependencyUrns(
     directDeps: Set[Resource],
-    propertyDeps: Map[String, Set[Resource]]
+    propertyDeps: Map[String, Set[Resource]],
+    resources: Resources
   ): Result[AggregatedDependencyUrns] =
-    resolveTransitivelyReferencedComponentResourceUrns(directDeps).flatMap { transiviteDepUrns =>
-      val x = propertyDeps.map { case (propertyName, resources) =>
-        resolveTransitivelyReferencedComponentResourceUrns(resources).map(propertyName -> _)
+    resolveTransitiveDependencies(directDeps, resources).flatMap { transiviteDepUrns =>
+      val x = propertyDeps.map { case (propertyName, dependenciesFromProperties) =>
+        resolveTransitiveDependencies(dependenciesFromProperties, resources).map(propertyName -> _)
       }.toVector
 
       Result.sequence(x).map { propertyDeps =>
@@ -288,13 +316,13 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       }
     }
 
-  private def resolveDeletedWithUrn(options: ResolvedResourceOptions): Result[Option[URN]] =
+  private[internal] def resolveDeletedWithUrn(options: ResolvedResourceOptions): Result[Option[URN]] =
     options.deletedWith.map(_.urn.getValue).getOrElse(Result.pure(None))
 
-  private def resolveAliases(@unused resource: Resource): Result[List[String]] =
+  private[internal] def resolveAliases(@unused resource: Resource): Result[List[String]] =
     Result.pure(List.empty) // TODO aliases
 
-  private def resolveProviderRegistrationId(state: ResourceState): Result[Option[String]] =
+  private[internal] def resolveProviderRegistrationId(state: ResourceState): Result[Option[String]] =
     state match
       case prs: ProviderResourceState =>
         prs.custom.common.provider match
@@ -308,7 +336,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
 
       case _ => Result.pure(None)
 
-  private def prepareResourceInputs[A: ArgsEncoder](
+  private[internal] def prepareResourceInputs[A: ArgsEncoder](
     resource: Resource,
     state: ResourceState,
     args: A,
@@ -328,13 +356,13 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       _                 <- log.trace(s"Preparing inputs: got provider reg ID, resolving provider references")
       providerRefs      <- resolveProviderReferences(state)
       _                 <- log.trace(s"Preparing inputs: resolved provider refs, aggregating dep URNs")
-      depUrns           <- aggregateDependencyUrns(directDeps, serResult.propertyToDependentResources)
+      depUrns           <- aggregateDependencyUrns(directDeps, serResult.propertyToDependentResources, ctx.resources)
       _                 <- log.trace(s"Preparing inputs: aggregated dep URNs, resolving aliases")
       aliases           <- resolveAliases(resource)
       _                 <- log.trace(s"Preparing inputs: resolved aliases, done")
     yield PreparedInputs(serResult.serialized, parentUrnOpt, deletedWithUrnOpt, provIdOpt, providerRefs, depUrns, aliases, options)
 
-  private def executeReadResourceRequest[R <: Resource](
+  private[internal] def executeReadResourceRequest[R <: Resource](
     state: ResourceState,
     inputs: PreparedInputs,
     id: ResourceId
@@ -372,7 +400,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         .either
     }
 
-  private def executeRegisterResourceRequest[R <: Resource](
+  private[internal] def executeRegisterResourceRequest[R <: Resource](
     resource: Resource,
     state: ResourceState,
     inputs: PreparedInputs,
@@ -473,14 +501,14 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         .either
     }
 
-  private def addChildToParentResource(resource: Resource, maybeParent: Option[Resource]): Result[Unit] =
+  private[internal] def addChildToParentResource(resource: Resource, maybeParent: Option[Resource]): Result[Unit] =
     maybeParent match
       case None         => Result.unit
       case Some(parent) => ctx.resources.updateStateFor(parent)(_.addChild(resource))
 
   // This method returns an Option of Resource because for Stack there is no parent resource,
   // for any other resource the parent is either explicitly set in ResourceOptions or the stack is the parent.
-  private def resolveParentUrn(typ: ResourceType, resourceOptions: ResolvedResourceOptions): Result[Option[URN]] =
+  private[internal] def resolveParentUrn(typ: ResourceType, resourceOptions: ResolvedResourceOptions): Result[Option[URN]] =
     if typ == StackResource.RootPulumiStackTypeName then Result.pure(None)
     else
       resourceOptions.parent match
@@ -493,25 +521,25 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
             _         <- log.trace(s"resolveParent - parent not found in ResourceOptions, from Context: $parentUrn")
           yield Some(parentUrn)
 
-  private def resolveParentTransformations(
+  private[internal] def resolveParentTransformations(
     @unused typ: ResourceType,
     @unused resourceOptions: ResolvedResourceOptions
   ): Result[List[Unit]] =
     Result.pure(List.empty) // TODO parent transformations
 
-  private def applyTransformations(
+  private[internal] def applyTransformations(
     resourceOptions: ResolvedResourceOptions,
     @unused parentTransformations: List[Unit] // TODO this needs transformations from ResourceState, not Resource
   ): Result[ResolvedResourceOptions] =
     Result.pure(resourceOptions) // TODO resource transformations
 
-  private def collapseAliases(@unused opts: ResolvedResourceOptions): Result[List[Output[String]]] =
+  private[internal] def collapseAliases(@unused opts: ResolvedResourceOptions): Result[List[Output[String]]] =
     Result.pure(List.empty) // TODO aliases
 
-  private def mergeProviders(typ: String, opts: ResolvedResourceOptions): Result[Providers] =
+  private[internal] def mergeProviders(typ: String, opts: ResolvedResourceOptions, resources: Resources): Result[Providers] =
     def getParentProviders = opts.parent match
       case None         => Result.pure(Map.empty)
-      case Some(parent) => ctx.resources.getStateFor(parent).map(_.providers)
+      case Some(parent) => resources.getStateFor(parent).map(_.providers)
 
     def overwriteWithProvidersFromOptions(initialProviders: Providers): Result[Providers] =
       opts match
@@ -541,7 +569,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       _                <- log.trace(s"final providers for $typ - initialProviders: $initialProviders")
     yield providers
 
-  private def getProvider(
+  private[internal] def getProvider(
     typ: ResourceType,
     providers: Providers,
     opts: ResolvedResourceOptions
@@ -569,7 +597,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
           case None           => Result.pure(None)
           case Some(provider) => Result.pure(Some(provider))
 
-  private def createResourceState(
+  private[internal] def createResourceState(
     typ: ResourceType,
     name: NonEmptyString,
     resource: Resource,
@@ -581,7 +609,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       parentTransformations <- resolveParentTransformations(typ, resourceOptions)
       opts                  <- applyTransformations(resourceOptions, parentTransformations) // todo add logging
       aliases               <- collapseAliases(opts) // todo add logging
-      providers             <- mergeProviders(typ, opts)
+      providers             <- mergeProviders(typ, opts, ctx.resources)
       maybeProvider         <- getProvider(typ, providers, opts)
     yield {
       val commonRS = CommonResourceState(
