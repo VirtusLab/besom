@@ -39,7 +39,7 @@ import besom.api.docker
     )
   )
 
-  // Deploy to Cloud Run. Some extra parameters like concurrency and memory are set for illustration purpose.
+  // Deploy to Cloud Run. Some additional parameters such as concurrency and memory are set for illustration purposes.
   val service = gcp.cloudrun.Service(
     "service",
     gcp.cloudrun.ServiceArgs(
