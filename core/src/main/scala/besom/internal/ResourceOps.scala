@@ -265,7 +265,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         childrenResult.flatMap { children =>
           val updatedAcc =
             current match
-              case dr: DependencyResource =>
+              case dr: DependencyResource => // Dependency resources are added directly to the set, they don't have a state.
                 Result.pure(acc + current)
               case _ =>
                 resources.getStateFor(current).map { rs =>
