@@ -184,6 +184,16 @@ provides the implementation details. If not specified explicitly, the default pr
 Providers can be configured
 using [provider configuration](https://www.pulumi.com/docs/concepts/resources/providers/#explicit-provider-configuration).
 
+Static [get functions](https://www.pulumi.com/docs/concepts/resources/get/) can be used to look up any existing resource that 
+is not managed by Pulumi. Here's an example of how to use it:
+
+  ```scala
+  @main def main = Pulumi.run {
+    val group = aws.ec2.SecurityGroup.get(name = "group", id = "sg-0dfd33cdac25b1ec9")
+    ...
+  }
+  ```
+
 #### Inputs and Outputs
 
 Inputs and Outputs are the
@@ -292,39 +302,36 @@ Configuration values can be set in two ways:
 
 ##### Accessing Configuration and Secrets from Code
 
-Configuration and secret values can be [accessed](https://www.pulumi.com/docs/concepts/config/#code)
-from [programs](#programs)
-using the `Config` object, e.g.:
+Configuration and secret values can be [accessed](https://www.pulumi.com/docs/concepts/config/#code) from [programs](#programs)
+using the `Config.get*` and `Config.require*` method family, e.g.:
 
 ```scala
 val a = config.get("aws:region")
 val b = Config("aws").map(_.get("region"))
 ```
 
-If the configuration value is a secret, it will be marked internally as such and redacted in console outputs.
+If the configuration value is a **secret**, it will be **automatically marked** internally as such and **redacted** in console outputs.
+
+[Structured Configuration](https://www.pulumi.com/docs/concepts/config/#structured-configuration) is also supported
+in two flavors: JSON AST (`config.getJson` or `config.requireJson`) or object deserialization (`config.getObject` or `config.requireObject`)
+and can be used to read Pulumi configuration in more advanced use cases.
 
 :::note
-Secret values are
-automatically [encrypted and stored](https://www.pulumi.com/docs/concepts/secrets/#configuring-secrets-encryption) in
-the Pulumi [state](#state).
+Secret values are automatically [encrypted and stored](https://www.pulumi.com/docs/concepts/secrets/#configuring-secrets-encryption) in the Pulumi [state](#state).
 :::
 
 :::tip
 Secrets in Besom differ in behavior from other Pulumi SDKs. In other SDKs, if you try to get a config key that is a
-secret, you will obtain it as plaintext (and due to [a bug](https://github.com/pulumi/pulumi/issues/7127) you won't even
-get a
-warning).
+secret, you will obtain it as plaintext (and due to [a bug](https://github.com/pulumi/pulumi/issues/7127) you won't even get a warning).
 
 We choose to do the right thing in Besom and **return all configs as Outputs** so that we can handle failure in pure,
-functional way, and **automatically** mark secret values 
-**as [secret Outputs](https://www.pulumi.com/docs/concepts/secrets/#how-secrets-relate-to-outputs)**.
+functional way, and **automatically** mark secret values**as [secret Outputs](https://www.pulumi.com/docs/concepts/secrets/#how-secrets-relate-to-outputs)**.
 :::
 
 #### Providers
 
-A [resource provider](https://www.pulumi.com/docs/concepts/resources/providers/) is a plugin that
-handles communications with a cloud service to create, read, update, and delete the resources you define in
-your Pulumi [programs](#programs).
+A [resource provider](https://www.pulumi.com/docs/concepts/resources/providers/) is a plugin that handles communications with a cloud service to create, read, update, and delete the resources 
+you define in your Pulumi [programs](#programs).
 
 You import a Provider SDK (e.g. `import besom.api.aws`) library in you [program](#programs), Pulumi passes your code to
 the language host plugin (i.e. `pulumi-language-scala`), waits to be notified of resource registrations, assembles
@@ -336,16 +343,13 @@ Providers can be configured
 using [provider configuration](https://www.pulumi.com/docs/concepts/resources/providers/#explicit-provider-configuration).
 
 :::tip
-It is recommended to [disable default providers](https://www.pulumi.com/blog/disable-default-providers/)
-if not
-for [all providers, at least for Kubernetes](https://www.pulumi.com/docs/concepts/config#pulumi-configuration-options).
+It is recommended to [disable default providers](https://www.pulumi.com/blog/disable-default-providers/) if not for [all providers, at least for Kubernetes](https://www.pulumi.com/docs/concepts/config#pulumi-configuration-options).
 :::
 
 #### State
 
 State is a snapshot of your [project](#projects) [resources](#resources) that is stored in
-a [backend](https://www.pulumi.com/docs/concepts/state/#deciding-on-a-state-backend)
-with [Pulumi Service](https://www.pulumi.com/docs/intro/cloud-providers/pulumi-service/) being the default.
+a [backend](https://www.pulumi.com/docs/concepts/state/#deciding-on-a-state-backend) with [Pulumi Service](https://www.pulumi.com/docs/intro/cloud-providers/pulumi-service/) being the default.
 
 State is used to:
 
@@ -356,6 +360,5 @@ State is used to:
 - and store [stack outputs](#stack-outputs)
 
 :::note
-Fore extra
-curious [here's the internal state schema](https://pulumi-developer-docs.readthedocs.io/en/latest/architecture/deployment-schema.html)
+Fore extra curious [here's the internal state schema](https://pulumi-developer-docs.readthedocs.io/en/latest/architecture/deployment-schema.html)
 :::
