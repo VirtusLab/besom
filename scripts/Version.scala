@@ -1,7 +1,6 @@
 package besom.scripts
 
 import scala.sys.exit
-import scala.util.CommandLineParser.FromString
 import scala.util.matching.Regex
 
 import besom.model.SemanticVersion
