@@ -11,9 +11,8 @@ import scala.language.implicitConversions
 import scala.util.Try
 
 object types:
-  // TODO: replace these stubs with proper implementations
   private object Opaques:
-    opaque type PulumiAny = besom.json.JsValue
+    type PulumiAny = besom.json.JsValue
     object PulumiAny:
       given Encoder[PulumiAny] = Encoder.jsonEncoder
       given Decoder[PulumiAny] = Decoder.jsonDecoder

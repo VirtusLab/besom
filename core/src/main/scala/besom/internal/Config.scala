@@ -89,7 +89,7 @@ class Config private (
     *   an optional configuration or secret value of the requested type, either from the configuration bag or from the environment, or
     *   default value
     */
-  def getOrDefault[A: ConfigValueReader](
+  private [internal] def getOrDefault[A: ConfigValueReader](
     key: NonEmptyString,
     isSecret: Boolean,
     environment: List[String],
