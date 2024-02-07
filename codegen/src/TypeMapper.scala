@@ -247,7 +247,7 @@ class TypeMapper(
   end unionMapping
 
   private def unescape(value: String) = {
-    value.replace("%2F", "/") // TODO: Proper URL un-escaping
+    value.replace("%2F", "/").replace("%2f", "/") // TODO: Proper URL un-escaping
   }
 }
 
