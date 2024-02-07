@@ -72,9 +72,50 @@ object NonEmptyString:
             else if s.isBlank then report.errorAndAbort("Blank string is not allowed here!")
             else str.asExprOf[NonEmptyString]
           case None =>
-            report.errorAndAbort(
-              "Only constant strings or string interpolations are allowed here, use NonEmptyString.apply instead!"
-            )
+            Some(expr.asTerm)
+              .collect { case Inlined(_, _, id: Ident) =>
+                id.tpe.termSymbol.tree
+              }
+              .collect { case ValDef(_, _, Some(rhs)) =>
+                rhs match
+                  case Apply(Select(Apply(Ident("augmentString"), List(augmented)), "*"), List(multiplier)) =>
+                    for
+                      multiplierValue <- multiplier.asExprOf[Int].value if multiplierValue > 0
+                      augmentedValue  <- augmented.asExprOf[String].value
+                    yield augmentedValue
+
+                  case Apply(Select(lhs, "+"), args) =>
+                    val baseAndArgs           = (lhs.asExprOf[String].value +: args.toVector.map(_.asExprOf[String].value)).flatten
+                    val hasNonEmptyBaseOrArgs = baseAndArgs.exists(_.nonEmpty)
+                    if hasNonEmptyBaseOrArgs then baseAndArgs.headOption
+                    else None
+
+                  case _ => rhs.asExprOf[String].value
+              }
+              .flatten
+              .match
+                case Some(value) =>
+                  if value.isEmpty then report.errorAndAbort("Empty string is not allowed here!")
+                  else if value.isBlank then report.errorAndAbort("Blank string is not allowed here!")
+                  else Expr(value)
+                case None =>
+                  Some(expr.asTerm)
+                    .tapEach { case Inlined(_, _, x) =>
+                      println(x)
+                    }
+                    .collect { case Inlined(_, _, id: Ident) =>
+                      id.tpe.termSymbol.tree
+                    }
+                    .collect { case ValDef(_, _, Some(rhs)) =>
+                      // rhs match
+                      //   case _ =>
+                      //     println(s"rhs = ${rhs.show} - $rhs - ${rhs.asExprOf[String].value}")
+                      rhs.asExprOf[String].value
+                    }
+                  report.errorAndAbort(
+                    "Only constant strings or string interpolations are allowed here, use NonEmptyString.apply instead!"
+                  )
+    end match
   end fromImpl
 
   implicit inline def str2NonEmptyString(inline s: String): NonEmptyString = NonEmptyString.from(s)

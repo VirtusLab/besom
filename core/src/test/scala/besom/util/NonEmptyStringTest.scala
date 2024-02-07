@@ -37,10 +37,38 @@ class NonEmptyStringTest extends munit.FunSuite with CompileAssertions:
       """)
   }
 
+  test("compiles with non-empty string multiplicated if the multiplier is constant and > 0") {
+    compiles("""
+      import besom.util.NonEmptyString.*
+      val z = "x" * 10
+      val x: NonEmptyString = NonEmptyString.from(z)
+      """)
+
+    failsToCompile("""
+      import besom.util.NonEmptyString.*
+      val z = "x" * 0
+      val x: NonEmptyString = NonEmptyString.from(z)
+      """)
+
+    failsToCompile("""
+      import besom.util.NonEmptyString.*
+      val z = "x" * -1
+      val x: NonEmptyString = NonEmptyString.from(z)
+      """)
+
+    failsToCompile("""
+      import besom.util.NonEmptyString.*
+      val times = 10
+      val z = "x" * times
+      val x: NonEmptyString = NonEmptyString.from(z)
+      """)
+  }
+
   test("fails to compile when calling smart constructor with a dynamic string") {
     failsToCompile("""
       import besom.util.NonEmptyString.*
-      val z = "x" * 10
+      def getStr: String = "abc"
+      val z = getStr
       val x: NonEmptyString = NonEmptyString.from(z)
       """)
   }
@@ -68,8 +96,89 @@ class NonEmptyStringTest extends munit.FunSuite with CompileAssertions:
     """)
   }
 
+  test("NonEmptyString can infer non empty strings from constant string definitions") {
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val x = "abc"
+    val y: NonEmptyString = x
+    """)
+
+    failsToCompile("""
+    import besom.util.NonEmptyString.*
+    val x = ""
+    val y: NonEmptyString = x
+    """)
+  }
+
+  test("NonEmptyString can be created from string concatenation") {
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val x: NonEmptyString = "abc" + "def" + ""
+    """)
+
+    failsToCompile("""
+    import besom.util.NonEmptyString.*
+    val x: NonEmptyString = "" + "" + ""
+    """)
+  }
+
+  test("NonEmptyString can be created from string concatenation at definition site") {
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val s: String = "abc" + "def" 
+    val x: NonEmptyString = s
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val s: String = "abc" + "" 
+    val x: NonEmptyString = s
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val s: String = "abc"
+    val s2: String = s + "def"
+    val x: NonEmptyString = s2
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val s: String = "def"
+    val s2: String = "abc" + s
+    val x: NonEmptyString = s2
+    """)
+
+    failsToCompile("""
+    import besom.util.NonEmptyString.*
+    val s: String = "" + ""
+    val x: NonEmptyString = s
+    """)
+  }
+
+  test("NonEmptyString can be inferred from remote declarations") {
+    compiles("""
+    import besom.util.NonEmptyString.*
+    object example: 
+      val x: String = "abc"
+    val y: NonEmptyString = example.x
+    """)
+
+    failsToCompile("""
+    import besom.util.NonEmptyString.*
+      object example: 
+        val x: String = ""
+      val y: NonEmptyString = example.x
+    """)
+  }
+
   test("NonEmptyString can be created via apply") {
     NonEmptyString("sample") match
       case None              => fail("apply doesn't work")
       case Some(nonEmptyStr) => assert(nonEmptyStr == "sample")
+
+    NonEmptyString("") match
+      case None    => ()
+      case Some(_) => fail("apply doesn't work")
   }
+end NonEmptyStringTest
