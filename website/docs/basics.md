@@ -246,7 +246,7 @@ combine them into a single output:
 val port: Output[Int] = pod.port
 val host: Output[String] = node.hostname
 val hello: Output[(String, Int)] = host.zip(port)
-val url: Output[String] = hello.map { case (a, b) => s"https://$hostname:$port/" }
+val url: Output[String] = hello.map { case (hostname, portValue) => s"https://$hostname:$portValue/" }
 ```
 
 If you have a map of outputs and need to use them together **as a map** you can use
