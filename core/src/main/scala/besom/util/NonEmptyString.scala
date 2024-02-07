@@ -37,7 +37,35 @@ object NonEmptyString:
   inline def from(inline s: String): NonEmptyString = ${ fromImpl('s) }
 
   private def fromImpl(expr: Expr[String])(using quotes: Quotes): Expr[NonEmptyString] =
+    println("==================")
     import quotes.reflect.*
+
+    // kudos to @Kordyjan for most of this implementation
+    def downTheRabbitHole(tree: Term): Either[Term, String] =
+      tree match
+        case Inlined(_, _, inner) => downTheRabbitHole(inner)
+        case Literal(StringConstant(value)) =>
+          Right(value.toString)
+        case augment @ Apply(Select(Apply(Ident("augmentString"), List(augmented)), "*"), List(multiplier)) =>
+          val opt = for
+            multiplierValue <- multiplier.asExprOf[Int].value if multiplierValue > 0
+            augmentedValue  <- augmented.asExprOf[String].value
+          yield augmentedValue
+
+          opt.toRight(augment)
+        case Apply(Select(left, "+"), right :: Nil) =>
+          for
+            l <- downTheRabbitHole(left).orElse(Right(""))
+            r <- downTheRabbitHole(right).orElse(Right(""))
+          yield l + r
+        case t if t.tpe.termSymbol != Symbol.noSymbol && t.tpe <:< TypeRepr.of[String] =>
+          t.tpe.termSymbol.tree match
+            case ValDef(_, _, Some(rhs)) => downTheRabbitHole(rhs)
+            case _ =>
+              report.errorAndAbort(t.tpe.termSymbol.tree.toString())
+              Left(t)
+        case other =>
+          Left(other)
 
     expr match
       // TODO add `pulumi` and `p` interpolators here but remember they return `Output[NonEmptyString]` in this case.
@@ -72,49 +100,15 @@ object NonEmptyString:
             else if s.isBlank then report.errorAndAbort("Blank string is not allowed here!")
             else str.asExprOf[NonEmptyString]
           case None =>
-            Some(expr.asTerm)
-              .collect { case Inlined(_, _, id: Ident) =>
-                id.tpe.termSymbol.tree
-              }
-              .collect { case ValDef(_, _, Some(rhs)) =>
-                rhs match
-                  case Apply(Select(Apply(Ident("augmentString"), List(augmented)), "*"), List(multiplier)) =>
-                    for
-                      multiplierValue <- multiplier.asExprOf[Int].value if multiplierValue > 0
-                      augmentedValue  <- augmented.asExprOf[String].value
-                    yield augmentedValue
-
-                  case Apply(Select(lhs, "+"), args) =>
-                    val baseAndArgs           = (lhs.asExprOf[String].value +: args.toVector.map(_.asExprOf[String].value)).flatten
-                    val hasNonEmptyBaseOrArgs = baseAndArgs.exists(_.nonEmpty)
-                    if hasNonEmptyBaseOrArgs then baseAndArgs.headOption
-                    else None
-
-                  case _ => rhs.asExprOf[String].value
-              }
-              .flatten
-              .match
-                case Some(value) =>
-                  if value.isEmpty then report.errorAndAbort("Empty string is not allowed here!")
-                  else if value.isBlank then report.errorAndAbort("Blank string is not allowed here!")
-                  else Expr(value)
-                case None =>
-                  Some(expr.asTerm)
-                    .tapEach { case Inlined(_, _, x) =>
-                      println(x)
-                    }
-                    .collect { case Inlined(_, _, id: Ident) =>
-                      id.tpe.termSymbol.tree
-                    }
-                    .collect { case ValDef(_, _, Some(rhs)) =>
-                      // rhs match
-                      //   case _ =>
-                      //     println(s"rhs = ${rhs.show} - $rhs - ${rhs.asExprOf[String].value}")
-                      rhs.asExprOf[String].value
-                    }
-                  report.errorAndAbort(
-                    "Only constant strings or string interpolations are allowed here, use NonEmptyString.apply instead!"
-                  )
+            downTheRabbitHole(expr.asTerm) match
+              case Right(value) =>
+                if value.isEmpty then report.errorAndAbort("Empty string is not allowed here!")
+                else if value.isBlank then report.errorAndAbort("Blank string is not allowed here!")
+                else Expr(value)
+              case Left(tree) =>
+                report.errorAndAbort(
+                  "Only constant strings or string interpolations are allowed here, use NonEmptyString.apply instead! " + tree.show
+                )
     end match
   end fromImpl
 
