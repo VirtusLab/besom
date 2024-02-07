@@ -662,11 +662,11 @@ class CodeGen(implicit
       }
       val description = configDefinition.description.getOrElse("")
       val deprecationCode = configDefinition.deprecationMessage match {
-        case Some(message) => s"""\n@deprecated("$message")"""
+        case Some(message) => s"\n@deprecated(\"\"\"$message\"\"\")"
         case None          => ""
       }
       val deprecationDocs = configDefinition.deprecationMessage match {
-        case Some(message) => s"""\n   * @deprecated $message"""
+        case Some(message) => s"""\n* @deprecated $message"""
         case None          => ""
       }
       val returnsDoc = s"@returns the value of the `$providerName:$configName` configuration property" +
