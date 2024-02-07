@@ -306,8 +306,9 @@ Configuration and secret values can be [accessed](https://www.pulumi.com/docs/co
 using the `Config.get*` and `Config.require*` method family, e.g.:
 
 ```scala
-val a = config.get("aws:region")
-val b = Config("aws").map(_.get("region"))
+val a: Output[Option[String]] = config.getString("aws:region")
+val b: Output[String] = config.requireString("aws:profile")
+val c: Output[Option[String]] = Config("aws").map(_.get("region"))
 ```
 
 If the configuration value is a **secret**, it will be **automatically marked** internally as such and **redacted** in console outputs.
