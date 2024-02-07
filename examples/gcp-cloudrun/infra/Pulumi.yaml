@@ -1,0 +1,10 @@
+name: gcp-cloudrun
+runtime: scala
+description: Google Cloud Run Scala Pulumi program
+template:
+  config:
+    gcp:project:
+      description: The Google Cloud project to deploy into
+    gcp:zone:
+      description: The Google Cloud zone
+      default: us-central1-a

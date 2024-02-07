@@ -30,6 +30,15 @@ Please also be sure to browse
 [current issues](https://github.com/VirtusLab/besom/issues)
 to make sure your issue is unique, to lighten the triage burden on our maintainers.
 
+### Adding examples
+
+Start with a template that is closest to your use case, and modify it, e.g.:
+```bash
+mkdir examples/my-example
+cd examples/my-example
+pulumi --logtostderr new https://github.com/VirtusLab/besom/tree/develop/templates/gcp
+```
+
 ## Branching and versioning strategy
 
 We mostly follow the Pulumi strategy:
@@ -240,7 +249,7 @@ git checkout -b release/v$(cat version.txt)
 git push --set-upstream origin release/v$(cat version.txt)
 ```
 
-### Adding examples and testing them locally
+### Testing examples locally
 
 Every example is a valid Pulumi program that can be tested by manually
 doing `pulumi up` in the right folder.
@@ -250,7 +259,7 @@ cd examples/<example-name>
 pulumi up
 ```
 
-Here is a Just helper to run the automated testing:
+Here is a `just` helper to run the automated testing:
 
 ```bash
 just test-example aws-webserver
