@@ -102,6 +102,10 @@ object NonEmptyString:
           yield l + r
 
         // it's a `val x = someObject.x` situation, we take the rhs and go deeper
+        // the guards are used here to check if the thing represented by `t` is seen by the compiler
+        // as a reference to something else, for instance `someObject.x`, at this point before widening
+        // the type of `t` *is* `someObject.x` and therefore we have to check if the underlying type is
+        // a subtype of `String` to continue the traversal (that's the `t.tpe <:< TypeRepr.of[String]` check)
         case t if t.tpe.termSymbol != Symbol.noSymbol && t.tpe <:< TypeRepr.of[String] =>
           t.tpe.termSymbol.tree match
             case ValDef(_, _, Some(rhs)) => downTheRabbitHole(rhs)
