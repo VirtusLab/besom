@@ -13,7 +13,7 @@ class SemanticVersionTest extends munit.FunSuite:
     "1.0.0-alpha+001" -> SemanticVersion(1, 0, 0, "alpha", "001"),
     "1.0.0+20130313144700" -> SemanticVersion(1, 0, 0, None, Some("20130313144700")),
     "1.0.0-beta+exp.sha.5114f85" -> SemanticVersion(1, 0, 0, "beta", "exp.sha.5114f85"),
-    "1.0.0+21AF26D3----117B344092BD" -> SemanticVersion(1, 0, 0, None, Some("21AF26D3----117B344092BD")),
+    "1.0.0+21AF26D3----117B344092BD" -> SemanticVersion(1, 0, 0, None, Some("21AF26D3----117B344092BD"))
   ).foreachEntry((input, expected) =>
     test(s"parse $input") {
       assertEquals(SemanticVersion.parseTolerant(input), Right(expected))
@@ -21,7 +21,7 @@ class SemanticVersionTest extends munit.FunSuite:
   )
 
   Map(
-    SemanticVersion(0, 0, 1, "SNAPSHOT") -> "0.0.1-SNAPSHOT",
+    SemanticVersion(0, 0, 1, "SNAPSHOT") -> "0.0.1-SNAPSHOT"
   ).foreachEntry((input, expected) =>
     test(s"format $input") {
       assertEquals(input.toString, expected)
@@ -30,7 +30,7 @@ class SemanticVersionTest extends munit.FunSuite:
   Map(
     SemanticVersion(0, 1, 1, "SNAPSHOT") -> "0.1.1-SNAPSHOT",
     SemanticVersion(1, 1, 0, "SNAPSHOT") -> "1.1-SNAPSHOT",
-    SemanticVersion(1, 0, 0, "SNAPSHOT", "deadbeef") -> "1-SNAPSHOT+deadbeef",
+    SemanticVersion(1, 0, 0, "SNAPSHOT", "deadbeef") -> "1-SNAPSHOT+deadbeef"
   ).foreachEntry((input, expected) =>
     test(s"short format $input") {
       assertEquals(input.toShortString, expected)
@@ -61,3 +61,4 @@ class SemanticVersionTest extends munit.FunSuite:
   test("1.0.0 == 1.0.0") {
     assertEquals(SemanticVersion.parse("1.0.0").toTry.get == SemanticVersion.parse("1.0.0").toTry.get, true)
   }
+end SemanticVersionTest
