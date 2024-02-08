@@ -113,11 +113,12 @@ class TypeMapperTest extends munit.FunSuite {
     Data(NumberType)(Expectations("Double")),
     Data(StringType)(Expectations("String")),
     Data(UnionType(List(StringType, NumberType), None))(Expectations("String | Double")),
-    Data(NamedType("#types/talos:machine/generated:Certificate",None),
-      metadata = PackageMetadata("talos", "0.2.0"),
+    Data(
+      UnionType(List(StringType, NamedType("#types/aws:iam/role:Role")), Some(StringType)),
+      metadata = PackageMetadata("aws", "6.7.0"),
       tags = Set(munit.Slow)
     )(
-      Expectations("besom.api.talos.machine.outputs.Certificate")
+      Expectations("String | besom.api.aws.iam.Role")
     ),
   )
 
