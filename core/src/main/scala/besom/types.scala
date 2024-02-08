@@ -11,18 +11,15 @@ import scala.language.implicitConversions
 import scala.util.Try
 
 object types:
-  private object Opaques:
-    type PulumiAny = besom.json.JsValue
-    object PulumiAny:
-      given Encoder[PulumiAny] = Encoder.jsonEncoder
-      given Decoder[PulumiAny] = Decoder.jsonDecoder
+  type PulumiAny = besom.json.JsValue
+  object PulumiAny:
+    given Encoder[PulumiAny] = Encoder.jsonEncoder
+    given Decoder[PulumiAny] = Decoder.jsonDecoder
 
-    opaque type PulumiJson = besom.json.JsValue
-    object PulumiJson:
-      given Encoder[PulumiJson] = Encoder.jsonEncoder
-      given Decoder[PulumiJson] = Decoder.jsonDecoder
-
-  export Opaques.*
+  type PulumiJson = besom.json.JsValue
+  object PulumiJson:
+    given Encoder[PulumiJson] = Encoder.jsonEncoder
+    given Decoder[PulumiJson] = Decoder.jsonDecoder
 
   /** Pulumi type token, used to identify the type of a resource, provider, or function.
     */
