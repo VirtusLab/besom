@@ -196,13 +196,13 @@ def withProgress[A](title: String, initialTotal: Int)(f: Progress ?=> A): A =
   def end(lbl: String, start: Temporal, end: Temporal) =
     if !failed.contains(lbl)
     then succeeded.put(lbl, s"\r$lbl: DONE [${elapsed(start, end)}]")
-  def failure(lbl: String, start: Temporal, end: Temporal, error: String) = 
+  def failure(lbl: String, start: Temporal, end: Temporal, error: String) =
     failed.put(lbl, s"\r$lbl: ERROR [${elapsed(start, end)}]: $error")
 
   def total(amount: Int): Unit = realTotal.getAndUpdate(Math.max(_, amount))
 
   def report(lbl: String, amount: Int, time: Temporal): Unit =
-    val current = counter.addAndGet(amount)
+    val current    = counter.addAndGet(amount)
     val percentage = (current.toDouble / realTotal.get() * 100).toInt
     Console.out.synchronized {
       println(s"\r$lbl: $percentage% [$current/${realTotal.get()}] [${time}]")
