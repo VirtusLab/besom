@@ -112,7 +112,6 @@ A simple example using Scala CLI:
 //> using plugin "org.virtuslab::besom-compiler-plugin:0.2.0"
 //> using dep "org.virtuslab::besom-core:0.2.0"
 //> using dep "org.virtuslab::besom-aws:6.2.1-core.0.2"
-//> using repository sonatype:snapshots
 
 import besom.*
 import besom.api.aws
