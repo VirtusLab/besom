@@ -130,6 +130,27 @@ trait BesomSyntax:
         res  <- ctx.readOrRegisterResource[A, EmptyArgs](companion.typeToken, name, EmptyArgs(), CustomResourceOptions(importId = id))
       yield res
 
+  extension (s: String)
+    /** Converts a [[String]] to a [[NonEmptyString]] if it is not empty or blank.
+      */
+    def toNonEmpty: Option[NonEmptyString] = NonEmptyString(s)
+
+    /** Converts a [[String]] to a [[NonEmptyString]] if it is not empty or blank, otherwise throws an [[IllegalArgumentException]].
+      */
+    def toNonEmptyOrThrow: NonEmptyString = NonEmptyString(s).getOrElse(throw IllegalArgumentException(s"String $s was empty!"))
+
+    /** Converts a [[String]] to an [[Output]] of [[NonEmptyString]] if it is not empty or blank, otherwise returns a failed [[Output]] with
+      * an [[IllegalArgumentException]].
+      */
+    def toNonEmptyOutput(using Context): Output[NonEmptyString] =
+      NonEmptyString(s).fold(Output.fail(IllegalArgumentException(s"String $s was empty!")))(Output.apply(_))
+
+  extension (os: Output[String])
+    /** Converts an [[Output]] of [[String]] to an [[Output]] of [[NonEmptyString]] which will be failed if the string is empty.
+      */
+    def toNonEmptyOutput(using Context): Output[NonEmptyString] =
+      os.flatMap(_.toNonEmptyOutput)
+
   /** Shortcut function allowing for uniform resource options syntax everywhere.
     *
     * @param variant

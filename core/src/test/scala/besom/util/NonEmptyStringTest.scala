@@ -40,7 +40,8 @@ class NonEmptyStringTest extends munit.FunSuite with CompileAssertions:
   test("fails to compile when calling smart constructor with a dynamic string") {
     failsToCompile("""
       import besom.util.NonEmptyString.*
-      val z = "x" * 10
+      def getStr: String = "abc"
+      val z = getStr
       val x: NonEmptyString = NonEmptyString.from(z)
       """)
   }
@@ -54,10 +55,123 @@ class NonEmptyStringTest extends munit.FunSuite with CompileAssertions:
     """)
   }
 
+  test("compiles with non-empty string multiplicated if the multiplier is constant and > 0") {
+    compiles("""
+      import besom.util.NonEmptyString.*
+      val z = "x" * 10
+      val x: NonEmptyString = NonEmptyString.from(z)
+      """)
+
+    failsToCompile("""
+      import besom.util.NonEmptyString.*
+      val z = "x" * 0
+      val x: NonEmptyString = NonEmptyString.from(z)
+      """)
+
+    failsToCompile("""
+      import besom.util.NonEmptyString.*
+      val z = "x" * -1
+      val x: NonEmptyString = NonEmptyString.from(z)
+      """)
+
+    failsToCompile("""
+      import besom.util.NonEmptyString.*
+      val times = 10
+      val z = "x" * times
+      val x: NonEmptyString = NonEmptyString.from(z)
+      """)
+
+    compiles("""
+      import besom.util.NonEmptyString.*
+      def takesNES(nes: NonEmptyString): Unit = ()
+      takesNES("x" * 10)
+      """)
+
+    failsToCompile("""
+      import besom.util.NonEmptyString.*
+      def takesNES(nes: NonEmptyString): Unit = ()
+      val times = 10
+      takesNES("x" * times)
+      """)
+
+    failsToCompile("""
+      import besom.util.NonEmptyString.*
+      def takesNES(nes: NonEmptyString): Unit = ()
+      val times = 10
+      val z = "x" * times
+      takesNES(z)
+      """)
+
+    failsToCompile("""
+      import besom.util.NonEmptyString.*
+      def takesNES(nes: NonEmptyString): Unit = ()
+      val times = 10
+      val z = "x" * times
+      takesNES(NonEmptyString.from(z))
+      """)
+  }
+
   test("NonEmptyString can be created from string interpolation with non-empty parts") {
     compiles("""
     import besom.util.NonEmptyString.*
     val x: NonEmptyString = s"abc${"def"}ghi"
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    import besom.util.interpolator.{*, given}
+    import besom.types.{ Context, Output }
+    given Context = ??? // just to make it compile
+    val x: Output[NonEmptyString] = p"abc${"def"}ghi"
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    import besom.util.interpolator.{*, given}
+    import besom.types.{ Context, Output }
+    given Context = ??? // just to make it compile
+    val x: Output[NonEmptyString] = pulumi"abc${"def"}ghi"
+    """)
+
+    failsToCompile("""
+    import besom.util.NonEmptyString.*
+    import besom.util.interpolator.{*, given}
+    import besom.types.{ Context, Output }
+    given Context = ??? // just to make it compile
+    val x: Output[NonEmptyString] = pulumi"${"doesn't matter"}"
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    def takesNES(nes: NonEmptyString): Unit = ()
+    takesNES(s"abc${"def"}ghi")
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    import besom.util.interpolator.{*, given}
+    import besom.types.{ Context, Output }
+    given Context = ??? // just to make it compile
+    def takesNES(nes: Output[NonEmptyString]): Unit = ()
+    takesNES(p"abc${"def"}ghi")
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    import besom.util.interpolator.{*, given}
+    import besom.types.{ Context, Output }
+    given Context = ??? // just to make it compile
+    def takesNES(nes: Output[NonEmptyString]): Unit = ()
+    takesNES(pulumi"abc${"def"}ghi")
+    """)
+
+    failsToCompile("""
+    import besom.util.NonEmptyString.*
+    import besom.util.interpolator.{*, given}
+    import besom.types.{ Context, Output }
+    given Context = ??? // just to make it compile
+    def takesNES(nes: Output[NonEmptyString]): Unit = ()
+    takesNES(pulumi"${"doesn't matter"}")
     """)
   }
 
@@ -68,8 +182,182 @@ class NonEmptyStringTest extends munit.FunSuite with CompileAssertions:
     """)
   }
 
+  test("NonEmptyString can infer non empty strings from constant string definitions") {
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val x = "abc"
+    val y: NonEmptyString = x
+    """)
+
+    failsToCompile("""
+    import besom.util.NonEmptyString.*
+    val x = ""
+    val y: NonEmptyString = x
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    def takesNES(nes: NonEmptyString): Unit = ()
+    takesNES("abc")
+    """)
+
+    failsToCompile("""
+    import besom.util.NonEmptyString.*
+    def takesNES(nes: NonEmptyString): Unit = ()
+    takesNES("")
+    """)
+  }
+
+  test("NonEmptyString can be created from string concatenation") {
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val x: NonEmptyString = "abc" + "def" + ""
+    """)
+
+    failsToCompile("""
+    import besom.util.NonEmptyString.*
+    val x: NonEmptyString = "" + "" + ""
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    def takesNES(nes: NonEmptyString): Unit = ()
+    takesNES("abc" + "def" + "")
+    """)
+
+    failsToCompile("""
+    import besom.util.NonEmptyString.*
+    def takesNES(nes: NonEmptyString): Unit = ()
+    takesNES("" + "" + "")
+    """)
+  }
+
+  test("NonEmptyString can be created from string concatenation at definition site") {
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val s: String = "abc" + "def"
+    val x: NonEmptyString = s
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val s: String = "abc" + ""
+    val x: NonEmptyString = s
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val s: String = "abc"
+    val s2: String = s + "def"
+    val x: NonEmptyString = s2
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val s: String = "def"
+    val s2: String = "abc" + s
+    val x: NonEmptyString = s2
+    """)
+
+    failsToCompile("""
+    import besom.util.NonEmptyString.*
+    val s: String = "" + ""
+    val x: NonEmptyString = s
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    def takesNES(nes: NonEmptyString): Unit = ()
+    val s: String = "abc" + "def"
+    takesNES(s)
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    def takesNES(nes: NonEmptyString): Unit = ()
+    val s: String = "abc" + ""
+    takesNES(s)
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    def takesNES(nes: NonEmptyString): Unit = ()
+    val s: String = "abc"
+    val s2: String = s + "def"
+    takesNES(s2)
+    """)
+  }
+
+  test("NonEmptyString can be inferred from remote declarations") {
+    compiles("""
+    import besom.util.NonEmptyString.*
+    object example:
+      val x: String = "abc"
+    val y: NonEmptyString = example.x
+    """)
+
+    failsToCompile("""
+    import besom.util.NonEmptyString.*
+      object example:
+        val x: String = ""
+      val y: NonEmptyString = example.x
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    object example:
+      val x: String = "abc"
+    def takesNES(nes: NonEmptyString): Unit = ()
+    takesNES(example.x)
+    """)
+
+    failsToCompile("""
+    import besom.util.NonEmptyString.*
+    object example:
+      val x: String = ""
+    def takesNES(nes: NonEmptyString): Unit = ()
+    takesNES(example.x)
+    """)
+  }
+
+  test("issue #138 - concatenation with dynamic string") {
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val api = "v1.2.3"
+    val z = "enable-" + api.replace(".", "-")
+    
+    val x: NonEmptyString = z
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val api = "v1.2.3"
+    val x: NonEmptyString = "enable-" + api.replace(".", "-")
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val api = "v1.2.3"
+    val z = "enable-" + api.replace(".", "-")
+    def takesNES(nes: NonEmptyString): Unit = ()
+    takesNES(z)
+    """)
+
+    compiles("""
+    import besom.util.NonEmptyString.*
+    val api = "v1.2.3"
+    def takesNES(nes: NonEmptyString): Unit = ()
+    takesNES("enable-" + api.replace(".", "-"))
+    """)
+  }
+
   test("NonEmptyString can be created via apply") {
     NonEmptyString("sample") match
       case None              => fail("apply doesn't work")
       case Some(nonEmptyStr) => assert(nonEmptyStr == "sample")
+
+    NonEmptyString("") match
+      case None    => ()
+      case Some(_) => fail("apply doesn't work")
   }
+end NonEmptyStringTest
