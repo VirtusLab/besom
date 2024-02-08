@@ -2,7 +2,7 @@
 title: Changelog
 ---
 
-0.2.0 (pending release)
+0.2.0 (08-02-2024)
 ---
 
 ## API Changes
