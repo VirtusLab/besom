@@ -598,7 +598,7 @@ object Packages:
     println(s"Packages directory: '$targetPath'")
     println(s"Schemas directory: '$schemasDir'")
   }
-  
+
   def listLatestPackages(targetPath: os.Path): Unit = {
     val metadata = readPackagesMetadata(targetPath)
     println(s"Found ${metadata.size} packages in Pulumi repository")
