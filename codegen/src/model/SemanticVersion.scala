@@ -55,7 +55,9 @@ case class SemanticVersion(
         .zipAll(thatPreRelease, None, None)
         .map(comparePreReleaseIdentifier.tupled)
         .find(_ != 0)
-        .getOrElse(thisPreRelease.length.compare(thatPreRelease.length)) // if all identifiers are equal, the version with fewer fields has lower precedence
+        .getOrElse(
+          thisPreRelease.length.compare(thatPreRelease.length)
+        ) // if all identifiers are equal, the version with fewer fields has lower precedence
 
     // ignore build metadata when comparing versions per semver spec https://semver.org/#spec-item-10
 

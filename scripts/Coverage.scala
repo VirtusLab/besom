@@ -1,7 +1,7 @@
 package besom.scripts
 
-import scoverage.domain.{ Constants, Coverage }
-import scoverage.reporter.{ CoverageAggregator, IOUtils, ScoverageHtmlWriter, ScoverageXmlWriter }
+import scoverage.domain.{Constants, Coverage}
+import scoverage.reporter.{CoverageAggregator, IOUtils, ScoverageHtmlWriter, ScoverageXmlWriter}
 import scoverage.serialize.Serializer
 import java.io.File
 
@@ -14,10 +14,10 @@ object Coverage:
       report(File(pathToSourceRoot), File(pathToCoverageData), File(reportsHTMLOutDir), File(reportsXMLOutDir))
     case "report-module" :: modulePath :: Nil => // very specific to our project
       val pathToSourceRootPath = File(modulePath).toPath
-      val moduleName = pathToSourceRootPath.getFileName.toString
-      val besomDir = pathToSourceRootPath.getParent
-      val outDir = besomDir.resolve(".out")
-      val coverageDir = outDir.resolve("coverage").resolve(moduleName)
+      val moduleName           = pathToSourceRootPath.getFileName.toString
+      val besomDir             = pathToSourceRootPath.getParent
+      val outDir               = besomDir.resolve(".out")
+      val coverageDir          = outDir.resolve("coverage").resolve(moduleName)
       report(
         pathToSourceRootPath.toFile,
         coverageDir.toFile,
@@ -62,3 +62,4 @@ object Coverage:
     val xmlWriter = new ScoverageXmlWriter(pathToSourceRoot, reportsXMLOutDir, false, None)
     xmlWriter.write(coverage)
     println("XML coverage report written to " + reportsXMLOutDir.getAbsolutePath)
+end Coverage

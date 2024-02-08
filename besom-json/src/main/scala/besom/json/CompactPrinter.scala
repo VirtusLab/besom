@@ -18,16 +18,15 @@ package besom.json
 
 import java.lang.StringBuilder
 
-/**
-  * A JsonPrinter that produces compact JSON source without any superfluous whitespace.
- */
+/** A JsonPrinter that produces compact JSON source without any superfluous whitespace.
+  */
 trait CompactPrinter extends JsonPrinter {
 
   def print(x: JsValue, sb: StringBuilder): Unit = {
     x match {
       case JsObject(x) => printObject(x, sb)
       case JsArray(x)  => printArray(x, sb)
-      case _ => printLeaf(x, sb)
+      case _           => printLeaf(x, sb)
     }
   }
 

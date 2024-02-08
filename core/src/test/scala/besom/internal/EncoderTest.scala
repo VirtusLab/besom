@@ -51,7 +51,7 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
   val dummyLabel: Label = Label.fromNameAndType("dummy", "dummy:pkg:Dummy")
 
   test("encode case class") {
-    val e         = summon[Encoder[TestCaseClass]]
+    val e = summon[Encoder[TestCaseClass]]
 
     val expected = Map(
       "foo" -> 10.asValue,
@@ -64,7 +64,7 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
   }
 
   test("encode null") {
-    val e         = summon[Encoder[Option[String]]]
+    val e = summon[Encoder[Option[String]]]
 
     val (_, encoded) = e.encode(None).unsafeRunSync()
 
@@ -72,7 +72,7 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
   }
 
   test("encode special case class with unmangling") {
-    val e         = summon[Encoder[SpecialCaseClass]]
+    val e = summon[Encoder[SpecialCaseClass]]
 
     val expected = Map(
       "equals" -> 10.asValue,
@@ -85,7 +85,7 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
   }
 
   test("encoder enum") {
-    val e         = summon[Encoder[TestEnum]]
+    val e = summon[Encoder[TestEnum]]
 
     assertEqualsValue(e.encode(TestEnum.Test1).unsafeRunSync()._2, "Test1 value".asValue)
     assertEqualsValue(e.encode(TestEnum.AnotherTest).unsafeRunSync()._2, "AnotherTest value".asValue)
@@ -93,7 +93,7 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
   }
 
   test("optional Encoder test") {
-    val e         = summon[Encoder[OptionCaseClass]]
+    val e = summon[Encoder[OptionCaseClass]]
 
     val (res, value) = e
       .encode(
@@ -165,6 +165,7 @@ class ArgsEncoderTest extends munit.FunSuite with ValueAssertions:
     assert(res.isEmpty, res)
     assert(value.fields.isEmpty, value)
   }
+end ArgsEncoderTest
 
 object ProviderArgsEncoderTest:
   import EncoderTest.*
@@ -310,3 +311,4 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
       """{"b":"true","helper":"{\"int\":1.0}","str":"x"}"""
     )
   }
+end ProviderArgsEncoderTest

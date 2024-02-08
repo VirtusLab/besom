@@ -119,7 +119,7 @@ class TypeMapperTest extends munit.FunSuite {
       tags = Set(munit.Slow)
     )(
       Expectations("String | besom.api.aws.iam.Role")
-    ),
+    )
   )
 
   tests.foreach { data =>

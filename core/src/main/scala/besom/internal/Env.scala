@@ -71,3 +71,4 @@ object Env:
   lazy val dryRun          = getOrFail(EnvDryRun).toBoolean
   lazy val monitorAddress  = getOrFail(EnvMonitor)
   lazy val engineAddress   = getOrFail(EnvEngine)
+end Env

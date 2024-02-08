@@ -59,3 +59,4 @@ object RegistersOutputs:
       }
     }
   }
+end RegistersOutputs

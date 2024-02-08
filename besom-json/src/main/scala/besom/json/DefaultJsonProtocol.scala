@@ -17,15 +17,10 @@
 
 package besom.json
 
-trait JsonProtocol extends BasicFormats
-        with StandardFormats
-        with CollectionFormats
-        with ProductFormats
-        with AdditionalFormats
+trait JsonProtocol extends BasicFormats with StandardFormats with CollectionFormats with ProductFormats with AdditionalFormats
 
-/**
-  * Provides all the predefined JsonFormats.
- */
+/** Provides all the predefined JsonFormats.
+  */
 trait DefaultJsonProtocol extends JsonProtocol
 
 object DefaultJsonProtocol extends DefaultJsonProtocol

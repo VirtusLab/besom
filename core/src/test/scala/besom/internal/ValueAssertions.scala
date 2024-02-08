@@ -58,3 +58,4 @@ trait ValueAssertions extends munit.Assertions:
           loc = loc,
           assertions = this
         )
+end ValueAssertions

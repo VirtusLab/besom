@@ -77,7 +77,7 @@ class PropertyInfoTest extends munit.FunSuite {
                 |""".stripMargin,
       expectedName = "restApi",
       expectedType = "String | besom.api.aws.apigateway.RestApi",
-      metadata = PackageMetadata("aws", "6.7.0"),
+      metadata = PackageMetadata("aws", "6.7.0")
     ),
     Data(
       name = "property with external (downloaded) named type with duplicate object",

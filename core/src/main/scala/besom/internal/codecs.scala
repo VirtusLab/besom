@@ -33,8 +33,7 @@ object Constants:
   final val StatePropertyName      = "state"
 
 case class DecodingError(message: String, cause: Throwable = null, label: Label) extends Exception(message, cause)
-case class AggregatedDecodingError(errors: NonEmptyVector[DecodingError])
-    extends Exception(errors.map(_.message).toVector.mkString("\n"))
+case class AggregatedDecodingError(errors: NonEmptyVector[DecodingError]) extends Exception(errors.map(_.message).toVector.mkString("\n"))
 /*
  * Would be awesome to make error reporting better, ie:
  *  - render yamled or jsoned version of top Value on error (so at the bottom of the stack!)
@@ -207,9 +206,7 @@ object Decoder extends DecoderInstancesLowPrio1:
             end if
           }
           .map(_.flatten)
-          .lmap(exception =>
-            DecodingError(s"$label: Encountered an error when deserializing a list", label = label, cause = exception)
-          )
+          .lmap(exception => DecodingError(s"$label: Encountered an error when deserializing a list", label = label, cause = exception))
       }
 
     def mapping(value: Value, label: Label): Validated[DecodingError, List[A]] = ???
@@ -233,9 +230,7 @@ object Decoder extends DecoderInstancesLowPrio1:
             end if
           }
           .map(_.flatten)
-          .lmap(exception =>
-            DecodingError(s"$label: Encountered an error when deserializing a set", label = label, cause = exception)
-          )
+          .lmap(exception => DecodingError(s"$label: Encountered an error when deserializing a set", label = label, cause = exception))
       }
 
     def mapping(value: Value, label: Label): Validated[DecodingError, Set[A]] = ???
@@ -245,8 +240,7 @@ object Decoder extends DecoderInstancesLowPrio1:
       decodeAsPossibleSecret(value, label).flatMap { odv =>
         odv
           .traverseValidatedResult { v =>
-            if !v.kind.isStructValue then
-              error(s"$label: Expected a struct kind, got: '${v.kind}'", label).invalidResult
+            if !v.kind.isStructValue then error(s"$label: Expected a struct kind, got: '${v.kind}'", label).invalidResult
             else
               v.getStructValue.fields.iterator
                 .filterNot { (key, _) => key.startsWith("__") }
@@ -263,9 +257,7 @@ object Decoder extends DecoderInstancesLowPrio1:
             end if
           }
           .map(_.flatten)
-          .lmap(exception =>
-            DecodingError(s"$label: Encountered an error when deserializing a map", label = label, cause = exception)
-          )
+          .lmap(exception => DecodingError(s"$label: Encountered an error when deserializing a map", label = label, cause = exception))
       }
     def mapping(value: Value, label: Label): Validated[DecodingError, Map[String, A]] = ???
 
@@ -382,9 +374,7 @@ object Decoder extends DecoderInstancesLowPrio1:
                   handle(label, structValue)
           }
           .map(_.flatten)
-          .lmap(exception =>
-            DecodingError(s"$label: Encountered an error when deserializing an asset", label = label, cause = exception)
-          )
+          .lmap(exception => DecodingError(s"$label: Encountered an error when deserializing an asset", label = label, cause = exception))
       }
 
     override def mapping(value: Value, label: Label): Validated[DecodingError, A] = ???
@@ -677,8 +667,8 @@ end DecoderHelpers
 
 /** ArgsEncoder - this is a separate typeclass required for serialization of top-level *Args classes
   *
-  * ProviderArgsEncoder - this is a separate typeclass required for serialization of top-level ProviderArgs classes that
-  * have all fields serialized as JSON strings
+  * ProviderArgsEncoder - this is a separate typeclass required for serialization of top-level ProviderArgs classes that have all fields
+  * serialized as JSON strings
   *
   * JsonEncoder - this is a separate typeclass required for json-serialized fields of ProviderArgs
   */

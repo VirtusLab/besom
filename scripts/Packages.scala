@@ -107,7 +107,7 @@ object Packages:
     "azure-native-v1", // deprecated
     "aws-quickstart-aurora-postgres", // archived
     "aws-quickstart-redshift", // archived
-    "aws-quickstart-vpc", // archived
+    "aws-quickstart-vpc" // archived
   )
 
   private val pluginDownloadProblemPackages = blockedPackages ++ Vector()

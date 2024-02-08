@@ -33,20 +33,20 @@ class ProductFormatsSpec extends Specification {
 
   trait TestProtocol {
     this: DefaultJsonProtocol =>
-    implicit val test0Format: JsonFormat[Test0] = jsonFormatN[Test0]
-    implicit val test2Format: JsonFormat[Test2] = jsonFormatN[Test2]
+    implicit val test0Format: JsonFormat[Test0]                                         = jsonFormatN[Test0]
+    implicit val test2Format: JsonFormat[Test2]                                         = jsonFormatN[Test2]
     implicit def test3Format[A: JsonFormat, B: JsonFormat]: RootJsonFormat[Test3[A, B]] = jsonFormatN[Test3[A, B]]
-    implicit def test4Format: JsonFormat[Test4] = jsonFormatN[Test4]
-    implicit def testTransientFormat: JsonFormat[TestTransient] = jsonFormatN[TestTransient]
-    implicit def testStaticFormat: JsonFormat[TestStatic] = jsonFormatN[TestStatic]
-    implicit def testMangledFormat: JsonFormat[TestMangled] = jsonFormatN[TestMangled]
+    implicit def test4Format: JsonFormat[Test4]                                         = jsonFormatN[Test4]
+    implicit def testTransientFormat: JsonFormat[TestTransient]                         = jsonFormatN[TestTransient]
+    implicit def testStaticFormat: JsonFormat[TestStatic]                               = jsonFormatN[TestStatic]
+    implicit def testMangledFormat: JsonFormat[TestMangled]                             = jsonFormatN[TestMangled]
   }
   object TestProtocol1 extends DefaultJsonProtocol with TestProtocol
   object TestProtocol2 extends DefaultJsonProtocol with TestProtocol with NullOptions
 
   "A JsonFormat created with `jsonFormat`, for a case class with 2 elements," should {
     import TestProtocol1.*
-    val obj = Test2(42, Some(4.2))
+    val obj  = Test2(42, Some(4.2))
     val json = JsObject("a" -> JsNumber(42), "b" -> JsNumber(4.2))
     "convert to a respective JsObject" in {
       obj.toJson mustEqual json
@@ -56,7 +56,7 @@ class ProductFormatsSpec extends Specification {
     }
     "throw a DeserializationException if the JsObject does not all required members" in (
       JsObject("b" -> JsNumber(4.2)).convertTo[Test2] must
-              throwA(new DeserializationException("Object is missing required member 'a'"))
+        throwA(new DeserializationException("Object is missing required member 'a'"))
     )
     "not require the presence of optional fields for deserialization" in {
       JsObject("a" -> JsNumber(42)).convertTo[Test2] mustEqual Test2(42, None)
@@ -74,13 +74,13 @@ class ProductFormatsSpec extends Specification {
       JsNull.convertTo[Test2] must throwA(new DeserializationException("Object expected"))
     )
     "expose the fieldName in the DeserializationException when able" in {
-      JsNull.convertTo[Test2] must throwA[DeserializationException].like {
-        case DeserializationException(_, _, fieldNames) => fieldNames mustEqual "a" :: "b" :: Nil
+      JsNull.convertTo[Test2] must throwA[DeserializationException].like { case DeserializationException(_, _, fieldNames) =>
+        fieldNames mustEqual "a" :: "b" :: Nil
       }
     }
     "expose all gathered fieldNames in the DeserializationException" in {
       JsObject("t2" -> JsObject("a" -> JsString("foo"))).convertTo[Test4] must throwA[DeserializationException].like {
-        case DeserializationException(msg, _, fieldNames) => 
+        case DeserializationException(msg, _, fieldNames) =>
           println(msg)
           fieldNames mustEqual "t2" :: "a" :: Nil
       }
@@ -130,13 +130,15 @@ class ProductFormatsSpec extends Specification {
       a15: String,
       a16: String,
       a17: String,
-      a18: String)
+      a18: String
+    )
 
     import Test18Protocol.*
-    val obj = Test18("a1", "a2", "a3", "a4", 5, "a6", "a7", "a8", "a9",
-                     "a10", "a11", 12d, "a13", "a14", "a15", "a16", "a17", "a18")
+    val obj = Test18("a1", "a2", "a3", "a4", 5, "a6", "a7", "a8", "a9", "a10", "a11", 12d, "a13", "a14", "a15", "a16", "a17", "a18")
 
-    val json = JsonParser("""{"a1":"a1","a2":"a2","a3":"a3","a4":"a4","a5":5,"a6":"a6","a7":"a7","a8":"a8","a9":"a9","a10":"a10","a11":"a11","a12":12.0,"a13":"a13","a14":"a14","a15":"a15","a16":"a16","a17":"a17","a18":"a18"}""")
+    val json = JsonParser(
+      """{"a1":"a1","a2":"a2","a3":"a3","a4":"a4","a5":5,"a6":"a6","a7":"a7","a8":"a8","a9":"a9","a10":"a10","a11":"a11","a12":12.0,"a13":"a13","a14":"a14","a15":"a15","a16":"a16","a17":"a17","a18":"a18"}"""
+    )
     "convert to a respective JsObject" in {
       obj.toJson mustEqual json
     }
@@ -158,7 +160,7 @@ class ProductFormatsSpec extends Specification {
 
   "A JsonFormat for a case class with transient fields and created with `jsonFormat`" should {
     import TestProtocol1.*
-    val obj = TestTransient(42, Some(4.2))
+    val obj  = TestTransient(42, Some(4.2))
     val json = JsObject("a" -> JsNumber(42), "b" -> JsNumber(4.2))
     "convert to a respective JsObject" in {
       obj.toJson mustEqual json
@@ -170,7 +172,7 @@ class ProductFormatsSpec extends Specification {
 
   "A JsonFormat for a case class with static fields and created with `jsonFormat`" should {
     import TestProtocol1.*
-    val obj = TestStatic(42, Some(4.2))
+    val obj  = TestStatic(42, Some(4.2))
     val json = JsObject("a" -> JsNumber(42), "b" -> JsNumber(4.2))
     "convert to a respective JsObject" in {
       obj.toJson mustEqual json
@@ -182,7 +184,7 @@ class ProductFormatsSpec extends Specification {
 
   "A JsonFormat created with `jsonFormat`, for a case class with 0 elements," should {
     import TestProtocol1.*
-    val obj = Test0()
+    val obj  = Test0()
     val json = JsObject()
     "convert to a respective JsObject" in {
       obj.toJson mustEqual json
