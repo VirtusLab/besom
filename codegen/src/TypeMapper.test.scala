@@ -112,7 +112,13 @@ class TypeMapperTest extends munit.FunSuite {
     Data(NamedType("pulumi.json#/Json"))(Expectations("besom.types.PulumiJson")),
     Data(NumberType)(Expectations("Double")),
     Data(StringType)(Expectations("String")),
-    Data(UnionType(List(StringType, NumberType), None))(Expectations("String | Double"))
+    Data(UnionType(List(StringType, NumberType), None))(Expectations("String | Double")),
+    Data(NamedType("#types/talos:machine/generated:Certificate",None),
+      metadata = PackageMetadata("talos", "0.2.0"),
+      tags = Set(munit.Slow)
+    )(
+      Expectations("besom.api.talos.machine.outputs.Certificate")
+    ),
   )
 
   tests.foreach { data =>

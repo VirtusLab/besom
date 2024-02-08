@@ -46,11 +46,11 @@ class TypeMapper(
         throw TypeMapperError(s"Unexpected file URI format: ${fileUri}")
     }
 
-    val (escapedTypeToken, isFromTypeUri, isFromResourceUri) = typePath match {
-      case s"/provider"           => (packageInfo.providerTypeToken, false, true)
-      case s"/types/${token}"     => (token, true, false)
-      case s"/resources/${token}" => (token, false, true)
-      case s"/${rest}" =>
+    val (escapedTypeToken, isFromTypeUri, isFromResourceUri) = typePath.stripPrefix("/") match {
+      case s"provider" => (packageInfo.providerTypeToken, false, true)
+      case s"types/${token}"          => (token, true, false)
+      case s"resources/${token}"      => (token, false, true)
+      case s"${rest}" =>
         throw TypeMapperError(
           s"Invalid named type reference, fileUri:' ${fileUri}', typePath: '${typePath}', rest: '${rest}''"
         )
@@ -71,11 +71,12 @@ class TypeMapper(
       packageInfo.providerToPackageParts
     )
 
-    val uniformedTypeToken           = typeCoordinates.token.asLookupKey
-    lazy val hasProviderDefinition   = packageInfo.providerTypeToken == uniformedTypeToken
-    lazy val hasResourceDefinition   = packageInfo.resourceTypeTokens.contains(uniformedTypeToken)
-    lazy val hasObjectTypeDefinition = packageInfo.objectTypeTokens.contains(uniformedTypeToken)
-    lazy val hasEnumTypeDefinition   = packageInfo.enumTypeTokens.contains(uniformedTypeToken)
+    val uniformedTypeToken         = typeCoordinates.token.asLookupKey
+    lazy val hasProviderDefinition = packageInfo.providerTypeToken == uniformedTypeToken
+    lazy val hasResourceDefinition = packageInfo.resourceTypeTokens.contains(uniformedTypeToken)
+    /*lazy */
+    val hasObjectTypeDefinition    = packageInfo.objectTypeTokens.contains(uniformedTypeToken)
+    lazy val hasEnumTypeDefinition = packageInfo.enumTypeTokens.contains(uniformedTypeToken)
 
     def resourceClassCoordinates: Option[ScalaDefinitionCoordinates] = {
       if (hasResourceDefinition || hasProviderDefinition) {
