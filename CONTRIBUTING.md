@@ -243,14 +243,22 @@ just publish-language-plugins-all
 To publish critical package(s):
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
-just clean-out cli packages maven aws azure gcp docker kubernetes random command tls
+just clean-out cli packages maven aws azure gcp docker kubernetes random command tls eks
 ```
 
-Publish all other packages:
+Tip: to check what packages are required for `examples` and `templates` use:
+```bash
+just cli version summary examples
+just cli version summary templates
+```
+
+Publish all packages:
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
 just clean-out cli packages maven-all
 ```
+
+Tip: it's safer to publish the packages on-by-one due to how Maven Central behaves.
 
 #### Finish the release
 
