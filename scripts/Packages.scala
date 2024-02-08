@@ -112,9 +112,7 @@ object Packages:
 
   private val pluginDownloadProblemPackages = blockedPackages ++ Vector()
 
-  private val codegenProblemPackages = blockedPackages ++ Vector(
-    "talos" // Failed to map type: 'NamedType(#types/talos:machine/generated:Certificate,None)', asArgsType: false
-  )
+  private val codegenProblemPackages = blockedPackages ++ Vector()
 
   private val compileProblemPackages = blockedPackages ++ Vector(
     "azure-native", // does not compile in finite time
