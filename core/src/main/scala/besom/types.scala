@@ -325,9 +325,11 @@ object types:
 
   trait EnumCompanion[V, E <: PulumiEnum[V]](enumName: String):
     def allInstances: Seq[E]
-    def fromValue(value: V): Either[Exception, E] = valuesToInstances.get(value).toRight(
-      left = Exception(s"`${value}` is not a valid value of `${enumName}`")
-    )
+    def fromValue(value: V): Either[Exception, E] = valuesToInstances
+      .get(value)
+      .toRight(
+        left = Exception(s"`${value}` is not a valid value of `${enumName}`")
+      )
 
     private lazy val valuesToInstances: Map[V, E] = allInstances.map(instance => instance.value -> instance).toMap
 

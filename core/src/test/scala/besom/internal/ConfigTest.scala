@@ -182,13 +182,12 @@ class ConfigTest extends munit.FunSuite {
     assertEquals(actual, expected)
   }
 
-
   sealed abstract class Switch(val name: String, val value: Boolean) extends besom.types.BooleanEnum
   object Switch extends EnumCompanion[Boolean, Switch]("Switch"):
     object On extends Switch("On", true)
     object Off extends Switch("Off", false)
     override val allInstances: Seq[Switch] = Seq(On, Off)
-    given EnumCompanion[Boolean, Switch] = this
+    given EnumCompanion[Boolean, Switch]   = this
 
   testConfig("get BooleanEnum")(
     configMap = Map("prov:switch" -> "false"),
