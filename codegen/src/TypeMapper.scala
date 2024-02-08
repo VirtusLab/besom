@@ -46,13 +46,15 @@ class TypeMapper(
         throw TypeMapperError(s"Unexpected file URI format: ${fileUri}")
     }
 
-    val (escapedTypeToken, isFromTypeUri, isFromResourceUri) = typePath.stripPrefix("/") match {
-      case s"provider" => (packageInfo.providerTypeToken, false, true)
-      case s"types/${token}"          => (token, true, false)
-      case s"resources/${token}"      => (token, false, true)
-      case s"${rest}" =>
+    val (escapedTypeToken, isFromTypeUri, isFromResourceUri) = typePath match {
+      case s"/provider" | s"/provider" => (packageInfo.providerTypeToken, false, true)
+      case s"/types/${token}"          => (token, true, false)
+      case s"types/${token}"           => (token, true, false) // handle malformed typeUri with missing leading '/'
+      case s"/resources/${token}"      => (token, false, true)
+      case s"resources/${token}"       => (token, false, true) // handle malformed typeUri with missing leading '/'
+      case s"/${rest}" =>
         throw TypeMapperError(
-          s"Invalid named type reference, fileUri:' ${fileUri}', typePath: '${typePath}', rest: '${rest}''"
+          s"Invalid named type reference, fileUri: '${fileUri}', typePath: '${typePath}', rest: '${rest}'"
         )
       case token => (token, false, false)
     }
