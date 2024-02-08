@@ -29,6 +29,31 @@ object NonEmptyString:
         */
       inline def asString: String = nes
 
+  object OutputOps:
+    import besom.internal.{Output, Context}
+    import besom.util.interpolator.*
+    inline def fromStringOutput(inline s: Output[String]): Output[NonEmptyString] = ${ fromStringOutputImpl('s) }
+
+    private def fromStringOutputImpl(expr: Expr[Output[String]])(using quotes: Quotes): Expr[Output[NonEmptyString]] =
+      import quotes.reflect.*
+
+      def handleParts(parts: Seq[Expr[String]]): Expr[Output[NonEmptyString]] =
+        val atLeastOneSegmentIsNonEmptyAndNonBlank =
+          parts
+            .collect { case Expr(str) => str }
+            .exists(!_.isBlank)
+
+        if atLeastOneSegmentIsNonEmptyAndNonBlank then expr.asExprOf[Output[NonEmptyString]]
+        else report.errorAndAbort("This interpolated string is possibly empty, empty strings are not allowed here!")
+
+      expr match
+        case '{ scala.StringContext.apply(${ Varargs(parts) }: _*).p(${ Varargs(_) }: _*)(using ${ xd }: Context) } =>
+          handleParts(parts)
+        case '{ scala.StringContext.apply(${ Varargs(parts) }: _*).pulumi(${ Varargs(_) }: _*)(using ${ xd }: Context) } =>
+          handleParts(parts)
+
+    end fromStringOutputImpl
+
   /** @param s
     *   a [[String]] to be converted to a [[NonEmptyString]].
     * @return
@@ -37,7 +62,6 @@ object NonEmptyString:
   inline def from(inline s: String): NonEmptyString = ${ fromImpl('s) }
 
   private def fromImpl(expr: Expr[String])(using quotes: Quotes): Expr[NonEmptyString] =
-    println("==================")
     import quotes.reflect.*
 
     // kudos to @Kordyjan for most of this implementation
@@ -68,7 +92,6 @@ object NonEmptyString:
           Left(other)
 
     expr match
-      // TODO add `pulumi` and `p` interpolators here but remember they return `Output[NonEmptyString]` in this case.
       case '{ scala.StringContext.apply(${ Varargs(parts) }: _*).s(${ Varargs(_) }: _*) } =>
         val atLeastOneSegmentIsNonEmptyAndNonBlank =
           parts
@@ -113,6 +136,11 @@ object NonEmptyString:
   end fromImpl
 
   implicit inline def str2NonEmptyString(inline s: String): NonEmptyString = NonEmptyString.from(s)
+
+  import besom.internal.{Output, Context}
+  implicit inline def outputStr2OutputNonEmptyString(inline s: Output[String])(using Context): Output[NonEmptyString] =
+    OutputOps.fromStringOutput(s)
+
 end NonEmptyString
 
 trait NonEmptyStringFactory:
