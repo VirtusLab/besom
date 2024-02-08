@@ -12,7 +12,7 @@ trait CompileAssertions:
     )
 
   inline def compiles(inline code: String): Unit =
-    if !scala.compiletime.testing.typeChecks(code) then
-      val errors        = scala.compiletime.testing.typeCheckErrors(code)
+    val errors = scala.compiletime.testing.typeCheckErrors(code)
+    if errors.nonEmpty then
       val errorMessages = errors.map(_.message).mkString(NL)
       fail(s"Code failed to compile:$NL$code$NL$errorMessages")
