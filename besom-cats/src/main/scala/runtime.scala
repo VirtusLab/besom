@@ -50,4 +50,4 @@ trait CatsEffectModule extends BesomModule:
   // override def run(program: Context ?=> Output[Exports]): Future[Unit] = ???
 
 object Pulumi extends CatsEffectModule
-export Pulumi.{ *, given }
+export Pulumi.{*, given}
