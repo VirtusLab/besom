@@ -138,17 +138,13 @@ You have to generate an SDK for a provider of your choice, use `just cli`, e.g.:
 
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
-just cli packages metadata azure docker gcp kubernetes random tls
-just cli packages generate azure docker gcp kubernetes random tls
-just cli packages publish-local azure docker gcp kubernetes random tls
+just cli packages local azure docker gcp kubernetes random tls
 ```
 
 To generate all Provider SDKs (takes a very long time):
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
-just cli packages metadata-all
-just cli packages generate-all
-just cli packages publish-local-all
+just cli packages local-all
 ```
 
 #### Test locally
@@ -225,17 +221,13 @@ just publish-language-plugins-all
 Publish all packages:
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
-just cli packages metadata-all
-just cli packages generate-all
-just cli packages publish-maven-all
+just clean-out cli packages maven-all
 ```
 
 To publish selected package(s):
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
-just cli packages metadata aws azure docker gcp kubernetes random tls
-just cli packages generate aws azure docker gcp kubernetes random tls
-just cli packages publish-maven aws azure docker gcp kubernetes random tls
+just clean-out cli packages maven aws azure docker gcp kubernetes random tls
 ```
 
 #### Finish the release

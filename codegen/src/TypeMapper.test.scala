@@ -112,7 +112,14 @@ class TypeMapperTest extends munit.FunSuite {
     Data(NamedType("pulumi.json#/Json"))(Expectations("besom.types.PulumiJson")),
     Data(NumberType)(Expectations("Double")),
     Data(StringType)(Expectations("String")),
-    Data(UnionType(List(StringType, NumberType), None))(Expectations("String | Double"))
+    Data(UnionType(List(StringType, NumberType), None))(Expectations("String | Double")),
+    Data(
+      UnionType(List(StringType, NamedType("#types/aws:iam/role:Role")), Some(StringType)),
+      metadata = PackageMetadata("aws", "6.7.0"),
+      tags = Set(munit.Slow)
+    )(
+      Expectations("String | besom.api.aws.iam.Role")
+    ),
   )
 
   tests.foreach { data =>

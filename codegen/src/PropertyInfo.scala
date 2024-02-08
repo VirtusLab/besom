@@ -90,10 +90,17 @@ object PropertyInfo:
     "toString"
   )
 
+  private val reservedPackages = Set(
+    "java",
+    "javax",
+    "scala",
+    "besom"
+  )
+
   // This logic must be undone the same way in codecs
   // Keep in sync with `unmanglePropertyName` in codecs.scala
   private def manglePropertyName(name: String)(implicit logger: Logger): String =
-    if anyRefMethodNames.contains(name) then
+    if (anyRefMethodNames ++ reservedPackages).contains(name) then
       val mangledName = name + "_"
       logger.debug(s"Mangled property name '$name' as '$mangledName'")
       mangledName

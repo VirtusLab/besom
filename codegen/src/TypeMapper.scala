@@ -47,12 +47,14 @@ class TypeMapper(
     }
 
     val (escapedTypeToken, isFromTypeUri, isFromResourceUri) = typePath match {
-      case s"/provider"           => (packageInfo.providerTypeToken, false, true)
-      case s"/types/${token}"     => (token, true, false)
-      case s"/resources/${token}" => (token, false, true)
+      case s"/provider" | s"/provider" => (packageInfo.providerTypeToken, false, true)
+      case s"/types/${token}"          => (token, true, false)
+      case s"types/${token}"           => (token, true, false) // handle malformed typeUri with missing leading '/'
+      case s"/resources/${token}"      => (token, false, true)
+      case s"resources/${token}"       => (token, false, true) // handle malformed typeUri with missing leading '/'
       case s"/${rest}" =>
         throw TypeMapperError(
-          s"Invalid named type reference, fileUri:' ${fileUri}', typePath: '${typePath}', rest: '${rest}''"
+          s"Invalid named type reference, fileUri: '${fileUri}', typePath: '${typePath}', rest: '${rest}'"
         )
       case token => (token, false, false)
     }
@@ -71,11 +73,12 @@ class TypeMapper(
       packageInfo.providerToPackageParts
     )
 
-    val uniformedTypeToken           = typeCoordinates.token.asLookupKey
-    lazy val hasProviderDefinition   = packageInfo.providerTypeToken == uniformedTypeToken
-    lazy val hasResourceDefinition   = packageInfo.resourceTypeTokens.contains(uniformedTypeToken)
-    lazy val hasObjectTypeDefinition = packageInfo.objectTypeTokens.contains(uniformedTypeToken)
-    lazy val hasEnumTypeDefinition   = packageInfo.enumTypeTokens.contains(uniformedTypeToken)
+    val uniformedTypeToken         = typeCoordinates.token.asLookupKey
+    lazy val hasProviderDefinition = packageInfo.providerTypeToken == uniformedTypeToken
+    lazy val hasResourceDefinition = packageInfo.resourceTypeTokens.contains(uniformedTypeToken)
+    /*lazy */
+    val hasObjectTypeDefinition    = packageInfo.objectTypeTokens.contains(uniformedTypeToken)
+    lazy val hasEnumTypeDefinition = packageInfo.enumTypeTokens.contains(uniformedTypeToken)
 
     def resourceClassCoordinates: Option[ScalaDefinitionCoordinates] = {
       if (hasResourceDefinition || hasProviderDefinition) {
@@ -247,7 +250,7 @@ class TypeMapper(
   end unionMapping
 
   private def unescape(value: String) = {
-    value.replace("%2F", "/") // TODO: Proper URL un-escaping
+    value.replace("%2F", "/").replace("%2f", "/") // TODO: Proper URL un-escaping
   }
 }
 
