@@ -114,6 +114,12 @@ or deserialize to an object (`config.getObject` or `config.requireObject`) [#207
   - added support for convenient provider configuration access [#259](https://github.com/VirtusLab/besom/issues/259)
   - allow to refer to other resources by reference instead of ID [#144](https://github.com/VirtusLab/besom/issues/144)
 
+* Improved [NonEmptyString] inference via metaprogramming to find string literals by recursively traversing the AST tree. It now coveres cases where strings are defined directly as `: String`, concatenated with `+`, multiplied with `*`, all kinds of interpolators (including `p`/`pulumi` interpolator) are covered. Additionally, some new extension methods are defined to ease work with NES:
+  - `"string".toNonEmpty: Option[NonEmptyString]` - safe, same as `NonEmptyString("string")`
+  - `"string".toNonEmptyOrThrow: `NonEmptyString` - an unsafe extension for situations where you just can't be bothered
+  - `"string".toNonEmptyOutput: Output[NonEmptyString]` - safe, if the string is empty the returned Output will be failed
+  - `Output("string").toNonEmptyOutput: Output[NonEmptyString]` - safe, if the string inside of the Output is empty the returned Output will be failed
+
 ## Bug Fixes
 
 * fixed logging via Pulumi RPC and added user-level MDC, now logs are properly displayed in the Pulumi console [#199](https://github.com/VirtusLab/besom/issues/199)
