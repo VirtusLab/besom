@@ -10,7 +10,7 @@ import scala.concurrent.duration.*
 //noinspection ScalaWeakerAccess,TypeAnnotation,ScalaFileName
 class CoreTests extends munit.FunSuite {
   override val munitTimeout = 5.minutes
-  
+
   implicit val codegenConfig: Config.CodegenConfig = Config.CodegenConfig()
 
   val wd = os.pwd / "integration-tests"
