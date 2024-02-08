@@ -2,7 +2,7 @@
 //> using options "-java-output-version:11", "-Ysafe-init", "-Xmax-inlines:64"
 //> using options "-Werror", "-Wunused:all", "-deprecation", "-feature", -language:noAutoTupling
 
-//> using dep "org.virtuslab::besom-json:0.2.0-SNAPSHOT"
+//> using dep "org.virtuslab::besom-json:0.2.0"
 
 //> using dep "com.lihaoyi::sourcecode:0.3.1"
 //> using dep "com.google.protobuf:protobuf-java-util:3.24.4"

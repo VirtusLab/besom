@@ -36,7 +36,7 @@ Start with a template that is closest to your use case, and modify it, e.g.:
 ```bash
 mkdir examples/my-example
 cd examples/my-example
-pulumi --logtostderr new https://github.com/VirtusLab/besom/tree/develop/templates/gcp
+pulumi --logtostderr new https://github.com/VirtusLab/besom/tree/main/templates/gcp
 ```
 
 ## Branching and versioning strategy
@@ -181,7 +181,7 @@ or use a command line option:
 To use development version of an example:
 
 ```bash
-pulumi --logtostderr new https://github.com/VirtusLab/besom/tree/develop/templates/aws
+pulumi --logtostderr new https://github.com/VirtusLab/besom/tree/main/templates/aws
 ```
 
 ### Publishing a release
