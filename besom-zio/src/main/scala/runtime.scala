@@ -52,4 +52,4 @@ trait ZIOModule extends BesomModule:
   // override def run(program: Context ?=> Output[Exports]): Future[Unit] = ???
 
 object Pulumi extends ZIOModule
-export Pulumi.{ *, given }
+export Pulumi.{*, given}
