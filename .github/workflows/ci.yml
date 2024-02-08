@@ -42,7 +42,7 @@ jobs:
         scala-cli fmt . -F --list --respect-project-filters || (
           echo "To format code run"
           echo "  scala-cli fmt ."
-          exit 0 
+          exit 1 
         )
 
   # we need: scala-cli, protoc, go, just, pulumi, java
