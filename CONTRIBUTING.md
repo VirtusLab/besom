@@ -188,12 +188,25 @@ pulumi --logtostderr new https://github.com/VirtusLab/besom/tree/develop/templat
 
 After all the testing is done, you can publish a release.
 
+It is recommended to use `just power-wash` before publishing a release:
+    
+```bash
+just power-wash
+```
+
 #### Bump Besom version
 
 To bump Besom version in all `project.scala` and `version.txt` files:
 
 ```bash
 just cli version bump X.Y.Z
+```
+
+#### Create release branch
+
+```bash
+git checkout -b release/v$(cat version.txt)
+git push --set-upstream origin release/v$(cat version.txt)
 ```
 
 #### Update dependencies versions in all `project.scala` files
@@ -204,6 +217,14 @@ This is most useful for `examples` and `templates`, and integration tests:
 just cli version update
 ```
 
+#### Update versions in all other places
+
+Manually update versions in all other places, specifically documentation and website, using find&replace.
+
+Manually update branch names in all places.
+
+Remove all `//> using repository sonatype:snapshots` from `project.scala` files.
+
 #### Create a release draft on GitHub
 
 ```bash
@@ -212,22 +233,23 @@ just upsert-gh-release
 
 #### Publish core and language host
 ```bash
+just publish-local-all
 just publish-maven-all
 just publish-language-plugins-all
 ```
 
 #### Publish packages
 
-Publish all packages:
+To publish critical package(s):
+```bash
+export GITHUB_TOKEN=$(gh auth token)
+just clean-out cli packages maven aws azure gcp docker kubernetes random command tls
+```
+
+Publish all other packages:
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
 just clean-out cli packages maven-all
-```
-
-To publish selected package(s):
-```bash
-export GITHUB_TOKEN=$(gh auth token)
-just clean-out cli packages maven aws azure docker gcp kubernetes random tls
 ```
 
 #### Finish the release
@@ -235,11 +257,6 @@ just clean-out cli packages maven aws azure docker gcp kubernetes random tls
 Finish the release on GitHub manually, make sure the changelog is correct and correct git tag was created.
 
 According to our Git branching and versioning strategy, the release branch should be created after the tag is created.
-
-```bash
-git checkout -b release/v$(cat version.txt)
-git push --set-upstream origin release/v$(cat version.txt)
-```
 
 ### Testing examples locally
 
