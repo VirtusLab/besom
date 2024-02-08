@@ -10,8 +10,7 @@ import k8s.core.v1.{ConfigMap, ConfigMapArgs, Namespace, Service, ServiceArgs, P
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.numeric.*
 
-case class Redis(connectionString: Output[String])(using ComponentBase) extends ComponentResource
-    derives RegistersOutputs
+case class Redis(connectionString: Output[String])(using ComponentBase) extends ComponentResource derives RegistersOutputs
 
 def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): Output[Redis] =
   component(name, "besom:liftoff:Redis", ComponentResourceOptions()) {
