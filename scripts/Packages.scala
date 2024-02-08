@@ -16,38 +16,42 @@ import scala.util.control.NonFatal
 object Packages:
   def main(args: String*): Unit =
     args match
-      case "local-all" :: Nil         => publishLocalAll(generateAll(packagesDir))
-      case "local" :: tail            => publishLocalSelected(generateSelected(packagesDir, tail), tail)
-      case "maven-all" :: Nil         => publishMavenAll(generateAll(packagesDir))
-      case "maven" :: tail            => publishMavenSelected(generateSelected(packagesDir, tail), tail)
-      case "metadata-all" :: Nil      => downloadPackagesMetadata(packagesDir)
-      case "metadata" :: tail         => downloadPackagesMetadata(packagesDir, selected = tail)
-      case "generate-all" :: Nil      => generateAll(packagesDir)
-      case "generate" :: tail         => generateSelected(packagesDir, tail)
-      case "publish-local-all" :: Nil => publishLocalAll(generatedFile)
-      case "publish-local" :: tail    => publishLocalSelected(generatedFile, tail)
-      case "publish-maven-all" :: Nil => publishMavenAll(generatedFile)
-      case "publish-maven" :: tail    => publishMavenSelected(generatedFile, tail)
-      case "compile" :: tail          => compileSelected(generatedFile, tail)
+      case "list" :: Nil                   => listLatestPackages(packagesDir)
+      case "local-all" :: Nil              => publishLocalAll(generateAll(packagesDir))
+      case "local" :: tail                 => publishLocalSelected(generateSelected(packagesDir, tail), tail)
+      case "maven-all" :: Nil              => publishMavenAll(generateAll(packagesDir))
+      case "maven" :: tail                 => publishMavenSelected(generateSelected(packagesDir, tail), tail)
+      case "metadata-all" :: Nil           => downloadPackagesMetadata(packagesDir)
+      case "metadata" :: tail              => downloadPackagesMetadata(packagesDir, selected = tail)
+      case "generate-all" :: Nil           => generateAll(packagesDir)
+      case "generate" :: tail              => generateSelected(packagesDir, tail)
+      case "publish-local-all" :: Nil      => publishLocalAll(generatedFile)
+      case "publish-local" :: tail         => publishLocalSelected(generatedFile, tail)
+      case "publish-maven-all" :: Nil      => publishMavenAll(generatedFile)
+      case "publish-maven" :: tail         => publishMavenSelected(generatedFile, tail)
+      case "compile" :: tail               => compileSelected(generatedFile, tail)
+      case "publish-maven-no-deps" :: tail => publishMavenSelectedNoDeps(generatedFile, tail)
       case cmd =>
         println(s"Unknown command: $cmd\n")
         println(
           s"""Usage: packages <command>
              |
              |Commands:
-             |  local-all                    - generate and publish all packages locally
-             |  local <package>...           - generate and publish selected packages locally
-             |  maven-all                    - generate and publish all packages to Maven
-             |  maven <package>...           - generate and publish selected packages to Maven
-             |  metadata-all                 - download all packages metadata
-             |  metadata <package>...        - download selected packages metadata
-             |  generate-all                 - generate all packages source code
-             |  generate <package>...        - generate selected packages source code
-             |  publish-local-all            - publish all packages locally
-             |  publish-local <package>...   - publish selected packages locally
-             |  publish-maven-all            - publish all packages to Maven
-             |  publish-maven <package>...   - publish selected packages to Maven
-             |  compile <package>...         - compile selected packages
+             |  list                               - list latest packages from Pulumi repository
+             |  local-all                          - generate and publish all packages locally
+             |  local <package>...                 - generate and publish selected packages locally
+             |  maven-all                          - generate and publish all packages to Maven
+             |  maven <package>...                 - generate and publish selected packages to Maven
+             |  metadata-all                       - download all packages metadata
+             |  metadata <package>...              - download selected packages metadata
+             |  generate-all                       - generate all packages source code
+             |  generate <package>...              - generate selected packages source code
+             |  publish-local-all                  - publish all packages locally
+             |  publish-local <package>...         - publish selected packages locally
+             |  publish-maven-all                  - publish all packages to Maven
+             |  publish-maven <package>...         - publish selected packages to Maven
+             |  compile <package>...               - compile selected packages
+             |  publish-maven-no-deps <package>... - publish selected packages to Maven without dependencies
              |""".stripMargin
         )
         exit(1)
@@ -229,6 +233,33 @@ object Packages:
     }
   end compileSelected
 
+  def publishMavenSelectedNoDeps(sourceFile: os.Path, packages: List[String]) =
+    val selectedPackages = resolvePackageVersions(sourceFile, packages)
+    withProgress("Publishing packages to Maven without dependencies", selectedPackages.size) {
+      selectedPackages.foreach { m =>
+        Progress.report(label = s"${m.name}:${m.version.getOrElse("latest")}")
+        val version = m.version.getOrElse(throw Exception("Package version must be provided for publishing")).asString
+        try
+          val args: Seq[os.Shellable] = Seq(
+            "scala-cli",
+            "--power",
+            "publish",
+            codegenDir / m.name / version,
+            "--suppress-experimental-feature-warning",
+            "--suppress-directives-in-multiple-files-warning"
+          )
+          os.proc(args ++ mavenOpts).call(stdin = envOrExit("PGP_PASSWORD"), stdout = os.Inherit, mergeErrIntoOut = true)
+          println(s"[${new Date}] Successfully published provider '${m.name}' version '${version}'")
+        catch
+          case _: os.SubprocessException =>
+            Progress.fail(s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', error: sub-process failed")
+          case NonFatal(_) =>
+            Progress.fail(s"[${new Date}] Publish failed for provider '${m.name}' version '${version}'")
+        finally Progress.end
+      }
+    }
+  end publishMavenSelectedNoDeps
+
   type PackageId = (String, Option[String])
   object PackageId:
     def apply(name: String, version: Option[String]): PackageId = (name, version)
@@ -354,6 +385,8 @@ object Packages:
           val version = m.version.getOrElse(throw Exception("Package version must be provided for publishing")).asString
           Progress.report(label = s"${m.name}:${version}")
           val logFile = publishMavenDir / s"${m.name}-${version}.log"
+          println("Waiting for 5 seconds to allow the previous publish to propagate")
+          Thread.sleep(5000)
           try
             val args: Seq[os.Shellable] = Seq(
               "scala-cli",
@@ -564,6 +597,12 @@ object Packages:
 
     println(s"Packages directory: '$targetPath'")
     println(s"Schemas directory: '$schemasDir'")
+  }
+  
+  def listLatestPackages(targetPath: os.Path): Unit = {
+    val metadata = readPackagesMetadata(targetPath)
+    println(s"Found ${metadata.size} packages in Pulumi repository")
+    metadata.foreach(m => println(s"${m.name}:${m.version.getOrElse("latest")}"))
   }
 
   def upsertGeneratedFile(metadata: Vector[PackageMetadata]): os.Path = {
