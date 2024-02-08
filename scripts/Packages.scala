@@ -220,6 +220,8 @@ object Packages:
           os.proc(args ++ compileLocalOpts).call(stdout = os.Inherit, mergeErrIntoOut = true)
           Progress.total(selectedPackages.size)
         catch
+          case _: os.SubprocessException =>
+            Progress.fail(s"[${new Date}] Compilation failed for provider '${m.name}' version '${version}', error: sub-process failed")
           case NonFatal(_) =>
             Progress.fail(s"[${new Date}] Compilation failed for provider '${m.name}' version '${version}'")
         finally Progress.end
@@ -266,6 +268,11 @@ object Packages:
             done += result.metadata
             Progress.total(todo.size)
           catch
+            case _: os.SubprocessException =>
+              Progress.fail(
+                s"[${new Date}] Code generation failed for provider '${m.name}' version '${versionOrLatest}', " +
+                  s"error: sub-process failed"
+              )
             case NonFatal(e) =>
               Progress.fail(
                 s"[${new Date}] Code generation failed for provider '${m.name}' version '${versionOrLatest}', " +
@@ -312,6 +319,11 @@ object Packages:
             done += m
             Progress.total(todo.size)
           catch
+            case _: os.SubprocessException =>
+              Progress.fail(
+                s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}, " +
+                  s"error: sub-process failed, see logs for details"
+              )
             case NonFatal(e) =>
               Progress.fail(
                 s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}, " +
@@ -357,6 +369,11 @@ object Packages:
             done += m
             Progress.total(todo.size)
           catch
+            case _: os.SubprocessException =>
+              Progress.fail(
+                s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}, " +
+                  s"error: sub-process failed, see logs for details"
+              )
             case NonFatal(e) =>
               Progress.fail(
                 s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}, " +
