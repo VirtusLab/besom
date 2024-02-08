@@ -27,73 +27,73 @@ object ProductFormatsMacro:
   import scala.deriving.*
   import scala.quoted.*
 
-  def jsonFormatImpl[T <: Product: Type](prodFormats: Expr[ProductFormats])(using Quotes): Expr[RootJsonFormat[T]] = 
+  def jsonFormatImpl[T <: Product: Type](prodFormats: Expr[ProductFormats])(using Quotes): Expr[RootJsonFormat[T]] =
     Expr.summon[Mirror.Of[T]].get match
       case '{
             $m: Mirror.ProductOf[T] { type MirroredElemLabels = elementLabels; type MirroredElemTypes = elementTypes }
-          } => 
-            def prepareInstances(elemLabels: Type[?], elemTypes: Type[?]): List[Expr[(String, JsonFormat[?], Boolean)]] =
-              (elemLabels, elemTypes) match
-                case ('[EmptyTuple], '[EmptyTuple]) => Nil
-                case ('[label *: labelsTail], '[tpe *: tpesTail]) =>
-                  val label          = Type.valueOfConstant[label].get.asInstanceOf[String]
-                  val isOption = Type.of[tpe] match
-                    case '[Option[?]] => Expr(true)
-                    case _ => Expr(false)
-                  
-                  val fieldName = Expr(label)
-                  val fieldFormat = Expr.summon[JsonFormat[tpe]].getOrElse {
-                    quotes.reflect.report.errorAndAbort("Missing given instance of JsonFormat[" ++ Type.show[tpe] ++ "]")
-                  } // TODO: Handle missing instance
-                  val namedInstance = '{ (${fieldName}, $fieldFormat, ${isOption}) }
-                  namedInstance :: prepareInstances(Type.of[labelsTail], Type.of[tpesTail])
+          } =>
+        def prepareInstances(elemLabels: Type[?], elemTypes: Type[?]): List[Expr[(String, JsonFormat[?], Boolean)]] =
+          (elemLabels, elemTypes) match
+            case ('[EmptyTuple], '[EmptyTuple]) => Nil
+            case ('[label *: labelsTail], '[tpe *: tpesTail]) =>
+              val label = Type.valueOfConstant[label].get.asInstanceOf[String]
+              val isOption = Type.of[tpe] match
+                case '[Option[?]] => Expr(true)
+                case _            => Expr(false)
 
-            // instances are in correct order of fields of the product
-            val allInstancesExpr = Expr.ofList(prepareInstances(Type.of[elementLabels], Type.of[elementTypes]))
+              val fieldName = Expr(label)
+              val fieldFormat = Expr.summon[JsonFormat[tpe]].getOrElse {
+                quotes.reflect.report.errorAndAbort("Missing given instance of JsonFormat[" ++ Type.show[tpe] ++ "]")
+              } // TODO: Handle missing instance
+              val namedInstance = '{ (${ fieldName }, $fieldFormat, ${ isOption }) }
+              namedInstance :: prepareInstances(Type.of[labelsTail], Type.of[tpesTail])
 
-            '{ 
-              new RootJsonFormat[T]:
-                private val allInstances = ${allInstancesExpr}
-                private val fmts = ${prodFormats}
-                def read(json: JsValue): T = json match
-                  case JsObject(fields) => 
-                    val values = allInstances.map { case (fieldName, fieldFormat, isOption) =>
-                      val fieldValue = 
-                        try fieldFormat.read(fields(fieldName))
-                        catch 
-                          case e: NoSuchElementException =>
-                            if isOption then None 
-                            else throw DeserializationException("Object is missing required member '" ++ fieldName ++ "'", null, fieldName :: Nil)
-                          case DeserializationException(msg, cause, fieldNames) =>
-                            throw DeserializationException(msg, cause, fieldName :: fieldNames)
+        // instances are in correct order of fields of the product
+        val allInstancesExpr = Expr.ofList(prepareInstances(Type.of[elementLabels], Type.of[elementTypes]))
 
-                      fieldValue
-                    }
-                    $m.fromProduct(Tuple.fromArray(values.toArray))
+        '{
+          new RootJsonFormat[T]:
+            private val allInstances = ${ allInstancesExpr }
+            private val fmts         = ${ prodFormats }
+            def read(json: JsValue): T = json match
+              case JsObject(fields) =>
+                val values = allInstances.map { case (fieldName, fieldFormat, isOption) =>
+                  val fieldValue =
+                    try fieldFormat.read(fields(fieldName))
+                    catch
+                      case e: NoSuchElementException =>
+                        if isOption then None
+                        else
+                          throw DeserializationException("Object is missing required member '" ++ fieldName ++ "'", null, fieldName :: Nil)
+                      case DeserializationException(msg, cause, fieldNames) =>
+                        throw DeserializationException(msg, cause, fieldName :: fieldNames)
 
-                  case _ => throw DeserializationException("Object expected", null, allInstances.map(_._1))
-                
-                def write(obj: T): JsValue = 
-                  val fieldValues = obj.productIterator.toList
-                  val fields = allInstances.zip(fieldValues).foldLeft(List.empty[(String, JsValue)]) { 
-                    case (acc, ((fieldName, fieldFormat, isOption), fieldValue)) =>
-                      val format = fieldFormat.asInstanceOf[JsonFormat[Any]]
-                      fieldValue match
-                        case Some(value) => (fieldName, format.write(fieldValue)) :: acc
-                        case None => if fmts.writeNulls then (fieldName, format.write(fieldValue)) :: acc else acc
-                        case value => (fieldName, format.write(value)) :: acc
-                  }
+                  fieldValue
+                }
+                $m.fromProduct(Tuple.fromArray(values.toArray))
 
-                  JsObject(fields.toMap)
-            }
+              case _ => throw DeserializationException("Object expected", null, allInstances.map(_._1))
 
-/**
- * This trait supplies an alternative rendering mode for optional case class members.
- * Normally optional members that are undefined (`None`) are not rendered at all.
- * By mixing in this trait into your custom JsonProtocol you can enforce the rendering of undefined members as `null`.
- * (Note that this only affect JSON writing, besom-json will always read missing optional members as well as `null`
- * optional members as `None`.)
- */
+            def write(obj: T): JsValue =
+              val fieldValues = obj.productIterator.toList
+              val fields = allInstances.zip(fieldValues).foldLeft(List.empty[(String, JsValue)]) {
+                case (acc, ((fieldName, fieldFormat, isOption), fieldValue)) =>
+                  val format = fieldFormat.asInstanceOf[JsonFormat[Any]]
+                  fieldValue match
+                    case Some(value) => (fieldName, format.write(fieldValue)) :: acc
+                    case None        => if fmts.writeNulls then (fieldName, format.write(fieldValue)) :: acc else acc
+                    case value       => (fieldName, format.write(value)) :: acc
+              }
+
+              JsObject(fields.toMap)
+        }
+end ProductFormatsMacro
+
+/** This trait supplies an alternative rendering mode for optional case class members. Normally optional members that are undefined (`None`)
+  * are not rendered at all. By mixing in this trait into your custom JsonProtocol you can enforce the rendering of undefined members as
+  * `null`. (Note that this only affect JSON writing, besom-json will always read missing optional members as well as `null` optional
+  * members as `None`.)
+  */
 trait NullOptions extends ProductFormats {
   this: StandardFormats with AdditionalFormats =>
 

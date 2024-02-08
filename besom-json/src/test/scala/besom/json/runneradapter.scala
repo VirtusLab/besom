@@ -37,7 +37,7 @@ object runner extends org.specs2.runner.FilesRunner {
   }
 
   def run(searchPath: os.Path, printer: String => Unit)(implicit
-      loc: munit.Location
+    loc: munit.Location
   ): Unit = {
     val env = Env(arguments = Arguments(), lineLogger = printerLogger(printer))
 
@@ -48,7 +48,7 @@ object runner extends org.specs2.runner.FilesRunner {
   }
 
   def execute(action: Action[Stats], printer: String => Unit, arguments: Arguments, exit: Boolean)(env: Env)(implicit
-      loc: munit.Location
+    loc: munit.Location
   ): Unit = {
     val logging = (s: String) => Name(printer(s))
 

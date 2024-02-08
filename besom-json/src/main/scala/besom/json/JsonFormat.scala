@@ -20,9 +20,8 @@ package besom.json
 import scala.annotation.implicitNotFound
 import scala.language.implicitConversions
 
-/**
-  * Provides the JSON deserialization for type T.
- */
+/** Provides the JSON deserialization for type T.
+  */
 @implicitNotFound(msg = "Cannot find JsonReader or JsonFormat type class for ${T}")
 trait JsonReader[T] {
   def read(json: JsValue): T
@@ -34,9 +33,8 @@ object JsonReader {
   }
 }
 
-/**
-  * Provides the JSON serialization for type T.
- */
+/** Provides the JSON serialization for type T.
+  */
 @implicitNotFound(msg = "Cannot find JsonWriter or JsonFormat type class for ${T}")
 trait JsonWriter[T] {
   def write(obj: T): JsValue
@@ -48,28 +46,23 @@ object JsonWriter {
   }
 }
 
-/**
-  * Provides the JSON deserialization and serialization for type T.
- */
+/** Provides the JSON deserialization and serialization for type T.
+  */
 trait JsonFormat[T] extends JsonReader[T] with JsonWriter[T]
 
 object JsonFormat:
   inline def derived[T <: Product](using JsonProtocol) = summon[JsonProtocol].jsonFormatN[T]
 
-/**
- * A special JsonReader capable of reading a legal JSON root object, i.e. either a JSON array or a JSON object.
- */
+/** A special JsonReader capable of reading a legal JSON root object, i.e. either a JSON array or a JSON object.
+  */
 @implicitNotFound(msg = "Cannot find RootJsonReader or RootJsonFormat type class for ${T}")
 trait RootJsonReader[T] extends JsonReader[T]
 
-/**
- * A special JsonWriter capable of writing a legal JSON root object, i.e. either a JSON array or a JSON object.
- */
+/** A special JsonWriter capable of writing a legal JSON root object, i.e. either a JSON array or a JSON object.
+  */
 @implicitNotFound(msg = "Cannot find RootJsonWriter or RootJsonFormat type class for ${T}")
 trait RootJsonWriter[T] extends JsonWriter[T]
 
-/**
- * A special JsonFormat signaling that the format produces a legal JSON root object, i.e. either a JSON array
- * or a JSON object.
- */
+/** A special JsonFormat signaling that the format produces a legal JSON root object, i.e. either a JSON array or a JSON object.
+  */
 trait RootJsonFormat[T] extends JsonFormat[T] with RootJsonReader[T] with RootJsonWriter[T]

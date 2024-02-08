@@ -34,10 +34,10 @@ class CollectionFormatsSpec extends Specification with DefaultJsonProtocol with 
       json.convertTo[List[Int]] mustEqual list
     }
   }
-  
+
   "The arrayFormat" should {
     val array = Array(1, 2, 3)
-    val json = JsArray(JsNumber(1), JsNumber(2), JsNumber(3))
+    val json  = JsArray(JsNumber(1), JsNumber(2), JsNumber(3))
     "convert an Array[Int] to a JsArray of JsNumbers" in {
       array.toJson mustEqual json
     }
@@ -45,9 +45,9 @@ class CollectionFormatsSpec extends Specification with DefaultJsonProtocol with 
       Arrays.equals(json.convertTo[Array[Int]], array) must beTrue
     }
   }
-  
+
   "The mapFormat" should {
-    val map = Map("a" -> 1, "b" -> 2, "c" -> 3)
+    val map  = Map("a" -> 1, "b" -> 2, "c" -> 3)
     val json = JsObject("a" -> JsNumber(1), "b" -> JsNumber(2), "c" -> JsNumber(3))
     "convert a Map[String, Long] to a JsObject" in {
       map.toJson mustEqual json
@@ -59,9 +59,9 @@ class CollectionFormatsSpec extends Specification with DefaultJsonProtocol with 
       Map(1 -> "a").toJson must throwA(new SerializationException("Map key must be formatted as JsString, not '1'"))
     }
   }
-  
+
   "The immutableSetFormat" should {
-    val set = Set(1, 2, 3)
+    val set     = Set(1, 2, 3)
     val numbers = Set(JsNumber(1), JsNumber(2), JsNumber(3))
     "convert a Set[Int] to a JsArray of JsNumbers" in {
       set.toJson.asInstanceOf[JsArray].elements.toSet mustEqual numbers
@@ -72,7 +72,7 @@ class CollectionFormatsSpec extends Specification with DefaultJsonProtocol with 
   }
 
   "The indexedSeqFormat" should {
-    val seq = collection.IndexedSeq(1, 2, 3)
+    val seq  = collection.IndexedSeq(1, 2, 3)
     val json = JsArray(JsNumber(1), JsNumber(2), JsNumber(3))
     "convert a Set[Int] to a JsArray of JsNumbers" in {
       seq.toJson mustEqual json

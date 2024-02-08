@@ -52,22 +52,23 @@ class JsonParserSpec extends Specification {
       JsonParser("\"L\\" + "u00e4nder\"") === JsString("Länder")
     }
     "parse all representations of the slash (SOLIDUS) character in a JsString" in {
-      JsonParser( "\"" + "/\\/\\u002f" + "\"") === JsString("///")
+      JsonParser("\"" + "/\\/\\u002f" + "\"") === JsString("///")
     }
     "parse a simple JsObject" in (
       JsonParser(""" { "key" :42, "key2": "value" }""") ===
-              JsObject("key" -> JsNumber(42), "key2" -> JsString("value"))
+        JsObject("key" -> JsNumber(42), "key2" -> JsString("value"))
     )
     "parse a simple JsArray" in (
       JsonParser("""[null, 1.23 ,{"key":true } ] """) ===
-              JsArray(JsNull, JsNumber(1.23), JsObject("key" -> JsTrue))
+        JsArray(JsNull, JsNumber(1.23), JsObject("key" -> JsTrue))
     )
     "parse directly from UTF-8 encoded bytes" in {
       val json = JsObject(
         "7-bit" -> JsString("This is regular 7-bit ASCII text."),
         "2-bytes" -> JsString("2-byte UTF-8 chars like £, æ or Ö"),
         "3-bytes" -> JsString("3-byte UTF-8 chars like ﾖ, ᄅ or ᐁ."),
-        "4-bytes" -> JsString("4-byte UTF-8 chars like \uD801\uDC37, \uD852\uDF62 or \uD83D\uDE01."))
+        "4-bytes" -> JsString("4-byte UTF-8 chars like \uD801\uDC37, \uD852\uDF62 or \uD83D\uDE01.")
+      )
       JsonParser(json.prettyPrint.getBytes("UTF-8")) === json
     }
     "parse directly from UTF-8 encoded bytes when string starts with a multi-byte character" in {
@@ -88,9 +89,9 @@ class JsonParserSpec extends Specification {
     }
     "not show bad performance characteristics when object keys' hashCodes collide" in {
       val numKeys = 10000
-      val value = "null"
+      val value   = "null"
 
-      val regularKeys = Iterator.from(1).map(i => s"key_$i").take(numKeys)
+      val regularKeys   = Iterator.from(1).map(i => s"key_$i").take(numKeys)
       val collidingKeys = HashCodeCollider.zeroHashCodeIterator().take(numKeys)
 
       def createJson(keys: Iterator[String]): String = keys.mkString("""{"""", s"""":$value,"""", s"""":$value}""")
@@ -108,10 +109,10 @@ class JsonParserSpec extends Specification {
         end_ - start
       }
 
-      val regularJson = createJson(regularKeys)
+      val regularJson   = createJson(regularKeys)
       val collidingJson = createJson(collidingKeys)
 
-      val regularTime = nanoBench { JsonParser(regularJson) }
+      val regularTime   = nanoBench { JsonParser(regularJson) }
       val collidingTime = nanoBench { JsonParser(collidingJson) }
 
       collidingTime / regularTime must be < 5L // speed must be in same order of magnitude
@@ -119,7 +120,8 @@ class JsonParserSpec extends Specification {
 
     "produce proper error messages" in {
       def errorMessage(input: String, settings: JsonParserSettings = JsonParserSettings.default) =
-        try JsonParser(input, settings) catch { case e: JsonParser.ParsingException => e.getMessage }
+        try JsonParser(input, settings)
+        catch { case e: JsonParser.ParsingException => e.getMessage }
 
       errorMessage("""[null, 1.23 {"key":true } ]""") ===
         """Unexpected character '{' at input index 12 (line 1, position 13), expected ']':
@@ -162,7 +164,7 @@ class JsonParserSpec extends Specification {
         val runnable = new Runnable {
           override def run(): Unit =
             try {
-              val nested = "[{\"key\":" * (depth / 2)
+              val nested   = "[{\"key\":" * (depth / 2)
               val settings = JsonParserSettings.default.withMaxDepth(maxDepth)
               nested.parseJson(settings)
               queue.push("didn't fail")
@@ -181,12 +183,12 @@ class JsonParserSpec extends Specification {
 
       // Explicit type needed to compile on Scala 2.10, can be inlined later
       def inc(i: Int): Int = 1 + i
-      val i: Int = Iterator.iterate(1)(inc).indexWhere(depth => probe(depth, maxDepth = 1000) contains "stackoverflow")
+      val i: Int           = Iterator.iterate(1)(inc).indexWhere(depth => probe(depth, maxDepth = 1000) contains "stackoverflow")
       println(s"Overflowing stack at $i which means we need about ${stackSize / i} bytes per recursive call")
 
       val maxDepth = i / 4 // should give lots of room
       probe(1500, maxDepth) ===
-      s"nonfatal: JSON input nested too deeply:JSON input was nested more deeply than the configured limit of maxNesting = $maxDepth"
+        s"nonfatal: JSON input nested too deeply:JSON input was nested more deeply than the configured limit of maxNesting = $maxDepth"
     }
 
     "parse multiple values when allowTrailingInput" in {
@@ -196,8 +198,8 @@ class JsonParserSpec extends Specification {
     }
     "reject trailing input when !allowTrailingInput" in {
       def parser = JsonParser("""{"key":1}x""")
-      parser must throwA[JsonParser.ParsingException].like {
-        case e: JsonParser.ParsingException => e.getMessage must contain("expected end-of-input")
+      parser must throwA[JsonParser.ParsingException].like { case e: JsonParser.ParsingException =>
+        e.getMessage must contain("expected end-of-input")
       }
     }
 

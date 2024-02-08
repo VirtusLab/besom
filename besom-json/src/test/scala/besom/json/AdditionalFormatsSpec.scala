@@ -23,18 +23,18 @@ class AdditionalFormatsSpec extends Specification {
   case class Container[A](inner: Option[A])
 
   object ReaderProtocol extends DefaultJsonProtocol {
-    implicit def containerReader[T :JsonFormat]: JsonFormat[Container[T]] = lift {
+    implicit def containerReader[T: JsonFormat]: JsonFormat[Container[T]] = lift {
       new JsonReader[Container[T]] {
         def read(value: JsValue) = value match {
           case JsObject(fields) if fields.contains("content") => Container(Some(jsonReader[T].read(fields("content"))))
-          case _ => deserializationError("Unexpected format: " + value.toString)
+          case _                                              => deserializationError("Unexpected format: " + value.toString)
         }
       }
     }
   }
 
   object WriterProtocol extends DefaultJsonProtocol {
-    implicit def containerWriter[T :JsonFormat]: JsonFormat[Container[T]] = lift {
+    implicit def containerWriter[T: JsonFormat]: JsonFormat[Container[T]] = lift {
       new JsonWriter[Container[T]] {
         def write(obj: Container[T]) = JsObject("content" -> obj.inner.toJson)
       }
