@@ -104,20 +104,22 @@ object Packages:
     ++ Vector("--repository=sonatype:snapshots")
 
   private val blockedPackages = Vector(
-    "azure-native-v1" // deprecated
+    "azure-native-v1", // deprecated
+    "aws-quickstart-aurora-postgres", // archived
+    "aws-quickstart-redshift", // archived
+    "aws-quickstart-vpc", // archived
   )
 
   private val pluginDownloadProblemPackages = blockedPackages ++ Vector()
 
   private val codegenProblemPackages = blockedPackages ++ Vector(
-//    "awsx", // Failed to map type: 'ArrayType(NamedType(/aws/v6.9.0/schema.json#/resources/aws:ec2%2feip:Eip,None))', asArgsType: false
-//    "talos" // Failed to map type: 'NamedType(#types/talos:machine/generated:Certificate,None)', asArgsType: false
+    "talos" // Failed to map type: 'NamedType(#types/talos:machine/generated:Certificate,None)', asArgsType: false
   )
 
   private val compileProblemPackages = blockedPackages ++ Vector(
-    "azure-native" // does not compile in finite time
-//    "aws-iam", // id parameter, schema error - components should make this viable
-//    "nuage" // id parameter, schema error - components should make this viable
+    "azure-native", // does not compile in finite time
+    "aws-iam", // id parameter, schema error - components should make this viable
+    "nuage" // id parameter, schema error - components should make this viable
   )
 
   def generateAll(targetPath: os.Path): os.Path = {
