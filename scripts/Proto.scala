@@ -5,10 +5,10 @@ import os.*
 
 object Proto:
   def main(args: String*): Unit =
-    val cwd = besomDir
+    val cwd       = besomDir
     val protoPath = cwd / "proto"
     args match
-      case "fetch" :: Nil => fetchProto(cwd, protoPath)
+      case "fetch" :: Nil   => fetchProto(cwd, protoPath)
       case "compile" :: Nil => compileProto(cwd, protoPath)
       case "all" :: Nil =>
         fetchProto(cwd, protoPath)
@@ -26,8 +26,7 @@ object Proto:
           sys.exit(1)
       case other =>
         println(s"Unknown command: $other")
-        println(
-          """Usage: proto <command>
+        println("""Usage: proto <command>
             |
             |Commands:
             |  fetch   - fetches protobuf declaration files from pulumi repo(s)
