@@ -92,11 +92,12 @@ When opened, both [Intellij IDEA](https://www.jetbrains.com/idea/)
 and [Metals](https://scalameta.org/metals/) should automatically recognize 
 the project and set up the IDE accordingly.
 
-[sbt](https://www.scala-sbt.org/) is also supported out-of-the-box but is not recommended due to
-slower iteration speed. Use of sbt support is suggested for situations where managed infrastructure
+[sbt](https://www.scala-sbt.org/), [gradle](https://gradle.org/) and [maven](https://maven.apache.org/) are also supported out-of-the-box,
+but are **not recommended** due to slower iteration speed. 
+Use of `sbt`, `gradle` or `mvn` support is suggested for situations where managed infrastructure
 is being added to an already existing project that uses sbt as the main build tool.
 
-IDE setup for `sbt` works automatically with both Intellij IDEA and Metals.
+IDE setup for `sbt`, `gradle` or `mvn` works automatically with both Intellij IDEA and Metals.
 
 [Mill](https://mill-build.com/) is not yet supported.
 

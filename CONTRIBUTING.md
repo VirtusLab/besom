@@ -162,7 +162,6 @@ as `org.virtuslab::besom-core:X.Y.Z` and `org.virtuslab::besom-<package>:A.B.C-c
 
 Language host provider is published to Maven as `pulumi-language-scala-vX.Y.Z-OS-ARCH.tar.gz`.
 
-
 To use development version of the language host provider:
 ```bash
 pulumi --logtostderr plugin install language scala $(cat version.txt) --server github://api.github.com/VirtusLab/besom
@@ -220,6 +219,7 @@ just cli version update
 #### Update versions in all other places
 
 Manually update versions in all other places, specifically documentation and website, using find&replace.
+Remember about `website/docusaurus.config.js:40`
 
 Manually update branch names in all places.
 
@@ -259,6 +259,8 @@ just clean-out cli packages maven-all
 ```
 
 Tip: it's safer to publish the packages on-by-one due to how Maven Central behaves.
+
+In case of any issues, you can try to resolve the issues manually at https://oss.sonatype.org/index.html#stagingRepositories.
 
 #### Finish the release
 
