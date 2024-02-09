@@ -121,13 +121,14 @@ The recommended practice is to **check stack files into source control** as a me
 Since secret values are encrypted, it is safe to check in these stack settings.
 :::
 
-##### Stack information from code
+##### Stack and project information from code
 
-You can access stack information from your [program](#programs) context using the `urn` method, e.g.:
-
+You can access Pulumi stack and project information from your [program](#programs) context using:
 ```scala
-urn.map(_.stack) // the stack name
-urn.map(_.project) // the stack name
+pulumiProject      // the Pulumi project name
+pulumiOrganization // the Pulumi organization name
+pulumiStack        // the Pulumi stack name
+urn                // the Pulumi stack URN
 ```
 
 ##### Stack Outputs
@@ -140,8 +141,7 @@ To export values from a stack in Besom, use the [`Stack.exports`](exports.md) fu
 
 ##### Stack References
 
-[Stack References](https://www.pulumi.com/docs/concepts/stack/#stackreferences) allow you to use outputs from other
-[stacks](#stacks) in your [program](#programs).
+[Stack References](https://www.pulumi.com/docs/concepts/stack/#stackreferences) allow you to use outputs from other [stacks](#stacks) in your [program](#programs).
 
 To reference values from another stack, create an instance of the `StackReference` type using the fully qualified
 name of the stack as an input, and then read exported stack outputs by their name.
@@ -166,8 +166,10 @@ Resources are defined using a [**resource constructor**](constructors.md). Each 
 
 ```scala
 val redisNamespace = Namespace(s"redis-cluster-namespace-$name")
-redisNamespace.id // the physical name
-redisNamespace.urn // the globally unique identifier
+redisNamespace.id // the Pulumi ID - a physical name
+redisNamespace.urn // the Pulumi URN - a globally unique identifier
+redisNamespace.pulumiResourceName // the Pulumi resource name
+redisNamespace.typeToken // the Pulumi resource type token
 redisNamespace.urn.map(_.resourceName) // the logical name
 redisNamespace.urn.map(_.resourceType) // the resource type
 ```
