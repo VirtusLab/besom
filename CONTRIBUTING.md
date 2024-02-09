@@ -260,6 +260,8 @@ just clean-out cli packages maven-all
 
 Tip: it's safer to publish the packages on-by-one due to how Maven Central behaves.
 
+In case of any issues, you can try to resolve the issues manually at https://oss.sonatype.org/index.html#stagingRepositories.
+
 #### Finish the release
 
 Finish the release on GitHub manually, make sure the changelog is correct and correct git tag was created.
