@@ -2,10 +2,11 @@
 //> using options "-java-output-version:11" "-encoding:utf-8", "-Ykind-projector:underscores"
 //> using options "-deprecation", "-feature"
 
-//> using dep "org.virtuslab::besom-core:0.2.0"
-
+//> using dep "org.virtuslab::besom-core:0.2.1-SNAPSHOT"
 //> using dep "org.typelevel::cats-effect:3.3.14"
 //> using test.dep "org.scalameta::munit:1.0.0-M10"
+
+//> using repository sonatype:snapshots
 
 //> using publish.name "besom-cats"
 //> using publish.organization "org.virtuslab"
