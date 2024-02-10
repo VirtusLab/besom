@@ -814,7 +814,7 @@ object Encoder:
 
   given jsonEncoder: Encoder[JsValue] with
     // TODO not stack-safe
-    def encodeInternal(json: JsValue): Value =
+    private def encodeInternal(json: JsValue): Value =
       json match
         case JsObject(fields)  => fields.view.mapValues(encodeInternal(_)).toMap.asValue
         case JsArray(elements) => elements.map(encodeInternal(_)).asValue
@@ -834,23 +834,16 @@ object Encoder:
         case None        => Result.pure(Set.empty -> Null)
 
   given outputEncoder[A](using inner: Encoder[Option[A]]): Encoder[Output[A]] with
-    def encode(outA: Output[A]): Result[(Set[Resource], Value)] = outA.getData.flatMap { oda =>
-      oda match
-        case OutputData.Unknown(resources, isSecret) =>
-          Result.pure(resources -> UnknownValue.asValue)
-
-        case OutputData.Known(resources, isSecret, maybeValue) =>
-          inner.encode(maybeValue).map { (innerResources, serializedValue) =>
-            val aggregatedResources = resources ++ innerResources
-            if isSecret then
-              val secretStruct = Map(
-                SpecialSigKey -> SpecialSecretSig.asValue,
-                SecretValueName -> serializedValue
-              )
-
-              aggregatedResources -> secretStruct.asValue
-            else aggregatedResources -> serializedValue
-          }
+    def encode(outA: Output[A]): Result[(Set[Resource], Value)] = outA.getData.flatMap {
+      case OutputData.Unknown(resources, _) =>
+        Result.pure(resources -> UnknownValue.asValue)
+      case OutputData.Known(resources, isSecret, maybeValue) =>
+        inner.encode(maybeValue).map { (innerResources, serializedValue) =>
+          val aggregatedResources = resources ++ innerResources
+          if isSecret
+          then aggregatedResources -> serializedValue.asSecret
+          else aggregatedResources -> serializedValue
+        }
     }
 
   private def assetWrapper(key: String, value: Value): Value = Map(
@@ -947,6 +940,7 @@ object Encoder:
 
   given mapEncoder[A](using inner: Encoder[A]): Encoder[Map[String, A]] = new Encoder[Map[String, A]]:
     def encode(map: Map[String, A]): Result[(Set[Resource], Value)] =
+      println(s"Map is secret: ${map.keySet.contains(SpecialSigKey)}")
       Result
         .sequence {
           map.toList.map { case (key, value) =>
@@ -959,7 +953,7 @@ object Encoder:
           val (resources, map) = lst.foldLeft(Set.empty[Resource] -> Map.empty[String, Value]) {
             case ((allResources, map), (key, (resources, value))) =>
               val concatResources = allResources ++ resources
-              if value.kind.isNullValue then (concatResources, map)
+              if value.kind.isNullValue then (concatResources, map) // we treat properties with null values as if they do not exist.
               else concatResources -> (map + (key -> value))
           }
 
@@ -1029,7 +1023,8 @@ object ArgsEncoder:
               serializedMap.foldLeft[(Map[String, Set[Resource]], Map[String, Value])](Map.empty -> Map.empty) {
                 case ((mapOfResources, mapOfValues), (label, (resources, value))) =>
                   if filterOut(label) then (mapOfResources, mapOfValues) // skip filtered
-                  else if value.kind.isNullValue then (mapOfResources, mapOfValues)
+                  else if value.kind.isNullValue then
+                    (mapOfResources, mapOfValues) // we treat properties with NullValue values as if they do not exist
                   else (mapOfResources + (label -> resources), mapOfValues + (label -> value))
               }
 

@@ -1,0 +1,12 @@
+name: kubernetes-secrets
+description: Minimal Kubernetes Secrets test
+runtime:
+  name: scala
+  options:
+    # language host debugging options, for full list of options:
+    #   ~/.pulumi/plugins/language-scala-*/pulumi-language-scala -h
+    v: 9
+    stderrthreshold: 3
+    alsologtostderr: true
+    log_dir: ./logs
+    tracing: "file:./up.trace" # Emit tracing to a Zipkin-compatible tracing to file

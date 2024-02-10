@@ -405,6 +405,11 @@ DO NOT remove dependencies from `project.scala`, because they are necessary in b
 
 ## Troubleshooting
 
+If you susspect the issue is related to serialization, try to skip the preview (dry run is known to be problematic):
+```bash
+pulumi up --skip-preview
+```
+
 ### GitHub might be throttling your requests
 
 If you see an error like this:
@@ -472,6 +477,16 @@ rm pulumi.rb
 
 ### Compilation issues
 
+Remove `.scala-build`, e.g.:
+```bash
+rm -rf core/.scala-build
+```
+
+To restart `bloop` compilation server:
+```bash
+scala-cli bloop exit
+```
+
 To clean the builds:
 ```bash
 just clean-all
@@ -481,11 +496,6 @@ If a deep cleaning needed:
 ```bash
 just power-wash
 ````
-
-To restart `bloop` compilation server:
-```bash
-scala-cli bloop exit
-```
 
 To set `bloop` verbosity:
 ```bash
@@ -499,7 +509,7 @@ scala-cli compile -S 3.nightly .
 
 To increase Scala compiler verbosity:
 ```bash
-scala-cli compile --javac-opt=-verbose .
+scala-cli compile --scalac-option -verbose .
 ```
 
 To inspect a running JVM byt its PID use `jcmd`, e.g.:
