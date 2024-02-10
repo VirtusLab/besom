@@ -25,6 +25,14 @@ class URNTest extends munit.FunSuite with CompileAssertions:
     "urn:pulumi:stack::project::pulumi:pulumi:Stack::stack-name"
   )
 
+  val kubernetesIngressUrn = URN(
+    "urn:pulumi:stack::project::kubernetes:networking.k8s.io/v1:Ingress::my-ingress"
+  )
+
+  val doubleDottedResourceTypeUrn = URN(
+    "urn:pulumi:stack::project::custom:resources.example.org:Resource$besom:testing.example.com/test:Resource::my-test-resource"
+  )
+
   test("URN.apply should only work for correct URNs") {
     failsToCompile("""
       import besom.types.URN
