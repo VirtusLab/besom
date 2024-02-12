@@ -4,6 +4,8 @@ import besom.types.*
 
 class URNTest extends munit.FunSuite with CompileAssertions:
 
+  // case class Sample(urn: String, )
+
   val exampleResourceString =
     "urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource"
 
@@ -150,6 +152,53 @@ class URNTest extends munit.FunSuite with CompileAssertions:
       shortResourceTypeUrnString.resourceName == "my-test-resource",
       s"Expected resourceName to be 'my-test-resource', got ${shortResourceTypeUrnString.resourceName}"
     )
+  }
+
+  test("URN should disallow dumb stuff at compile time") {
+    // empty resource name, nope nope nope
+    failsToCompile("""
+      import besom.types.URN
+      URN("urn:pulumi:stack::project::resource:type::")
+      """)
+
+    // this is tripped by newline in resource name
+    failsToCompile("""
+      import besom.types.URN
+      URN("urn:pulumi:stack::project::resource:type::some really ::^&\n*():: crazy name")
+      """)
+  }
+
+  List(
+    "urn:pulumi:test::test::pulumi:pulumi:Stack::test-test",
+    "urn:pulumi:stack-name::project-name::my:customtype$aws:s3/bucket:Bucket::bob",
+
+    // these 3 are pure garbage, the resource type is non-compliant in all 3
+    // they are duplicated with fixed resource types below
+    // "urn:pulumi:stack::project::type::",
+    // "urn:pulumi:stack::project::type::some really ::^&\n*():: crazy name",
+    // "urn:pulumi:stack::project with whitespace::type::some name",
+
+    "urn:pulumi:stack::project::resource:type::",
+    "urn:pulumi:stack::project::resource:type::some really ::^&\n*():: crazy name",
+    "urn:pulumi:stack::project with whitespace::resource:type::some name",
+    "urn:pulumi:test::test::pkgA:index:t1-new$pkgA:index:t2::n1-new-sub", // had to add hyphen to Identifier to make it work
+    "urn:pulumi:dev::iac-workshop::pulumi:pulumi:Stack::iac-workshop-dev",
+    "urn:pulumi:dev::iac-workshop::apigateway:index:RestAPI::helloWorldApi",
+    "urn:pulumi:dev::workshop::apigateway:index:RestAPI$aws:apigateway/restApi:RestApi::helloWorldApi",
+    "urn:pulumi:dev::workshop::apigateway:index:RestAPI$aws:lambda/permission:Permission::helloWorldApi-fa520765",
+    "urn:pulumi:stage::demo::eks:index:Cluster$pulumi:providers:kubernetes::eks-provider",
+    "urn:pulumi:defStack::defProject::kubernetes:storage.k8s.io/v1beta1:CSIDriver::defName",
+    "urn:pulumi:stack::project::my:my$aws:sns/topicSubscription:TopicSubscription::TopicSubscription",
+    "urn:pulumi:foo::countdown::aws:cloudwatch/logSubscriptionFilter:LogSubscriptionFilter::countDown_watcher",
+    "urn:pulumi:stack::project::pulumi:providers:aws::default_4_13_0",
+    "urn:pulumi:foo::todo::aws:s3/bucketObject:BucketObject::todo4c238266/index.html",
+    "urn:pulumi:dev::awsx-pulumi-issue::awsx:ec2:Vpc$aws:ec2/vpc:Vpc$aws:ec2/subnet:Subnet$aws:ec2/routeTable:RouteTable$aws:ec2/routeTableAssociation:RouteTableAssociation::example-private-vpc-public-1",
+    "urn:pulumi:dev::eks::pulumi:providers:aws::default_4_36_0"
+  ).foreach { u =>
+    test(s"runtime URN should parse $u") {
+      val maybeParsed = URN.from(u)
+      assert(maybeParsed.isSuccess)
+    }
   }
 
 end URNTest
