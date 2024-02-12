@@ -268,6 +268,16 @@ Finish the release on GitHub manually, make sure the changelog is correct and co
 
 According to our Git branching and versioning strategy, the release branch should be created after the tag is created.
 
+#### After the release
+
+After the release, you can bump the version to the next `-SNAPSHOT` version:
+
+```bash
+just cli version bump X.Y.Z-SNAPSHOT
+```
+
+Add `//> using repository sonatype:snapshots` to `project.scala` files.
+
 ### Testing examples locally
 
 Every example is a valid Pulumi program that can be tested by manually
