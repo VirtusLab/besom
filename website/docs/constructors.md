@@ -4,15 +4,15 @@ title: Resource constructors and asynchronicity
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-### Resources
+## Resources
 
 Resources are the [primary construct of Pulumi](basics.md#resources) programs.
 
-### Outputs
+## Outputs
 
 Outputs are the [primary asynchronous data structure of Pulumi](basics.md#inputs-and-outputs) programs.
 
-### Resource constructor syntax
+## Resource constructor syntax
 
 Most Pulumi SDKs expect you to create resource objects by invoking their constructors with `new` keyword, 
 for example in TypeScript: 
@@ -45,7 +45,7 @@ We have retained the CamelCase naming convention of resource constructors for pa
 You can always expect resource constructor names to start with capital letter. 
 :::
 
-### Resource asynchronicity
+## Resource asynchronicity
 
 Resources in Besom have an interesting property related to the fact that Pulumi's runtime is asynchronous. 
 One could suspect that in following snippet resources are created sequentially due to monadic syntax:
@@ -161,7 +161,7 @@ A good observer will notice that all these forks have to be awaited somehow and 
 does await for all spawned Outputs to be resolved before finishing the run.
 :::
 
-### Compile time checking
+## Compile time checking
 
 Besom tries to catch as many errors as possible at compile time, examples of our compile time checks are:
 - A component resource must register a correct type name with the base constructor in format: `<package>:<module>:<type>`

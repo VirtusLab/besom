@@ -193,15 +193,24 @@ It is recommended to use `just power-wash` before publishing a release:
 just power-wash
 ```
 
-#### Bump Besom version
+#### Prerequisites
+
+Publish SDKs locally to test and provide fresh dependencies for scripts:
+
+```bash
+just publish-local-all
+```
+
+#### Bump Besom version (skip for `SNAPSHOT` re-release)
 
 To bump Besom version in all `project.scala` and `version.txt` files:
 
 ```bash
+export GITHUB_TOKEN=$(gh auth token)
 just cli version bump X.Y.Z
 ```
 
-#### Create release branch
+#### Create release branch (skip for `SNAPSHOT`)
 
 ```bash
 git checkout -b release/v$(cat version.txt)
@@ -213,13 +222,14 @@ git push --set-upstream origin release/v$(cat version.txt)
 This is most useful for `examples` and `templates`, and integration tests:
 
 ```bash
+export GITHUB_TOKEN=$(gh auth token)
 just cli version update
 ```
 
-#### Update versions in all other places
+#### Update versions in all other places  (skip for `SNAPSHOT`)
 
 Manually update versions in all other places, specifically documentation and website, using find&replace.
-Remember about `website/docusaurus.config.js:40`
+Remember about `website/docusaurus.config.js:40` and `website/src/remark/codeblockVersion.js:5`
 
 Manually update branch names in all places.
 
@@ -233,7 +243,6 @@ just upsert-gh-release
 
 #### Publish core and language host
 ```bash
-just publish-local-all
 just publish-maven-all
 just publish-language-plugins-all
 ```
@@ -258,7 +267,7 @@ export GITHUB_TOKEN=$(gh auth token)
 just clean-out cli packages maven-all
 ```
 
-Tip: it's safer to publish the packages on-by-one due to how Maven Central behaves.
+Tip: it's safer to publish the packages on-by-one or in batches due to how Maven Central behaves.
 
 In case of any issues, you can try to resolve the issues manually at https://oss.sonatype.org/index.html#stagingRepositories.
 
@@ -267,6 +276,13 @@ In case of any issues, you can try to resolve the issues manually at https://oss
 Finish the release on GitHub manually, make sure the changelog is correct and correct git tag was created.
 
 According to our Git branching and versioning strategy, the release branch should be created after the tag is created.
+
+If releasing a `SNAPSHOT` make sure to bump the git tag.
+
+```bash
+git tag -f v$(cat version.txt)
+git push -f origin v$(cat version.txt)
+```
 
 #### After the release
 
@@ -472,6 +488,16 @@ rm pulumi.rb
 
 ### Compilation issues
 
+Remove `.scala-build`, e.g.:
+```bash
+rm -rf core/.scala-build
+```
+
+To restart `bloop` compilation server:
+```bash
+scala-cli bloop exit
+```
+
 To clean the builds:
 ```bash
 just clean-all
@@ -481,11 +507,6 @@ If a deep cleaning needed:
 ```bash
 just power-wash
 ````
-
-To restart `bloop` compilation server:
-```bash
-scala-cli bloop exit
-```
 
 To set `bloop` verbosity:
 ```bash
@@ -499,7 +520,7 @@ scala-cli compile -S 3.nightly .
 
 To increase Scala compiler verbosity:
 ```bash
-scala-cli compile --javac-opt=-verbose .
+scala-cli compile --scalac-option -verbose .
 ```
 
 To inspect a running JVM byt its PID use `jcmd`, e.g.:

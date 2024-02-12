@@ -76,7 +76,7 @@ To start your adventure with infrastructure-as-code with Scala follow these step
     pulumi destroy -y
     ```
 
-### Choice of build tool and IDE
+## Choice of build tool and IDE
 ---
 
 Besom uses [Scala-CLI](https://scala-cli.virtuslab.org/) for project compilation and execution.
