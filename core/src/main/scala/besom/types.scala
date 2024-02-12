@@ -181,7 +181,7 @@ object types:
       *
       * type       = package ":" [ module ":" ] type name ;
       * package    = identifier ;
-      * module     = identifier ;
+      * module     = identifier ; // this actually lies a bit because it has to allow "."
       * type name  = identifier ;
       * identifier = unicode letter { unicode letter | unicode digit | "_" } ; // this actually lies a bit because it has to allow "/"
       * ```
@@ -202,7 +202,7 @@ object types:
       */
 
     private inline val urnRegex =
-      """urn:pulumi:(?<stack>[^:]+|[^:]*::[^:]*)::(?<project>[^:]+|[^:]*::[^:]*)::(?<parentType>(?:(\p{L}[\p{L}\p{N}_/]*)(?::(\p{L}[\p{L}\p{N}_/]*))?:(\p{L}[\p{L}\p{N}_/]*)(?:\$))*)(?<resourceType>(\p{L}[\p{L}\p{N}_/]*)(?::(\p{L}[\p{L}\p{N}_/]*))?:(\p{L}[\p{L}\p{N}_/]*))::(?<resourceName>[^:]+|[^:]*::[^:]*)"""
+      """urn:pulumi:(?<stack>[^:]+|[^:]*::[^:]*)::(?<project>[^:]+|[^:]*::[^:]*)::(?<parentType>(?:(\p{L}[\p{L}\p{N}_/]*)(?::(\p{L}[\p{L}\p{N}_/\\.]*))?:(\p{L}[\p{L}\p{N}_/]*)(?:\$))*)(?<resourceType>(\p{L}[\p{L}\p{N}_/]*)(?::(\p{L}[\p{L}\p{N}_/\\.]*))?:(\p{L}[\p{L}\p{N}_/]*))::(?<resourceName>[^:]+|[^:]*::[^:]*)"""
 
     private[types] val UrnRegex = urnRegex.r
 
