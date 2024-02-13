@@ -714,6 +714,7 @@ object Encoder:
                 case ((allResources, props), (label, (fieldResources, value))) =>
                   val concatResources = allResources ++ fieldResources
                   if value.kind.isNullValue then (concatResources, props)
+                  else if Encoder.isEmptySecretValue(value) then (concatResources, props) // skip nulls in secrets
                   else concatResources -> (props + (label -> value))
               }
 
@@ -940,7 +941,6 @@ object Encoder:
 
   given mapEncoder[A](using inner: Encoder[A]): Encoder[Map[String, A]] = new Encoder[Map[String, A]]:
     def encode(map: Map[String, A]): Result[(Set[Resource], Value)] =
-      println(s"Map is secret: ${map.keySet.contains(SpecialSigKey)}")
       Result
         .sequence {
           map.toList.map { case (key, value) =>
@@ -993,6 +993,14 @@ object Encoder:
         optA match
           case Left(a)  => innerA.encode(a)
           case Right(b) => innerB.encode(b)
+
+  def isEmptySecretValue(value: Value): Boolean =
+    value.kind.isStructValue &&
+      value.getStructValue.fields.contains(SpecialSigKey) &&
+      value.getStructValue.fields(SpecialSigKey).getStringValue == SpecialSecretSig &&
+      value.getStructValue.fields.contains(SecretValueName) &&
+      value.getStructValue.fields(SecretValueName).kind.isNullValue
+
 end Encoder
 
 // ArgsEncoder and ProviderArgsEncoder are nearly the same with the small difference of
@@ -1006,6 +1014,7 @@ object ArgsEncoder:
     elems: List[(String, Encoder[?])]
   ): ArgsEncoder[A] =
     new ArgsEncoder[A]:
+      import Constants.*
       override def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Struct)] =
         Result
           .sequence {
@@ -1023,6 +1032,7 @@ object ArgsEncoder:
               serializedMap.foldLeft[(Map[String, Set[Resource]], Map[String, Value])](Map.empty -> Map.empty) {
                 case ((mapOfResources, mapOfValues), (label, (resources, value))) =>
                   if filterOut(label) then (mapOfResources, mapOfValues) // skip filtered
+                  else if Encoder.isEmptySecretValue(value) then (mapOfResources, mapOfValues) // skip nulls in secrets
                   else if value.kind.isNullValue then
                     (mapOfResources, mapOfValues) // we treat properties with NullValue values as if they do not exist
                   else (mapOfResources + (label -> resources), mapOfValues + (label -> value))
@@ -1039,6 +1049,7 @@ object ArgsEncoder:
     lazy val nameEncoderPairs            = labels.zip(instances)
 
     argsEncoderProduct(nameEncoderPairs)
+end ArgsEncoder
 
 trait ProviderArgsEncoder[A] extends ArgsEncoder[A]:
   def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Struct)]
@@ -1048,6 +1059,7 @@ object ProviderArgsEncoder:
     elems: List[(String, JsonEncoder[?])]
   ): ProviderArgsEncoder[A] =
     new ProviderArgsEncoder[A]:
+      import Constants.*
       override def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Struct)] =
         Result
           .sequence {
@@ -1066,6 +1078,7 @@ object ProviderArgsEncoder:
                 case ((mapOfResources, mapOfValues), (label, (resources, value))) =>
                   if filterOut(label) then (mapOfResources, mapOfValues)
                   else if value.kind.isNullValue then (mapOfResources, mapOfValues)
+                  else if Encoder.isEmptySecretValue(value) then (mapOfResources, mapOfValues) // skip nulls in secrets
                   else (mapOfResources + (label -> resources), mapOfValues + (label -> value))
               }
 
@@ -1080,6 +1093,7 @@ object ProviderArgsEncoder:
     lazy val nameEncoderPairs                = labels.zip(instances)
 
     providerArgsEncoderProduct(nameEncoderPairs)
+end ProviderArgsEncoder
 
 trait JsonEncoder[A]:
   def encode(a: A): Result[(Set[Resource], Value)]
@@ -1092,6 +1106,8 @@ object JsonEncoder:
       def encode(a: A): Result[(Set[Resource], Value)] = enc.encode(a).flatMap {
         case (resources, v @ Value(Kind.NullValue(_), _))   => Result.pure(resources -> v)
         case (resources, s @ Value(Kind.StringValue(_), _)) => Result.pure(resources -> s)
+        // if the value is an empty secret, we don't want to serialize it as a JSON string, ProviderArgsEncoder will filter it out
+        case (resources, v @ Value(Kind.StructValue(_), _)) if Encoder.isEmptySecretValue(v) => Result.pure(resources -> v)
         case (resources, value) =>
           Result.evalEither(value.asJsonString).transform {
             case Left(ex) =>

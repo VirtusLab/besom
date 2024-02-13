@@ -5,7 +5,8 @@ import besom.api.kubernetes as k8s
   val provider = k8s.Provider(
     "k8s",
     k8s.ProviderArgs(
-      renderYamlToDirectory = "output"
+      renderYamlToDirectory = "output",
+      cluster = Output.secret[Option[String]](None)
     )
   )
 
@@ -13,7 +14,8 @@ import besom.api.kubernetes as k8s
     "test-secret1",
     k8s.core.v1.SecretArgs(
       metadata = k8s.meta.v1.inputs.ObjectMetaArgs(
-        name = "test-secret1"
+        name = "test-secret1",
+        namespace = Output.secret[Option[String]](None)
       ),
 //      data = Map(), // WORKAROUND
       stringData = Map(
