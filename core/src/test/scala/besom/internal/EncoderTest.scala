@@ -7,7 +7,6 @@ import besom.types.{EnumCompanion, Label, StringEnum, Output as _, *}
 import besom.util.*
 import com.google.protobuf.struct.*
 import com.google.protobuf.struct.Struct.toJavaProto
-import com.google.protobuf.struct.Value.Kind
 
 object EncoderTest:
 
@@ -26,7 +25,9 @@ object EncoderTest:
 
   case class PlainCaseClass(data: String, moreData: Int) derives Encoder
   case class OptionCaseClass(data: Option[String], moreData: Option[Int]) derives Encoder
-  case class InputOptionalCaseClass(value: Output[Option[String]], data: Output[Option[Map[String, Output[String]]]]) derives Encoder
+  case class InputOptionalCaseClass(value: Output[Option[String]], data: Output[Option[Map[String, Output[String]]]])
+      derives Encoder,
+        ArgsEncoder
   case class TestArgs(a: Output[String], b: Output[PlainCaseClass]) derives ArgsEncoder
   case class TestOptionArgs(a: Output[Option[String]], b: Output[Option[PlainCaseClass]]) derives ArgsEncoder
 
@@ -78,15 +79,28 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
 
     val (_, encoded) = e.encode(Output.secret(None)).unsafeRunSync()
     val expected     = None.asValue.asSecret
+
     assertEqualsValue(encoded, expected)
   }
 
   test("encode secret input map") {
-    given Context                                                                = DummyContext().unsafeRunSync()
-    val e                                                                        = summon[Encoder[Output[Option[Map[String, String]]]]]
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[Output[Option[Map[String, String]]]]]
+
     val data: besom.types.Input.Optional[Map[String, besom.types.Input[String]]] = None
     val (_, encoded) = e.encode(data.asOptionOutput(isSecret = true)).unsafeRunSync()
     val expected     = None.asValue.asSecret
+
+    assertEqualsValue(encoded, expected)
+  }
+
+  test("encode class with secret inputs") {
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[InputOptionalCaseClass]]
+
+    val (_, encoded) = e.encode(InputOptionalCaseClass(Output.secret(None), Output.secret(None))).unsafeRunSync()
+    val expected     = Map().asValue
+
     assertEqualsValue(encoded, expected)
   }
 
@@ -183,6 +197,43 @@ class ArgsEncoderTest extends munit.FunSuite with ValueAssertions:
 
     assert(res.isEmpty, res)
     assert(value.fields.isEmpty, value)
+  }
+
+  test("empty secret args") {
+    given Context = DummyContext().unsafeRunSync()
+    val ae        = summon[ArgsEncoder[InputOptionalCaseClass]]
+
+    val (res, value) = ae
+      .encode(
+        InputOptionalCaseClass(Output.secret(None), Output.secret(None)),
+        _ => false
+      )
+      .unsafeRunSync()
+
+    assert(res.isEmpty, res)
+    assert(value.fields.isEmpty, value)
+  }
+
+  test("secrets args") {
+    given Context = DummyContext().unsafeRunSync()
+    val ae        = summon[ArgsEncoder[InputOptionalCaseClass]]
+
+    val (res, value) = ae
+      .encode(
+        InputOptionalCaseClass(
+          Output.secret(Some("secret")),
+          Output.secret(Some(Map("key" -> Output.secret("value"))))
+        ),
+        _ => false
+      )
+      .unsafeRunSync()
+    val expected = Map(
+      "value" -> "secret".asValue.asSecret,
+      "data" -> Map("key" -> "value".asValue.asSecret).asValue.asSecret
+    ).asValue
+
+    assert(res.keySet == Set("value", "data"), res)
+    assertEqualsValue(value.asValue, expected)
   }
 end ArgsEncoderTest
 
@@ -291,11 +342,26 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
     given Context = DummyContext().unsafeRunSync()
     val pae       = summon[ProviderArgsEncoder[ProviderArgs]]
 
-    val expected = Map("kubeconfig" -> "abcd".asValue).asValue
-
     val args         = ProviderArgs(kubeconfig = "abcd")
     val (_, encoded) = pae.encode(args, _ => false).unsafeRunSync()
-    assertEqualsValue(Value(Kind.StructValue(encoded)), expected)
+
+    val expected = Map("kubeconfig" -> "abcd".asValue).asValue
+
+    assertEqualsValue(encoded.asValue, expected)
+  }
+
+  // FIXME: This test is failing because the `ProviderArgsEncoder` is not encoding the `kubeconfig` as a secret
+  test("encode secret ProviderArgs".ignore) {
+    given Context = DummyContext().unsafeRunSync()
+    val pae       = summon[ProviderArgsEncoder[ProviderArgs]]
+
+    val args         = ProviderArgs(kubeconfig = Output.secret("abcd"))
+    val (_, encoded) = pae.encode(args, _ => false).unsafeRunSync()
+
+    val expected = Map("kubeconfig" -> "abcd".asValue.asSecret).asValue
+
+    assertNoDiff(pprint(encoded.asValue).plainText, pprint(expected).plainText)
+    assertEqualsValue(encoded.asValue, expected)
   }
 
   test("json ProviderArgsEncoder test") {
@@ -330,49 +396,55 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
       """{"b":"true","helper":"{\"int\":1.0}","str":"x"}"""
     )
   }
+
+  test("json secret ProviderArgsEncoder test") {
+    given Context = DummyContext().unsafeRunSync()
+
+    val res = PropertiesSerializer
+      .serializeResourceProperties(
+        ExampleResourceArgs(
+          Output.secret(None),
+          Output.secret(None),
+          Output.secret(None)
+        )
+      )
+      .unsafeRunSync()
+
+    val json = com.google.protobuf.util.JsonFormat
+      .printer()
+      .omittingInsignificantWhitespace()
+      .sortingMapKeys()
+      .print(toJavaProto(res.serialized))
+
+    assertNoDiff(
+      json,
+      """{}"""
+    )
+  }
 end ProviderArgsEncoderTest
 
-// FIXME: this hangs in runtime
 class Regression383Test extends munit.FunSuite with ValueAssertions:
   import Regression383Test.*
+  import ProtobufUtil.*
 
   test("#383 regression") {
     given Context = DummyContext().unsafeRunSync()
     val e         = summon[ArgsEncoder[SecretArgs]]
 
     val (_, encoded) = e.encode(SecretArgs(), _ => false).unsafeRunSync()
+    val expected     = Map().asValue
 
-    println(encoded)
-
-    // assertEqualsValue(encoded, Null)
+    assertEqualsValue(encoded.asValue, expected)
   }
 
 object Regression383Test:
-  final case class Secret private (
-    urn: besom.types.Output[besom.types.URN],
-    id: besom.types.Output[besom.types.ResourceId],
-    data: besom.types.Output[Map[String, String]]
-  ) extends besom.CustomResource
-  object Secret extends besom.ResourceCompanion[Secret]:
-    def apply(using ctx: besom.types.Context)(
-      name: besom.util.NonEmptyString,
-      args: SecretArgs = SecretArgs()
-    ): besom.types.Output[Secret] =
-      ctx.readOrRegisterResource[Secret, SecretArgs](typeToken, name, args, besom.CustomResourceOptions())
-
-    private[besom] def typeToken: besom.types.ResourceType = "kubernetes:core/v1:Secret"
-    given resourceDecoder(using besom.types.Context): besom.types.ResourceDecoder[Secret] =
-      besom.internal.ResourceDecoder.derived[Secret]
-    given decoder(using besom.types.Context): besom.types.Decoder[Secret] =
-      besom.internal.Decoder.customResourceDecoder[Secret]
-
   final case class SecretArgs private (
-    data: besom.types.Output[scala.Option[scala.Predef.Map[String, String]]]
+    data: besom.types.Output[Option[Map[String, String]]]
   )
 
   object SecretArgs:
     def apply(
-      data: besom.types.Input.Optional[Map[String, besom.types.Input[String]]] = None
+      data: besom.types.Input.Optional[Map[String, Input[String]]] = None
     )(using besom.types.Context): SecretArgs =
       new SecretArgs(
         data = data.asOptionOutput(isSecret = true)

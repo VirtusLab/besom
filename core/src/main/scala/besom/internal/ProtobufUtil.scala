@@ -17,6 +17,8 @@ object ProtobufUtil:
       SecretValueName -> v
     ).asValue
 
+  extension (s: Struct) def asValue: Value = Value(Kind.StructValue(s))
+
   extension (s: String) def asValue: Value = Value(Kind.StringValue(s))
   extension (s: Option[String])
     def asValue: Value =
