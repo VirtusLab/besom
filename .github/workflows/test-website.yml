@@ -3,7 +3,7 @@ name: Test website deployment to GitHub Pages
 on:
   pull_request:
     branches:
-      - develop
+      - main
     paths: 
       - 'website/**'
 jobs:

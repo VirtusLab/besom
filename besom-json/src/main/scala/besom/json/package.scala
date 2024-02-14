@@ -17,6 +17,7 @@
 package besom
 
 import scala.language.implicitConversions
+import scala.util.Try
 
 package object json {
 
@@ -40,10 +41,17 @@ package json {
   class SerializationException(msg: String) extends RuntimeException(msg)
 
   private[json] class RichAny[T](any: T) {
-    def toJson(implicit writer: JsonWriter[T]): JsValue = writer.write(any)
+    def toJson(implicit writer: JsonWriter[T]): JsValue                    = writer.write(any)
+    def asJson(implicit writer: JsonWriter[T]): Either[Exception, JsValue] = writer.maybeWrite(any)
   }
 
   private[json] class RichString(string: String) {
+    def parseJson[T: JsonReader]: Either[Exception, T] = Try {
+      JsonParser(string).convertTo[T]
+    }.toEither.left.map {
+      case e: DeserializationException => e
+      case e                           => DeserializationException(e.getMessage, e)
+    }
     def parseJson: JsValue                               = JsonParser(string)
     def parseJson(settings: JsonParserSettings): JsValue = JsonParser(string, settings)
   }

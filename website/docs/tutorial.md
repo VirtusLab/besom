@@ -2,9 +2,8 @@
 title: Tutorial
 ---
 
-### Introduction
+## Introduction
 ---
-
 
 Besom, the Pulumi SDK for Scala allows you to create, deploy and manage cloud resources such as databases, serverless
 functions and services quickly and safely. In this tutorial your will do exactly that - you will deploy a very basic 
@@ -58,7 +57,7 @@ already packaged into zip files.
 
 These artifacts can be found in `./pre-built/` directory of the repository.
 
-### Architecture
+## Architecture
 ---
 
 The application you are going to deploy to AWS is called CatPost. It's a simple app from simpler times - its only 
@@ -74,7 +73,7 @@ in a DynamoDB table and the pictures of cats are stored in a publicly available 
 page with post feed, second handles creation of new posts, uploads data to S3 and DynamoDB.
 Ok, let's deploy!
 
-### Infrastructure-as-Scala-code
+## Infrastructure-as-Scala-code
 ---
 
 Your infrastructure will live inside the `./besom` directory. Once you open the directory in your IDE (remember: 
@@ -95,10 +94,12 @@ import besom.*
 }
 ```
 
+To learn more about projects and programs in Besom refer to the [Projects section of the Basics page](./basics.md#projects).
+
 This is the minimal Besom program that doesn't do anything beside logging a message. Let's change that and add some
 AWS components! 
 
-### AWS S3 Bucket
+## AWS S3 Bucket
 ---
 
 The first step that you are going to do is to set up data storage for our app. The most important part of application
@@ -145,13 +146,19 @@ val feedBucket = s3.Bucket(
 )
 ```
 
-Unfortunately bucket names in AWS are **globally unique**, and therefore it would be very easy to have a name clash with 
+### Resource names, identifiers and URNs
+
+Since bucket names in AWS are **globally unique**, it would be very easy to have a name clash with 
 another user. When you omit the explicit name of a resource via it's resource arguments Pulumi uses the name of Pulumi 
-resource and suffixes it with a random string to generate a unique name. This distinction is quite important 
-because Pulumi resource name is a part of [Pulumi URN](https://www.pulumi.com/docs/concepts/resources/names/), but
-the actual bucket name is a part of its resource ID in AWS infrastructure. For now let's just remember that first
+resource and suffixes it with a random string to generate a unique name (auto-name). This distinction is quite important 
+because Pulumi resource name is a part of [Pulumi URN](https://www.pulumi.com/docs/concepts/resources/names/), but the actual bucket name is a part of its resource ID in AWS infrastructure.
+To learn more please refer to the [Resources section of the Basics page](./basics.md#resources).
+
+For now let's just remember that first
 argument of Besom resource constructor function is always the Pulumi resource name and resource names for cloud 
 provider to use are always provided via resource arguments.
+
+### Create the resources stack
 
 You can try and create your bucket now. To do this execute `pulumi up` in `./besom` directory: 
 ```bash
@@ -164,7 +171,7 @@ stacks commonly match application environments. You might be also asked to provi
 actually quite important because Pulumi uses that password to encrypt sensitive data related to your deployment. As 
 you are just playing you can use an empty password, but it's *very important* to use a proper password for actual work.
 Pulumi will subsequently print a preview of changes between current state of affairs and the changes your code will 
-introduce to the cloud environment. 
+introduce to the cloud environment. To learn more about stacks refer to the [Stacks section of the Basics page](./basics.md#stacks)
 
 Select `yes` when asked whether you want to deploy this set of changes to cloud.
 
@@ -177,6 +184,8 @@ for confirmation
 Remember that in actual production environment you can't just `pulumi destroy` things. Since we're just trying things 
 out it will be handy however because it's a tutorial. If you get into any trouble you can just start over by 
 destroying everything and then applying your program from ground up.
+
+### Make the bucket public
 
 There's one huge problem with our bucket now - all S3 buckets are private by default. Let's make it public. 
 
@@ -256,7 +265,7 @@ Stack(feedBucket, feedBucketPublicAccessBlock, feedBucketPolicy)
 
 If you run your program now you will have an empty but publicly accessible S3 bucket!
 
-### DynamoDB Table
+## DynamoDB Table
 ---
 
 In scope of the lambda app at `./lambda/dynamodb.scala` you can find the case class used to model a row of
@@ -303,7 +312,7 @@ val catPostTable = dynamodb.Table(
 
 That's all! DynamoDB is that easy to set up. Add the resource to the final `Stack` and run it.
 
-### AWS Lambdas
+## AWS Lambdas
 
 Ok, now you're getting to the point. You will now deploy both [AWS Lambdas](https://aws.amazon.com/lambda/). 
 For lambdas to run they have to have a correct set of permissions aggregated as an AWS IAM Role. 
@@ -389,7 +398,7 @@ If you chose to rebuild the lambdas on your own you have to adjust the path so t
 
 Add this to your program, add both lambdas to the `Stack` at the end of your program, run `pulumi up` and that's it, AWS Lambdas deployed.
 
-### AWS API Gateway
+## AWS API Gateway
 
 Last thing to do - you have to make your app accessible from the Internet. To do this you have to deploy 
 [API Gateway](https://aws.amazon.com/api-gateway/) with a correct configuration. 
@@ -619,6 +628,8 @@ Two things that need attention here is that API deployment has to be sequenced w
 [`deleteBeforeReplace` resource option](https://www.pulumi.com/docs/concepts/options/deletebeforereplace/) makes an appearance. 
 These are necessary for AWS to correctly handle the deployment of these resources.
 
+## Export stack outputs
+
 Ok, that's it. Add *all* of these resources to Stack and then modify
 the [`exports`](./exports.md) so that it matches this:
 ```scala
@@ -642,7 +653,7 @@ Current stack outputs (2):
 
 <br/><br/>
 
-### Addendum A - debugging:
+## Addendum A - debugging
 
 If you run into problems with CatPost lambdas when hacking on this tutorial you might want to create Cloudwatch 
 `LogGroup`s for them so that you can track what's in their logs:
@@ -674,7 +685,7 @@ val addLambdaLogs = addLambda.name.flatMap { addName =>
 ```
 Again, remember to add them to the Stack at the end of the program.
 
-### Addendum B - final `Stack` block:
+## Addendum B - final `Stack` block
 
 Here's how the final `Stack` block looks like in a complete deployment:
 ```scala
@@ -706,7 +717,7 @@ Stack(
 )
 ```
 
-### Addendum C - complete branch:
+## Addendum C - complete branch
 
 If you run into problems during your tutorial run be sure to check out the `complete` branch of the 
 [`besom-tutorial` repo](https://github.com/VirtusLab/besom-tutorial).

@@ -48,6 +48,10 @@ object aliases:
     object StackRef extends besom.internal.ResourceOptsVariant.StackRef
     object Custom extends besom.internal.ResourceOptsVariant.Custom
     object Component extends besom.internal.ResourceOptsVariant.Component
+  type FullyQualifiedStackName = besom.internal.FullyQualifiedStackName
+  object FullyQualifiedStackName extends besom.internal.FullyQualifiedStackNameFactory
+  type StackName = besom.internal.StackName
+  object StackName extends besom.internal.StackNameFactory
 
   export besom.internal.InvokeOptions
 end aliases

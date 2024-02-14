@@ -149,6 +149,8 @@ The supported versions are:
 
 - Scala CLI 1.0.4 or higher
 - SBT 1.9.6 or higher
+- Apache Maven 3.8.4 or higher
+- Gradle Build Tool 7.4 or higher
 
 Other build tools are supported via the `runtime.options.binary`
 configuration option that can point to a pre-built jar in
@@ -177,11 +179,12 @@ When opened, both [Intellij IDEA](https://www.jetbrains.com/idea/)
 and [Metals](https://scalameta.org/metals/) should automatically recognize 
 the project and set up the IDE accordingly.
 
-[sbt](https://www.scala-sbt.org/) is also supported out-of-the-box but is not recommended due to
-slower iteration speed. Use of sbt support is suggested for situations where managed infrastructure
+[sbt](https://www.scala-sbt.org/), [gradle](https://gradle.org/) and [maven](https://maven.apache.org/) are also supported out-of-the-box,
+but are **not recommended** due to slower iteration speed. 
+Use of `sbt`, `gradle` or `mvn` support is suggested for situations where managed infrastructure
 is being added to an already existing project that uses sbt as the main build tool.
 
-IDE setup for `sbt` works automatically with both Intellij IDEA and Metals.
+IDE setup for `sbt`, `gradle` or `mvn` works automatically with both Intellij IDEA and Metals.
 
 [Mill](https://mill-build.com/) is not yet supported.
 

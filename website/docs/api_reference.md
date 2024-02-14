@@ -2,4 +2,4 @@
 title: API Reference
 ---
 
-### Coming soon!
+## Coming soon!

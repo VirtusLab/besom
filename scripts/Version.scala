@@ -68,6 +68,8 @@ object Version:
           }
       case "bump" :: newBesomVersion :: Nil =>
         println(s"Bumping Besom core version from '$besomVersion' to '$newBesomVersion'")
+        os.write.over(cwd / "version.txt", newBesomVersion)
+        println(s"Updated version.txt")
         projectFiles()
           .collect { case (path, content) if content.linesIterator.exists(besomDependencyPattern.matches) => path -> content }
           .foreachEntry { case (path, content) =>
@@ -82,9 +84,6 @@ object Version:
             os.write.over(path, newContent)
             println(s"Updated $path")
           }
-
-        os.write.over(cwd / "version.txt", newBesomVersion)
-        println(s"Updated version.txt")
       case "update" :: Nil =>
         println(s"Bumping Besom packages version to latest")
         val latestPackages = latestPackageVersions()

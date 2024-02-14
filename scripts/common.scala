@@ -227,3 +227,29 @@ def withProgress[A](title: String, initialTotal: Int)(f: Progress ?=> A): A =
     println()
 
 end withProgress
+
+def resolveMavenPackage(name: String, defaultScalaVersion: String): Either[Exception, String] =
+  import coursier.*
+  import coursier.parse.DependencyParser
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  DependencyParser
+    .dependency(name, defaultScalaVersion)
+    .fold(
+      msg => Left(Exception(s"Failed to parse $name: $msg")),
+      Right(_)
+    )
+    .flatMap { dep =>
+      Resolve()
+        .addRepositories(
+          Repositories.central,
+          Repositories.sonatype("public"),
+          Repositories.sonatype("snapshots")
+        )
+        .addDependencies(dep)
+        .either()
+        .flatMap {
+          _.reconciledVersions.get(dep.module).toRight(Exception(s"Failed to resolve $name"))
+        }
+    }
+end resolveMavenPackage
