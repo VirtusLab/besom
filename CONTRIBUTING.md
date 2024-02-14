@@ -421,6 +421,11 @@ DO NOT remove dependencies from `project.scala`, because they are necessary in b
 
 ## Troubleshooting
 
+If you susspect the issue is related to serialization, try to skip the preview (dry run is known to be problematic):
+```bash
+pulumi up --skip-preview
+```
+
 ### GitHub might be throttling your requests
 
 If you see an error like this:

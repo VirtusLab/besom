@@ -188,4 +188,53 @@ class CoreTests extends munit.FunSuite {
   ).test("cats purrl provider should work") { ctx =>
     pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
   }
+
+  FunFixture[pulumi.FixtureContext](
+    setup = {
+      val schemaName = "kubernetes"
+      val result     = codegen.generatePackage(PackageMetadata(schemaName, providerKubernetesSchemaVersion))
+      scalaCli.publishLocal(result.outputDir).call()
+      pulumi.fixture.setup(
+        wd / "resources" / "kubernetes-secrets",
+        projectFiles = Map(
+          "project.scala" ->
+            (defaultProjectFile + CodeGen.packageDependency(schemaName, providerKubernetesSchemaVersion))
+        )
+      )
+    },
+    teardown = pulumi.fixture.teardown
+  ).test("kubernetes provider should work with secrets") { ctx =>
+    val result = pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env, check = false)
+    if result.exitCode != 0 then
+      println(result.out.text())
+      println(result.err.text())
+      fail(s"pulumi up failed with exit code ${result.exitCode}")
+
+    val y1 = os.read(ctx.programDir / "output" / "1-manifest" / "v1-secret-test-test-secret1.yaml")
+    assertEquals(
+      y1,
+      """apiVersion: v1
+          |data:
+          |  password: dGVzdC1wYXNzd29yZA==
+          |  username: dGVzdC11c2Vy
+          |kind: Secret
+          |metadata:
+          |  name: test-secret1
+          |  namespace: test
+          |""".stripMargin
+    )
+    val v2 = os.read(ctx.programDir / "output" / "1-manifest" / "v1-secret-test-test-secret2.yaml")
+    assertEquals(
+      v2,
+      """apiVersion: v1
+          |data:
+          |  password: dGVzdC1wYXNzd29yZA==
+          |  username: dGVzdC11c2Vy
+          |kind: Secret
+          |metadata:
+          |  name: test-secret2
+          |  namespace: test
+          |""".stripMargin
+    )
+  }
 }

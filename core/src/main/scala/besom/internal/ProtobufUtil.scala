@@ -1,13 +1,23 @@
 package besom.internal
 
 import com.google.protobuf.util.JsonFormat
-import com.google.protobuf.struct.*, Value.Kind
+import com.google.protobuf.struct.*
+import Value.Kind
+import besom.internal.Constants.{SecretValueName, SpecialSecretSig, SpecialSigKey}
+
 import scala.util.*
 
 object ProtobufUtil:
   private val printer = JsonFormat.printer().omittingInsignificantWhitespace()
 
-  extension (v: Value) def asJsonString: Either[Throwable, String] = Try(printer.print(Value.toJavaProto(v))).toEither
+  extension (v: Value)
+    def asJsonString: Either[Throwable, String] = Try(printer.print(Value.toJavaProto(v))).toEither
+    def asSecret: Value = Map(
+      SpecialSigKey -> SpecialSecretSig.asValue,
+      SecretValueName -> v
+    ).asValue
+
+  extension (s: Struct) def asValue: Value = Value(Kind.StructValue(s))
 
   extension (s: String) def asValue: Value = Value(Kind.StringValue(s))
   extension (s: Option[String])

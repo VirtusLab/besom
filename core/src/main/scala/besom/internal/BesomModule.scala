@@ -52,7 +52,8 @@ trait EffectBesomModule extends BesomSyntax:
         config         <- Config.forProject(runInfo.project)
         featureSupport <- FeatureSupport(monitor)
         _              <- logger.trace(s"Environment:\n${sys.env.toSeq.sortBy(_._1).map((k, v) => s"$k: $v").mkString("\n")}")
-        _              <- logger.debug(s"Resolved feature support, spawning context and executing user program.")
+        _              <- logger.debug(s"Resolved feature support: ${pprint(featureSupport)}")
+        _              <- logger.debug(s"Spawning context and executing user program.")
         ctx            <- Context(runInfo, taskTracker, monitor, engine, logger, featureSupport, config)
         _              <- logger.debug(s"Context established, executing user program.")
         stack          <- Result.defer(program(using ctx)) // for formatting ffs
