@@ -661,12 +661,12 @@ object LocalWorkspace:
   // the extensions for Pulumi settings files
   private val SettingsExtensions = List(".yaml", ".yml", ".json")
 
-  /** Creates a new LocalWorkspace with the default options.
+  /** Creates a new [[LocalWorkspace]] with the default options.
     *
     * @param options
     *   the configuration options for the workspace
     * @return
-    *   a new LocalWorkspace
+    *   a new [[LocalWorkspace]]
     */
   def apply(options: LocalWorkspaceOption*): Either[Exception, LocalWorkspace] =
     val opts = LocalWorkspaceOptions.from(options*)
@@ -921,6 +921,10 @@ object LocalWorkspace:
   end defaultInlineProject
 end LocalWorkspace
 
+/** The configuration options for a [[LocalWorkspace]].
+  * @see
+  *   [[LocalWorkspaceOptions]]
+  */
 sealed trait LocalWorkspaceOption
 object LocalWorkspaceOption:
 

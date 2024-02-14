@@ -482,3 +482,19 @@ def selectStackInlineSource(
     s       <- Stack.select(stackName, ws)
   yield s
 end selectStackInlineSource
+
+
+/** Creates and configures a [[RemoteWorkspace]].
+  *
+  * [[RemoteWorkspaceOption]]s can be used to configure things like e.g.:
+  *   - [[WorkDir]] - the working directory
+  *   - [[Program]] - the program to execute
+  *   - [[Repo]] - the git repository to clone
+  *
+  * @param options
+  *   options to pass to the [[RemoteWorkspace]]
+  * @return
+  *   a [[RemoteWorkspace]] or an error if any
+  */
+def remoteWorkspace(options: RemoteWorkspaceOption*): Either[Exception, RemoteWorkspace] = RemoteWorkspace(options*)
+
