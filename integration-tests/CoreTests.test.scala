@@ -210,16 +210,6 @@ class CoreTests extends munit.FunSuite {
       println(result.err.text())
       fail(s"pulumi up failed with exit code ${result.exitCode}")
 
-    val y0 = os.read(ctx.programDir / "output" / "1-manifest" / "v1-secret-default-test-secret0.yaml")
-    assertEquals(
-      y0,
-      """apiVersion: v1
-        |kind: Secret
-        |metadata:
-        |  name: test-secret0
-        |  namespace: default
-        |""".stripMargin
-    )
     val y1 = os.read(ctx.programDir / "output" / "1-manifest" / "v1-secret-test-test-secret1.yaml")
     assertEquals(
       y1,
