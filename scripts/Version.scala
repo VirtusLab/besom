@@ -66,7 +66,10 @@ object Version:
           .foreach { case (a, b) =>
             println(s"$a $b")
           }
-      case "bump" :: newBesomVersion :: Nil =>
+      case "bump" :: newBesomVersionStr :: Nil =>
+        val newBesomVersion = SemanticVersion.parse(newBesomVersionStr).fold(
+          e => throw Exception(s"Invalid version: $newBesomVersionStr", e), _.toString
+        )
         println(s"Bumping Besom core version from '$besomVersion' to '$newBesomVersion'")
         os.write.over(cwd / "version.txt", newBesomVersion)
         println(s"Updated version.txt")
@@ -77,7 +80,7 @@ object Version:
               .map {
                 case line if line.contains("besom-fake-") => line // ignore
                 case besomDependencyPattern(prefix, version, suffix) =>
-                  prefix + changeVersion(version, besomVersion) + suffix
+                  prefix + changeVersion(version, newBesomVersion) + suffix
                 case line => line // pass through
               }
               .mkString("\n") + "\n"
