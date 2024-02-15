@@ -2,6 +2,14 @@
 title: Changelog
 ---
 
+0.2.1 (15-02-2024)
+
+## Bug Fixes
+
+TODO
+
+* Full changelog is available at [GitHub (v0.2.0...v0.2.1)](https://github.com/VirtusLab/besom/compare/v0.2.0...v0.2.1)
+
 0.2.0 (08-02-2024)
 ---
 
