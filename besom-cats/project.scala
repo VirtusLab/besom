@@ -6,7 +6,6 @@
 //> using dep "org.typelevel::cats-effect:3.3.14"
 //> using test.dep "org.scalameta::munit:1.0.0-M10"
 
-//> using repository sonatype:snapshots
 
 //> using publish.name "besom-cats"
 //> using publish.organization "org.virtuslab"

@@ -29,7 +29,7 @@ To start your adventure with infrastructure-as-code with Scala follow these step
     To install the latest Scala Language Plugin release, run the following:
 
     ```bash
-    pulumi plugin install language scala 0.2.0 --server github://api.github.com/VirtusLab/besom
+    pulumi plugin install language scala 0.2.1 --server github://api.github.com/VirtusLab/besom
     ```
 
 4. **Create a new project**:
@@ -43,7 +43,7 @@ To start your adventure with infrastructure-as-code with Scala follow these step
     mkdir besom-demo && cd besom-demo
     ```
     ```bash
-    pulumi new https://github.com/VirtusLab/besom/tree/v0.2.0/templates/aws
+    pulumi new https://github.com/VirtusLab/besom/tree/v0.2.1/templates/aws
     ```
 
 5. **Deploy to the Cloud**:

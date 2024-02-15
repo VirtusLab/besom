@@ -3,4 +3,3 @@
 //> using plugin org.virtuslab::besom-compiler-plugin:0.2.1
 //> using dep org.virtuslab::besom-core:0.2.1
 
-//> using repository sonatype:snapshots

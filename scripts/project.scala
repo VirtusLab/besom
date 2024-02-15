@@ -11,4 +11,3 @@
 //> using dep io.get-coursier:coursier_2.13:2.1.9
 //> using dep org.virtuslab::besom-codegen:0.2.1
 
-//> using repository sonatype:snapshots
