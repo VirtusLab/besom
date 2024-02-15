@@ -193,14 +193,6 @@ It is recommended to use `just power-wash` before publishing a release:
 just power-wash
 ```
 
-#### Prerequisites
-
-Publish SDKs locally to test and provide fresh dependencies for scripts:
-
-```bash
-just publish-local-all
-```
-
 #### Bump Besom version (skip for `SNAPSHOT` re-release)
 
 To bump Besom version in all `project.scala` and `version.txt` files:
@@ -208,6 +200,12 @@ To bump Besom version in all `project.scala` and `version.txt` files:
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
 just cli version bump X.Y.Z
+```
+
+Publish SDKs locally to test and provide fresh dependencies for scripts:
+
+```bash
+just publish-local-all
 ```
 
 #### Create release branch (skip for `SNAPSHOT`)
@@ -230,10 +228,6 @@ just cli version update
 
 Manually update versions in all other places, specifically documentation and website, using find&replace.
 Remember about `website/docusaurus.config.js:40` and `website/src/remark/codeblockVersion.js:5`
-
-Manually update branch names in all places.
-
-Remove all `//> using repository sonatype:snapshots` from `project.scala` files.
 
 #### Create a release draft on GitHub
 

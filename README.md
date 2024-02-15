@@ -111,16 +111,16 @@ A simple example using Scala CLI:
 //> using scala "3.3.1"
 //> using plugin "org.virtuslab::besom-compiler-plugin:0.2.1"
 //> using dep "org.virtuslab::besom-core:0.2.1"
-//> using dep "org.virtuslab::besom-aws:6.2.1-core.0.2"
+//> using dep "org.virtuslab::besom-aws:6.22.1-core.0.2"
 
 import besom.*
 import besom.api.aws
 
 @main def run = Pulumi.run {
-   val bucket <- aws.s3.Bucket("my-bucket")
-   
+   val bucket = aws.s3.Bucket("my-bucket")
+
    Stack.exports(
-      bucketUrl = bucket.websiteEndpoint
+      bucketName = bucket.bucket
    )
 }
 ```
