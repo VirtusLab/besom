@@ -70,6 +70,8 @@ case class SemanticVersion(
     else preCompared // pre-release version has lower precedence than a normal version
   end compare
 
+  def isSnapshot: Boolean = preRelease.contains("SNAPSHOT")
+
   lazy val preReleaseString: String    = preRelease.map("-" + _).getOrElse("")
   lazy val buildMetadataString: String = buildMetadata.map("+" + _).getOrElse("")
 
