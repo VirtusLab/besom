@@ -5,6 +5,5 @@
 //> using dep "org.virtuslab::besom-gcp:7.9.0-core.0.2"
 //> using dep "org.virtuslab::besom-docker:4.5.1-core.0.2"
 
-//> using repository sonatype:snapshots
 
 //> using exclude "app/*"

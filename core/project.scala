@@ -16,7 +16,6 @@
 //> using dep "com.lihaoyi::pprint:0.6.6"
 //> using test.dep "org.scalameta::munit:1.0.0-M10"
 
-//> using repository sonatype:snapshots
 
 //> using publish.name "besom-core"
 //> using publish.organization "org.virtuslab"
