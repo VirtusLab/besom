@@ -1,12 +1,16 @@
 // @ts-check
 // Note: type annotations allow type checking and IDEs autocompletion
 
+const fs = require('fs');
+
 const lightCodeTheme = require('prism-react-renderer/themes/github');
 const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 const codeblockVersion = require('./src/remark/codeblockVersion');
 
 const organizationName = 'virtuslab';
 const projectName = 'besom';
+
+const besomVersion = fs.readFileSync('../version.txt').toString().trim()
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -37,7 +41,7 @@ const config = {
   },
 
   customFields: {
-    besomVersion: '0.2.1' // TODO process.env.BESOM_VERSION
+    besomVersion: besomVersion
   },
 
   presets: [
@@ -47,7 +51,7 @@ const config = {
       ({
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
-          remarkPlugins: [codeblockVersion]
+          remarkPlugins: [codeblockVersion(besomVersion)]
         },
         blog: {
           showReadingTime: true,
