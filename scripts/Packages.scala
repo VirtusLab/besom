@@ -73,10 +73,12 @@ object Packages:
   val publishedMavenFile = publishMavenDir / "published.json"
 
   def compileOpts(heapMaxGb: Int = 32): Vector[os.Shellable] =
+    println(s"Compiling with max heap size: ${heapMaxGb}G")
     Vector(
       "--server=false",
       "--javac-opt=-verbose",
       s"--javac-opt=-J-XX:MaxHeapSize=${heapMaxGb}G",
+      "--javac-opt=-J-XX:NewRatio=1", // increase young vs old gen size, default is 2
       "--javac-opt=-J-XX:+UseParallelGC"
     )
 
@@ -128,8 +130,6 @@ object Packages:
   private val codegenProblemPackages = blockedPackages ++ Vector()
 
   private val compileProblemPackages = blockedPackages ++ Vector(
-    "azure-native", // does not compile in finite time
-    "azure-quickstart-acr-geo-replication", // depends on azure-native
     "aws-iam", // id parameter, schema error - components should make this viable
     "nuage" // id parameter, schema error - components should make this viable
   )
