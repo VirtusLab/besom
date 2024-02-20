@@ -11,7 +11,7 @@ Docker, and consists of three components:
 
 In this directory, you will find two variants of the Guestbook:
 
-1. [simple/](simple) is a straight port of the original YAML.
+1. [simple](simple) is a straight port of the original YAML.
 2. [components](components) demonstrates benefits of using a real language, namely eliminating boilerplate through
    the use of real component abstractions.
 

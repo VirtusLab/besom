@@ -12,10 +12,12 @@ import besom.api.kubernetes.core.v1.enums.ServiceSpecType
   val isMinikube = config
     .getBoolean("isMinikube")
     .getOrElse(false)
+  
   //
   // REDIS LEADER.
   //
   val redisLeaderLabels = Map("app" -> "redis-leader")
+  val redisLeaderPort = 6379
 
   val redisLeaderDeployment = Deployment(
     "redis-leader",
@@ -35,7 +37,7 @@ import besom.api.kubernetes.core.v1.enums.ServiceSpecType
                     "memory" -> "100Mi"
                   )
                 ),
-                ports = List(ContainerPortArgs(containerPort = 6379))
+                ports = List(ContainerPortArgs(containerPort = redisLeaderPort))
               )
             )
           )
@@ -49,7 +51,7 @@ import besom.api.kubernetes.core.v1.enums.ServiceSpecType
     ServiceArgs(
       metadata = ObjectMetaArgs(labels = redisLeaderLabels, name = "redis-leader"),
       spec = ServiceSpecArgs(
-        ports = List(ServicePortArgs(port = 6379, targetPort = 6379)),
+        ports = List(ServicePortArgs(port = redisLeaderPort, targetPort = redisLeaderPort)),
         selector = redisLeaderLabels
       )
     ),
@@ -60,6 +62,7 @@ import besom.api.kubernetes.core.v1.enums.ServiceSpecType
   // REDIS REPLICA.
   //
   val redisReplicaLabels = Map("app" -> "redis-replica")
+  val redisReplicaPort = 6379
 
   val redisReplicaDeployment = Deployment(
     "redis-replica",
@@ -82,7 +85,7 @@ import besom.api.kubernetes.core.v1.enums.ServiceSpecType
                 // If your cluster config does not include a dns service, then to instead access an environment
                 // variable to find the leader's host, change `value: "dns"` to read `value: "env"`.
                 env = List(EnvVarArgs("name", "GET_HOSTS_FROM"), EnvVarArgs("value", "dns")),
-                ports = List(ContainerPortArgs(containerPort = 6379))
+                ports = List(ContainerPortArgs(containerPort = redisReplicaPort))
               )
             )
           )
@@ -96,7 +99,7 @@ import besom.api.kubernetes.core.v1.enums.ServiceSpecType
     ServiceArgs(
       metadata = ObjectMetaArgs(labels = redisReplicaLabels, name = "redis-replica"),
       spec = ServiceSpecArgs(
-        ports = List(ServicePortArgs(port = 6379, targetPort = 6379)),
+        ports = List(ServicePortArgs(port = redisReplicaPort, targetPort = redisReplicaPort)),
         selector = redisReplicaLabels
       )
     ),
@@ -107,6 +110,7 @@ import besom.api.kubernetes.core.v1.enums.ServiceSpecType
   // FRONTEND
   //
   val frontendLabels = Map("app" -> "frontend")
+  val frontendPort = 80
 
   val frontendDeployment = Deployment(
     "frontend",
@@ -133,7 +137,7 @@ import besom.api.kubernetes.core.v1.enums.ServiceSpecType
                   EnvVarArgs("name", "GET_HOSTS_FROM"),
                   EnvVarArgs("value", "dns") /*, EnvVarArgs("value", "env")*/
                 ),
-                ports = List(ContainerPortArgs(containerPort = 80))
+                ports = List(ContainerPortArgs(containerPort = frontendPort))
               )
             )
           )
@@ -148,7 +152,7 @@ import besom.api.kubernetes.core.v1.enums.ServiceSpecType
       metadata = ObjectMetaArgs(labels = frontendLabels, name = "frontend"),
       spec = ServiceSpecArgs(
         `type` = isMinikube.map(if _ then ServiceSpecType.ClusterIP else ServiceSpecType.LoadBalancer),
-        ports = List(ServicePortArgs(port = 80, targetPort = 80)),
+        ports = List(ServicePortArgs(port = frontendPort, targetPort = frontendPort)),
         selector = frontendLabels
       )
     ),
