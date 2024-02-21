@@ -155,10 +155,10 @@ class ContextImpl(
     BesomMDC(Key.LabelKey, label) {
       Output.ofData {
         ResourceOps()
-          .readOrRegisterResourceInternal[R, EmptyArgs](
+          .readOrRegisterResourceInternal[R, A](
             typ,
             name,
-            EmptyArgs(),
+            args,
             options, // TODO pass initial ResourceTransformations here
             remote = true // all codegened components are remote components
           )
