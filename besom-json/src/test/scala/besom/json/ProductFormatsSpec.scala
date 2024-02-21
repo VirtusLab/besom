@@ -22,8 +22,9 @@ class ProductFormatsSpec extends Specification {
 
   case class Test0()
   case class Test2(a: Int, b: Option[Double])
-  case class Test3[A, B](as: List[A], bs: List[B])
+  case class Test3[A, B](as: List[A], bs: Option[List[B]] = Some(List.empty))
   case class Test4(t2: Test2)
+  case class Test5(optA: Option[String] = Some("default"))
   case class TestTransient(a: Int, b: Option[Double]) {
     @transient var c = false
   }
@@ -37,12 +38,34 @@ class ProductFormatsSpec extends Specification {
     implicit val test2Format: JsonFormat[Test2]                                         = jsonFormatN[Test2]
     implicit def test3Format[A: JsonFormat, B: JsonFormat]: RootJsonFormat[Test3[A, B]] = jsonFormatN[Test3[A, B]]
     implicit def test4Format: JsonFormat[Test4]                                         = jsonFormatN[Test4]
+    implicit def test5Format: JsonFormat[Test5]                                         = jsonFormatN[Test5]
     implicit def testTransientFormat: JsonFormat[TestTransient]                         = jsonFormatN[TestTransient]
     implicit def testStaticFormat: JsonFormat[TestStatic]                               = jsonFormatN[TestStatic]
     implicit def testMangledFormat: JsonFormat[TestMangled]                             = jsonFormatN[TestMangled]
   }
   object TestProtocol1 extends DefaultJsonProtocol with TestProtocol
   object TestProtocol2 extends DefaultJsonProtocol with TestProtocol with NullOptions
+
+  case class Foo(a: Int, b: Int)
+  object Foo:
+    import DefaultJsonProtocol.*
+    given JsonFormat[Foo] = jsonFormatN
+
+  "A JsonFormat derived for an inner class" should {
+    "compile" in {
+
+      val compileErrors = scala.compiletime.testing.typeCheckErrors(
+        """
+          class Test:
+            case class Foo(a: Int, b: Int)
+            object Foo:
+              import DefaultJsonProtocol.*
+              given JsonFormat[Foo] = jsonFormatN"""
+      )
+
+      compileErrors must beEmpty
+    }
+  }
 
   "A JsonFormat created with `jsonFormat`, for a case class with 2 elements," should {
     import TestProtocol1.*
@@ -96,7 +119,7 @@ class ProductFormatsSpec extends Specification {
 
   "A JsonFormat for a generic case class and created with `jsonFormat`" should {
     import TestProtocol1.*
-    val obj = Test3(42 :: 43 :: Nil, "x" :: "y" :: "z" :: Nil)
+    val obj = Test3(42 :: 43 :: Nil, Some("x" :: "y" :: "z" :: Nil))
     val json = JsObject(
       "as" -> JsArray(JsNumber(42), JsNumber(43)),
       "bs" -> JsArray(JsString("x"), JsString("y"), JsString("z"))
@@ -167,6 +190,20 @@ class ProductFormatsSpec extends Specification {
     }
     "convert a JsObject to the respective case class instance" in {
       json.convertTo[TestTransient] mustEqual obj
+    }
+  }
+
+  "A JsonFormat for a case class with default parameters and created with `jsonFormat`" should {
+    "read case classes with optional members from JSON with missing fields" in {
+      import TestProtocol1.*
+      JsObject().convertTo[Test5] mustEqual Test5(Some("default"))
+    }
+
+    "read a generic case class with optional members from JSON with missing fields" in {
+      import TestProtocol1.*
+      val json = JsObject("as" -> JsArray(JsNumber(23), JsNumber(5)))
+
+      json.convertTo[Test3[Int, String]] mustEqual Test3(List(23, 5), Some(List.empty))
     }
   }
 

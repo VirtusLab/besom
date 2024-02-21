@@ -6,8 +6,7 @@ class DerivedFormatsSpec extends Specification {
 
   "The derives keyword" should {
     "behave as expected" in {
-      import DefaultJsonProtocol.*
-      given JsonProtocol = DefaultJsonProtocol
+      import besom.json.default.*
 
       case class Color(name: String, red: Int, green: Int, blue: Int) derives JsonFormat
       val color = Color("CadetBlue", 95, 158, 160)
