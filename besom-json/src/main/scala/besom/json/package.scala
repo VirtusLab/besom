@@ -50,7 +50,7 @@ object DefaultJsonExports extends DefaultExports
 export DefaultJsonExports.*
 
 /** This allows to perform a single import: `import besom.json.default.*` to get basic JSON behaviour. If you need to extend JSON handling
-  * in any way, please perfom `import besom.json.*`, then extend `DefaultJsonProtocol`:
+  * in any way, please use `import besom.json.*`, then extend `DefaultJsonProtocol`:
   *
   * ```
   *   object MyCustomJsonProtocol extends DefaultJsonProtocol:

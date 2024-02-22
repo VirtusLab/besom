@@ -115,7 +115,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
     )
   }
 
-  test("json interpolator sanitizes strings when interpolating".ignore) {
+  test("json interpolator sanitizes strings when interpolating") {
     import besom.json.*
     import besom.util.JsonInterpolator.given
     import besom.internal.DummyContext

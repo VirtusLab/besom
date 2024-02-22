@@ -10,6 +10,8 @@ import java.util.Objects
 object JsonInterpolator:
   import scala.quoted.*
 
+  private val NL = System.lineSeparator()
+
   given {} with
     extension (sc: StringContext)
       inline def json(inline args: Any*)(using ctx: besom.internal.Context): Output[JsValue] = ${ jsonImpl('sc, 'args, 'ctx) }
@@ -67,7 +69,13 @@ object JsonInterpolator:
                 case '{ $part: Output[Double] }  => 0d
                 case '{ $part: Output[Boolean] } => true
                 case '{ $part: Output[JsValue] } => JsNull
-                case other => report.errorAndAbort(s"`${other.show}` / ${other} is not a valid interpolation type.") // TODO better error
+                case '{ $other: t } =>
+                  report.errorAndAbort(
+                    s"`Value ${other.show}: ${Type.show[t]}` is not a valid JSON interpolation type.$NL$NL" +
+                      s"Types Available for interpolation are: " +
+                      s"String, Int, Long, Float, Double, Boolean, JsValue and Outputs of those types.$NL" +
+                      s"If you want to interpolate a custom data type - derive or implement a JsonFormat for it and convert it to JsValue.$NL$NL"
+                  )
               }
 
               val str = interleave(parts.map(_.valueOrAbort).toList, defaults.map(_.toString()).toList).reduce(_ + _)
@@ -77,21 +85,41 @@ object JsonInterpolator:
                   report.errorAndAbort(s"Failed to parse JSON (default values inserted at compile time): ${exception.getMessage}")
                 case Success(value) =>
                   val liftedSeqOfExpr: Seq[Expr[Output[?]]] = argExprs.map {
-                    case '{ $part: String }          => '{ Output($part)(using $ctx) } // TODO sanitize strings
-                    case '{ $part: Int }             => '{ Output($part)(using $ctx) }
-                    case '{ $part: Long }            => '{ Output($part)(using $ctx) }
-                    case '{ $part: Float }           => '{ Output($part)(using $ctx) }
-                    case '{ $part: Double }          => '{ Output($part)(using $ctx) }
-                    case '{ $part: Boolean }         => '{ Output($part)(using $ctx) }
-                    case '{ $part: JsValue }         => '{ Output($part)(using $ctx) }
-                    case '{ $part: Output[String] }  => part // TODO sanitize strings
+                    case '{ $part: String } =>
+                      '{
+                        Output($part)(using $ctx).map { str =>
+                          val sb = java.lang.StringBuilder()
+                          besom.json.CompactPrinter.print(JsString(str), sb) // escape strings
+                          sb.toString().drop(1).dropRight(1) // json strings start and end with "
+                        }
+                      } // TODO sanitize strings
+                    case '{ $part: Int }     => '{ Output($part)(using $ctx) }
+                    case '{ $part: Long }    => '{ Output($part)(using $ctx) }
+                    case '{ $part: Float }   => '{ Output($part)(using $ctx) }
+                    case '{ $part: Double }  => '{ Output($part)(using $ctx) }
+                    case '{ $part: Boolean } => '{ Output($part)(using $ctx) }
+                    case '{ $part: JsValue } => '{ Output($part)(using $ctx) }
+                    case '{ $part: Output[String] } =>
+                      '{
+                        $part.map { str =>
+                          val sb = java.lang.StringBuilder()
+                          besom.json.CompactPrinter.print(JsString(str), sb) // escape strings
+                          sb.toString().drop(1).dropRight(1) // json strings start and end with "
+                        }
+                      } // TODO sanitize strings
                     case '{ $part: Output[Int] }     => part
                     case '{ $part: Output[Long] }    => part
                     case '{ $part: Output[Float] }   => part
                     case '{ $part: Output[Double] }  => part
                     case '{ $part: Output[Boolean] } => part
                     case '{ $part: Output[JsValue] } => part
-                    case other => report.errorAndAbort(s"`${other.show}` is not a valid interpolation type.") // TODO better error
+                    case '{ $other: t } =>
+                      report.errorAndAbort(
+                        s"`Value ${other.show}: ${Type.show[t]}` is not a valid JSON interpolation type.$NL$NL" +
+                          s"Types Available for interpolation are: " +
+                          s"String, Int, Long, Float, Double, Boolean, JsValue and Outputs of those types.$NL" +
+                          s"If you want to interpolate a custom data type - derive or implement a JsonFormat for it and convert it to JsValue.$NL$NL"
+                      )
                   }
 
                   val liftedExprOfSeq = Expr.ofSeq(liftedSeqOfExpr)
