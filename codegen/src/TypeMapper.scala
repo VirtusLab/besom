@@ -7,9 +7,8 @@ import scala.meta.*
 import scala.meta.dialects.Scala33
 
 class TypeMapper(
-  val defaultPackageInfo: PulumiPackageInfo,
-  schemaProvider: SchemaProvider
-)(implicit logger: Logger) {
+  val defaultPackageInfo: PulumiPackageInfo
+)(using logger: Logger, schemaProvider: SchemaProvider) {
   import TypeMapper.*
 
   private def scalaTypeFromTypeUri(
@@ -34,14 +33,13 @@ class TypeMapper(
       case "" =>
         defaultPackageInfo
       case s"/${providerName}/v${schemaVersion}/schema.json" =>
-        schemaProvider.packageInfo(PackageMetadata(providerName, schemaVersion))._2
+        schemaProvider.packageInfo(PackageMetadata(providerName, schemaVersion))
       case s"${protocol}://${host}/${providerName}/v${schemaVersion}/schema.json" =>
         schemaProvider
           .packageInfo(
             PackageMetadata(providerName, schemaVersion)
               .withUrl(s"${protocol}://${host}/${providerName}")
           )
-          ._2
       case _ =>
         throw TypeMapperError(s"Unexpected file URI format: ${fileUri}")
     }

@@ -58,7 +58,7 @@ trait Context extends TaskTracker:
   /** This is called by codegened custom resource & stack reference constructor functions, get functions and rehydrated resources decoders.
     */
   private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
-    typ: ResourceType,
+    typ: Input[ResourceType],
     name: NonEmptyString,
     args: A,
     options: ResourceOptions
@@ -177,14 +177,20 @@ class ContextImpl(
     }
 
   override private[besom] def readOrRegisterResource[R <: Resource: ResourceDecoder, A: ArgsEncoder](
-    typ: ResourceType,
+    typ: Input[ResourceType],
     name: NonEmptyString,
     args: A,
     options: ResourceOptions
   )(using Context): Output[R] =
-    BesomMDC(Key.LabelKey, Label.fromNameAndType(name, typ)) {
-      Output.ofData(ResourceOps().readOrRegisterResourceInternal[R, A](typ, name, args, options, remote = false).map(OutputData(_)))
-    }
+    typ
+      .asOutput()
+      .flatMap(t =>
+        BesomMDC(Key.LabelKey, Label.fromNameAndType(name, t)) {
+          Output.ofData(
+            ResourceOps().readOrRegisterResourceInternal[R, A](t, name, args, options, remote = false).map(OutputData(_))
+          )
+        }
+      )
 
   override private[besom] def registerResourceOutputs(
     name: NonEmptyString,
