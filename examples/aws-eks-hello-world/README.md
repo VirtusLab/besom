@@ -21,8 +21,8 @@ to get started with Pulumi & AWS.
    pulumi config set aws:region us-west-2
    ```
 
-   We recommend using `us-west-2` to host your EKS cluster as other regions (notably `us-east-1`) may have capacity issues that prevent EKS
-   clusters from creating.
+   We recommend using `us-west-2` to host your EKS cluster as other regions (notably `us-east-1`) may have capacity
+   issues that prevent EKS clusters from creating.
 
 3. Stand up the EKS cluster:
 
