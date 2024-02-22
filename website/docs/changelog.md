@@ -2,6 +2,19 @@
 title: Changelog
 ---
 
+0.2.2 (22-02-2024)
+---
+
+## Bug Fixes
+
+* fixed component argument serialization issue [398](https://github.com/VirtusLab/besom/pull/398)
+
+## Other Changes
+
+* added Kubernetes guestbook example [395](https://github.com/VirtusLab/besom/pull/395)
+
+**Full Changelog**: https://github.com/VirtusLab/besom/compare/v0.2.1...v0.2.2
+
 0.2.1 (15-02-2024)
 ---
 
