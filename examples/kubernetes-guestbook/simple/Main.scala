@@ -12,12 +12,12 @@ import besom.api.kubernetes.core.v1.enums.ServiceSpecType
   val isMinikube = config
     .getBoolean("isMinikube")
     .getOrElse(false)
-  
+
   //
   // REDIS LEADER.
   //
   val redisLeaderLabels = Map("app" -> "redis-leader")
-  val redisLeaderPort = 6379
+  val redisLeaderPort   = 6379
 
   val redisLeaderDeployment = Deployment(
     "redis-leader",
@@ -62,7 +62,7 @@ import besom.api.kubernetes.core.v1.enums.ServiceSpecType
   // REDIS REPLICA.
   //
   val redisReplicaLabels = Map("app" -> "redis-replica")
-  val redisReplicaPort = 6379
+  val redisReplicaPort   = 6379
 
   val redisReplicaDeployment = Deployment(
     "redis-replica",
@@ -110,7 +110,7 @@ import besom.api.kubernetes.core.v1.enums.ServiceSpecType
   // FRONTEND
   //
   val frontendLabels = Map("app" -> "frontend")
-  val frontendPort = 80
+  val frontendPort   = 80
 
   val frontendDeployment = Deployment(
     "frontend",
