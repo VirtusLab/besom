@@ -215,7 +215,7 @@ git checkout -b release/v$(cat version.txt)
 git push --set-upstream origin release/v$(cat version.txt)
 ```
 
-#### Update dependencies versions in all `project.scala` files
+#### Update dependencies versions in all `project.scala` files (optional for patch versions)
 
 This is most useful for `examples` and `templates`, and integration tests:
 
@@ -227,7 +227,6 @@ just cli version update
 #### Update versions in all other places  (skip for `SNAPSHOT`)
 
 Manually update versions in all other places, specifically documentation and website, using find&replace.
-Remember about `website/docusaurus.config.js:40` and `website/src/remark/codeblockVersion.js:5`
 
 #### Create a release draft on GitHub
 
@@ -237,11 +236,11 @@ just upsert-gh-release
 
 #### Publish core and language host
 ```bash
-just publish-maven-all
 just publish-language-plugins-all
+just publish-maven-all
 ```
 
-#### Publish packages
+#### Publish packages (optional for patch versions)
 
 To publish critical package(s):
 ```bash
@@ -271,14 +270,15 @@ In case of any issues, you can try to resolve the issues manually at https://oss
 
 Finish the release on GitHub manually, make sure the changelog is correct and correct git tag was created.
 
-According to our Git branching and versioning strategy, the release branch should be created after the tag is created.
-
-If releasing a `SNAPSHOT` make sure to bump the git tag.
+According to our Git branching and versioning strategy, the release branch should be merged after the tag is created.
+Make sure to bump the git tag because GitHub Release probably already created the tag.
 
 ```bash
 git tag -f v$(cat version.txt)
 git push -f origin v$(cat version.txt)
 ```
+
+Make sure to merge (DO NOT squash) the release branch to `main` and delete it.
 
 #### After the release
 
