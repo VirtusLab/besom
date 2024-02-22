@@ -261,7 +261,9 @@ export GITHUB_TOKEN=$(gh auth token)
 just clean-out cli packages maven-all
 ```
 
+Cation: publishing to Maven Central is irreversible.
 Tip: it's safer to publish the packages on-by-one or in batches due to how Maven Central behaves.
+Note: `azure-native` publishing takes a long time (1-2 hours) it is recommended to handle it separately. 
 
 In case of any issues, you can try to resolve the issues manually at https://oss.sonatype.org/index.html#stagingRepositories.
 
