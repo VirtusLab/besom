@@ -18,8 +18,7 @@ case class ServiceDeploymentArgs(
   env: List[EnvVarArgs] = List.empty
 )
 
-case class ServiceDeployment(ipAddress: Output[Option[String]])(using ComponentBase) extends ComponentResource
-    derives RegistersOutputs
+case class ServiceDeployment(ipAddress: Output[Option[String]])(using ComponentBase) extends ComponentResource derives RegistersOutputs
 
 def serviceDeployment(using Context)(
   name: NonEmptyString,
