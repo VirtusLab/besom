@@ -39,7 +39,7 @@ object JsonInterpolator:
 
     resolveStringContext(sc.asTerm) match
       case Left(badTerm) =>
-        report.errorAndAbort(s"$sc -> $badTerm is not a string context :O") // TODO what should we do here?
+        report.errorAndAbort(s"$sc -> $badTerm is not a string context :O") // this should never happen
 
       case Right(parts) =>
         args match
@@ -50,7 +50,7 @@ object JsonInterpolator:
                 case str =>
                   scala.util.Try(JsonParser(str)) match
                     case Failure(exception) =>
-                      report.errorAndAbort(s"Failed to parse JSON: ${exception.getMessage}")
+                      report.errorAndAbort(s"Failed to parse JSON:$NL  ${exception.getMessage}")
                     case Success(value) =>
                       '{ Output(JsonParser(ParserInput.apply(${ Expr(str) })))(using $ctx) }
             else
@@ -82,7 +82,7 @@ object JsonInterpolator:
 
               scala.util.Try(JsonParser(str)) match
                 case Failure(exception) =>
-                  report.errorAndAbort(s"Failed to parse JSON (default values inserted at compile time): ${exception.getMessage}")
+                  report.errorAndAbort(s"Failed to parse JSON (default values inserted at compile time):$NL  ${exception.getMessage}")
                 case Success(value) =>
                   val liftedSeqOfExpr: Seq[Expr[Output[?]]] = argExprs.map {
                     case '{ $part: String } =>
@@ -92,7 +92,7 @@ object JsonInterpolator:
                           besom.json.CompactPrinter.print(JsString(str), sb) // escape strings
                           sb.toString().drop(1).dropRight(1) // json strings start and end with "
                         }
-                      } // TODO sanitize strings
+                      }
                     case '{ $part: Int }     => '{ Output($part)(using $ctx) }
                     case '{ $part: Long }    => '{ Output($part)(using $ctx) }
                     case '{ $part: Float }   => '{ Output($part)(using $ctx) }
@@ -106,7 +106,7 @@ object JsonInterpolator:
                           besom.json.CompactPrinter.print(JsString(str), sb) // escape strings
                           sb.toString().drop(1).dropRight(1) // json strings start and end with "
                         }
-                      } // TODO sanitize strings
+                      }
                     case '{ $part: Output[Int] }     => part
                     case '{ $part: Output[Long] }    => part
                     case '{ $part: Output[Float] }   => part
