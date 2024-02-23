@@ -111,7 +111,7 @@ A simple example using Scala CLI:
 //> using scala "3.3.1"
 //> using plugin "org.virtuslab::besom-compiler-plugin:0.2.2"
 //> using dep "org.virtuslab::besom-core:0.2.2"
-//> using dep "org.virtuslab::besom-aws:6.22.1-core.0.2"
+//> using dep "org.virtuslab::besom-aws:6.23.0-core.0.2"
 
 import besom.*
 import besom.api.aws
