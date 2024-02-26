@@ -24,16 +24,17 @@ WORKDIR /src
 # Copy local code to the container image
 COPY . .
 # Build a native binary with Scala CLI
-ARG GRAALVM_VERSION=22
+ARG GRAALVM_VERSION=21.0.2
 RUN \
     --mount=type=cache,target=/root/.cache/coursier \
     /usr/local/bin/scala-cli --power package . \
       --suppress-experimental-feature-warning \
       --server=false \
-      --jvm=graalvm-java17 \
+      --jvm=graalvm-java21:21.0.2 \
       --native-image \
-      --graalvm-jvm-id=graalvm-java17:${GRAALVM_VERSION} \
+      --graalvm-jvm-id=graalvm-java21:${GRAALVM_VERSION} \
       --graalvm-args="--static" \
+      --graalvm-args="--install-exit-handlers" \
       --main-class org.virtuslab.besom.example.main -o app -f
 
 FROM --platform=linux/amd64 gcr.io/distroless/static
