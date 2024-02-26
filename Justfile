@@ -444,6 +444,7 @@ clean-test-templates:
 test-example example-name:
 	@echo "----------------------------------------"
 	@echo "Testing example {{example-name}}"
+	scala-cli bloop exit # allow different examples use different jvms
 	scala-cli compile -v -v -v {{no-bloop-ci}} examples/{{example-name}} {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 
 # Cleans after an example test
