@@ -25,9 +25,10 @@ These values are indicated with `***`.
    pulumi -C infra config set gcp:region us-west1 # any valid GCP region here
    ```
 
-3. Authenticate to GCR with Docker:
+3. Authenticate to GCR with application-default credentials and Docker:
 
    ```bash
+   gcloud auth application-default login # this is required for pulumi to reach GCP
    gcloud auth configure-docker # this is required to push the container
    ```
 
