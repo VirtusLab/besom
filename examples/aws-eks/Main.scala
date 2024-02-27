@@ -2,9 +2,9 @@ import besom.*
 import besom.api.{awsx, eks, kubernetes as k8s}
 
 @main def main = Pulumi.run {
-  val appName = "hello-world"
+  val appName   = "hello-world"
   val appLabels = Map("appClass" -> appName)
-  val appPort = 80
+  val appPort   = 80
 
   // Get the default VPC
   val vpc = awsx.ec2.Vpc("my-vpc", awsx.ec2.VpcArgs(cidrBlock = "10.0.0.0/16"))
