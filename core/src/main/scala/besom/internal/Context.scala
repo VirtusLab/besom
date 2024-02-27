@@ -155,10 +155,10 @@ class ContextImpl(
     BesomMDC(Key.LabelKey, label) {
       Output.ofData {
         ResourceOps()
-          .readOrRegisterResourceInternal[R, EmptyArgs](
+          .readOrRegisterResourceInternal[R, A](
             typ,
             name,
-            EmptyArgs(),
+            args,
             options, // TODO pass initial ResourceTransformations here
             remote = true // all codegened components are remote components
           )
@@ -220,7 +220,7 @@ end ContextImpl
 object Context:
   def apply()(using Context): Context = summon[Context]
 
-  def apply(
+  def create(
     runInfo: RunInfo,
     featureSupport: FeatureSupport,
     config: Config,
@@ -245,7 +245,7 @@ object Context:
     for
       resources    <- Resources()
       stackPromise <- Promise[StackResource]()
-    yield apply(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, stackPromise)
+    yield Context.create(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, stackPromise)
 
   def apply(
     runInfo: RunInfo,

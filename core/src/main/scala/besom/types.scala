@@ -171,10 +171,11 @@ object types:
       * ```
       * urn = "urn:pulumi:" stack "::" project "::" qualified type name "::" name ;
       *
-      * stack   = string ;
-      * project = string ;
-      * name    = string ;
-      * string  = (* any sequence of unicode code points that does not contain "::" *) ;
+      * stack     = string ;
+      * project   = string ;
+      * name      = anystring ; // lol: https://github.com/pulumi/pulumi/commit/516979770f11d3a426239429731cf9f327c38836
+      * string    = (* any sequence of unicode code points that does not contain "::" *) ;
+      * anystring = (* any sequence of unicode code points *) ;
       *
       * qualified type name = [ parent type "$" ] type ;
       * parent type         = type ;
@@ -183,34 +184,36 @@ object types:
       * package    = identifier ;
       * module     = identifier ;
       * type name  = identifier ;
-      * identifier = unicode letter { unicode letter | unicode digit | "_" } ; // this actually lies a bit because it has to allow "/"
+      * identifier = unicode letter { unicode letter | unicode digit | "_" } ; // this actually lies a bit because it has to allow "/", "." and "-"
       * ```
       *
       * So let's start with the easy part, the first part of the regex is just a constant string: `urn:pulumi:`. Then we have these
       * segments:
       * ```
-      * 1. Identifier Regex: \p{L}[\p{L}\p{N}_/]*
+      * 1. Identifier Regex: \p{L}[-\p{L}\p{N}_/]*
       * 2. Type Components Regex: The package, module, and type name follow the identifier pattern, separated by :.
-      *    This can be represented as (\p{L}[\p{L}\p{N}_/]*) for each component, with optional components for module.
+      *    This can be represented as (\p{L}[-\p{L}\p{N}_/]*) for each component, with optional components for module.
       * 3. Qualified Type Name Regex: This includes any number of parent types (each following the type pattern) separated by $,
       *    and then the final resource type. The parent types are optional and non-greedy to ensure they don't consume the final
       *    resource type.
-      * 4. Stack, Project, and Name Regex: These are strings that do not contain ::. This can be represented as ([^:]+|[^:]*::[^:]*).
+      * 4. Stack, Project: These are strings that do not contain :: and are not empty. This can be represented as ((?:(?!::).)+).
+      * 5. Name: This is any string, including empty strings in permissive validation. This can be represented as ((?:(?!::).)*)?.
       * ```
       * The final regex is then an amalgamation of these components, with the parent type and resource type separated by :: and named
       * capture groups for each component.
       */
 
-    private inline val urnRegex =
-      """urn:pulumi:(?<stack>[^:]+|[^:]*::[^:]*)::(?<project>[^:]+|[^:]*::[^:]*)::(?<parentType>(?:(\p{L}[\p{L}\p{N}_/]*)(?::(\p{L}[\p{L}\p{N}_/]*))?:(\p{L}[\p{L}\p{N}_/]*)(?:\$))*)(?<resourceType>(\p{L}[\p{L}\p{N}_/]*)(?::(\p{L}[\p{L}\p{N}_/]*))?:(\p{L}[\p{L}\p{N}_/]*))::(?<resourceName>[^:]+|[^:]*::[^:]*)"""
+    private inline val urnRegexStrict =
+      """urn:pulumi:(?<stack>(?:(?!::).)+)::(?<project>(?:(?!::).)+)::(?<parentType>(?:(\p{L}[-\p{L}\p{N}_/]*)(?::(\p{L}[-\p{L}\p{N}_/\\.]*))?:(\p{L}[-\p{L}\p{N}_/]*)(?:\$))*)(?<resourceType>(\p{L}[-\p{L}\p{N}_/]*)(?::(\p{L}[-\p{L}\p{N}_/\\.]*))?:(\p{L}[-\p{L}\p{N}_/]*))::(?<resourceName>(?:(?!::).)+)"""
 
-    private[types] val UrnRegex = urnRegex.r
+    private val UrnRegexPermissive =
+      """urn:pulumi:(?<stack>(?:(?!::).)+)::(?<project>(?:(?!::).)+)::(?<parentType>(?:(\p{L}[-\p{L}\p{N}_/]*)(?::(\p{L}[-\p{L}\p{N}_/\\.]*))?:(\p{L}[-\p{L}\p{N}_/]*)(?:\$))*)(?<resourceType>(\p{L}[-\p{L}\p{N}_/]*)(?::(\p{L}[-\p{L}\p{N}_/\\.]*))?:(\p{L}[-\p{L}\p{N}_/]*))::(?<resourceName>(?s:.*))""".r
 
     inline def apply(s: String): URN =
       requireConst(s)
       inline if !constValue[Matches[
           s.type,
-          urnRegex.type
+          urnRegexStrict.type
         ]]
       then
         error(
@@ -220,7 +223,7 @@ object types:
 
     // TODO this should be only usable in Decoder and RawResourceResult.fromResponse
     private[besom] def from(s: String): Try[URN] = Try {
-      if UrnRegex.matches(s) then s
+      if UrnRegexPermissive.matches(s) then s
       else throw IllegalArgumentException(s"URN $s is not valid")
     }
 
@@ -236,17 +239,17 @@ object types:
       /** @return
         *   the Pulumi stack name
         */
-      def stack: String = URN.UrnRegex.findFirstMatchIn(urn).get.group("stack")
+      def stack: String = URN.UrnRegexPermissive.findFirstMatchIn(urn).get.group("stack")
 
       /** @return
         *   the Pulumi project name
         */
-      def project: String = URN.UrnRegex.findFirstMatchIn(urn).get.group("project")
+      def project: String = URN.UrnRegexPermissive.findFirstMatchIn(urn).get.group("project")
 
       /** @return
         *   the type of the parent [[besom.internal.Resource]]
         */
-      def parentType: Vector[ResourceType] = URN.UrnRegex
+      def parentType: Vector[ResourceType] = URN.UrnRegexPermissive
         .findFirstMatchIn(urn)
         .fold(Vector.empty) { m =>
           m.group("parentType") match
@@ -258,12 +261,12 @@ object types:
         *   the type of this [[besom.internal.Resource]]
         */
       def resourceType: ResourceType =
-        ResourceType.unsafeOf(URN.UrnRegex.findFirstMatchIn(urn).get.group("resourceType"))
+        ResourceType.unsafeOf(URN.UrnRegexPermissive.findFirstMatchIn(urn).get.group("resourceType"))
 
       /** @return
         *   the logical name of this [[besom.internal.Resource]]
         */
-      def resourceName: String = URN.UrnRegex.findFirstMatchIn(urn).get.group("resourceName")
+      def resourceName: String = URN.UrnRegexPermissive.findFirstMatchIn(urn).get.group("resourceName")
   end URN
 
   // TODO This should not be a subtype of string, user's access to underlying string has no meaning

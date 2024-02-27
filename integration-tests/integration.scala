@@ -10,13 +10,14 @@ import scala.util.{Failure, Success, Try}
 
 case object LocalOnly extends munit.Tag("LocalOnly")
 
-val javaVersion                 = Config.DefaultJavaVersion
-val scalaVersion                = Config.DefaultScalaVersion
-val coreVersion                 = os.read(os.pwd / "version.txt").trim
-val scalaPluginVersion          = coreVersion
-val providerRandomSchemaVersion = "4.15.1"
-val providerTlsSchemaVersion    = "5.0.0"
-val providerPurrlSchemaVersion  = "0.5.0"
+val javaVersion                     = Config.DefaultJavaVersion
+val scalaVersion                    = Config.DefaultScalaVersion
+val coreVersion                     = os.read(os.pwd / "version.txt").trim
+val scalaPluginVersion              = coreVersion
+val providerRandomSchemaVersion     = "4.15.1"
+val providerTlsSchemaVersion        = "5.0.0"
+val providerPurrlSchemaVersion      = "0.5.0"
+val providerKubernetesSchemaVersion = "4.7.1"
 
 val languagePluginDir = os.pwd / ".out" / "language-plugin"
 
@@ -25,6 +26,8 @@ val defaultProjectFile =
       |//> using options -java-output-version:$javaVersion -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
       |//> using plugin org.virtuslab::besom-compiler-plugin:$coreVersion
       |//> using dep org.virtuslab::besom-core:$coreVersion
+      |
+      |//> using repository sonatype:snapshots
       |""".stripMargin
 
 def sanitizeName(name: String): String = name.replaceAll("[^a-zA-Z0-9]", "-").toLowerCase().take(40).stripSuffix("-")

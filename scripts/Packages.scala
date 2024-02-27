@@ -1,13 +1,16 @@
 package besom.scripts
 
+import besom.codegen.*
 import besom.codegen.Config.CodegenConfig
-import besom.codegen.{PackageMetadata, PackageVersion, UpickleApi, generator}
+import besom.model.SemanticVersion
+import coursier.error.ResolutionError.CantDownloadModule
 import org.virtuslab.yaml.*
-import os.Path
+import os.{Path, Shellable}
 
 import java.util.Date
 import scala.collection.immutable.ListMap
 import scala.collection.mutable
+import scala.concurrent.duration.*
 import scala.sys.exit
 import scala.util.*
 import scala.util.control.NonFatal
@@ -16,21 +19,22 @@ import scala.util.control.NonFatal
 object Packages:
   def main(args: String*): Unit =
     args match
-      case "list" :: Nil                   => listLatestPackages(packagesDir)
-      case "local-all" :: Nil              => publishLocalAll(generateAll(packagesDir))
-      case "local" :: tail                 => publishLocalSelected(generateSelected(packagesDir, tail), tail)
-      case "maven-all" :: Nil              => publishMavenAll(generateAll(packagesDir))
-      case "maven" :: tail                 => publishMavenSelected(generateSelected(packagesDir, tail), tail)
-      case "metadata-all" :: Nil           => downloadPackagesMetadata(packagesDir)
-      case "metadata" :: tail              => downloadPackagesMetadata(packagesDir, selected = tail)
-      case "generate-all" :: Nil           => generateAll(packagesDir)
-      case "generate" :: tail              => generateSelected(packagesDir, tail)
-      case "publish-local-all" :: Nil      => publishLocalAll(generatedFile)
-      case "publish-local" :: tail         => publishLocalSelected(generatedFile, tail)
-      case "publish-maven-all" :: Nil      => publishMavenAll(generatedFile)
-      case "publish-maven" :: tail         => publishMavenSelected(generatedFile, tail)
-      case "compile" :: tail               => compileSelected(generatedFile, tail)
-      case "publish-maven-no-deps" :: tail => publishMavenSelectedNoDeps(generatedFile, tail)
+      case "list" :: Nil                    => listLatestPackages(packagesDir)
+      case "list-published-to-maven" :: Nil => listPublishedPackages(publishedMavenFile)
+      case "local-all" :: Nil               => publishLocalAll(generateAll(packagesDir))
+      case "local" :: tail                  => publishLocalSelected(generateSelected(packagesDir, tail), tail)
+      case "maven-all" :: Nil               => publishMavenAll(generateAll(packagesDir))
+      case "maven" :: tail                  => publishMavenSelected(generateSelected(packagesDir, tail), tail)
+      case "metadata-all" :: Nil            => downloadPackagesMetadata(packagesDir)
+      case "metadata" :: tail               => downloadPackagesMetadata(packagesDir, selected = tail)
+      case "generate-all" :: Nil            => generateAll(packagesDir)
+      case "generate" :: tail               => generateSelected(packagesDir, tail)
+      case "publish-local-all" :: Nil       => publishLocalAll(generatedFile)
+      case "publish-local" :: tail          => publishLocalSelected(generatedFile, tail)
+      case "publish-maven-all" :: Nil       => publishMavenAll(generatedFile)
+      case "publish-maven" :: tail          => publishMavenSelected(generatedFile, tail)
+      case "compile" :: tail                => compileSelected(generatedFile, tail)
+      case "publish-maven-no-deps" :: tail  => publishMavenSelectedNoDeps(generatedFile, tail)
       case cmd =>
         println(s"Unknown command: $cmd\n")
         println(
@@ -69,10 +73,12 @@ object Packages:
   val publishedMavenFile = publishMavenDir / "published.json"
 
   def compileOpts(heapMaxGb: Int = 32): Vector[os.Shellable] =
+    println(s"Compiling with max heap size: ${heapMaxGb}G")
     Vector(
       "--server=false",
       "--javac-opt=-verbose",
       s"--javac-opt=-J-XX:MaxHeapSize=${heapMaxGb}G",
+      "--javac-opt=-J-XX:NewRatio=1", // increase young vs old gen size, default is 2
       "--javac-opt=-J-XX:+UseParallelGC"
     )
 
@@ -105,7 +111,12 @@ object Packages:
     then publishOpts(heapMaxGb = 16, jarCompression = 9, sources = true, docs = true)
     else publishOpts(heapMaxGb = 32, jarCompression = 9, sources = true, docs = true)
   } ++ mavenAuthOpts(pgpKey = envOrExit("PGP_KEY_ID"))
-    ++ Vector("--repository=sonatype:snapshots")
+    ++ Vector(
+      "--repository=sonatype:snapshots",
+      "--connection-timeout-retries=10", // up from default 3
+      "--staging-repo-retries=10", // up from default 3
+      s"--staging-repo-wait-time-milis=${15.seconds.toMillis}" // up from default 10s
+    )
 
   private val blockedPackages = Vector(
     "azure-native-v1", // deprecated
@@ -119,7 +130,6 @@ object Packages:
   private val codegenProblemPackages = blockedPackages ++ Vector()
 
   private val compileProblemPackages = blockedPackages ++ Vector(
-    "azure-native", // does not compile in finite time
     "aws-iam", // id parameter, schema error - components should make this viable
     "nuage" // id parameter, schema error - components should make this viable
   )
@@ -240,6 +250,7 @@ object Packages:
         Progress.report(label = s"${m.name}:${m.version.getOrElse("latest")}")
         val version = m.version.getOrElse(throw Exception("Package version must be provided for publishing")).asString
         try
+          awaitPublishedToMaven(m)
           val args: Seq[os.Shellable] = Seq(
             "scala-cli",
             "--power",
@@ -385,10 +396,9 @@ object Packages:
           val version = m.version.getOrElse(throw Exception("Package version must be provided for publishing")).asString
           Progress.report(label = s"${m.name}:${version}")
           val logFile = publishMavenDir / s"${m.name}-${version}.log"
-          println("Waiting for 5 seconds to allow the previous publish to propagate")
-          Thread.sleep(5000)
           try
-            val args: Seq[os.Shellable] = Seq(
+            awaitPublishedToMaven(m)
+            val args: Seq[Shellable] = Seq(
               "scala-cli",
               "--power",
               "publish",
@@ -402,6 +412,12 @@ object Packages:
             done += m
             Progress.total(todo.size)
           catch
+            case e: CantDownloadModule =>
+              e.printStackTrace()
+              Progress.fail(
+                s"[${new Date}] Publish failed for provider '${m.name}' version '${version}' " +
+                  s"error: failed to download dependency, message: ${e.getMessage}"
+              )
             case _: os.SubprocessException =>
               Progress.fail(
                 s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}, " +
@@ -413,8 +429,52 @@ object Packages:
                   s"error [${e.getClass.getSimpleName}]: ${e.getMessage}"
               )
           finally Progress.end
+          end try
+        end if
     }
     done.toVector
+  }
+
+  private def awaitPublishedToMaven(m: PackageMetadata): Unit = {
+    // Check if dependencies are available in Maven Central before publishing
+    if m.dependencies.nonEmpty then
+      val timeout  = 15.minutes
+      val interval = 15.second
+      val deadline = timeout.fromNow
+      println(s"Checking for dependencies with timeout of ${timeout}")
+
+      // TODO: clean this up, it's a bit of a mess
+      val defaultScalaVersion = Config.DefaultBesomVersion
+      val shortCoreVersion = SemanticVersion
+        .parseTolerant(defaultScalaVersion)
+        .fold(
+          e => Left(Exception(s"Invalid besom version: ${defaultScalaVersion}", e)),
+          v => Right(v.copy(patch = 0).toShortString /* drop patch version */ )
+        )
+
+      def dependency(m: PackageMetadata): String =
+        s"org.virtuslab::besom-${m.name}:${m.version.get}-core.${shortCoreVersion.toTry.get}"
+
+      val allDependencies = m.dependencies.map(dependency)
+      val found           = mutable.Map.empty[String, Boolean]
+
+      def foundAll = found.values.forall(identity)
+
+      allDependencies.foreach { d =>
+        found(d) = false
+      }
+      while (deadline.hasTimeLeft && !foundAll) {
+        allDependencies.foreach { d =>
+          resolveMavenPackage(d, defaultScalaVersion).fold(
+            _ => println(s"Dependency '${d}' not found"),
+            _ => found(d) = true
+          )
+        }
+        if !foundAll then
+          println(s"Waiting for ${interval} to allow the publish to propagate")
+          Thread.sleep(interval.toMillis)
+      }
+    end if
   }
 
   def readPackagesMetadata(targetPath: os.Path, selected: List[String] = Nil): Vector[PackageMetadata] = {
@@ -601,9 +661,30 @@ object Packages:
 
   def listLatestPackages(targetPath: os.Path): Unit = {
     val metadata = readPackagesMetadata(targetPath)
-    println(s"Found ${metadata.size} packages in Pulumi repository")
-    metadata.foreach(m => println(s"${m.name}:${m.version.getOrElse("latest")}"))
+    val active = metadata
+      .filterNot(m => blockedPackages.contains(m.name))
+      .filterNot(m => codegenProblemPackages.contains(m.name))
+      .filterNot(m => compileProblemPackages.contains(m.name))
+      .size
+    println(s"Found ${metadata.size} (${active} active) packages in Pulumi repository")
+    metadata.foreach(m =>
+      println {
+        s"${m.name}:${m.version.getOrElse("latest")}" + {
+          if blockedPackages.contains(m.name) then " (blocked)" else ""
+        } + {
+          if codegenProblemPackages.contains(m.name) then " (codegen problem)" else ""
+        } + {
+          if compileProblemPackages.contains(m.name) then " (compile problem)" else ""
+        }
+      }
+    )
   }
+
+  def listPublishedPackages(file: os.Path): Unit =
+    val metadata = PackageMetadata.fromJsonList(os.read(file))
+    println(s"Found ${metadata.size} packages in logs published to Maven")
+    metadata.foreach(m => println(s"${m.name}:${m.version.getOrElse("unknown")}"))
+  end listPublishedPackages
 
   def upsertGeneratedFile(metadata: Vector[PackageMetadata]): os.Path = {
     val generated =

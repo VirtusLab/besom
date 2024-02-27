@@ -162,7 +162,6 @@ as `org.virtuslab::besom-core:X.Y.Z` and `org.virtuslab::besom-<package>:A.B.C-c
 
 Language host provider is published to Maven as `pulumi-language-scala-vX.Y.Z-OS-ARCH.tar.gz`.
 
-
 To use development version of the language host provider:
 ```bash
 pulumi --logtostderr plugin install language scala $(cat version.txt) --server github://api.github.com/VirtusLab/besom
@@ -194,36 +193,40 @@ It is recommended to use `just power-wash` before publishing a release:
 just power-wash
 ```
 
-#### Bump Besom version
+#### Bump Besom version (skip for `SNAPSHOT` re-release)
 
 To bump Besom version in all `project.scala` and `version.txt` files:
 
 ```bash
+export GITHUB_TOKEN=$(gh auth token)
 just cli version bump X.Y.Z
 ```
 
-#### Create release branch
+Publish SDKs locally to test and provide fresh dependencies for scripts:
+
+```bash
+just publish-local-all
+```
+
+#### Create release branch (skip for `SNAPSHOT`)
 
 ```bash
 git checkout -b release/v$(cat version.txt)
 git push --set-upstream origin release/v$(cat version.txt)
 ```
 
-#### Update dependencies versions in all `project.scala` files
+#### Update dependencies versions in all `project.scala` files (optional for patch versions)
 
 This is most useful for `examples` and `templates`, and integration tests:
 
 ```bash
+export GITHUB_TOKEN=$(gh auth token)
 just cli version update
 ```
 
-#### Update versions in all other places
+#### Update versions in all other places  (skip for `SNAPSHOT`)
 
 Manually update versions in all other places, specifically documentation and website, using find&replace.
-
-Manually update branch names in all places.
-
-Remove all `//> using repository sonatype:snapshots` from `project.scala` files.
 
 #### Create a release draft on GitHub
 
@@ -233,12 +236,11 @@ just upsert-gh-release
 
 #### Publish core and language host
 ```bash
-just publish-local-all
-just publish-maven-all
 just publish-language-plugins-all
+just publish-maven-all
 ```
 
-#### Publish packages
+#### Publish packages (optional for patch versions)
 
 To publish critical package(s):
 ```bash
@@ -258,13 +260,35 @@ export GITHUB_TOKEN=$(gh auth token)
 just clean-out cli packages maven-all
 ```
 
-Tip: it's safer to publish the packages on-by-one due to how Maven Central behaves.
+Cation: publishing to Maven Central is irreversible.
+Tip: it's safer to publish the packages on-by-one or in batches due to how Maven Central behaves.
+Note: `azure-native` publishing takes a long time (1-2 hours) it is recommended to handle it separately. 
+
+In case of any issues, you can try to resolve the issues manually at https://oss.sonatype.org/index.html#stagingRepositories.
 
 #### Finish the release
 
 Finish the release on GitHub manually, make sure the changelog is correct and correct git tag was created.
 
-According to our Git branching and versioning strategy, the release branch should be created after the tag is created.
+According to our Git branching and versioning strategy, the release branch should be merged after the tag is created.
+Make sure to bump the git tag because GitHub Release probably already created the tag.
+
+```bash
+git tag -f v$(cat version.txt)
+git push -f origin v$(cat version.txt)
+```
+
+Make sure to merge (DO NOT squash) the release branch to `main` and delete it.
+
+#### After the release
+
+After the release, you can bump the version to the next `-SNAPSHOT` version:
+
+```bash
+just cli version bump X.Y.Z-SNAPSHOT
+```
+
+Add `//> using repository sonatype:snapshots` to `project.scala` files.
 
 ### Testing examples locally
 
@@ -393,6 +417,11 @@ DO NOT remove dependencies from `project.scala`, because they are necessary in b
 
 ## Troubleshooting
 
+If you susspect the issue is related to serialization, try to skip the preview (dry run is known to be problematic):
+```bash
+pulumi up --skip-preview
+```
+
 ### GitHub might be throttling your requests
 
 If you see an error like this:
@@ -460,6 +489,16 @@ rm pulumi.rb
 
 ### Compilation issues
 
+Remove `.scala-build`, e.g.:
+```bash
+rm -rf core/.scala-build
+```
+
+To restart `bloop` compilation server:
+```bash
+scala-cli bloop exit
+```
+
 To clean the builds:
 ```bash
 just clean-all
@@ -469,11 +508,6 @@ If a deep cleaning needed:
 ```bash
 just power-wash
 ````
-
-To restart `bloop` compilation server:
-```bash
-scala-cli bloop exit
-```
 
 To set `bloop` verbosity:
 ```bash
@@ -487,7 +521,7 @@ scala-cli compile -S 3.nightly .
 
 To increase Scala compiler verbosity:
 ```bash
-scala-cli compile --javac-opt=-verbose .
+scala-cli compile --scalac-option -verbose .
 ```
 
 To inspect a running JVM byt its PID use `jcmd`, e.g.:

@@ -7,14 +7,14 @@ import Version from '@site/src/components/Version';
 Before we dive into the [details of Besom](architecture.md), let's take a look at the basics of Pulumi.
 This page offers an executive summary of [Pulumi's concepts](https://www.pulumi.com/docs/concepts/).
 
-### What is Pulumi?
+## What is Pulumi?
 
 Pulumi is a modern infrastructure as code platform. It leverages existing programming languages
 and their native ecosystem to interact with cloud resources through the Pulumi SDK.
 
 Pulumi is a registered trademark of [Pulumi Corporation](https://pulumi.com).
 
-### What is Besom?
+## What is Besom?
 
 Besom is a **Pulumi SDK for Scala 3**. It allows you to use Scala to define your infrastructure
 in a type-safe and functional way.
@@ -25,7 +25,7 @@ Besom **does NOT depend on Pulumi Java SDK**, it is a completely separate implem
 Please pay attention to your dependencies, **only use `org.virtuslab::besom-*`** and not `com.pulumi:*`.<br/>
 :::
 
-### Concepts
+## Concepts
 
 It is important to understand the basic concepts of Pulumi before we dive into the details of Besom.
 We strongly advise to get acquainted with [Pulumi's concepts](https://www.pulumi.com/docs/concepts/)
@@ -38,7 +38,7 @@ For more detailed information
 see [how Pulumi works](https://www.pulumi.com/docs/concepts/how-pulumi-works/#how-pulumi-works)
 documentation section.
 
-#### Projects
+### Projects
 
 A [Pulumi project](https://www.pulumi.com/docs/concepts/projects/) consists of:
 
@@ -69,7 +69,7 @@ name: Example Besom project file with only required attributes
 runtime: scala
 ```
 
-#### Programs
+### Programs
 
 A Pulumi program, written in a general-purpose programming language, is a collection of [resources](#resources)
 that are deployed to form a [stack](#stacks).
@@ -98,7 +98,7 @@ A minimal Besom program consists of:
 Pass [`Context`](context.md) everywhere you are using Besom outside of `Pulumi.run` block with `(using besom.Context)`.
 :::
 
-#### Stacks
+### Stacks
 
 [Pulumi stack](https://www.pulumi.com/docs/concepts/stack/) is a separate, isolated, independently configurable
 instance of a Pulumi [program](#programs), and can be updated and referred to independently.
@@ -121,13 +121,14 @@ The recommended practice is to **check stack files into source control** as a me
 Since secret values are encrypted, it is safe to check in these stack settings.
 :::
 
-##### Stack information from code
+##### Stack and project information from code
 
-You can access stack information from your [program](#programs) context using the `urn` method, e.g.:
-
+You can access Pulumi stack and project information from your [program](#programs) context using:
 ```scala
-urn.map(_.stack) // the stack name
-urn.map(_.project) // the stack name
+pulumiProject      // the Pulumi project name
+pulumiOrganization // the Pulumi organization name
+pulumiStack        // the Pulumi stack name
+urn                // the Pulumi stack URN
 ```
 
 ##### Stack Outputs
@@ -140,15 +141,14 @@ To export values from a stack in Besom, use the [`Stack.exports`](exports.md) fu
 
 ##### Stack References
 
-[Stack References](https://www.pulumi.com/docs/concepts/stack/#stackreferences) allow you to use outputs from other
-[stacks](#stacks) in your [program](#programs).
+[Stack Reference](https://www.pulumi.com/docs/concepts/stack/#stackreferences) allows you to use outputs from other [stacks](#stacks) in your [program](#programs).
 
 To reference values from another stack, create an instance of the `StackReference` type using the fully qualified
 name of the stack as an input, and then read exported stack outputs by their name.
 
 `StackReference` is not implemented yet in Besom, coming soon.
 
-#### Resources
+### Resources
 
 Resources are the primary [construct of Pulumi](https://www.pulumi.com/docs/concepts/resources/) programs.
 Resources represent the fundamental units that make up your infrastructure, such as a compute instance,
@@ -166,8 +166,10 @@ Resources are defined using a [**resource constructor**](constructors.md). Each 
 
 ```scala
 val redisNamespace = Namespace(s"redis-cluster-namespace-$name")
-redisNamespace.id // the physical name
-redisNamespace.urn // the globally unique identifier
+redisNamespace.id // the Pulumi ID - a physical name
+redisNamespace.urn // the Pulumi URN - a globally unique identifier
+redisNamespace.pulumiResourceName // the Pulumi resource name
+redisNamespace.typeToken // the Pulumi resource type token
 redisNamespace.urn.map(_.resourceName) // the logical name
 redisNamespace.urn.map(_.resourceType) // the resource type
 ```
@@ -194,7 +196,7 @@ is not managed by Pulumi. Here's an example of how to use it:
   }
   ```
 
-#### Inputs and Outputs
+### Inputs and Outputs
 
 Inputs and Outputs are the
 primary [asynchronous data types in Pulumi](https://www.pulumi.com/docs/concepts/inputs-outputs/),
@@ -285,7 +287,7 @@ val https: Output[String] = p"https://$host:$port/api/"
 We encourage you to learn more about relationship between [resources](#resources) and [outputs](#inputs-and-outputs)
 in the [Resource constructors and asynchronicity](constructors.md) section.
 
-#### Configuration and Secrets
+### Configuration and Secrets
 
 [Configuration](https://www.pulumi.com/docs/concepts/config) or [Secret](https://www.pulumi.com/docs/concepts/secrets/)
 is a set of key-value pairs that influence the behavior of a Pulumi program.
@@ -326,10 +328,10 @@ Secrets in Besom differ in behavior from other Pulumi SDKs. In other SDKs, if yo
 secret, you will obtain it as plaintext (and due to [a bug](https://github.com/pulumi/pulumi/issues/7127) you won't even get a warning).
 
 We choose to do the right thing in Besom and **return all configs as Outputs** so that we can handle failure in pure,
-functional way, and **automatically** mark secret values**as [secret Outputs](https://www.pulumi.com/docs/concepts/secrets/#how-secrets-relate-to-outputs)**.
+functional way, and **automatically** mark secret values **as [secret Outputs](https://www.pulumi.com/docs/concepts/secrets/#how-secrets-relate-to-outputs)**.
 :::
 
-#### Providers
+### Providers
 
 A [resource provider](https://www.pulumi.com/docs/concepts/resources/providers/) is a plugin that handles communications with a cloud service to create, read, update, and delete the resources 
 you define in your Pulumi [programs](#programs).
@@ -347,7 +349,7 @@ using [provider configuration](https://www.pulumi.com/docs/concepts/resources/pr
 It is recommended to [disable default providers](https://www.pulumi.com/blog/disable-default-providers/) if not for [all providers, at least for Kubernetes](https://www.pulumi.com/docs/concepts/config#pulumi-configuration-options).
 :::
 
-#### State
+### State
 
 State is a snapshot of your [project](#projects) [resources](#resources) that is stored in
 a [backend](https://www.pulumi.com/docs/concepts/state/#deciding-on-a-state-backend) with [Pulumi Service](https://www.pulumi.com/docs/intro/cloud-providers/pulumi-service/) being the default.

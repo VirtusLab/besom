@@ -66,25 +66,42 @@ object Version:
           .foreach { case (a, b) =>
             println(s"$a $b")
           }
-      case "bump" :: newBesomVersion :: Nil =>
+      case "bump" :: newBesomVersionStr :: Nil =>
+        val (newBesomVersion, isSnapshot) = SemanticVersion
+          .parse(newBesomVersionStr)
+          .fold(
+            e => throw Exception(s"Invalid version: $newBesomVersionStr", e),
+            v => (v.toString, v.isSnapshot)
+          )
         println(s"Bumping Besom core version from '$besomVersion' to '$newBesomVersion'")
-        projectFiles()
+        os.write.over(cwd / "version.txt", newBesomVersion)
+        println(s"Updated version.txt")
+        val filesWithBesomDeps = projectFiles()
           .collect { case (path, content) if content.linesIterator.exists(besomDependencyPattern.matches) => path -> content }
+        filesWithBesomDeps
           .foreachEntry { case (path, content) =>
-            val newContent = content.linesIterator
+            val hasSnapshotRepo = content.linesIterator
+              .forall(line => line.contains("repository sonatype:snapshots"))
+            val newContent: Vector[String] = content.linesIterator.toVector
               .map {
                 case line if line.contains("besom-fake-") => line // ignore
                 case besomDependencyPattern(prefix, version, suffix) =>
-                  prefix + changeVersion(version, besomVersion) + suffix
+                  prefix + changeVersion(version, newBesomVersion) + suffix
                 case line => line // pass through
               }
-              .mkString("\n") + "\n"
-            os.write.over(path, newContent)
+              .filter {
+                case line if !isSnapshot && line.contains("repository sonatype:snapshots") =>
+                  false // remove snapshot repo from non-snapshot version
+                case _ => true
+              } ++ {
+              if isSnapshot && !hasSnapshotRepo then // add snapshot repo to snapshot version
+                Vector("//> using repository sonatype:snapshots")
+              else Vector.empty
+            }
+
+            os.write.over(path, newContent.mkString("\n") + "\n")
             println(s"Updated $path")
           }
-
-        os.write.over(cwd / "version.txt", newBesomVersion)
-        println(s"Updated version.txt")
       case "update" :: Nil =>
         println(s"Bumping Besom packages version to latest")
         val latestPackages = latestPackageVersions()

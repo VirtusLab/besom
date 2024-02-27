@@ -29,7 +29,7 @@ To start your adventure with infrastructure-as-code with Scala follow these step
     To install the latest Scala Language Plugin release, run the following:
 
     ```bash
-    pulumi plugin install language scala 0.2.0 --server github://api.github.com/VirtusLab/besom
+    pulumi plugin install language scala 0.2.2 --server github://api.github.com/VirtusLab/besom
     ```
 
 4. **Create a new project**:
@@ -43,7 +43,7 @@ To start your adventure with infrastructure-as-code with Scala follow these step
     mkdir besom-demo && cd besom-demo
     ```
     ```bash
-    pulumi new https://github.com/VirtusLab/besom/tree/v0.2.0/templates/aws
+    pulumi new https://github.com/VirtusLab/besom/tree/v0.2.2/templates/aws
     ```
 
 5. **Deploy to the Cloud**:
@@ -76,7 +76,7 @@ To start your adventure with infrastructure-as-code with Scala follow these step
     pulumi destroy -y
     ```
 
-### Choice of build tool and IDE
+## Choice of build tool and IDE
 ---
 
 Besom uses [Scala-CLI](https://scala-cli.virtuslab.org/) for project compilation and execution.
@@ -92,11 +92,12 @@ When opened, both [Intellij IDEA](https://www.jetbrains.com/idea/)
 and [Metals](https://scalameta.org/metals/) should automatically recognize 
 the project and set up the IDE accordingly.
 
-[sbt](https://www.scala-sbt.org/) is also supported out-of-the-box but is not recommended due to
-slower iteration speed. Use of sbt support is suggested for situations where managed infrastructure
+[sbt](https://www.scala-sbt.org/), [gradle](https://gradle.org/) and [maven](https://maven.apache.org/) are also supported out-of-the-box,
+but are **not recommended** due to slower iteration speed. 
+Use of `sbt`, `gradle` or `mvn` support is suggested for situations where managed infrastructure
 is being added to an already existing project that uses sbt as the main build tool.
 
-IDE setup for `sbt` works automatically with both Intellij IDEA and Metals.
+IDE setup for `sbt`, `gradle` or `mvn` works automatically with both Intellij IDEA and Metals.
 
 [Mill](https://mill-build.com/) is not yet supported.
 

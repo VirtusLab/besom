@@ -17,7 +17,7 @@ our implementation with the rest of Pulumi ecosystem, finding and solving issues
 ergonomics and feature completeness.
 :::
 
-#### Mission
+### Mission
 
 Besom's mission is to introduce **rich type safety** to the domain of cloud and platform engineering. 
 We want to allow our users to benefit from Scala's compiler support to **catch problems and mistakes before the execution** 
@@ -28,7 +28,7 @@ Besom follows the general model of Pulumi SDKs and operates using the **same bas
 It is therefore strongly advised to get acquainted with [**Pulumi's basics**](basics.md) section as
 a fast way to get up to speed with the general concepts. 
 
-#### Uniqueness
+### Uniqueness
 
 Besom is unique in the fact that it's meant to support all Scala's technological ecosystems transparently:
 * Scala's [Future](https://docs.scala-lang.org/overviews/core/futures.html) and [Akka](https://akka.io/) / [Apache Pekko](https://pekko.apache.org/)
@@ -42,7 +42,7 @@ written in functional style, to name two:
 - Stack along with its exports are the return value of the main function of the program, 
 - smaller chunks of the program have to be composed into the main flow of the program to be executed. 
 
-#### Next steps:
+### Next steps
 
 - [Getting started](getting_started.md) section helps you **get your hands dirty** and figure out the details as you go
 - [Basics](basics.md) offers an **executive summary** of Pulumi's key concepts and how they are implemented in Besom

@@ -1,9 +1,10 @@
 name: Deploy website to GitHub Pages
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - develop
+      - main
     paths: 
       - 'website/**'
 

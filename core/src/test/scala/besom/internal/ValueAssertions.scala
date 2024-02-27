@@ -46,7 +46,8 @@ trait ValueAssertions extends munit.Assertions:
           assertEqualsMaybeValue(
             actualFieldValue,
             expectedFieldValue,
-            s"values not equal for key '$key', parent clue:  $clue"
+            s"""values not equal for key '$key'
+               |-> parent clue: $clue""".stripMargin
           )
         }
       case (Kind.ListValue(_), Kind.ListValue(_)) => assertEquals(actual, expected)

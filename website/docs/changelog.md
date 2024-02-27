@@ -2,6 +2,30 @@
 title: Changelog
 ---
 
+0.2.2 (22-02-2024)
+---
+
+## Bug Fixes
+
+* fixed component argument serialization issue [398](https://github.com/VirtusLab/besom/pull/398)
+
+## Other Changes
+
+* added Kubernetes guestbook example [395](https://github.com/VirtusLab/besom/pull/395)
+
+**Full Changelog**: https://github.com/VirtusLab/besom/compare/v0.2.1...v0.2.2
+
+0.2.1 (15-02-2024)
+---
+
+## Bug Fixes
+
+* Fix URL validation to allow for kubernetes types [#385](https://github.com/VirtusLab/besom/pull/385)
+* Loosen up and fix URN parsing [#389](https://github.com/VirtusLab/besom/pull/389)
+* Fix serializer now skips fields with null value secrets [#386](https://github.com/VirtusLab/besom/pull/386)
+
+* Full changelog is available at [GitHub (v0.2.0...v0.2.1)](https://github.com/VirtusLab/besom/compare/v0.2.0...v0.2.1)
+
 0.2.0 (08-02-2024)
 ---
 

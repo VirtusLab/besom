@@ -417,6 +417,8 @@ upsert-gh-release:
 power-wash: clean-all
 	rm -rf ~/.ivy2/local/org.virtuslab/
 	rm -rf ~/.m2/repository/org/virtuslab/
+	rm -rf ~/.cache/coursier/v1/https/repo1.maven.org/maven2/org/virtuslab/ # Linux
+	rm -rf ~/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/virtuslab/ # Mac
 	git clean -i -d -x -e ".idea"
 	killall -9 java
 
