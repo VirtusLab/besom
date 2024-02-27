@@ -7,7 +7,7 @@ import besom.api.{awsx, eks, kubernetes as k8s}
   val appPort = 80
 
   // Get the default VPC
-  val vpc = awsx.ec2.Vpc("my-vpc")
+  val vpc = awsx.ec2.Vpc("my-vpc", awsx.ec2.VpcArgs(cidrBlock = "10.0.0.0/16"))
 
   // Create an EKS cluster using the default VPC and subnet
   val cluster = eks.Cluster(
