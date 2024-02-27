@@ -1,8 +1,0 @@
-name: aws-eks-hello-world
-runtime: scala
-description: A minimal "Hello, World" container in EKS.
-template:
-  config:
-    aws:region:
-      description: The AWS region to deploy into
-      default: us-west-2

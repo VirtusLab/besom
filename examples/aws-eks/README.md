@@ -47,7 +47,13 @@ These values are indicated with `***`.
    kubectl --kubeconfig=./kubeconfig.json get pods --all-namespaces
    ```
 
-5. To clean up resources, destroy your stack and remove it:
+5. And finally - open the application in your browser to see the running application.
+
+   ```bash
+   curl $(pulumi stack output url)
+   ```
+
+6. To clean up resources, destroy your stack and remove it:
 
    ```bash
    pulumi destroy
