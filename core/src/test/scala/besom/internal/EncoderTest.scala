@@ -454,3 +454,22 @@ object Regression383Test:
     besom.internal.Encoder.derived[SecretArgs]
   given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[SecretArgs] =
     besom.internal.ArgsEncoder.derived[SecretArgs]
+end Regression383Test
+
+class RecurrentArgsTest extends munit.FunSuite with ValueAssertions:
+  case class Recurrent(value: Option[Recurrent])
+  object Recurrent:
+    given encoder(using besom.types.Context): besom.types.Encoder[Recurrent] =
+      besom.internal.Encoder.derived[Recurrent]
+
+  test("encode recurrent type") {
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[Recurrent]]
+
+    val (_, encoded) = e.encode(Recurrent(Some(Recurrent(Some(Recurrent(Some(Recurrent(None)))))))).unsafeRunSync()
+
+    val expected =
+      Map("value" -> Map("value" -> Map("value" -> Map().asValue).asValue).asValue).asValue
+    assertEqualsValue(encoded, expected)
+  }
+end RecurrentArgsTest
