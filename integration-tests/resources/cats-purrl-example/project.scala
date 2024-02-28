@@ -3,6 +3,6 @@
 //> using plugin org.virtuslab::besom-compiler-plugin:0.2.3-SNAPSHOT
 //> using dep org.virtuslab::besom-core:0.2.3-SNAPSHOT
 
-//> using dep org.virtuslab::besom-cats:0.2.3-SNAPSHOT
-//> using dep "org.virtuslab::besom-purrl:0.5.0-core.0.2"
 //> using repository sonatype:snapshots
+//> using dep org.virtuslab::besom-cats:0.2.3-SNAPSHOT
+//> using dep "org.virtuslab::besom-purrl:0.5.0-core.0.2-SNAPSHOT"
