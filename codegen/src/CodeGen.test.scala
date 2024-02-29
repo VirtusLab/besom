@@ -92,8 +92,8 @@ class CodeGenTest extends munit.FunSuite {
               |
               |  given outputOps: {} with
               |    extension(output: besom.types.Output[Provider])
-              |      def urn : besom.types.Output[besom.types.URN] = output.flatMap(_.urn)
-              |      def id : besom.types.Output[besom.types.ResourceId] = output.flatMap(_.id)
+              |      def urn(using besom.types.Context) : besom.types.Output[besom.types.URN] = output.flatMap(_.urn)
+              |      def id(using besom.types.Context) : besom.types.Output[besom.types.ResourceId] = output.flatMap(_.id)
               |""".stripMargin,
         "src/index/ProviderArgs.scala" ->
           s"""|package besom.api.example
@@ -221,9 +221,9 @@ class CodeGenTest extends munit.FunSuite {
              |
              |  given outputOps: {} with
              |    extension(output: besom.types.Output[Cluster])
-             |      def urn : besom.types.Output[besom.types.URN] = output.flatMap(_.urn)
-             |      def id : besom.types.Output[besom.types.ResourceId] = output.flatMap(_.id)
-             |      def name : besom.types.Output[String] = output.flatMap(_.name)
+             |      def urn(using besom.types.Context) : besom.types.Output[besom.types.URN] = output.flatMap(_.urn)
+             |      def id(using besom.types.Context) : besom.types.Output[besom.types.ResourceId] = output.flatMap(_.id)
+             |      def name(using besom.types.Context) : besom.types.Output[String] = output.flatMap(_.name)
              |""".stripMargin,
         "src/container/v1/ClusterArgs.scala" ->
           """|package besom.api.googlenative.container.v1
@@ -281,11 +281,11 @@ class CodeGenTest extends munit.FunSuite {
              |
              |  given outputOps: {} with
              |    extension(output: besom.types.Output[ClusterGetKubeconfigResult])
-             |      def kubeconfig : besom.types.Output[String] = output.map(_.kubeconfig)
+             |      def kubeconfig(using besom.types.Context) : besom.types.Output[String] = output.map(_.kubeconfig)
              |
              |  given optionOutputOps: {} with
              |    extension(output: besom.types.Output[scala.Option[ClusterGetKubeconfigResult]])
-             |      def kubeconfig : besom.types.Output[scala.Option[String]] = output.map(_.map(_.kubeconfig))
+             |      def kubeconfig(using besom.types.Context) : besom.types.Output[scala.Option[String]] = output.map(_.map(_.kubeconfig))
              |""".stripMargin,
         "src/container/v1/getCluster.scala" ->
           """|package besom.api.googlenative.container.v1
@@ -655,15 +655,15 @@ class CodeGenTest extends munit.FunSuite {
              |
              |  given outputOps: {} with
              |    extension(output: besom.types.Output[EniConfig])
-             |      def apiVersion : besom.types.Output[String] = output.map(_.apiVersion)
-             |      def kind : besom.types.Output[String] = output.map(_.kind)
-             |      def spec : besom.types.Output[scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]] = output.map(_.spec)
+             |      def apiVersion(using besom.types.Context) : besom.types.Output[String] = output.map(_.apiVersion)
+             |      def kind(using besom.types.Context) : besom.types.Output[String] = output.map(_.kind)
+             |      def spec(using besom.types.Context) : besom.types.Output[scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]] = output.map(_.spec)
              |
              |  given optionOutputOps: {} with
              |    extension(output: besom.types.Output[scala.Option[EniConfig]])
-             |      def apiVersion : besom.types.Output[scala.Option[String]] = output.map(_.map(_.apiVersion))
-             |      def kind : besom.types.Output[scala.Option[String]] = output.map(_.map(_.kind))
-             |      def spec : besom.types.Output[scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]] = output.map(_.flatMap(_.spec))
+             |      def apiVersion(using besom.types.Context) : besom.types.Output[scala.Option[String]] = output.map(_.map(_.apiVersion))
+             |      def kind(using besom.types.Context) : besom.types.Output[scala.Option[String]] = output.map(_.map(_.kind))
+             |      def spec(using besom.types.Context) : besom.types.Output[scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]] = output.map(_.flatMap(_.spec))
              |
              |
              |
@@ -711,13 +711,13 @@ class CodeGenTest extends munit.FunSuite {
              |
              |  given outputOps: {} with
              |    extension(output: besom.types.Output[EniConfigSpec])
-             |      def securityGroups : besom.types.Output[scala.Option[scala.collection.immutable.List[String]]] = output.map(_.securityGroups)
-             |      def subnet : besom.types.Output[scala.Option[String]] = output.map(_.subnet)
+             |      def securityGroups(using besom.types.Context) : besom.types.Output[scala.Option[scala.collection.immutable.List[String]]] = output.map(_.securityGroups)
+             |      def subnet(using besom.types.Context) : besom.types.Output[scala.Option[String]] = output.map(_.subnet)
              |
              |  given optionOutputOps: {} with
              |    extension(output: besom.types.Output[scala.Option[EniConfigSpec]])
-             |      def securityGroups : besom.types.Output[scala.Option[scala.collection.immutable.List[String]]] = output.map(_.flatMap(_.securityGroups))
-             |      def subnet : besom.types.Output[scala.Option[String]] = output.map(_.flatMap(_.subnet))
+             |      def securityGroups(using besom.types.Context) : besom.types.Output[scala.Option[scala.collection.immutable.List[String]]] = output.map(_.flatMap(_.securityGroups))
+             |      def subnet(using besom.types.Context) : besom.types.Output[scala.Option[String]] = output.map(_.flatMap(_.subnet))
              |
              |
              |

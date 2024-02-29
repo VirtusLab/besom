@@ -16,7 +16,7 @@ case class StackReference(
   def getOutput(name: NonEmptyString)(using Context): Output[Option[JsValue]] =
     getOutput(Output(name))
 
-  def getOutput(name: Output[NonEmptyString]): Output[Option[JsValue]] =
+  def getOutput(name: Output[NonEmptyString])(using Context): Output[Option[JsValue]] =
     val output = name.zip(outputs).map { case (name, outputs) =>
       outputs.get(name)
     }

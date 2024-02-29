@@ -12,12 +12,12 @@ import scala.reflect.Typeable
   * @param ctx
   *   the Besom [[Context]]
   */
-class Output[+A] private[internal] (using private[besom] val ctx: Context)(
+class Output[+A] private[internal] (
   private val dataResult: Result[OutputData[A]]
 ):
-  def map[B](f: A => B): Output[B] = Output.ofData(dataResult.map(_.map(f)))
+  def map[B](f: A => B)(using Context): Output[B] = Output.ofData(dataResult.map(_.map(f)))
 
-  def flatMap[B](f: A => Output[B]): Output[B] =
+  def flatMap[B](f: A => Output[B])(using Context): Output[B] =
     Output.ofData(
       for
         outputData: OutputData[A]         <- dataResult
@@ -25,7 +25,7 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
       yield nested.flatten
     )
 
-  def flatMap[F[_]: Result.ToFuture, B](f: A => F[B]): Output[B] =
+  def flatMap[F[_]: Result.ToFuture, B](f: A => F[B])(using Context): Output[B] =
     Output.ofData(
       for
         outputData: OutputData[A]         <- dataResult
@@ -33,14 +33,14 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
       yield nested.flatten
     )
 
-  def zip[B](that: => Output[B])(using z: Zippable[A, B]): Output[z.Out] =
+  def zip[B](that: => Output[B])(using z: Zippable[A, B], ctx: Context): Output[z.Out] =
     Output.ofData(dataResult.zip(that.getData).map((a, b) => a.zip(b)))
 
-  def flatten[B](using ev: A <:< Output[B]): Output[B] = flatMap(a => ev(a))
+  def flatten[B](using ev: A <:< Output[B], ctx: Context): Output[B] = flatMap(a => ev(a))
 
-  def asPlaintext: Output[A] = withIsSecret(Result.pure(false))
+  def asPlaintext(using Context): Output[A] = withIsSecret(Result.pure(false))
 
-  def asSecret: Output[A] = withIsSecret(Result.pure(true))
+  def asSecret(using Context): Output[A] = withIsSecret(Result.pure(true))
 
   private[internal] def getData: Result[OutputData[A]] = dataResult
 
@@ -55,7 +55,7 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
       case _                                   => Result.fail(Exception(msg))
     }
 
-  private[internal] def withIsSecret(isSecretEff: Result[Boolean]): Output[A] =
+  private[internal] def withIsSecret(isSecretEff: Result[Boolean])(using Context): Output[A] =
     Output.ofData(
       for
         secret <- isSecretEff
@@ -155,6 +155,12 @@ object Output:
   // TODO could this be pure without implicit Context? it's not async in any way so? only test when all tests are written
   def ofData[A](data: OutputData[A])(using ctx: Context): Output[A] =
     new Output[A](ctx.registerTask(Result.pure(data)))
+
+  def pure[A](value: A): Output[A] =
+    new Output[A](Result.pure(OutputData(value)))
+
+  def pureData[A](value: OutputData[A]): Output[A] =
+    new Output[A](Result.pure(value))
 
   def secret[A](value: A)(using ctx: Context): Output[A] =
     new Output[A](ctx.registerTask(Result.pure(OutputData(value, Set.empty, isSecret = true))))

@@ -18,7 +18,7 @@ sealed trait Resource:
   /** @return
     *   the logical name of this [[besom.internal.Resource]]
     */
-  def pulumiResourceName: Output[String] = urn.map(_.resourceName)
+  def pulumiResourceName(using Context): Output[String] = urn.map(_.resourceName)
 
   private[internal] def isCustom: Boolean = this match
     case _: CustomResource => true

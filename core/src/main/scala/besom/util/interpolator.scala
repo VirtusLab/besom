@@ -19,4 +19,4 @@ object interpolator:
     def p(args: Any*)(using Context): Output[String] = pulumi(args*)
 
   implicit final class OutputStringStripMarginOps(output: Output[String]):
-    def stripMargin: Output[String] = output.map(_.stripMargin)
+    def stripMargin(using Context): Output[String] = output.map(_.stripMargin)

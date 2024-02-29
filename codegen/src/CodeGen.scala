@@ -380,7 +380,7 @@ class CodeGen(implicit
       val resultType = scalameta.types.besom.types.Output(innerType)
 
       // colon after underscore would be treated as a part of the name so we add a space
-      m"""def ${propertyInfo.name} : $resultType = output.flatMap(_.${propertyInfo.name})""".parse[Stat].get
+      m"""def ${propertyInfo.name}(using besom.types.Context) : $resultType = output.flatMap(_.${propertyInfo.name})""".parse[Stat].get
     }
 
     val hasOutputExtensions = baseOutputExtensionMethods.nonEmpty
@@ -751,7 +751,7 @@ class CodeGen(implicit
         else propertyInfo.baseType
 
       // colon after underscore would be treated as a part of the name so we add a space
-      m"""def ${propertyInfo.name} : besom.types.Output[$innerType] = output.map(_.${propertyInfo.name})"""
+      m"""def ${propertyInfo.name}(using besom.types.Context) : besom.types.Output[$innerType] = output.map(_.${propertyInfo.name})"""
         .parse[Stat]
         .get
     }
@@ -762,7 +762,7 @@ class CodeGen(implicit
         else Term.Name("map")
 
       // colon after underscore would be treated as a part of the name so we add a space
-      m"""def ${propertyInfo.name} : besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.map(_.${innerMethodName}(_.${propertyInfo.name}))"""
+      m"""def ${propertyInfo.name}(using besom.types.Context) : besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.map(_.${innerMethodName}(_.${propertyInfo.name}))"""
         .parse[Stat]
         .get
     }
