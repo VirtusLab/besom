@@ -8,6 +8,8 @@ import com.google.protobuf.struct.*
 
 class ReSerializerTest extends munit.FunSuite:
 
+  given Context = DummyContext().unsafeRunSync()
+
   test("serialize-deserialize common types") {
     assertEquals(reSerialize(Option.empty[String]).unsafeRunSync(), Option.empty[String])
     assertEquals(reSerialize("asdf").unsafeRunSync(), "asdf")
