@@ -90,6 +90,8 @@ class DecoderTest extends munit.FunSuite:
 
   extension [E, A](vr: ValidatedResult[E, A]) def verify(f: Validated[E, A] => Unit): Unit = vr.asResult.map(f).unsafeRunSync()
 
+  given Context = DummyContext().unsafeRunSync()
+
   test("special struct signature can be extracted") {
     val secretStructSample: Value = Map(
       SpecialSigKey -> SpecialSecretSig.asValue

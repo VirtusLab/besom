@@ -47,7 +47,7 @@ case class AggregatedDecodingError(errors: NonEmptyVector[DecodingError]) extend
 trait Decoder[A]:
   self =>
 
-  def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[A]] =
+  def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A]] =
     Decoder
       .decodeAsPossibleSecret(value, label)
       .flatMap((odv: OutputData[Value]) =>
@@ -68,7 +68,7 @@ trait Decoder[A]:
   def mapping(value: Value, label: Label): Validated[DecodingError, A]
 
   def emap[B](f: (A, Label) => ValidatedResult[DecodingError, B]): Decoder[B] = new Decoder[B]:
-    override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[B]] =
+    override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[B]] =
       self.decode(value, label).flatMap { odA =>
         odA
           .traverseValidatedResult { a =>
@@ -164,7 +164,7 @@ object Decoder extends DecoderInstancesLowPrio1:
     def mapping(value: Value, label: Label): Validated[DecodingError, JsValue] = convertToJsValue(value).valid
 
   given optDecoder[A](using innerDecoder: Decoder[A]): Decoder[Option[A]] = new Decoder[Option[A]]:
-    override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[Option[A]]] =
+    override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Option[A]]] =
       decodeAsPossibleSecret(value, label).flatMap { odv =>
         odv
           .traverseValidatedResult {
@@ -188,7 +188,7 @@ object Decoder extends DecoderInstancesLowPrio1:
 
   // this is kinda different from what other pulumi sdks are doing because we disallow nulls in the list
   given listDecoder[A](using innerDecoder: Decoder[A]): Decoder[List[A]] = new Decoder[List[A]]:
-    override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[List[A]]] =
+    override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[List[A]]] =
       decodeAsPossibleSecret(value, label).flatMap { (odv: OutputData[Value]) =>
         odv
           .traverseValidatedResult { (v: Value) =>
@@ -212,7 +212,7 @@ object Decoder extends DecoderInstancesLowPrio1:
     def mapping(value: Value, label: Label): Validated[DecodingError, List[A]] = ???
 
   given setDecoder[A](using innerDecoder: Decoder[A]): Decoder[Set[A]] = new Decoder[Set[A]]:
-    override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[Set[A]]] =
+    override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Set[A]]] =
       decodeAsPossibleSecret(value, label).flatMap { (odv: OutputData[Value]) =>
         odv
           .traverseValidatedResult { (v: Value) =>
@@ -236,7 +236,7 @@ object Decoder extends DecoderInstancesLowPrio1:
     def mapping(value: Value, label: Label): Validated[DecodingError, Set[A]] = ???
 
   given mapDecoder[A](using innerDecoder: Decoder[A]): Decoder[Map[String, A]] = new Decoder[Map[String, A]]:
-    override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[Map[String, A]]] =
+    override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Map[String, A]]] =
       decodeAsPossibleSecret(value, label).flatMap { odv =>
         odv
           .traverseValidatedResult { v =>
@@ -263,7 +263,7 @@ object Decoder extends DecoderInstancesLowPrio1:
 
   private def getResourceBasedResourceDecoder[R <: Resource: ResourceDecoder](using Context): Decoder[R] =
     new Decoder[R]:
-      override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[R]] =
+      override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[R]] =
         decodeAsPossibleSecret(value, label).flatMap { odv =>
           odv
             .traverseValidatedResult { innerValue =>
@@ -321,7 +321,7 @@ object Decoder extends DecoderInstancesLowPrio1:
 
   // wondering if this works, it's a bit of a hack
   given dependencyResourceDecoder(using Context): Decoder[DependencyResource] = new Decoder[DependencyResource]:
-    override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[DependencyResource]] =
+    override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[DependencyResource]] =
       decodeAsPossibleSecret(value, label).flatMap { odv =>
         odv
           .traverseValidatedResult { innerValue =>
@@ -355,9 +355,9 @@ object Decoder extends DecoderInstancesLowPrio1:
 
   def assetArchiveDecoder[A](
     specialSig: String,
-    handle: (Label, Struct) => ValidatedResult[DecodingError, OutputData[A]]
+    handle: Context ?=> (Label, Struct) => ValidatedResult[DecodingError, OutputData[A]]
   ): Decoder[A] = new Decoder[A]:
-    override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[A]] =
+    override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A]] =
       decodeAsPossibleSecret(value, label).flatMap { odv =>
         odv
           .traverseValidatedResult { innerValue =>
@@ -460,7 +460,7 @@ object Decoder extends DecoderInstancesLowPrio1:
   )
 
   given assetDecoder: Decoder[Asset] = new Decoder[Asset]:
-    override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[Asset]] =
+    override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Asset]] =
       fileAssetDecoder
         .decode(value, label)
         .orElse(stringAssetDecoder.decode(value, label))
@@ -470,7 +470,7 @@ object Decoder extends DecoderInstancesLowPrio1:
     override def mapping(value: Value, label: Label): Validated[DecodingError, Asset] = ???
 
   given archiveDecoder: Decoder[Archive] = new Decoder[Archive]:
-    override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[Archive]] =
+    override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Archive]] =
       fileArchiveDecoder
         .decode(value, label)
         .orElse(remoteArchiveDecoder.decode(value, label))
@@ -481,7 +481,7 @@ object Decoder extends DecoderInstancesLowPrio1:
     override def mapping(value: Value, label: Label): Validated[DecodingError, Archive] = ???
 
   given assetOrArchiveDecoder: Decoder[AssetOrArchive] = new Decoder[AssetOrArchive]:
-    override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[AssetOrArchive]] =
+    override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[AssetOrArchive]] =
       assetDecoder
         .decode(value, label)
         .orElse(archiveDecoder.decode(value, label))
@@ -503,7 +503,7 @@ trait DecoderHelpers:
   import Constants.*
 
   def unionDecoder2[A, B](using aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[A | B] = new Decoder[A | B]:
-    override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[A | B]] =
+    override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A | B]] =
       decodeAsPossibleSecret(value, label).flatMap { odv =>
         odv
           .traverseValidatedResult { v =>
@@ -536,7 +536,7 @@ trait DecoderHelpers:
     require(typeMap.nonEmpty, s"Decoder.discriminated requires non-empty 'typeMap' parameter")
     new Decoder[A]:
       private def getDecoder(key: String): Decoder[A] = typeMap(key).asInstanceOf[Decoder[A]]
-      private def decodeValue(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[A]] =
+      private def decodeValue(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A]] =
         if !value.kind.isStructValue then error(s"$label: Expected a struct", label).invalidResult
         else
           val fields = value.getStructValue.fields
@@ -553,7 +553,7 @@ trait DecoderHelpers:
               ).invalidResult
       end decodeValue
 
-      override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[A]] =
+      override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A]] =
         decodeAsPossibleSecret(value, label).flatMap { (odv: OutputData[Value]) =>
           odv.traverseValidatedResult(decodeValue(_, label)).map(_.flatten)
         }
@@ -567,12 +567,12 @@ trait DecoderHelpers:
     require(typeMap.nonEmpty, s"Decoder.nonDiscriminated requires non-empty 'typeMap' parameter")
     new Decoder[A]:
       private def getDecoder(key: Int): Decoder[A] = typeMap(key).asInstanceOf[Decoder[A]]
-      private def decodeValue(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[A]] =
+      private def decodeValue(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A]] =
         val dd = for key <- 0 until typeMap.size yield getDecoder(key).decode(value, label)
         dd.reduce(_ orElse _) // we assume that only one of the decoders will succeed
       end decodeValue
 
-      override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[A]] =
+      override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A]] =
         decodeAsPossibleSecret(value, label).flatMap { (odv: OutputData[Value]) =>
           odv.traverseValidatedResult(decodeValue(_, label)).map(_.flatten)
         }
@@ -585,7 +585,7 @@ trait DecoderHelpers:
     new Decoder[A]:
       private val enumNameToDecoder                   = elems.toMap
       private def getDecoder(key: String): Decoder[A] = enumNameToDecoder(key).asInstanceOf[Decoder[A]]
-      override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[A]] =
+      override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A]] =
         if value.kind.isStringValue then
           val key = value.getStringValue
           getDecoder(key).decode(Map.empty.asValue, label.withKey(key))
@@ -599,7 +599,7 @@ trait DecoderHelpers:
 
   def decoderProduct[A](p: Mirror.ProductOf[A], elems: => List[(String, Decoder[?])]): Decoder[A] =
     new Decoder[A]:
-      override def decode(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[A]] =
+      override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A]] =
         decodeAsPossibleSecret(value, label).flatMap { odv =>
           odv
             .traverseValidatedResult { innerValue =>
@@ -626,7 +626,7 @@ trait DecoderHelpers:
 
       override def mapping(value: Value, label: Label): Validated[DecodingError, A] = ???
 
-  def decodeAsPossibleSecret(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[Value]] =
+  def decodeAsPossibleSecret(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Value]] =
     extractSpecialStructSignature(value) match
       case Some(sig) if sig == SpecialSecretSig =>
         val innerValue = value.getStructValue.fields
