@@ -1,14 +1,13 @@
 package besom.internal
 
-import com.google.protobuf.struct.*
-import Constants.*
-import Decoder.*
-import ProtobufUtil.*
-import besom.types.Label
+import besom.internal.Constants.*
+import besom.internal.Decoder.*
+import besom.internal.ProtobufUtil.{*, given}
+import besom.internal.RunResult.{*, given}
+import besom.types.{Label, PulumiAny, URN}
 import besom.util.*
-import RunResult.{given, *}
-import Validated.*
-import besom.types.PulumiAny
+import besom.util.Validated.*
+import com.google.protobuf.struct.*
 
 object DecoderTest:
   case class TestCaseClass(
@@ -319,3 +318,56 @@ class DecoderTest extends munit.FunSuite:
     }
   }
 end DecoderTest
+
+class OutputValueDecoderTest extends munit.FunSuite with ValueAssertions:
+  val dummyLabel: Label = Label.fromNameAndType("dummy", "dummy:pkg:Dummy")
+
+  val fakeUrn1 = "urn:pulumi:stack::project::example:module:Resource::my-name-1"
+  val fakeUrn2 = "urn:pulumi:stack::project::example:module:Resource::my-name-2"
+
+  t[Option[Boolean]](None, _ => Null)
+  t(0, _.asValue)
+  t(1, _.asValue)
+  t("", _.asValue)
+  t("hi", _.asValue)
+  t(List.empty, (v: List[Value]) => v.asValue)
+  t(Map.empty, (v: Map[String, Value]) => v.asValue)
+
+  def typeName(a: Any): String = if a == null then "Null" else a.getClass.getSimpleName
+  def t[A: Decoder](value: A, f: A => Value): Unit =
+    for
+      isKnown  <- List(true, false)
+      isSecret <- List(true, false)
+      deps     <- List(List.empty, List(fakeUrn1, fakeUrn2))
+    do {
+      val name = s"basics: ${typeName(value)} (isKnown: $isKnown, isSecret: $isSecret, deps: ${deps.length})"
+      test(name) {
+        given Context = DummyContext().unsafeRunSync()
+
+        val urns: List[URN] = deps.map(URN.from(_).get)
+        val maybeValue      = Option(value)
+        val input           = f(value).asOutputValue(isKnown = isKnown, isSecret = isSecret, dependencies = urns)
+
+        val d = summon[Decoder[A]]
+        d.decode(input, dummyLabel)
+          .asResult
+          .map({
+            case Validated.Valid(d) =>
+              d match
+                case OutputData.Known(r, s, v) =>
+                  if !isKnown then fail("Unexpected known", clues(name))
+                  assertEquals(v, maybeValue, name)
+                  assertEquals(s, isSecret, name)
+                  assertEquals(r.map(_.urn.getValue.unsafeRunSync().get), urns.toSet, name)
+                case OutputData.Unknown(r, s) =>
+                  if isKnown then fail("Unexpected unknown", clues(name))
+                  assertEquals(s, isSecret, name)
+                  assertEquals(r.map(_.urn.getValue.unsafeRunSync().get), urns.toSet, name)
+            case Validated.Invalid(ex) => fail("Validated.Invalid", ex.head)
+          })
+          .unsafeRunSync()
+      }
+    }
+    end for
+  end t
+end OutputValueDecoderTest

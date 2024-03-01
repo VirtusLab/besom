@@ -337,11 +337,13 @@ object types:
     private lazy val valuesToInstances: Map[V, E] = allInstances.map(instance => instance.value -> instance).toMap
 
     extension [A](a: A)
-      def asValueAny: Value = a match
-        case a: Int     => a.asValue
-        case a: Double  => a.asValue
-        case a: Boolean => a.asValue
-        case a: String  => a.asValue
+      def asValueAny: Value =
+        import besom.internal.ProtobufUtil.given
+        a match
+          case a: Int     => a.asValue
+          case a: Double  => a.asValue
+          case a: Boolean => a.asValue
+          case a: String  => a.asValue
 
     given Encoder[E] = (a: E) => Result.pure(Set.empty -> a.value.asValueAny)
     given (using decV: Decoder[V]): Decoder[E] =

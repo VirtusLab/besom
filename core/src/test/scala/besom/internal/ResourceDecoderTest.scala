@@ -1,11 +1,11 @@
 package besom.internal
 
-import RunResult.{given, *}
-import com.google.protobuf.struct.*
-import ProtobufUtil.*
-import besom.util.*
+import besom.internal.ProtobufUtil.{*, given}
+import besom.internal.RunResult.{*, given}
+import besom.internal.logging.*
 import besom.types.*
-import logging.*
+import besom.util.*
+import com.google.protobuf.struct.*
 
 class ResourceDecoderTest extends munit.FunSuite:
   case class CustomStruct(a: String, b: Double) derives Decoder

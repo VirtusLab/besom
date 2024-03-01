@@ -1,11 +1,11 @@
 package besom.internal
 
-import besom.internal.ProtobufUtil.*
+import besom.internal.ProtobufUtil.{*, given}
 import besom.types.*
 import besom.types.Archive.*
 import besom.types.Asset.*
-import besom.util.{NonEmptyString, *}
 import besom.util.Validated.*
+import besom.util.{NonEmptyString, *}
 import com.google.protobuf.struct.*
 import com.google.protobuf.struct.Value.Kind
 
@@ -14,13 +14,42 @@ import scala.deriving.Mirror
 import scala.util.*
 
 object Constants:
-  final val UnknownValue           = "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
-  final val SpecialSigKey          = "4dabf18193072939515e22adb298388d"
-  final val SpecialAssetSig        = "c44067f5952c0a294b673a41bacd8c17"
-  final val SpecialArchiveSig      = "0def7320c3a5731c473e5ecbe6d01bc7"
-  final val SpecialSecretSig       = "1b47061264138c4ac30d75fd1eb44270"
-  final val SpecialResourceSig     = "5cf8f73096256a8f31e491e813e4eb8e"
-  final val SecretValueName        = "value"
+  /** Well-known signatures used in gRPC protocol, see sdk/go/common/resource/properties.go. */
+
+  /** Signature used to encode type identity inside of a map in gRPC protocol.
+    *
+    * This is required when flattening into ordinary maps, like we do when performing serialization, to ensure recoverability of type
+    * identities later on.
+    */
+  final val SpecialSigKey = "4dabf18193072939515e22adb298388d"
+
+  /** Signature used to identify assets in maps in gRPC protocol */
+  final val SpecialAssetSig = "c44067f5952c0a294b673a41bacd8c17"
+
+  /** Signature used to identify archives in maps in gRPC protocol */
+  final val SpecialArchiveSig = "0def7320c3a5731c473e5ecbe6d01bc7"
+
+  /** Signature used to identify secrets maps in gRPC protocol */
+  final val SpecialSecretSig = "1b47061264138c4ac30d75fd1eb44270"
+
+  /** Signature used to identify resources in maps in gRPC protocol */
+  final val SpecialResourceSig = "5cf8f73096256a8f31e491e813e4eb8e"
+
+  /** Signature used to identify outputs in maps in gRPC protocol */
+  final val SpecialOutputValueSig = "d0e6a833031e9bbcd3f4e8bde6ca49a4"
+
+  /** Well-known sentinels used in gRPC protocol, see sdk/go/common/resource/plugin/rpc.go */
+
+  /** Sentinel indicating that a string property's value is not known, because it depends on a computation with values whose values
+    * themselves are not yet known (e.g., dependent upon an output property).
+    */
+  final val UnknownStringValue = "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
+
+  /** Well-known property names used in gRPC protocol */
+
+  final val ValueName              = "value"
+  final val SecretName             = "secret"
+  final val DependenciesName       = "dependencies"
   final val AssetTextName          = "text"
   final val ArchiveAssetsName      = "assets"
   final val AssetOrArchivePathName = "path"
@@ -31,6 +60,7 @@ object Constants:
   final val IdPropertyName         = "id"
   final val UrnPropertyName        = "urn"
   final val StatePropertyName      = "state"
+end Constants
 
 case class DecodingError(message: String, cause: Throwable = null, label: Label) extends Exception(message, cause)
 case class AggregatedDecodingError(errors: NonEmptyVector[DecodingError]) extends Exception(errors.map(_.message).toVector.mkString("\n"))
@@ -49,7 +79,7 @@ trait Decoder[A]:
 
   def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A]] =
     Decoder
-      .decodeAsPossibleSecret(value, label)
+      .decodeAsPossibleSecretOrOutput(value, label)
       .flatMap((odv: OutputData[Value]) =>
         ValidatedResult(
           odv
@@ -165,7 +195,7 @@ object Decoder extends DecoderInstancesLowPrio1:
 
   given optDecoder[A](using innerDecoder: Decoder[A]): Decoder[Option[A]] = new Decoder[Option[A]]:
     override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Option[A]]] =
-      decodeAsPossibleSecret(value, label).flatMap { odv =>
+      decodeAsPossibleSecretOrOutput(value, label).flatMap { odv =>
         odv
           .traverseValidatedResult {
             case Value(Kind.NullValue(_), _) => ValidatedResult.valid(OutputData(None))
@@ -189,7 +219,7 @@ object Decoder extends DecoderInstancesLowPrio1:
   // this is kinda different from what other pulumi sdks are doing because we disallow nulls in the list
   given listDecoder[A](using innerDecoder: Decoder[A]): Decoder[List[A]] = new Decoder[List[A]]:
     override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[List[A]]] =
-      decodeAsPossibleSecret(value, label).flatMap { (odv: OutputData[Value]) =>
+      decodeAsPossibleSecretOrOutput(value, label).flatMap { (odv: OutputData[Value]) =>
         odv
           .traverseValidatedResult { (v: Value) =>
             if !v.kind.isListValue then error(s"$label: Expected a list, got ${v.kind}", label).invalidResult
@@ -199,7 +229,7 @@ object Decoder extends DecoderInstancesLowPrio1:
                   innerDecoder.decode(v, label.atIndex(i))
                 }
                 .foldLeft[ValidatedResult[DecodingError, Vector[OutputData[A]]]](ValidatedResult.valid(Vector.empty))(
-                  accumulatedOutputDatasOrErrors(_, _, "list", label)
+                  accumulatedOutputDataOrErrors(_, _, "list", label)
                 )
                 .map(_.toList)
                 .map(OutputData.sequence)
@@ -213,7 +243,7 @@ object Decoder extends DecoderInstancesLowPrio1:
 
   given setDecoder[A](using innerDecoder: Decoder[A]): Decoder[Set[A]] = new Decoder[Set[A]]:
     override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Set[A]]] =
-      decodeAsPossibleSecret(value, label).flatMap { (odv: OutputData[Value]) =>
+      decodeAsPossibleSecretOrOutput(value, label).flatMap { (odv: OutputData[Value]) =>
         odv
           .traverseValidatedResult { (v: Value) =>
             if !v.kind.isListValue then error(s"$label: Expected a list kind, got: '${v.kind}'", label).invalidResult
@@ -223,7 +253,7 @@ object Decoder extends DecoderInstancesLowPrio1:
                   innerDecoder.decode(v, label.atIndex(i))
                 }
                 .foldLeft[ValidatedResult[DecodingError, Vector[OutputData[A]]]](ValidatedResult.valid(Vector.empty))(
-                  accumulatedOutputDatasOrErrors(_, _, "list", label)
+                  accumulatedOutputDataOrErrors(_, _, "list", label)
                 )
                 .map(_.toSet)
                 .map(OutputData.sequence)
@@ -237,7 +267,7 @@ object Decoder extends DecoderInstancesLowPrio1:
 
   given mapDecoder[A](using innerDecoder: Decoder[A]): Decoder[Map[String, A]] = new Decoder[Map[String, A]]:
     override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Map[String, A]]] =
-      decodeAsPossibleSecret(value, label).flatMap { odv =>
+      decodeAsPossibleSecretOrOutput(value, label).flatMap { odv =>
         odv
           .traverseValidatedResult { v =>
             if !v.kind.isStructValue then error(s"$label: Expected a struct kind, got: '${v.kind}'", label).invalidResult
@@ -250,7 +280,7 @@ object Decoder extends DecoderInstancesLowPrio1:
                 .foldLeft[ValidatedResult[DecodingError, Vector[OutputData[(String, A)]]]](
                   ValidatedResult.valid(Vector.empty)
                 )(
-                  accumulatedOutputDatasOrErrors(_, _, "struct", label)
+                  accumulatedOutputDataOrErrors(_, _, "struct", label)
                 )
                 .map(OutputData.sequence)
                 .map(_.map(_.toMap))
@@ -261,10 +291,10 @@ object Decoder extends DecoderInstancesLowPrio1:
       }
     def mapping(value: Value, label: Label): Validated[DecodingError, Map[String, A]] = ???
 
-  private def getResourceBasedResourceDecoder[R <: Resource: ResourceDecoder](using Context): Decoder[R] =
+  private def getResourceBasedResourceDecoder[R <: Resource: ResourceDecoder]: Decoder[R] =
     new Decoder[R]:
       override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[R]] =
-        decodeAsPossibleSecret(value, label).flatMap { odv =>
+        decodeAsPossibleSecretOrOutput(value, label).flatMap { odv =>
           odv
             .traverseValidatedResult { innerValue =>
               extractSpecialStructSignature(innerValue) match
@@ -313,16 +343,16 @@ object Decoder extends DecoderInstancesLowPrio1:
       override def mapping(value: Value, label: Label): Validated[DecodingError, R] = ???
 
   // handles ProviderResources too as they extend CustomResource
-  given customResourceDecoder[R <: CustomResource: ResourceDecoder](using Context): Decoder[R] =
+  given customResourceDecoder[R <: CustomResource: ResourceDecoder]: Decoder[R] =
     getResourceBasedResourceDecoder[R]
 
-  given remoteComponentResourceDecoder[R <: RemoteComponentResource: ResourceDecoder](using Context): Decoder[R] =
+  given remoteComponentResourceDecoder[R <: RemoteComponentResource: ResourceDecoder]: Decoder[R] =
     getResourceBasedResourceDecoder[R]
 
   // wondering if this works, it's a bit of a hack
-  given dependencyResourceDecoder(using Context): Decoder[DependencyResource] = new Decoder[DependencyResource]:
+  given dependencyResourceDecoder: Decoder[DependencyResource] = new Decoder[DependencyResource]:
     override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[DependencyResource]] =
-      decodeAsPossibleSecret(value, label).flatMap { odv =>
+      decodeAsPossibleSecretOrOutput(value, label).flatMap { odv =>
         odv
           .traverseValidatedResult { innerValue =>
             extractSpecialStructSignature(innerValue) match
@@ -358,7 +388,7 @@ object Decoder extends DecoderInstancesLowPrio1:
     handle: Context ?=> (Label, Struct) => ValidatedResult[DecodingError, OutputData[A]]
   ): Decoder[A] = new Decoder[A]:
     override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A]] =
-      decodeAsPossibleSecret(value, label).flatMap { odv =>
+      decodeAsPossibleSecretOrOutput(value, label).flatMap { odv =>
         odv
           .traverseValidatedResult { innerValue =>
             extractSpecialStructSignature(innerValue) match
@@ -429,6 +459,7 @@ object Decoder extends DecoderInstancesLowPrio1:
         .map(uri => OutputData(RemoteArchive(uri)))
   )
 
+  // noinspection NoTailRecursionAnnotation
   given assetArchiveDecoder: Decoder[AssetArchive] = assetArchiveDecoder[AssetArchive](
     Constants.SpecialArchiveSig,
     (label, structValue) =>
@@ -504,7 +535,7 @@ trait DecoderHelpers:
 
   def unionDecoder2[A, B](using aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[A | B] = new Decoder[A | B]:
     override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A | B]] =
-      decodeAsPossibleSecret(value, label).flatMap { odv =>
+      decodeAsPossibleSecretOrOutput(value, label).flatMap { odv =>
         odv
           .traverseValidatedResult { v =>
             aDecoder
@@ -554,7 +585,7 @@ trait DecoderHelpers:
       end decodeValue
 
       override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A]] =
-        decodeAsPossibleSecret(value, label).flatMap { (odv: OutputData[Value]) =>
+        decodeAsPossibleSecretOrOutput(value, label).flatMap { (odv: OutputData[Value]) =>
           odv.traverseValidatedResult(decodeValue(_, label)).map(_.flatten)
         }
 
@@ -573,7 +604,7 @@ trait DecoderHelpers:
       end decodeValue
 
       override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A]] =
-        decodeAsPossibleSecret(value, label).flatMap { (odv: OutputData[Value]) =>
+        decodeAsPossibleSecretOrOutput(value, label).flatMap { (odv: OutputData[Value]) =>
           odv.traverseValidatedResult(decodeValue(_, label)).map(_.flatten)
         }
 
@@ -588,7 +619,7 @@ trait DecoderHelpers:
       override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A]] =
         if value.kind.isStringValue then
           val key = value.getStringValue
-          getDecoder(key).decode(Map.empty.asValue, label.withKey(key))
+          getDecoder(key).decode(Map.empty[String, Value].asValue, label.withKey(key))
         else
           error(
             s"$label: Value was not a string, Enums should be serialized as strings", // TODO: This is not necessarily true
@@ -600,7 +631,7 @@ trait DecoderHelpers:
   def decoderProduct[A](p: Mirror.ProductOf[A], elems: => List[(String, Decoder[?])]): Decoder[A] =
     new Decoder[A]:
       override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A]] =
-        decodeAsPossibleSecret(value, label).flatMap { odv =>
+        decodeAsPossibleSecretOrOutput(value, label).flatMap { odv =>
           odv
             .traverseValidatedResult { innerValue =>
               if innerValue.kind.isStructValue then
@@ -626,19 +657,62 @@ trait DecoderHelpers:
 
       override def mapping(value: Value, label: Label): Validated[DecodingError, A] = ???
 
-  def decodeAsPossibleSecret(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Value]] =
+  def decodeAsPossibleSecretOrOutput(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Value]] =
     extractSpecialStructSignature(value) match
       case Some(sig) if sig == SpecialSecretSig =>
         val innerValue = value.getStructValue.fields
-          .get(SecretValueName)
+          .get(ValueName)
           .map(ValidatedResult.valid)
-          .getOrElse(error(s"$label: Secrets must have a field called $SecretValueName", label).invalidResult)
+          .getOrElse(error(s"$label: Secrets must have a field called $ValueName", label).invalidResult)
 
         innerValue.map(OutputData(_, isSecret = true))
+      case Some(sig) if sig == SpecialOutputValueSig =>
+        val innerValue: ValidatedResult[DecodingError, Option[Value]] =
+          value.getStructValue.fields
+            .get(ValueName)
+            .validResult
+        val isSecret: ValidatedResult[DecodingError, Boolean] =
+          value.getStructValue.fields
+            .get(SecretName)
+            .collectFirst({ case Value(Kind.BoolValue(b), _) => b })
+            .getOrElse(false)
+            .validResult
+
+        val deps: ValidatedResult[DecodingError, Vector[Resource]] =
+          value.getStructValue.fields
+            .get(DependenciesName)
+            .map { v =>
+              if !v.kind.isListValue then error(s"$label: Expected a dependencies list in output, got ${v.kind}", label).invalidResult
+              else
+                val depsLabel = label.withKey(DependenciesName)
+                v.getListValue.values.zipWithIndex
+                  .map { case (v, i) =>
+                    val l = depsLabel.atIndex(i)
+                    v.getStringValue.validResult
+                      .flatMap(URN.from(_).toEither.left.map(e => error(s"$l: Expected a valid URN string", l, e)).toValidatedResult)
+                      .map(urn => DependencyResource(Output(urn)))
+                  }
+                  .foldLeft[ValidatedResult[DecodingError, Vector[Resource]]](ValidatedResult.valid(Vector.empty)) { (acc, vr) =>
+                    acc.zipWith(vr) { (acc, v) =>
+                      acc :+ v
+                    }
+                  }
+            }
+            .getOrElse(ValidatedResult.valid(Vector.empty))
+
+        for
+          innerValue: Option[Value] <- innerValue
+          isSecret: Boolean         <- isSecret
+          deps: Vector[Resource]    <- deps
+        yield
+          if innerValue.isEmpty
+          then OutputData.unknown(isSecret, deps.toSet)
+          else OutputData(deps.toSet, innerValue, isSecret)
       case _ =>
-        if value.kind.isStringValue && Constants.UnknownValue == value.getStringValue then
-          ValidatedResult.valid(OutputData.unknown(isSecret = false))
+        if value.kind.isStringValue && Constants.UnknownStringValue == value.getStringValue
+        then ValidatedResult.valid(OutputData.unknown(isSecret = false))
         else ValidatedResult.valid(OutputData(value))
+  end decodeAsPossibleSecretOrOutput
 
   def extractSpecialStructSignature(value: Value): Option[String] =
     Iterator(value)
@@ -646,9 +720,9 @@ trait DecoderHelpers:
       .flatMap(_.getStructValue.fields)
       .filter((k, _) => k == SpecialSigKey)
       .flatMap((_, v) => v.kind.stringValue)
-      .nextOption
+      .nextOption // TODO: log error if the signature is not recognized
 
-  def accumulatedOutputDatasOrErrors[A](
+  def accumulatedOutputDataOrErrors[A](
     acc: ValidatedResult[DecodingError, Vector[OutputData[A]]],
     elementValidatedResult: ValidatedResult[DecodingError, OutputData[A]],
     typ: String,
@@ -658,11 +732,12 @@ trait DecoderHelpers:
       elementValidatedResult
         // TODO this should have an issue number from GH and should suggest reporting this to us
         .filterOrError(_.nonEmpty)(
-          DecodingError(s"Encountered a 'null' in '$typ', this is illegal in Besom", label = label)
+          DecodingError(s"Encountered a 'null' in '$typ', this is illegal in Besom, please file an issue on GitHub", label = label)
         )
     ) { (acc, elementOutputData) =>
       acc :+ elementOutputData
     }
+
 end DecoderHelpers
 
 /** ArgsEncoder - this is a separate typeclass required for serialization of top-level *Args classes
@@ -672,8 +747,8 @@ end DecoderHelpers
   *
   * JsonEncoder - this is a separate typeclass required for json-serialized fields of ProviderArgs
   */
-@implicitNotFound("""Instance of Encoder[${A}] is missing! Most likely you are trying to use structured 
-    |stack exports and you have defined a case class that holds your exported values. 
+@implicitNotFound("""Instance of Encoder[${A}] is missing! Most likely you are trying to use structured
+    |stack exports and you have defined a case class that holds your exported values.
     |
     |Add `derives Encoder` (or `derives besom.Encoder` if you don't have the global import in
     |that scope) to your case class definition like this:
@@ -714,7 +789,7 @@ object Encoder:
                 case ((allResources, props), (label, (fieldResources, value))) =>
                   val concatResources = allResources ++ fieldResources
                   if value.kind.isNullValue then (concatResources, props)
-                  else if Encoder.isEmptySecretValue(value) then (concatResources, props) // skip nulls in secrets
+                  else if Encoder.isEmptySecretOrOutputValue(value) then (concatResources, props) // skip nulls in secrets
                   else concatResources -> (props + (label -> value))
               }
 
@@ -740,7 +815,7 @@ object Encoder:
           if ctx.featureSupport.keepResources then
             outputURNEnc.encode(a.urn).flatMap { (urnResources, urnValue) =>
               val fixedIdValue =
-                if idValue.kind.isStringValue && idValue.getStringValue == UnknownValue then Value(Kind.StringValue(""))
+                if idValue.kind.isStringValue && idValue.getStringValue == UnknownStringValue then Value(Kind.StringValue(""))
                 else idValue
 
               val result = Map(
@@ -835,17 +910,23 @@ object Encoder:
         case None        => Result.pure(Set.empty -> Null)
 
   given outputEncoder[A](using inner: Encoder[Option[A]]): Encoder[Output[A]] with
-    def encode(outA: Output[A]): Result[(Set[Resource], Value)] = outA.getData.flatMap {
-      case OutputData.Unknown(resources, _) =>
-        Result.pure(resources -> UnknownValue.asValue)
-      case OutputData.Known(resources, isSecret, maybeValue) =>
-        inner.encode(maybeValue).map { (innerResources, serializedValue) =>
-          val aggregatedResources = resources ++ innerResources
-          if isSecret
-          then aggregatedResources -> serializedValue.asSecret
-          else aggregatedResources -> serializedValue
+    def encode(outA: Output[A]): Result[(Set[Resource], Value)] =
+      /*if opts.keepOutputValues then
+        outA.getData.flatMap { (d: OutputData[A]) =>
+          Result.pure(resources -> d.asOutputValue)
         }
-    }
+      else*/
+        outA.getData.flatMap {
+          case OutputData.Unknown(resources, _) =>
+            Result.pure(resources -> UnknownStringValue.asValue)
+          case OutputData.Known(resources, isSecret, maybeValue) =>
+            inner.encode(maybeValue).map { (innerResources, serializedValue) =>
+              val aggregatedResources = resources ++ innerResources
+              if isSecret
+              then aggregatedResources -> serializedValue.asSecret
+              else aggregatedResources -> serializedValue
+            }
+        }
 
   private def assetWrapper(key: String, value: Value): Value = Map(
     Constants.SpecialSigKey -> Constants.SpecialAssetSig.asValue,
@@ -967,7 +1048,7 @@ object Encoder:
   import scala.quoted.*
 
   private def unionEncoderImpl[U: Type](using Quotes) =
-    import quotes.reflect.*
+    import scala.quoted.quotes.reflect.*
     TypeRepr.of[U] match
       case OrType(t1, t2) =>
         (t1.asType, t2.asType) match
@@ -994,13 +1075,20 @@ object Encoder:
           case Left(a)  => innerA.encode(a)
           case Right(b) => innerB.encode(b)
 
-  def isEmptySecretValue(value: Value): Boolean =
-    value.kind.isStructValue &&
-      value.getStructValue.fields.contains(SpecialSigKey) &&
-      value.getStructValue.fields(SpecialSigKey).getStringValue == SpecialSecretSig &&
-      value.getStructValue.fields.contains(SecretValueName) &&
-      value.getStructValue.fields(SecretValueName).kind.isNullValue
-
+  def isEmptySecretOrOutputValue(value: Value): Boolean =
+    if value.kind.isStructValue && value.getStructValue.fields.contains(SpecialSigKey) then
+      value.getStructValue.fields(SpecialSigKey).getStringValue match
+        case SpecialSecretSig =>
+          value.getStructValue.fields.contains(ValueName) && value.getStructValue.fields(ValueName).kind.isNullValue
+        case SpecialOutputValueSig =>
+          val isSecret = value.getStructValue.fields.contains(SecretName) &&
+            value.getStructValue.fields(SecretName).kind.isBoolValue &&
+            value.getStructValue.fields(SecretName).getBoolValue
+          val isEmpty = !value.getStructValue.fields.contains(ValueName) ||
+            value.getStructValue.fields.contains(ValueName) &&
+            value.getStructValue.fields(ValueName).kind.isNullValue
+          isSecret && isEmpty
+    else false
 end Encoder
 
 // ArgsEncoder and ProviderArgsEncoder are nearly the same with the small difference of
@@ -1032,7 +1120,7 @@ object ArgsEncoder:
               serializedMap.foldLeft[(Map[String, Set[Resource]], Map[String, Value])](Map.empty -> Map.empty) {
                 case ((mapOfResources, mapOfValues), (label, (resources, value))) =>
                   if filterOut(label) then (mapOfResources, mapOfValues) // skip filtered
-                  else if Encoder.isEmptySecretValue(value) then (mapOfResources, mapOfValues) // skip nulls in secrets
+                  else if Encoder.isEmptySecretOrOutputValue(value) then (mapOfResources, mapOfValues) // skip nulls in secrets
                   else if value.kind.isNullValue then
                     (mapOfResources, mapOfValues) // we treat properties with NullValue values as if they do not exist
                   else (mapOfResources + (label -> resources), mapOfValues + (label -> value))
@@ -1078,7 +1166,7 @@ object ProviderArgsEncoder:
                 case ((mapOfResources, mapOfValues), (label, (resources, value))) =>
                   if filterOut(label) then (mapOfResources, mapOfValues)
                   else if value.kind.isNullValue then (mapOfResources, mapOfValues)
-                  else if Encoder.isEmptySecretValue(value) then (mapOfResources, mapOfValues) // skip nulls in secrets
+                  else if Encoder.isEmptySecretOrOutputValue(value) then (mapOfResources, mapOfValues) // skip nulls in secrets
                   else (mapOfResources + (label -> resources), mapOfValues + (label -> value))
               }
 
@@ -1099,15 +1187,13 @@ trait JsonEncoder[A]:
   def encode(a: A): Result[(Set[Resource], Value)]
 
 object JsonEncoder:
-  import ProtobufUtil.*
-
   given jsonEncoder[A](using enc: Encoder[A]): JsonEncoder[A] =
     new JsonEncoder[A]:
       def encode(a: A): Result[(Set[Resource], Value)] = enc.encode(a).flatMap {
         case (resources, v @ Value(Kind.NullValue(_), _))   => Result.pure(resources -> v)
         case (resources, s @ Value(Kind.StringValue(_), _)) => Result.pure(resources -> s)
         // if the value is an empty secret, we don't want to serialize it as a JSON string, ProviderArgsEncoder will filter it out
-        case (resources, v @ Value(Kind.StructValue(_), _)) if Encoder.isEmptySecretValue(v) => Result.pure(resources -> v)
+        case (resources, v @ Value(Kind.StructValue(_), _)) if Encoder.isEmptySecretOrOutputValue(v) => Result.pure(resources -> v)
         case (resources, value) =>
           Result.evalEither(value.asJsonString).transform {
             case Left(ex) =>
