@@ -23,6 +23,13 @@ const config = {
   organizationName: organizationName, // Usually your GitHub org/user name.
   projectName: projectName, // Usually your repo name.
 
+  // https://plausible.io/docs/docusaurus-integration
+  scripts: [{
+    src: 'https://plausible.io/js/script.js',
+    defer: true,
+    'data-domain': 'virtuslab.github.io/besom'
+  }],
+
   // Set the production url of your site here
   url: `https://${organizationName}.github.io`,
   // Set the /<baseUrl>/ pathname under which your site is served
@@ -51,15 +58,35 @@ const config = {
       ({
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
-          remarkPlugins: [codeblockVersion(besomVersion)]
+          remarkPlugins: [codeblockVersion(besomVersion)],
+          editUrl: 'https://github.com/VirtusLab/besom/tree/main/website'
         },
-        blog: {
-          showReadingTime: true,
-        },
+        blog: false,
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
       }),
+    ],
+  ],
+
+  plugins: [
+    [
+      "./plugins/blog-plugin",
+      {
+        id: "blog",
+        routeBasePath: "blog",
+        path: "./blog",
+        showReadingTime: true,
+        blogSidebarCount: 0,
+        blogTitle: 'Besom, Scala SDK for Pulumi blog',
+        blogDescription: 'The latest news and updates about Besom, Scala SDK for Pulumi',
+        feedOptions: {
+          type: 'all',
+          title: 'Besom, Scala SDK for Pulumi blog',
+          copyright: `Copyright © ${new Date().getFullYear()} VirtusLab Sp. z o.o.`,
+        },
+        editUrl: 'https://github.com/VirtusLab/besom/tree/main/website'
+      },
     ],
   ],
 
@@ -79,6 +106,11 @@ const config = {
             sidebarId: 'docsSidebar',
             position: 'left',
             label: 'Documentation',
+          },
+          {
+            to: 'blog',
+            position: 'left',
+            label: 'Blog'
           },
           {
             href: 'https://github.com/virtuslab/besom',
