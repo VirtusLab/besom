@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkbesom_website=self.webpackChunkbesom_website||[]).push([[513],{5498:e=>{e.exports=JSON.parse('{"permalink":"/besom/blog","page":1,"postsPerPage":10,"totalPages":1,"totalCount":1,"blogDescription":"The latest news and updates about Besom, Scala SDK for Pulumi","blogTitle":"Besom, Scala SDK for Pulumi blog"}')}}]);

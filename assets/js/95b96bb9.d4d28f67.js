@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkbesom_website=self.webpackChunkbesom_website||[]).push([[405],{7057:e=>{e.exports=JSON.parse('{"title":"Recent posts","items":[]}')}}]);
