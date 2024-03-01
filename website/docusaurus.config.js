@@ -62,18 +62,6 @@ const config = {
           editUrl: 'https://github.com/VirtusLab/besom/tree/main/website'
         },
         blog: false,
-        // blog: {
-        //   showReadingTime: true,
-        //   blogSidebarCount: 0,
-        //   blogTitle: 'Besom, Scala SDK for Pulumi blog',
-        //   blogDescription: 'The latest news and updates about Besom, Scala SDK for Pulumi',
-        //   feedOptions: {
-        //     type: 'all',
-        //     title: 'Besom, Scala SDK for Pulumi blog',
-        //     copyright: `Copyright © ${new Date().getFullYear()} VirtusLab Sp. z o.o.`,
-        //   },
-        //   editUrl: 'https://github.com/VirtusLab/besom/tree/main/website'
-        // },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
@@ -121,8 +109,6 @@ const config = {
           },
           {
             to: 'blog',
-            // type: 'docSidebar',
-            // sidebarId: 'blogSidebar',
             position: 'left',
             label: 'Blog'
           },
