@@ -1,16 +1,10 @@
 package besom.internal
 
-import com.google.protobuf.struct.{Struct, Value}, Value.Kind, Kind.*
+import com.google.protobuf.struct.{Struct, Value}
+import Value.Kind
+import Kind.*
 import Constants.{IdPropertyName, UrnPropertyName}
-
-/** Controls the serialization of RPC structures.
-  *
-  * @param keepOutputValues
-  *   true if we are keeping output values If the monitor does not support output values, they will not be kept, even when set to true.
-  */
-case class SerializationOptions(
-  keepOutputValues: Boolean
-)
+import besom.aliases.Context
 
 case class SerializationResult(
   serialized: Struct,
@@ -25,7 +19,7 @@ object PropertiesSerializer:
     */
   def serializeResourceProperties[A: ArgsEncoder](
     args: A
-  ): Result[SerializationResult] =
+  )(using Context): Result[SerializationResult] =
     serializeFilteredProperties(args, key => key == IdPropertyName || key == UrnPropertyName)
 
   /** serializeFilteredProperties walks the props object passed in, awaiting all interior promises for properties with keys that match the
@@ -34,7 +28,7 @@ object PropertiesSerializer:
   def serializeFilteredProperties[A: ArgsEncoder](
     args: A,
     filter: String => Boolean
-  ): Result[SerializationResult] =
+  )(using Context): Result[SerializationResult] =
     summon[ArgsEncoder[A]].encode(args, filter).map { case (fieldsToResources, value) =>
       SerializationResult(value, detectUnknowns(Value(Kind.StructValue(value))), fieldsToResources)
     }

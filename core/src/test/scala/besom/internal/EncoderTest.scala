@@ -53,7 +53,8 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
   val dummyLabel: Label = Label.fromNameAndType("dummy", "dummy:pkg:Dummy")
 
   test("encode case class") {
-    val e = summon[Encoder[TestCaseClass]]
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[TestCaseClass]]
 
     val expected = Map(
       "foo" -> 10.asValue,
@@ -66,7 +67,8 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
   }
 
   test("encode null") {
-    val e = summon[Encoder[Option[String]]]
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[Option[String]]]
 
     val (_, encoded) = e.encode(None).unsafeRunSync()
 
@@ -105,7 +107,8 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
   }
 
   test("encode special case class with unmangling") {
-    val e = summon[Encoder[SpecialCaseClass]]
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[SpecialCaseClass]]
 
     val expected = Map(
       "equals" -> 10.asValue,
@@ -118,7 +121,8 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
   }
 
   test("encoder enum") {
-    val e = summon[Encoder[TestEnum]]
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[TestEnum]]
 
     assertEqualsValue(e.encode(TestEnum.Test1).unsafeRunSync()._2, "Test1 value".asValue)
     assertEqualsValue(e.encode(TestEnum.AnotherTest).unsafeRunSync()._2, "AnotherTest value".asValue)
@@ -126,7 +130,8 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
   }
 
   test("optional Encoder test") {
-    val e = summon[Encoder[OptionCaseClass]]
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[OptionCaseClass]]
 
     val (res, value) = e
       .encode(
@@ -139,7 +144,8 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
   }
 
   test("encode a union of string and case class") {
-    val e = summon[Encoder[String | TestCaseClass]]
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[String | TestCaseClass]]
 
     val (_, encodedString) = e.encode("abc").unsafeRunSync()
     assertEqualsValue(encodedString, "abc".asValue)

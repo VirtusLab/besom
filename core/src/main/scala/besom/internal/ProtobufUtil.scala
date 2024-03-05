@@ -49,14 +49,6 @@ object ProtobufUtil:
         case Some(a) => a.asValue
         case None    => Null
 
-/*  given [A: ToValue]: ToValue[OutputData[A]] with
-    import besom.util.*
-    extension (d: OutputData[A])
-      private def deps(r: Set[Resource])(using Context): Result[List[URN]] = r.toList.map(_.urn.getValue)
-      def asValue: Value = d match
-        case OutputData.Known(r, s, v) => v.asValue.asOutputValue(isKnown = true, isSecret = s, dependencies = r)
-        case OutputData.Unknown(r, s)  => Null.asOutputValue(isKnown = false, isSecret = s, dependencies = r)*/
-
   extension (v: Value)
     def asString: String                        = v.toProtoString
     def asJsonString: Either[Throwable, String] = Try(printer.print(Value.toJavaProto(v))).toEither
