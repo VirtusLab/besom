@@ -5,6 +5,7 @@ import scala.language.dynamics
 import scala.quoted.*
 import com.google.protobuf.struct.Struct
 
+//noinspection ScalaUnusedSymbol
 object EmptyExport extends Dynamic:
   inline def applyDynamic(name: "apply")(inline args: Any*)(using ctx: Context): Stack = ${
     Export.applyDynamicImpl('args, 'None)
@@ -13,6 +14,7 @@ object EmptyExport extends Dynamic:
     Export.applyDynamicNamedImpl('args, 'ctx, 'None)
   }
 
+//noinspection ScalaUnusedSymbol
 class Export(private val stack: Stack) extends Dynamic:
   private val maybeStack: Option[Stack] = Some(stack)
   inline def applyDynamic(name: "apply")(inline args: Any*)(using ctx: Context): Stack = ${
@@ -46,7 +48,7 @@ object Export:
             Expr.summon[Encoder[v]] match
               case Some(encoder) =>
                 // TODO make sure we don't need deps here (replaced with _)
-                Right('{ ${ encoder }.encode(${ value }).map { (_, value1) => (${ name }, value1) } })
+                Right('{ ${ encoder }.encode(${ value })(using ${ ctx }).map { (_, value1) => (${ name }, value1) } })
               case None =>
                 Left(() => report.error(s"Encoder[${Type.show[v]}] is missing", value))
         }

@@ -1,7 +1,9 @@
 package besom.internal
 
-import com.google.protobuf.struct.{Struct, Value}, Value.Kind, Kind.*
-import Constants.{IdPropertyName, UrnPropertyName}
+import besom.internal.Constants.{IdPropertyName, UrnPropertyName}
+import com.google.protobuf.struct.Value.Kind
+import com.google.protobuf.struct.Value.Kind.*
+import com.google.protobuf.struct.{Struct, Value}
 
 case class SerializationResult(
   serialized: Struct,
@@ -10,15 +12,22 @@ case class SerializationResult(
 )
 
 object PropertiesSerializer:
+
+  /** serializeResourceProperties walks the props object passed in, awaiting all interior promises besides those for `id` and `urn`,
+    * creating a reasonable POJO object that can be remoted over to registerResource.
+    */
   def serializeResourceProperties[A: ArgsEncoder](
     args: A
-  ): Result[SerializationResult] =
+  )(using Context): Result[SerializationResult] =
     serializeFilteredProperties(args, key => key == IdPropertyName || key == UrnPropertyName)
 
+  /** serializeFilteredProperties walks the props object passed in, awaiting all interior promises for properties with keys that match the
+    * provided filter, creating a reasonable POJO object that can be remoted over to registerResource.
+    */
   def serializeFilteredProperties[A: ArgsEncoder](
     args: A,
     filter: String => Boolean
-  ): Result[SerializationResult] =
+  )(using Context): Result[SerializationResult] =
     summon[ArgsEncoder[A]].encode(args, filter).map { case (fieldsToResources, value) =>
       SerializationResult(value, detectUnknowns(Value(Kind.StructValue(value))), fieldsToResources)
     }

@@ -6,7 +6,6 @@ import besom.internal.RunResult.{*, given}
 import besom.types.{EnumCompanion, Label, StringEnum, Output as _, *}
 import besom.util.*
 import com.google.protobuf.struct.*
-import com.google.protobuf.struct.Struct.toJavaProto
 
 object EncoderTest:
 
@@ -53,24 +52,38 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
   val dummyLabel: Label = Label.fromNameAndType("dummy", "dummy:pkg:Dummy")
 
   test("encode case class") {
-    val e = summon[Encoder[TestCaseClass]]
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[TestCaseClass]]
 
+    val (_, encoded) = e.encode(TestCaseClass(10, List("qwerty"), None, None, Some("abc"))).unsafeRunSync()
     val expected = Map(
       "foo" -> 10.asValue,
       "bar" -> List("qwerty".asValue).asValue,
       "optNone1" -> Null,
       "optSome" -> Some("abc").asValue
     ).asValue
-    val (_, encoded) = e.encode(TestCaseClass(10, List("qwerty"), None, None, Some("abc"))).unsafeRunSync()
-    assertEqualsValue(encoded, expected)
+
+    assertEqualsValue(encoded, expected, encoded.toProtoString)
   }
 
   test("encode null") {
-    val e = summon[Encoder[Option[String]]]
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[Option[String]]]
 
     val (_, encoded) = e.encode(None).unsafeRunSync()
+    val expected     = Null
 
-    assertEqualsValue(encoded, Null)
+    assertEqualsValue(encoded, expected, encoded.toProtoString)
+  }
+
+  test("encode output null") {
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[Output[Option[String]]]]
+
+    val (_, encoded) = e.encode(Output(None)).unsafeRunSync()
+    val expected     = Null
+
+    assertEqualsValue(encoded, expected, encoded.toProtoString)
   }
 
   test("encode secret null") {
@@ -80,7 +93,7 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
     val (_, encoded) = e.encode(Output.secret(None)).unsafeRunSync()
     val expected     = None.asValue.asSecret
 
-    assertEqualsValue(encoded, expected)
+    assertEqualsValue(encoded, expected, encoded.toProtoString)
   }
 
   test("encode secret input map") {
@@ -91,7 +104,7 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
     val (_, encoded) = e.encode(data.asOptionOutput(isSecret = true)).unsafeRunSync()
     val expected     = None.asValue.asSecret
 
-    assertEqualsValue(encoded, expected)
+    assertEqualsValue(encoded, expected, encoded.toProtoString)
   }
 
   test("encode class with secret inputs") {
@@ -101,11 +114,12 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
     val (_, encoded) = e.encode(InputOptionalCaseClass(Output.secret(None), Output.secret(None))).unsafeRunSync()
     val expected     = Map().asValue
 
-    assertEqualsValue(encoded, expected)
+    assertEqualsValue(encoded, expected, encoded.toProtoString)
   }
 
   test("encode special case class with unmangling") {
-    val e = summon[Encoder[SpecialCaseClass]]
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[SpecialCaseClass]]
 
     val expected = Map(
       "equals" -> 10.asValue,
@@ -114,44 +128,49 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
     ).asValue
     val (_, encoded) = e.encode(SpecialCaseClass(10, "abc", "qwerty")).unsafeRunSync()
 
-    assertEqualsValue(encoded, expected)
+    assertEqualsValue(encoded, expected, encoded.toProtoString)
   }
 
   test("encoder enum") {
-    val e = summon[Encoder[TestEnum]]
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[TestEnum]]
 
     assertEqualsValue(e.encode(TestEnum.Test1).unsafeRunSync()._2, "Test1 value".asValue)
     assertEqualsValue(e.encode(TestEnum.AnotherTest).unsafeRunSync()._2, "AnotherTest value".asValue)
     assertEqualsValue(e.encode(TestEnum.`weird-test`).unsafeRunSync()._2, "weird-test value".asValue)
   }
 
-  test("optional Encoder test") {
-    val e = summon[Encoder[OptionCaseClass]]
+  test("encode optional") {
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[OptionCaseClass]]
 
-    val (res, value) = e
+    val (res, encoded) = e
       .encode(
         OptionCaseClass(None, None)
       )
       .unsafeRunSync()
 
     assert(res.isEmpty)
-    assert(value.getStructValue.fields.isEmpty, value)
+    assert(encoded.getStructValue.fields.isEmpty, encoded.toProtoString)
   }
 
   test("encode a union of string and case class") {
-    val e = summon[Encoder[String | TestCaseClass]]
+    given Context = DummyContext().unsafeRunSync()
+    val e         = summon[Encoder[String | TestCaseClass]]
 
     val (_, encodedString) = e.encode("abc").unsafeRunSync()
-    assertEqualsValue(encodedString, "abc".asValue)
+    val expectedString     = "abc".asValue
+
+    assertEqualsValue(encodedString, expectedString, encodedString.toProtoString)
 
     val (_, encodedCaseClass) = e.encode(TestCaseClass(10, List("qwerty"), None, None, Some("abc"))).unsafeRunSync()
-    val expected = Map(
+    val expectedCaseClass = Map(
       "foo" -> 10.asValue,
       "bar" -> List("qwerty".asValue).asValue,
       "optNone1" -> Null,
       "optSome" -> Some("abc").asValue
     ).asValue
-    assertEqualsValue(encodedCaseClass, expected)
+    assertEqualsValue(encodedCaseClass, expectedCaseClass, encodedCaseClass.toProtoString)
   }
 
 end EncoderTest
@@ -159,11 +178,11 @@ end EncoderTest
 class ArgsEncoderTest extends munit.FunSuite with ValueAssertions:
   import EncoderTest.*
 
-  test("ArgsEncoder works") {
+  test("simple args") {
     given Context = DummyContext().unsafeRunSync()
     val ae        = summon[ArgsEncoder[TestArgs]]
 
-    val (res, value) = ae
+    val (res, encoded) = ae
       .encode(
         TestArgs(
           Output("SOME-TEST-PROVIDER"),
@@ -175,17 +194,24 @@ class ArgsEncoderTest extends munit.FunSuite with ValueAssertions:
 
     assert(res.contains("a"), res)
     assert(res.contains("b"), res)
-    assert(value.fields("a").kind.isStringValue, value)
-    assert(value.fields("b").kind.isStructValue, value)
-    assertEquals(value.fields("a").getStringValue, "SOME-TEST-PROVIDER")
-    assertEquals(value.fields("b").getStructValue.fields("data").getStringValue, "werks?")
+
+    val expected =
+      Map(
+        "a" -> "SOME-TEST-PROVIDER".asValue,
+        "b" -> Map(
+          "data" -> "werks?".asValue,
+          "moreData" -> 123.asValue
+        ).asValue
+      ).asValue
+
+    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
   }
 
-  test("optional ArgsEncoder test") {
+  test("optional args") {
     given Context = DummyContext().unsafeRunSync()
     val ae        = summon[ArgsEncoder[TestOptionArgs]]
 
-    val (res, value) = ae
+    val (res, encoded) = ae
       .encode(
         TestOptionArgs(
           Output(None),
@@ -195,30 +221,39 @@ class ArgsEncoderTest extends munit.FunSuite with ValueAssertions:
       )
       .unsafeRunSync()
 
+    val expected =
+      Map(
+        "a" -> Null,
+        "b" -> Null
+      ).asValue
+
+    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
     assert(res.isEmpty, res)
-    assert(value.fields.isEmpty, value)
   }
 
   test("empty secret args") {
     given Context = DummyContext().unsafeRunSync()
     val ae        = summon[ArgsEncoder[InputOptionalCaseClass]]
 
-    val (res, value) = ae
+    val (res, encoded) = ae
       .encode(
         InputOptionalCaseClass(Output.secret(None), Output.secret(None)),
         _ => false
       )
       .unsafeRunSync()
 
+    val expected =
+      Map.empty[String, Value].asValue
+
+    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
     assert(res.isEmpty, res)
-    assert(value.fields.isEmpty, value)
   }
 
   test("secrets args") {
     given Context = DummyContext().unsafeRunSync()
     val ae        = summon[ArgsEncoder[InputOptionalCaseClass]]
 
-    val (res, value) = ae
+    val (res, encoded) = ae
       .encode(
         InputOptionalCaseClass(
           Output.secret(Some("secret")),
@@ -227,13 +262,14 @@ class ArgsEncoderTest extends munit.FunSuite with ValueAssertions:
         _ => false
       )
       .unsafeRunSync()
+
     val expected = Map(
       "value" -> "secret".asValue.asSecret,
       "data" -> Map("key" -> "value".asValue.asSecret).asValue.asSecret
     ).asValue
 
     assert(res.keySet == Set("value", "data"), res)
-    assertEqualsValue(value.asValue, expected)
+    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
   }
 end ArgsEncoderTest
 
@@ -302,11 +338,11 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
   import EncoderTest.*
   import ProviderArgsEncoderTest.*
 
-  test("simple ProviderArgsEncoder test") {
+  test("simple args") {
     given Context = DummyContext().unsafeRunSync()
     val pae       = summon[ProviderArgsEncoder[TestProviderArgs]]
 
-    val (res, value) = pae
+    val (res, encoded) = pae
       .encode(
         TestProviderArgs(
           Output("SOME-TEST-PROVIDER"),
@@ -318,13 +354,20 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
 
     assert(res.contains("type"), res)
     assert(res.contains("pcc"), res)
-    assert(value.fields("type").kind.isStringValue, value.fields("type"))
-    assert(value.fields("pcc").kind.isStringValue, value.fields("pcc"))
-    assertEquals(value.fields("type").getStringValue, "SOME-TEST-PROVIDER")
-    assertEquals(value.fields("pcc").getStringValue, "{\"data\":\"werks?\",\"moreData\":123.0}")
+
+    val expected =
+      Map(
+        "type" -> "SOME-TEST-PROVIDER".asValue,
+        "pcc" -> Map(
+          "data" -> "werks?".asValue,
+          "moreData" -> 123.asValue
+        ).asValue.asJsonStringOrThrow.asValue
+      ).asValue
+
+    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
   }
 
-  test("optional ProviderArgsEncoder test") {
+  test("optional args") {
     given Context = DummyContext().unsafeRunSync()
     val pae       = summon[ProviderArgsEncoder[TestProviderOptionArgs]]
 
@@ -332,13 +375,20 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
       Output(None),
       Output(None)
     )
-    val (res, value) = pae.encode(args, _ => false).unsafeRunSync()
+    val (res, encoded) = pae.encode(args, _ => false).unsafeRunSync()
 
     assert(res.isEmpty, res)
-    assert(value.fields.isEmpty, value)
+
+    val expected =
+      Map(
+        "type" -> Null,
+        "pcc" -> Null
+      ).asValue
+
+    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
   }
 
-  test("encode ProviderArgs") {
+  test("encode Kubernetes ProviderArgs") {
     given Context = DummyContext().unsafeRunSync()
     val pae       = summon[ProviderArgsEncoder[ProviderArgs]]
 
@@ -347,11 +397,11 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
 
     val expected = Map("kubeconfig" -> "abcd".asValue).asValue
 
-    assertEqualsValue(encoded.asValue, expected)
+    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
   }
 
   // FIXME: This test is failing because the `ProviderArgsEncoder` is not encoding the `kubeconfig` as a secret
-  test("encode secret ProviderArgs".ignore) {
+  test("encode json secret".ignore) {
     given Context = DummyContext().unsafeRunSync()
     val pae       = summon[ProviderArgsEncoder[ProviderArgs]]
 
@@ -360,11 +410,10 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
 
     val expected = Map("kubeconfig" -> "abcd".asValue.asSecret).asValue
 
-    assertNoDiff(pprint(encoded.asValue).plainText, pprint(expected).plainText)
-    assertEqualsValue(encoded.asValue, expected)
+    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
   }
 
-  test("json ProviderArgsEncoder test") {
+  test("encode json") {
     // This is currently only used on arguments to provider resources.
     // When serializing properties with ProviderArgsEncoder to protobuf Struct, instead of sending their native
     // Struct representation, we send a protobuf String value with a JSON-formatted Struct representation
@@ -385,19 +434,19 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
       )
       .unsafeRunSync()
 
-    val json = com.google.protobuf.util.JsonFormat
-      .printer()
-      .omittingInsignificantWhitespace()
-      .sortingMapKeys()
-      .print(toJavaProto(res.serialized))
+    val encoded = res.serialized.asValue
 
-    assertNoDiff(
-      json,
-      """{"b":"true","helper":"{\"int\":1.0}","str":"x"}"""
-    )
+    val expected =
+      Map(
+        "str" -> "x".asValue,
+        "b" -> true.asValue.asJsonStringOrThrow.asValue,
+        "helper" -> Map("int" -> 1.asValue).asValue.asJsonStringOrThrow.asValue
+      ).asValue
+
+    assertEqualsValue(encoded, expected, encoded.toProtoString)
   }
 
-  test("json secret ProviderArgsEncoder test") {
+  test("encode empty json secrets") {
     given Context = DummyContext().unsafeRunSync()
 
     val res = PropertiesSerializer
@@ -410,16 +459,10 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
       )
       .unsafeRunSync()
 
-    val json = com.google.protobuf.util.JsonFormat
-      .printer()
-      .omittingInsignificantWhitespace()
-      .sortingMapKeys()
-      .print(toJavaProto(res.serialized))
+    val encoded  = res.serialized.asValue
+    val expected = Map().asValue
 
-    assertNoDiff(
-      json,
-      """{}"""
-    )
+    assertEqualsValue(encoded, expected, encoded.toProtoString)
   }
 end ProviderArgsEncoderTest
 
@@ -434,7 +477,7 @@ class Regression383Test extends munit.FunSuite with ValueAssertions:
     val (_, encoded) = e.encode(SecretArgs(), _ => false).unsafeRunSync()
     val expected     = Map().asValue
 
-    assertEqualsValue(encoded.asValue, expected)
+    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
   }
 
 object Regression383Test:
@@ -467,9 +510,9 @@ class RecurrentArgsTest extends munit.FunSuite with ValueAssertions:
     val e         = summon[Encoder[Recurrent]]
 
     val (_, encoded) = e.encode(Recurrent(Some(Recurrent(Some(Recurrent(Some(Recurrent(None)))))))).unsafeRunSync()
-
     val expected =
       Map("value" -> Map("value" -> Map("value" -> Map().asValue).asValue).asValue).asValue
-    assertEqualsValue(encoded, expected)
+
+    assertEqualsValue(encoded, expected, encoded.toProtoString)
   }
 end RecurrentArgsTest

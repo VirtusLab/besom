@@ -341,7 +341,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     state: ResourceState,
     args: A,
     options: ResolvedResourceOptions
-  ): Result[PreparedInputs] =
+  )(using Context): Result[PreparedInputs] =
     val directDeps = options.dependsOn.toSet
     for
       _                 <- log.trace(s"Preparing inputs: gathering direct dependencies")

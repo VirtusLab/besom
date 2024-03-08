@@ -683,9 +683,9 @@ end DecoderHelpers
     |case class MyExportedValues(...) derives Encoder""")
 trait Encoder[A]:
   self =>
-  def encode(a: A): Result[(Set[Resource], Value)]
+  def encode(a: A)(using Context): Result[(Set[Resource], Value)]
   def contramap[B](f: B => A): Encoder[B] = new Encoder[B]:
-    def encode(b: B): Result[(Set[Resource], Value)] = self.encode(f(b))
+    def encode(b: B)(using Context): Result[(Set[Resource], Value)] = self.encode(f(b))
 
 object Encoder:
   import Constants.*
@@ -695,11 +695,11 @@ object Encoder:
     new Encoder[A]:
       // TODO We only serialize dumb enums!!
       // private val encoderMap                                    = nameEncoderPairs.toMap
-      override def encode(a: A): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> a.toString.asValue)
+      override def encode(a: A)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> a.toString.asValue)
 
   def encoderProduct[A](nameEncoderPairs: => List[(String, Encoder[?])]): Encoder[A] =
     new Encoder[A]:
-      override def encode(a: A): Result[(Set[Resource], Value)] =
+      override def encode(a: A)(using Context): Result[(Set[Resource], Value)] =
         Result
           .sequence {
             a.asInstanceOf[Product]
@@ -732,12 +732,11 @@ object Encoder:
       case _: Mirror.ProductOf[A] => encoderProduct(nameEncoderPairs)
 
   given customResourceEncoder[A <: CustomResource](using
-    ctx: Context,
     outputIdEnc: Encoder[Output[ResourceId]],
     outputURNEnc: Encoder[Output[URN]]
   ): Encoder[A] =
     new Encoder[A]:
-      def encode(a: A): Result[(Set[Resource], Value)] =
+      def encode(a: A)(using ctx: Context): Result[(Set[Resource], Value)] =
         outputIdEnc.encode(a.id).flatMap { (idResources, idValue) =>
           if ctx.featureSupport.keepResources then
             outputURNEnc.encode(a.urn).flatMap { (urnResources, urnValue) =>
@@ -757,11 +756,10 @@ object Encoder:
         }
 
   given componentResourceEncoder[A <: ComponentResource](using
-    ctx: Context,
     outputURNEnc: Encoder[Output[URN]]
   ): Encoder[A] =
     new Encoder[A]:
-      def encode(a: A): Result[(Set[Resource], Value)] =
+      def encode(a: A)(using ctx: Context): Result[(Set[Resource], Value)] =
         outputURNEnc.encode(a.urn).flatMap { (urnResources, urnValue) =>
           if ctx.featureSupport.keepResources then
             val result = Map(
@@ -774,11 +772,10 @@ object Encoder:
         }
 
   given remoteComponentResourceEncoder[A <: RemoteComponentResource](using
-    ctx: Context,
     outputURNEnc: Encoder[Output[URN]]
   ): Encoder[A] =
     new Encoder[A]:
-      def encode(a: A): Result[(Set[Resource], Value)] =
+      def encode(a: A)(using ctx: Context): Result[(Set[Resource], Value)] =
         outputURNEnc.encode(a.urn).flatMap { (urnResources, urnValue) =>
           if ctx.featureSupport.keepResources then
             val result = Map(
@@ -791,29 +788,29 @@ object Encoder:
         }
 
   given stringEncoder: Encoder[String] with
-    def encode(str: String): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> str.asValue)
+    def encode(str: String)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> str.asValue)
 
   given urnEncoder: Encoder[URN] with
-    def encode(urn: URN): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> urn.asString.asValue)
+    def encode(urn: URN)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> urn.asString.asValue)
 
   given idEncoder: Encoder[ResourceId] with
-    def encode(id: ResourceId): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> id.asString.asValue)
+    def encode(id: ResourceId)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> id.asString.asValue)
 
   given Encoder[NonEmptyString] with
-    def encode(nestr: NonEmptyString): Result[(Set[Resource], Value)] =
+    def encode(nestr: NonEmptyString)(using Context): Result[(Set[Resource], Value)] =
       Result.pure(Set.empty -> Value(Kind.StringValue(nestr.asString)))
 
   given Encoder[Int] with
-    def encode(int: Int): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> int.asValue)
+    def encode(int: Int)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> int.asValue)
 
   given Encoder[Double] with
-    def encode(dbl: Double): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> dbl.asValue)
+    def encode(dbl: Double)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> dbl.asValue)
 
   given Encoder[Value] with
-    def encode(vl: Value): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> vl)
+    def encode(vl: Value)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> vl)
 
   given Encoder[Boolean] with
-    def encode(bool: Boolean): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> bool.asValue)
+    def encode(bool: Boolean)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> bool.asValue)
 
   given jsonEncoder: Encoder[JsValue] with
     // TODO not stack-safe
@@ -827,17 +824,17 @@ object Encoder:
         case JsFalse           => false.asValue
         case JsNull            => Null
 
-    def encode(json: JsValue): Result[(Set[Resource], Value)] =
+    def encode(json: JsValue)(using Context): Result[(Set[Resource], Value)] =
       Result.pure(Set.empty -> encodeInternal(json))
 
   given optEncoder[A](using inner: Encoder[A]): Encoder[Option[A]] with
-    def encode(optA: Option[A]): Result[(Set[Resource], Value)] =
+    def encode(optA: Option[A])(using Context): Result[(Set[Resource], Value)] =
       optA match
         case Some(value) => inner.encode(value)
         case None        => Result.pure(Set.empty -> Null)
 
   given outputEncoder[A](using inner: Encoder[Option[A]]): Encoder[Output[A]] with
-    def encode(outA: Output[A]): Result[(Set[Resource], Value)] = outA.getData.flatMap {
+    def encode(outA: Output[A])(using ctx: Context): Result[(Set[Resource], Value)] = outA.getData.flatMap {
       case OutputData.Unknown(resources, _) =>
         Result.pure(resources -> UnknownValue.asValue)
       case OutputData.Known(resources, isSecret, maybeValue) =>
@@ -860,32 +857,32 @@ object Encoder:
   ).asValue
 
   given fileAssetEncoder: Encoder[FileAsset] = new Encoder[FileAsset]:
-    def encode(fileAsset: FileAsset): Result[(Set[Resource], Value)] = Result {
+    def encode(fileAsset: FileAsset)(using Context): Result[(Set[Resource], Value)] = Result {
       Set.empty -> assetWrapper(Constants.AssetOrArchivePathName, fileAsset.path.asValue)
     }
 
   given remoteAssetEncoder: Encoder[RemoteAsset] = new Encoder[RemoteAsset]:
-    def encode(remoteAsset: RemoteAsset): Result[(Set[Resource], Value)] = Result {
+    def encode(remoteAsset: RemoteAsset)(using Context): Result[(Set[Resource], Value)] = Result {
       Set.empty -> assetWrapper(Constants.AssetOrArchiveUriName, remoteAsset.uri.asValue)
     }
 
   given stringAssetEncoder: Encoder[StringAsset] = new Encoder[StringAsset]:
-    def encode(stringAsset: StringAsset): Result[(Set[Resource], Value)] = Result {
+    def encode(stringAsset: StringAsset)(using Context): Result[(Set[Resource], Value)] = Result {
       Set.empty -> assetWrapper(Constants.AssetTextName, stringAsset.text.asValue)
     }
 
   given fileArchiveEncoder: Encoder[FileArchive] = new Encoder[FileArchive]:
-    def encode(fileArchive: FileArchive): Result[(Set[Resource], Value)] = Result {
+    def encode(fileArchive: FileArchive)(using Context): Result[(Set[Resource], Value)] = Result {
       Set.empty -> archiveWrapper(Constants.AssetOrArchivePathName, fileArchive.path.asValue)
     }
 
   given remoteArchiveEncoder: Encoder[RemoteArchive] = new Encoder[RemoteArchive]:
-    def encode(remoteArchive: RemoteArchive): Result[(Set[Resource], Value)] = Result {
+    def encode(remoteArchive: RemoteArchive)(using Context): Result[(Set[Resource], Value)] = Result {
       Set.empty -> archiveWrapper(Constants.AssetOrArchiveUriName, remoteArchive.uri.asValue)
     }
 
   given assetArchiveEncoder: Encoder[AssetArchive] = new Encoder[AssetArchive]:
-    def encode(assetArchive: AssetArchive): Result[(Set[Resource], Value)] =
+    def encode(assetArchive: AssetArchive)(using Context): Result[(Set[Resource], Value)] =
       val serializedAssets =
         assetArchive.assets.toVector.map { case (key, assetOrArchive) =>
           assetOrArchiveEncoder.encode(assetOrArchive).map((key, _))
@@ -902,7 +899,7 @@ object Encoder:
       }
 
   given assetEncoder: Encoder[Asset] = new Encoder[Asset]:
-    def encode(asset: Asset): Result[(Set[Resource], Value)] =
+    def encode(asset: Asset)(using Context): Result[(Set[Resource], Value)] =
       asset match
         case fa: FileAsset   => fileAssetEncoder.encode(fa)
         case ra: RemoteAsset => remoteAssetEncoder.encode(ra)
@@ -911,7 +908,7 @@ object Encoder:
         //   Result.fail(Exception("Cannot serialize invalid asset")) // TODO is this necessary?
 
   given archiveEncoder: Encoder[Archive] = new Encoder[Archive]:
-    def encode(archive: Archive): Result[(Set[Resource], Value)] =
+    def encode(archive: Archive)(using Context): Result[(Set[Resource], Value)] =
       archive match
         case fa: FileArchive   => fileArchiveEncoder.encode(fa)
         case ra: RemoteArchive => remoteArchiveEncoder.encode(ra)
@@ -920,13 +917,13 @@ object Encoder:
         //   Result.fail(Exception("Cannot serialize invalid archive")) // TODO is this necessary?
 
   given assetOrArchiveEncoder: Encoder[AssetOrArchive] = new Encoder[AssetOrArchive]:
-    def encode(assetOrArchive: AssetOrArchive): Result[(Set[Resource], Value)] =
+    def encode(assetOrArchive: AssetOrArchive)(using Context): Result[(Set[Resource], Value)] =
       assetOrArchive match
         case a: Asset   => assetEncoder.encode(a)
         case a: Archive => archiveEncoder.encode(a)
 
   given listEncoder[A](using innerEncoder: Encoder[A]): Encoder[List[A]] = new Encoder[List[A]]:
-    def encode(lstA: List[A]): Result[(Set[Resource], Value)] =
+    def encode(lstA: List[A])(using Context): Result[(Set[Resource], Value)] =
       Result
         .sequence(lstA.map(innerEncoder.encode(_)))
         .map { lst =>
@@ -939,10 +936,10 @@ object Encoder:
   // TODO is this ever necessary?
   given vectorEncoder[A](using lstEncoder: Encoder[List[A]]): Encoder[Vector[A]] =
     new Encoder[Vector[A]]:
-      def encode(vecA: Vector[A]): Result[(Set[Resource], Value)] = lstEncoder.encode(vecA.toList)
+      def encode(vecA: Vector[A])(using Context): Result[(Set[Resource], Value)] = lstEncoder.encode(vecA.toList)
 
   given mapEncoder[A](using inner: Encoder[A]): Encoder[Map[String, A]] = new Encoder[Map[String, A]]:
-    def encode(map: Map[String, A]): Result[(Set[Resource], Value)] =
+    def encode(map: Map[String, A])(using Context): Result[(Set[Resource], Value)] =
       Result
         .sequence {
           map.toList.map { case (key, value) =>
@@ -969,7 +966,7 @@ object Encoder:
   import scala.quoted.*
 
   private def unionEncoderImpl[U: Type](using Quotes) =
-    import quotes.reflect.*
+    import scala.quoted.quotes.reflect.*
     TypeRepr.of[U] match
       case OrType(t1, t2) =>
         (t1.asType, t2.asType) match
@@ -978,7 +975,7 @@ object Encoder:
               case (Some(enc1), Some(enc2)) =>
                 '{
                   new Encoder[U]:
-                    def encode(aOrB: U): Result[(Set[Resource], Value)] = aOrB match
+                    def encode(aOrB: U)(using Context): Result[(Set[Resource], Value)] = aOrB match
                       case a: t1 => ${ enc1 }.encode(a)
                       case b: t2 => ${ enc2 }.encode(b)
                 }
@@ -991,7 +988,7 @@ object Encoder:
 
   given eitherEncoder[A, B](using innerA: Encoder[A], innerB: Encoder[B]): Encoder[Either[A, B]] =
     new Encoder[Either[A, B]]:
-      def encode(optA: Either[A, B]): Result[(Set[Resource], Value)] =
+      def encode(optA: Either[A, B])(using Context): Result[(Set[Resource], Value)] =
         optA match
           case Left(a)  => innerA.encode(a)
           case Right(b) => innerB.encode(b)
@@ -1009,7 +1006,7 @@ end Encoder
 // ProviderArgsEncoder summoning JsonEncoder instances instead of Encoder (because all
 // of the fields in provider arguments are serialized to JSON strings)
 trait ArgsEncoder[A]:
-  def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Struct)]
+  def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Set[Resource]], Struct)]
 
 object ArgsEncoder:
   def argsEncoderProduct[A](
@@ -1017,7 +1014,7 @@ object ArgsEncoder:
   ): ArgsEncoder[A] =
     new ArgsEncoder[A]:
       import Constants.*
-      override def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Struct)] =
+      override def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Set[Resource]], Struct)] =
         Result
           .sequence {
             a.asInstanceOf[Product]
@@ -1054,7 +1051,7 @@ object ArgsEncoder:
 end ArgsEncoder
 
 trait ProviderArgsEncoder[A] extends ArgsEncoder[A]:
-  def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Struct)]
+  def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Set[Resource]], Struct)]
 
 object ProviderArgsEncoder:
   def providerArgsEncoderProduct[A](
@@ -1062,7 +1059,7 @@ object ProviderArgsEncoder:
   ): ProviderArgsEncoder[A] =
     new ProviderArgsEncoder[A]:
       import Constants.*
-      override def encode(a: A, filterOut: String => Boolean): Result[(Map[String, Set[Resource]], Struct)] =
+      override def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Set[Resource]], Struct)] =
         Result
           .sequence {
             a.asInstanceOf[Product]
@@ -1098,14 +1095,14 @@ object ProviderArgsEncoder:
 end ProviderArgsEncoder
 
 trait JsonEncoder[A]:
-  def encode(a: A): Result[(Set[Resource], Value)]
+  def encode(a: A)(using Context): Result[(Set[Resource], Value)]
 
 object JsonEncoder:
   import ProtobufUtil.*
 
   given jsonEncoder[A](using enc: Encoder[A]): JsonEncoder[A] =
     new JsonEncoder[A]:
-      def encode(a: A): Result[(Set[Resource], Value)] = enc.encode(a).flatMap {
+      def encode(a: A)(using Context): Result[(Set[Resource], Value)] = enc.encode(a).flatMap {
         case (resources, v @ Value(Kind.NullValue(_), _))   => Result.pure(resources -> v)
         case (resources, s @ Value(Kind.StringValue(_), _)) => Result.pure(resources -> s)
         // if the value is an empty secret, we don't want to serialize it as a JSON string, ProviderArgsEncoder will filter it out

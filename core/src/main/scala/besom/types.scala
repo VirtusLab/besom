@@ -343,7 +343,9 @@ object types:
         case a: Boolean => a.asValue
         case a: String  => a.asValue
 
-    given Encoder[E] = (a: E) => Result.pure(Set.empty -> a.value.asValueAny)
+    given Encoder[E] = new Encoder[E]:
+      def encode(a: E)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> a.value.asValueAny)
+
     given (using decV: Decoder[V]): Decoder[E] =
       decV.emap { (value, label) =>
         valuesToInstances
