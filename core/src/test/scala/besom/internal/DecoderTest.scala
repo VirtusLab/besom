@@ -1,14 +1,13 @@
 package besom.internal
 
-import com.google.protobuf.struct.*
-import Constants.*
-import Decoder.*
-import ProtobufUtil.*
-import besom.types.Label
+import besom.internal.Constants.*
+import besom.internal.Decoder.*
+import besom.internal.ProtobufUtil.*
+import besom.internal.RunResult.{*, given}
+import besom.types.{Label, PulumiAny}
 import besom.util.*
-import RunResult.{given, *}
-import Validated.*
-import besom.types.PulumiAny
+import besom.util.Validated.*
+import com.google.protobuf.struct.*
 
 object DecoderTest:
   case class TestCaseClass(

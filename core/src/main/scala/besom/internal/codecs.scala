@@ -4,8 +4,8 @@ import besom.internal.ProtobufUtil.*
 import besom.types.*
 import besom.types.Archive.*
 import besom.types.Asset.*
-import besom.util.{NonEmptyString, *}
 import besom.util.Validated.*
+import besom.util.{NonEmptyString, *}
 import com.google.protobuf.struct.*
 import com.google.protobuf.struct.Value.Kind
 
@@ -261,7 +261,7 @@ object Decoder extends DecoderInstancesLowPrio1:
       }
     def mapping(value: Value, label: Label): Validated[DecodingError, Map[String, A]] = ???
 
-  private def getResourceBasedResourceDecoder[R <: Resource: ResourceDecoder](using Context): Decoder[R] =
+  private def getResourceBasedResourceDecoder[R <: Resource: ResourceDecoder]: Decoder[R] =
     new Decoder[R]:
       override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[R]] =
         decodeAsPossibleSecret(value, label).flatMap { odv =>
@@ -313,14 +313,14 @@ object Decoder extends DecoderInstancesLowPrio1:
       override def mapping(value: Value, label: Label): Validated[DecodingError, R] = ???
 
   // handles ProviderResources too as they extend CustomResource
-  given customResourceDecoder[R <: CustomResource: ResourceDecoder](using Context): Decoder[R] =
+  given customResourceDecoder[R <: CustomResource: ResourceDecoder]: Decoder[R] =
     getResourceBasedResourceDecoder[R]
 
-  given remoteComponentResourceDecoder[R <: RemoteComponentResource: ResourceDecoder](using Context): Decoder[R] =
+  given remoteComponentResourceDecoder[R <: RemoteComponentResource: ResourceDecoder]: Decoder[R] =
     getResourceBasedResourceDecoder[R]
 
   // wondering if this works, it's a bit of a hack
-  given dependencyResourceDecoder(using Context): Decoder[DependencyResource] = new Decoder[DependencyResource]:
+  given dependencyResourceDecoder: Decoder[DependencyResource] = new Decoder[DependencyResource]:
     override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[DependencyResource]] =
       decodeAsPossibleSecret(value, label).flatMap { odv =>
         odv
@@ -429,6 +429,7 @@ object Decoder extends DecoderInstancesLowPrio1:
         .map(uri => OutputData(RemoteArchive(uri)))
   )
 
+  // noinspection NoTailRecursionAnnotation
   given assetArchiveDecoder: Decoder[AssetArchive] = assetArchiveDecoder[AssetArchive](
     Constants.SpecialArchiveSig,
     (label, structValue) =>
@@ -646,7 +647,7 @@ trait DecoderHelpers:
       .flatMap(_.getStructValue.fields)
       .filter((k, _) => k == SpecialSigKey)
       .flatMap((_, v) => v.kind.stringValue)
-      .nextOption
+      .nextOption // TODO: log error if the signature is not recognized
 
   def accumulatedOutputDatasOrErrors[A](
     acc: ValidatedResult[DecodingError, Vector[OutputData[A]]],
@@ -658,11 +659,12 @@ trait DecoderHelpers:
       elementValidatedResult
         // TODO this should have an issue number from GH and should suggest reporting this to us
         .filterOrError(_.nonEmpty)(
-          DecodingError(s"Encountered a 'null' in '$typ', this is illegal in Besom", label = label)
+          DecodingError(s"Encountered a 'null' in '$typ', this is illegal in Besom, please file an issue on GitHub", label = label)
         )
     ) { (acc, elementOutputData) =>
       acc :+ elementOutputData
     }
+
 end DecoderHelpers
 
 /** ArgsEncoder - this is a separate typeclass required for serialization of top-level *Args classes
@@ -672,8 +674,8 @@ end DecoderHelpers
   *
   * JsonEncoder - this is a separate typeclass required for json-serialized fields of ProviderArgs
   */
-@implicitNotFound("""Instance of Encoder[${A}] is missing! Most likely you are trying to use structured 
-    |stack exports and you have defined a case class that holds your exported values. 
+@implicitNotFound("""Instance of Encoder[${A}] is missing! Most likely you are trying to use structured
+    |stack exports and you have defined a case class that holds your exported values.
     |
     |Add `derives Encoder` (or `derives besom.Encoder` if you don't have the global import in
     |that scope) to your case class definition like this:
