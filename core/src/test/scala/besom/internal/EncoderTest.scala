@@ -1,7 +1,7 @@
 package besom.internal
 
 import besom.internal.Encoder.*
-import besom.internal.ProtobufUtil.*
+import besom.internal.ProtobufUtil.{*, given}
 import besom.internal.RunResult.{*, given}
 import besom.types.{EnumCompanion, Label, StringEnum, Output as _, *}
 import besom.util.*
@@ -91,7 +91,7 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
     val e         = summon[Encoder[Output[Option[String]]]]
 
     val (_, encoded) = e.encode(Output.secret(None)).unsafeRunSync()
-    val expected     = None.asValue.asSecret
+    val expected     = Null.asSecret
 
     assertEqualsValue(encoded, expected, encoded.toProtoString)
   }
@@ -102,7 +102,7 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
 
     val data: besom.types.Input.Optional[Map[String, besom.types.Input[String]]] = None
     val (_, encoded) = e.encode(data.asOptionOutput(isSecret = true)).unsafeRunSync()
-    val expected     = None.asValue.asSecret
+    val expected     = Null.asSecret
 
     assertEqualsValue(encoded, expected, encoded.toProtoString)
   }
@@ -112,7 +112,7 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
     val e         = summon[Encoder[InputOptionalCaseClass]]
 
     val (_, encoded) = e.encode(InputOptionalCaseClass(Output.secret(None), Output.secret(None))).unsafeRunSync()
-    val expected     = Map().asValue
+    val expected     = Map.empty[String, Value].asValue
 
     assertEqualsValue(encoded, expected, encoded.toProtoString)
   }
@@ -170,6 +170,7 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
       "optNone1" -> Null,
       "optSome" -> Some("abc").asValue
     ).asValue
+
     assertEqualsValue(encodedCaseClass, expectedCaseClass, encodedCaseClass.toProtoString)
   }
 
@@ -460,7 +461,7 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
       .unsafeRunSync()
 
     val encoded  = res.serialized.asValue
-    val expected = Map().asValue
+    val expected = Map.empty[String, Value].asValue
 
     assertEqualsValue(encoded, expected, encoded.toProtoString)
   }
@@ -468,14 +469,13 @@ end ProviderArgsEncoderTest
 
 class Regression383Test extends munit.FunSuite with ValueAssertions:
   import Regression383Test.*
-  import ProtobufUtil.*
 
   test("#383 regression") {
     given Context = DummyContext().unsafeRunSync()
     val e         = summon[ArgsEncoder[SecretArgs]]
 
     val (_, encoded) = e.encode(SecretArgs(), _ => false).unsafeRunSync()
-    val expected     = Map().asValue
+    val expected     = Map.empty[String, Value].asValue
 
     assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
   }
@@ -511,7 +511,7 @@ class RecurrentArgsTest extends munit.FunSuite with ValueAssertions:
 
     val (_, encoded) = e.encode(Recurrent(Some(Recurrent(Some(Recurrent(Some(Recurrent(None)))))))).unsafeRunSync()
     val expected =
-      Map("value" -> Map("value" -> Map("value" -> Map().asValue).asValue).asValue).asValue
+      Map("value" -> Map("value" -> Map("value" -> Map.empty[String, Value].asValue).asValue).asValue).asValue
 
     assertEqualsValue(encoded, expected, encoded.toProtoString)
   }

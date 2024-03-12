@@ -2,7 +2,7 @@ package besom.internal
 
 import besom.internal.Constants.*
 import besom.internal.Decoder.*
-import besom.internal.ProtobufUtil.*
+import besom.internal.ProtobufUtil.{*, given}
 import besom.internal.RunResult.{*, given}
 import besom.types.{Label, PulumiAny}
 import besom.util.*

@@ -1,7 +1,6 @@
 package besom
 
 import besom.internal.*
-import besom.internal.ProtobufUtil.*
 import besom.util.*
 import com.google.protobuf.struct.*
 
@@ -337,11 +336,13 @@ object types:
     private lazy val valuesToInstances: Map[V, E] = allInstances.map(instance => instance.value -> instance).toMap
 
     extension [A](a: A)
-      def asValueAny: Value = a match
-        case a: Int     => a.asValue
-        case a: Double  => a.asValue
-        case a: Boolean => a.asValue
-        case a: String  => a.asValue
+      def asValueAny: Value =
+        import besom.internal.ProtobufUtil.given
+        a match
+          case a: Int     => a.asValue
+          case a: Double  => a.asValue
+          case a: Boolean => a.asValue
+          case a: String  => a.asValue
 
     given Encoder[E] = new Encoder[E]:
       def encode(a: E)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> a.value.asValueAny)

@@ -1,9 +1,10 @@
 package besom.internal
 
-import RunResult.{given, *}
-import besom.types.{Output => _, *}
-import besom.internal.ProtobufUtil.*
-import com.google.protobuf.struct.*, Value.Kind
+import besom.internal.ProtobufUtil.given
+import besom.internal.RunResult.{*, given}
+import besom.types.{Output as _, *}
+import com.google.protobuf.struct.*
+import com.google.protobuf.struct.Value.Kind
 
 class ExportsTest extends munit.FunSuite with ValueAssertions:
 

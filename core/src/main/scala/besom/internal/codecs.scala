@@ -1,6 +1,6 @@
 package besom.internal
 
-import besom.internal.ProtobufUtil.*
+import besom.internal.ProtobufUtil.{*, given}
 import besom.types.*
 import besom.types.Archive.*
 import besom.types.Asset.*
@@ -13,6 +13,7 @@ import scala.annotation.implicitNotFound
 import scala.deriving.Mirror
 import scala.util.*
 
+//noinspection ScalaFileName
 object Constants:
   final val UnknownValue           = "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
   final val SpecialSigKey          = "4dabf18193072939515e22adb298388d"
@@ -31,6 +32,7 @@ object Constants:
   final val IdPropertyName         = "id"
   final val UrnPropertyName        = "urn"
   final val StatePropertyName      = "state"
+end Constants
 
 case class DecodingError(message: String, cause: Throwable = null, label: Label) extends Exception(message, cause)
 case class AggregatedDecodingError(errors: NonEmptyVector[DecodingError]) extends Exception(errors.map(_.message).toVector.mkString("\n"))
@@ -589,7 +591,7 @@ trait DecoderHelpers:
       override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A]] =
         if value.kind.isStringValue then
           val key = value.getStringValue
-          getDecoder(key).decode(Map.empty.asValue, label.withKey(key))
+          getDecoder(key).decode(Map.empty[String, Value].asValue, label.withKey(key))
         else
           error(
             s"$label: Value was not a string, Enums should be serialized as strings", // TODO: This is not necessarily true
@@ -1098,8 +1100,6 @@ trait JsonEncoder[A]:
   def encode(a: A)(using Context): Result[(Set[Resource], Value)]
 
 object JsonEncoder:
-  import ProtobufUtil.*
-
   given jsonEncoder[A](using enc: Encoder[A]): JsonEncoder[A] =
     new JsonEncoder[A]:
       def encode(a: A)(using Context): Result[(Set[Resource], Value)] = enc.encode(a).flatMap {

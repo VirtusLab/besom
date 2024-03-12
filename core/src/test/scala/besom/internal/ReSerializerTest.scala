@@ -1,6 +1,5 @@
 package besom.internal
 
-import besom.internal
 import besom.internal.RunResult.{*, given}
 import besom.types.{Output as _, *}
 import besom.util.Validated
@@ -46,7 +45,8 @@ class ReSerializerTest extends munit.FunSuite:
       besom.json.JsObject("asdf" -> besom.json.JsNull)
     )
 
-    import besom.json.*, DefaultJsonProtocol.*
+    import besom.json.*
+    import DefaultJsonProtocol.*
     assertEquals(reSerialize("""{}""".toJson)(e, d).unsafeRunSync(), """{}""".toJson)
     assertEquals(reSerialize("""[]""".toJson)(e, d).unsafeRunSync(), """[]""".toJson)
     assertEquals(reSerialize("""{"asdf": null}""".toJson)(e, d).unsafeRunSync(), """{"asdf": null}""".toJson)
