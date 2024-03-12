@@ -34,7 +34,7 @@ object PropertiesSerializer:
 
   private[internal] def detectUnknowns(value: Value): Boolean =
     value.kind match
-      case StringValue(str) => str == Constants.UnknownValue
+      case StringValue(str) => str == Constants.UnknownStringValue
       case StructValue(struct) =>
         struct.fields.foldLeft(false) { case (prev, (_, value)) =>
           prev || detectUnknowns(value)

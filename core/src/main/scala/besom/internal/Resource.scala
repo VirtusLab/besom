@@ -49,7 +49,7 @@ trait ProviderResource extends CustomResource:
   private[internal] def registrationId: Result[String] =
     for
       urn <- urn.getValueOrElse(URN.empty)
-      id  <- id.getValueOrElse(Constants.UnknownValue)
+      id  <- id.getValueOrElse(Constants.UnknownStringValue)
     yield s"${urn}::${id}"
 
 case class DependencyResource(urn: Output[URN]) extends Resource derives ResourceDecoder

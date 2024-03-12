@@ -15,12 +15,21 @@ import scala.util.*
 
 //noinspection ScalaFileName
 object Constants:
-  final val UnknownValue           = "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
-  final val SpecialSigKey          = "4dabf18193072939515e22adb298388d"
-  final val SpecialAssetSig        = "c44067f5952c0a294b673a41bacd8c17"
-  final val SpecialArchiveSig      = "0def7320c3a5731c473e5ecbe6d01bc7"
-  final val SpecialSecretSig       = "1b47061264138c4ac30d75fd1eb44270"
-  final val SpecialResourceSig     = "5cf8f73096256a8f31e491e813e4eb8e"
+  final val SpecialSigKey      = "4dabf18193072939515e22adb298388d"
+  final val SpecialAssetSig    = "c44067f5952c0a294b673a41bacd8c17"
+  final val SpecialArchiveSig  = "0def7320c3a5731c473e5ecbe6d01bc7"
+  final val SpecialSecretSig   = "1b47061264138c4ac30d75fd1eb44270"
+  final val SpecialResourceSig = "5cf8f73096256a8f31e491e813e4eb8e"
+
+  /** Well-known sentinels used in gRPC protocol, see sdk/go/common/resource/plugin/rpc.go */
+
+  /** Sentinel indicating that a string property's value is not known, because it depends on a computation with values whose values
+    * themselves are not yet known (e.g., dependent upon an output property).
+    */
+  final val UnknownStringValue = "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
+
+  /** Well-known property names used in gRPC protocol */
+
   final val SecretValueName        = "value"
   final val AssetTextName          = "text"
   final val ArchiveAssetsName      = "assets"
@@ -639,7 +648,7 @@ trait DecoderHelpers:
 
         innerValue.map(OutputData(_, isSecret = true))
       case _ =>
-        if value.kind.isStringValue && Constants.UnknownValue == value.getStringValue then
+        if value.kind.isStringValue && Constants.UnknownStringValue == value.getStringValue then
           ValidatedResult.valid(OutputData.unknown(isSecret = false))
         else ValidatedResult.valid(OutputData(value))
 
@@ -743,7 +752,7 @@ object Encoder:
           if ctx.featureSupport.keepResources then
             outputURNEnc.encode(a.urn).flatMap { (urnResources, urnValue) =>
               val fixedIdValue =
-                if idValue.kind.isStringValue && idValue.getStringValue == UnknownValue then Value(Kind.StringValue(""))
+                if idValue.kind.isStringValue && idValue.getStringValue == UnknownStringValue then Value(Kind.StringValue(""))
                 else idValue
 
               val result = Map(
@@ -838,7 +847,7 @@ object Encoder:
   given outputEncoder[A](using inner: Encoder[Option[A]]): Encoder[Output[A]] with
     def encode(outA: Output[A])(using ctx: Context): Result[(Set[Resource], Value)] = outA.getData.flatMap {
       case OutputData.Unknown(resources, _) =>
-        Result.pure(resources -> UnknownValue.asValue)
+        Result.pure(resources -> UnknownStringValue.asValue)
       case OutputData.Known(resources, isSecret, maybeValue) =>
         inner.encode(maybeValue).map { (innerResources, serializedValue) =>
           val aggregatedResources = resources ++ innerResources
