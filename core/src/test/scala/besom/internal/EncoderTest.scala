@@ -7,6 +7,13 @@ import besom.types.{EnumCompanion, Label, StringEnum, Output as _, *}
 import besom.util.*
 import com.google.protobuf.struct.*
 
+def runWithBothOutputCodecs(body: Context ?=> Unit)(using munit.Location): Unit =
+  Vector(true, false).foreach(keepOutputValues => {
+    given Context =
+      DummyContext(featureSupport = DummyContext.dummyFeatureSupport.copy(keepOutputValues = keepOutputValues)).unsafeRunSync()
+    body
+  })
+
 object EncoderTest:
 
   sealed abstract class TestEnum(val name: String, val value: String) extends StringEnum
@@ -66,55 +73,77 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
     assertEqualsValue(encoded, expected, encoded.toProtoString)
   }
 
-  test("encode null") {
-    given Context = DummyContext().unsafeRunSync()
-    val e         = summon[Encoder[Option[String]]]
+  runWithBothOutputCodecs {
+    test(s"encode null (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val e = summon[Encoder[Option[String]]]
 
-    val (_, encoded) = e.encode(None).unsafeRunSync()
-    val expected     = Null
+      val (_, encoded) = e.encode(None).unsafeRunSync()
+      val expected     = Null
 
-    assertEqualsValue(encoded, expected, encoded.toProtoString)
+      assertEqualsValue(encoded, expected, encoded.toProtoString)
+    }
   }
 
-  test("encode output null") {
-    given Context = DummyContext().unsafeRunSync()
-    val e         = summon[Encoder[Output[Option[String]]]]
+  runWithBothOutputCodecs {
+    test(s"encode output null (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val e = summon[Encoder[Output[Option[String]]]]
 
-    val (_, encoded) = e.encode(Output(None)).unsafeRunSync()
-    val expected     = Null
+      val (_, encoded) = e.encode(Output(None)).unsafeRunSync()
+      val expected =
+        if Context().featureSupport.keepOutputValues
+        then Null.asOutputValue(isSecret = false, dependencies = Nil)
+        else Null
 
-    assertEqualsValue(encoded, expected, encoded.toProtoString)
+      assertEqualsValue(encoded, expected, encoded.toProtoString)
+    }
   }
 
-  test("encode secret null") {
-    given Context = DummyContext().unsafeRunSync()
-    val e         = summon[Encoder[Output[Option[String]]]]
+  runWithBothOutputCodecs {
+    test(s"encode secret null (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val e = summon[Encoder[Output[Option[String]]]]
 
-    val (_, encoded) = e.encode(Output.secret(None)).unsafeRunSync()
-    val expected     = Null.asSecret
+      val (_, encoded) = e.encode(Output.secret(None)).unsafeRunSync()
+      val expected =
+        if Context().featureSupport.keepOutputValues
+        then Null.asOutputValue(isSecret = true, dependencies = Nil)
+        else Null.asSecretValue
 
-    assertEqualsValue(encoded, expected, encoded.toProtoString)
+      assertEqualsValue(encoded, expected, encoded.toProtoString)
+    }
   }
 
-  test("encode secret input map") {
-    given Context = DummyContext().unsafeRunSync()
-    val e         = summon[Encoder[Output[Option[Map[String, String]]]]]
+  runWithBothOutputCodecs {
+    test(s"encode secret input map (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val e = summon[Encoder[Output[Option[Map[String, String]]]]]
 
-    val data: besom.types.Input.Optional[Map[String, besom.types.Input[String]]] = None
-    val (_, encoded) = e.encode(data.asOptionOutput(isSecret = true)).unsafeRunSync()
-    val expected     = Null.asSecret
+      val data: besom.types.Input.Optional[Map[String, besom.types.Input[String]]] = None
+      val (_, encoded) = e.encode(data.asOptionOutput(isSecret = true)).unsafeRunSync()
 
-    assertEqualsValue(encoded, expected, encoded.toProtoString)
+      val expected =
+        if Context().featureSupport.keepOutputValues
+        then Null.asValue.asOutputValue(isSecret = true, dependencies = Nil)
+        else Null.asSecretValue
+
+      assertEqualsValue(encoded, expected, encoded.toProtoString)
+    }
   }
 
-  test("encode class with secret inputs") {
-    given Context = DummyContext().unsafeRunSync()
-    val e         = summon[Encoder[InputOptionalCaseClass]]
+  runWithBothOutputCodecs {
+    test(s"encode class with secret inputs (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val e = summon[Encoder[InputOptionalCaseClass]]
 
-    val (_, encoded) = e.encode(InputOptionalCaseClass(Output.secret(None), Output.secret(None))).unsafeRunSync()
-    val expected     = Map.empty[String, Value].asValue
+      val (_, encoded) = e.encode(InputOptionalCaseClass(Output.secret(None), Output.secret(None))).unsafeRunSync()
+      val expected =
+        if Context().featureSupport.keepOutputValues
+        then
+          Map(
+            "value" -> Null.asOutputValue(isSecret = true, dependencies = Nil),
+            "data" -> Null.asOutputValue(isSecret = true, dependencies = Nil)
+          ).asValue
+        else Map.empty[String, Value].asValue
 
-    assertEqualsValue(encoded, expected, encoded.toProtoString)
+      assertEqualsValue(encoded, expected, encoded.toProtoString)
+    }
   }
 
   test("encode special case class with unmangling") {
@@ -179,98 +208,135 @@ end EncoderTest
 class ArgsEncoderTest extends munit.FunSuite with ValueAssertions:
   import EncoderTest.*
 
-  test("simple args") {
-    given Context = DummyContext().unsafeRunSync()
-    val ae        = summon[ArgsEncoder[TestArgs]]
+  runWithBothOutputCodecs {
+    test(s"simple args (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val ae = summon[ArgsEncoder[TestArgs]]
 
-    val (res, encoded) = ae
-      .encode(
-        TestArgs(
-          Output("SOME-TEST-PROVIDER"),
-          Output(PlainCaseClass(data = "werks?", moreData = 123))
-        ),
-        _ => false
-      )
-      .unsafeRunSync()
+      val (res, encoded) = ae
+        .encode(
+          TestArgs(
+            Output("SOME-TEST-PROVIDER"),
+            Output(PlainCaseClass(data = "werks?", moreData = 123))
+          ),
+          _ => false
+        )
+        .unsafeRunSync()
 
-    assert(res.contains("a"), res)
-    assert(res.contains("b"), res)
+      val expected =
+        if Context().featureSupport.keepOutputValues
+        then
+          Map(
+            "a" -> "SOME-TEST-PROVIDER".asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "b" -> Map(
+              "data" -> "werks?".asValue,
+              "moreData" -> 123.asValue
+            ).asValue.asOutputValue(isSecret = false, dependencies = Nil)
+          ).asValue
+        else
+          Map(
+            "a" -> "SOME-TEST-PROVIDER".asValue,
+            "b" -> Map(
+              "data" -> "werks?".asValue,
+              "moreData" -> 123.asValue
+            ).asValue
+          ).asValue
 
-    val expected =
-      Map(
-        "a" -> "SOME-TEST-PROVIDER".asValue,
-        "b" -> Map(
-          "data" -> "werks?".asValue,
-          "moreData" -> 123.asValue
-        ).asValue
-      ).asValue
-
-    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
+      assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
+      assert(res.contains("a"), res)
+      assert(res.contains("b"), res)
+    }
   }
 
-  test("optional args") {
-    given Context = DummyContext().unsafeRunSync()
-    val ae        = summon[ArgsEncoder[TestOptionArgs]]
+  runWithBothOutputCodecs {
+    test(s"optional args (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val ae = summon[ArgsEncoder[TestOptionArgs]]
 
-    val (res, encoded) = ae
-      .encode(
-        TestOptionArgs(
-          Output(None),
-          Output(None)
-        ),
-        _ => false
-      )
-      .unsafeRunSync()
+      val (res, encoded) = ae
+        .encode(
+          TestOptionArgs(
+            Output(None),
+            Output(None)
+          ),
+          _ => false
+        )
+        .unsafeRunSync()
 
-    val expected =
-      Map(
-        "a" -> Null,
-        "b" -> Null
-      ).asValue
+      val expected =
+        if Context().featureSupport.keepOutputValues
+        then
+          Map(
+            "a" -> Null.asOutputValue(isSecret = false, dependencies = Nil),
+            "b" -> Null.asOutputValue(isSecret = false, dependencies = Nil)
+          ).asValue
+        else Map.empty[String, Value].asValue
 
-    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
-    assert(res.isEmpty, res)
+      assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
+
+      if Context().featureSupport.keepOutputValues
+      then assert(res.contains("a") && res.contains("b"))
+      else assert(res.isEmpty, res)
+    }
   }
 
-  test("empty secret args") {
-    given Context = DummyContext().unsafeRunSync()
-    val ae        = summon[ArgsEncoder[InputOptionalCaseClass]]
+  runWithBothOutputCodecs {
+    test(s"empty secret args (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val ae = summon[ArgsEncoder[InputOptionalCaseClass]]
 
-    val (res, encoded) = ae
-      .encode(
-        InputOptionalCaseClass(Output.secret(None), Output.secret(None)),
-        _ => false
-      )
-      .unsafeRunSync()
+      val (res, encoded) = ae
+        .encode(
+          InputOptionalCaseClass(Output.secret(None), Output.secret(None)),
+          _ => false
+        )
+        .unsafeRunSync()
 
-    val expected =
-      Map.empty[String, Value].asValue
+      val expected =
+        if Context().featureSupport.keepOutputValues
+        then
+          Map(
+            "value" -> Null.asOutputValue(isSecret = true, dependencies = Nil),
+            "data" -> Null.asOutputValue(isSecret = true, dependencies = Nil)
+          ).asValue
+        else Map.empty[String, Value].asValue
 
-    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
-    assert(res.isEmpty, res)
+      assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
+
+      if Context().featureSupport.keepOutputValues
+      then assert(res.contains("value") && res.contains("data"))
+      else assert(res.isEmpty, res)
+    }
   }
 
-  test("secrets args") {
-    given Context = DummyContext().unsafeRunSync()
-    val ae        = summon[ArgsEncoder[InputOptionalCaseClass]]
+  runWithBothOutputCodecs {
+    test(s"secret args (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val ae = summon[ArgsEncoder[InputOptionalCaseClass]]
 
-    val (res, encoded) = ae
-      .encode(
-        InputOptionalCaseClass(
-          Output.secret(Some("secret")),
-          Output.secret(Some(Map("key" -> Output.secret("value"))))
-        ),
-        _ => false
-      )
-      .unsafeRunSync()
+      val (res, encoded) = ae
+        .encode(
+          InputOptionalCaseClass(
+            Output.secret(Some("secret")),
+            Output.secret(Some(Map("key" -> Output.secret("value"))))
+          ),
+          _ => false
+        )
+        .unsafeRunSync()
 
-    val expected = Map(
-      "value" -> "secret".asValue.asSecret,
-      "data" -> Map("key" -> "value".asValue.asSecret).asValue.asSecret
-    ).asValue
+      val expected =
+        if Context().featureSupport.keepOutputValues then
+          Map(
+            "value" -> "secret".asValue.asOutputValue(isSecret = true, dependencies = Nil),
+            "data" -> Map(
+              "key" -> "value".asValue.asOutputValue(isSecret = true, dependencies = Nil)
+            ).asValue.asOutputValue(isSecret = true, dependencies = Nil)
+          ).asValue
+        else
+          Map(
+            "value" -> "secret".asValue.asSecretValue,
+            "data" -> Map("key" -> "value".asValue.asSecretValue).asValue.asSecretValue
+          ).asValue
 
-    assert(res.keySet == Set("value", "data"), res)
-    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
+      assert(res.keySet == Set("value", "data"), res)
+      assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
+    }
   }
 end ArgsEncoderTest
 
@@ -339,145 +405,229 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
   import EncoderTest.*
   import ProviderArgsEncoderTest.*
 
-  test("simple args") {
-    given Context = DummyContext().unsafeRunSync()
-    val pae       = summon[ProviderArgsEncoder[TestProviderArgs]]
+  runWithBothOutputCodecs {
+    test(s"simple args (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val pae = summon[ProviderArgsEncoder[TestProviderArgs]]
 
-    val (res, encoded) = pae
-      .encode(
-        TestProviderArgs(
-          Output("SOME-TEST-PROVIDER"),
-          Output(PlainCaseClass(data = "werks?", moreData = 123))
-        ),
-        _ => false
-      )
-      .unsafeRunSync()
-
-    assert(res.contains("type"), res)
-    assert(res.contains("pcc"), res)
-
-    val expected =
-      Map(
-        "type" -> "SOME-TEST-PROVIDER".asValue,
-        "pcc" -> Map(
-          "data" -> "werks?".asValue,
-          "moreData" -> 123.asValue
-        ).asValue.asJsonStringOrThrow.asValue
-      ).asValue
-
-    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
-  }
-
-  test("optional args") {
-    given Context = DummyContext().unsafeRunSync()
-    val pae       = summon[ProviderArgsEncoder[TestProviderOptionArgs]]
-
-    val args = TestProviderOptionArgs(
-      Output(None),
-      Output(None)
-    )
-    val (res, encoded) = pae.encode(args, _ => false).unsafeRunSync()
-
-    assert(res.isEmpty, res)
-
-    val expected =
-      Map(
-        "type" -> Null,
-        "pcc" -> Null
-      ).asValue
-
-    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
-  }
-
-  test("encode Kubernetes ProviderArgs") {
-    given Context = DummyContext().unsafeRunSync()
-    val pae       = summon[ProviderArgsEncoder[ProviderArgs]]
-
-    val args         = ProviderArgs(kubeconfig = "abcd")
-    val (_, encoded) = pae.encode(args, _ => false).unsafeRunSync()
-
-    val expected = Map("kubeconfig" -> "abcd".asValue).asValue
-
-    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
-  }
-
-  // FIXME: This test is failing because the `ProviderArgsEncoder` is not encoding the `kubeconfig` as a secret
-  test("encode json secret".ignore) {
-    given Context = DummyContext().unsafeRunSync()
-    val pae       = summon[ProviderArgsEncoder[ProviderArgs]]
-
-    val args         = ProviderArgs(kubeconfig = Output.secret("abcd"))
-    val (_, encoded) = pae.encode(args, _ => false).unsafeRunSync()
-
-    val expected = Map("kubeconfig" -> "abcd".asValue.asSecret).asValue
-
-    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
-  }
-
-  test("encode json") {
-    // This is currently only used on arguments to provider resources.
-    // When serializing properties with ProviderArgsEncoder to protobuf Struct, instead of sending their native
-    // Struct representation, we send a protobuf String value with a JSON-formatted Struct representation
-    // inside. In the tests below this will look like a double-JSON encoded string since we write asserts
-    // against a JSON rendering of the proto struct.
-    //
-    // For a practical example of where this applies, see Provider resource in pulumi-kubernetes.
-
-    given Context = DummyContext().unsafeRunSync()
-
-    val res = PropertiesSerializer
-      .serializeResourceProperties(
-        ExampleResourceArgs(
-          Output(Some("x")),
-          Output(Some(true)),
-          Output(Some(HelperArgs(Output(Some(1)))))
+      val (res, encoded) = pae
+        .encode(
+          TestProviderArgs(
+            Output("SOME-TEST-PROVIDER"),
+            Output(PlainCaseClass(data = "werks?", moreData = 123))
+          ),
+          _ => false
         )
-      )
-      .unsafeRunSync()
+        .unsafeRunSync()
 
-    val encoded = res.serialized.asValue
+      assert(res.contains("type"), res)
+      assert(res.contains("pcc"), res)
 
-    val expected =
-      Map(
-        "str" -> "x".asValue,
-        "b" -> true.asValue.asJsonStringOrThrow.asValue,
-        "helper" -> Map("int" -> 1.asValue).asValue.asJsonStringOrThrow.asValue
-      ).asValue
+      val expected =
+        if Context().featureSupport.keepOutputValues
+        then
+          Map(
+            "type" -> "SOME-TEST-PROVIDER".asValue.asOutputValue(isSecret = false, dependencies = Nil).asValue,
+            "pcc" -> Map(
+              "data" -> "werks?".asValue,
+              "moreData" -> 123.asValue
+            ).asValue.asJsonStringOrThrow.asValue.asOutputValue(isSecret = false, dependencies = Nil).asValue
+          ).asValue
+        else
+          Map(
+            "type" -> "SOME-TEST-PROVIDER".asValue,
+            "pcc" -> Map(
+              "data" -> "werks?".asValue,
+              "moreData" -> 123.asValue
+            ).asValue.asJsonStringOrThrow.asValue
+          ).asValue
 
-    assertEqualsValue(encoded, expected, encoded.toProtoString)
+      assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
+    }
   }
 
-  test("encode empty json secrets") {
-    given Context = DummyContext().unsafeRunSync()
+  runWithBothOutputCodecs {
+    test(s"optional args (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val pae = summon[ProviderArgsEncoder[TestProviderOptionArgs]]
 
-    val res = PropertiesSerializer
-      .serializeResourceProperties(
-        ExampleResourceArgs(
-          Output.secret(None),
-          Output.secret(None),
-          Output.secret(None)
-        )
+      val args = TestProviderOptionArgs(
+        Output(None),
+        Output(None)
       )
-      .unsafeRunSync()
+      val (res, encoded) = pae.encode(args, _ => false).unsafeRunSync()
+      
+      val expected =
+        if Context().featureSupport.keepOutputValues
+        then
+          Map(
+            "type" -> Null.asOutputValue(isSecret = false, dependencies = Nil),
+            "pcc" -> Null.asOutputValue(isSecret = false, dependencies = Nil)
+          ).asValue
+        else
+          Map(
+            "type" -> Null,
+            "pcc" -> Null
+          ).asValue
 
-    val encoded  = res.serialized.asValue
-    val expected = Map.empty[String, Value].asValue
+      assertEqualsValue(encoded.asValue, expected)
+      if Context().featureSupport.keepOutputValues
+      then assert(res.keySet == Set("type", "pcc"), res)
+      else assert(res.isEmpty, res)
+    }
+  }
 
-    assertEqualsValue(encoded, expected, encoded.toProtoString)
+  runWithBothOutputCodecs {
+    test(s"encode Kubernetes ProviderArgs (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val pae = summon[ProviderArgsEncoder[ProviderArgs]]
+
+      val args         = ProviderArgs(kubeconfig = "abcd")
+      val (_, encoded) = pae.encode(args, _ => false).unsafeRunSync()
+
+      // strings and nulls are not converted to JSON by the underlying implementation
+      val expected =
+        if Context().featureSupport.keepOutputValues
+        then
+          Map(
+            "kubeconfig" -> "abcd".asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "context" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "deleteUnreachable" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "enableConfigMapMutable" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "enableServerSideApply" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "namespace" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "renderYamlToDirectory" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "skipUpdateUnreachable" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "suppressDeprecationWarnings" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "suppressHelmHookWarnings" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "cluster" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil)
+          ).asValue
+        else Map("kubeconfig" -> "abcd".asValue).asValue
+
+      assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
+      if Context().featureSupport.keepOutputValues
+      then assertEquals(encoded.fields.size, 11)
+      else assertEquals(encoded.fields.size, 1)
+    }
+  }
+
+  runWithBothOutputCodecs {
+    test(s"encode json secret (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val pae = summon[ProviderArgsEncoder[ProviderArgs]]
+
+      val args         = ProviderArgs(kubeconfig = Output.secret("abcd"))
+      val (_, encoded) = pae.encode(args, _ => false).unsafeRunSync()
+
+      // strings and nulls are not converted to JSON by the underlying implementation
+      val expected =
+        if Context().featureSupport.keepOutputValues
+        then
+          Map(
+            "kubeconfig" -> "abcd".asValue.asOutputValue(isSecret = true, dependencies = Nil),
+            "context" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "deleteUnreachable" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "enableConfigMapMutable" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "enableServerSideApply" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "namespace" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "renderYamlToDirectory" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "skipUpdateUnreachable" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "suppressDeprecationWarnings" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "suppressHelmHookWarnings" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil),
+            "cluster" -> Null.asValue.asOutputValue(isSecret = false, dependencies = Nil)
+          ).asValue
+        else Map("kubeconfig" -> "abcd".asValue.asSecretValue).asValue
+
+      assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
+    }
+  }
+
+  runWithBothOutputCodecs {
+    test(s"encode json (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      // This is currently only used on arguments to provider resources.
+      // When serializing properties with ProviderArgsEncoder to protobuf Struct, instead of sending their native
+      // Struct representation, we send a protobuf String value with a JSON-formatted Struct representation
+      // inside. In the tests below this will look like a double-JSON encoded string since we write asserts
+      // against a JSON rendering of the proto struct.
+      //
+      // For a practical example of where this applies, see Provider resource in pulumi-kubernetes.
+
+      val res = PropertiesSerializer
+        .serializeResourceProperties(
+          ExampleResourceArgs(
+            Output(Some("x")),
+            Output(Some(true)),
+            Output(Some(HelperArgs(Output(Some(1)))))
+          )
+        )
+        .unsafeRunSync()
+
+      val encoded = res.serialized.asValue
+
+      val expected =
+        if Context().featureSupport.keepOutputValues
+        then
+          Map(
+            "str" -> "x".asValue.asOutputValue(isSecret = false, dependencies = Nil).asValue,
+            "b" -> true.asValue.asJsonStringOrThrow.asValue.asOutputValue(isSecret = false, dependencies = Nil).asValue,
+            "helper" ->
+              Map("int" -> 1.asValue).asValue.asJsonStringOrThrow.asValue
+                .asOutputValue(isSecret = false, dependencies = Nil)
+                .asValue
+          ).asValue
+        else
+          Map(
+            "str" -> "x".asValue,
+            "b" -> true.asValue.asJsonStringOrThrow.asValue,
+            "helper" -> Map("int" -> 1.asValue).asValue.asJsonStringOrThrow.asValue
+          ).asValue
+
+      assertEqualsValue(encoded, expected, encoded.toProtoString)
+    }
+  }
+
+  runWithBothOutputCodecs {
+    test(s"encode empty json secrets (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val res = PropertiesSerializer
+        .serializeResourceProperties(
+          ExampleResourceArgs(
+            Output.secret(None),
+            Output.secret(None),
+            Output.secret(None)
+          )
+        )
+        .unsafeRunSync()
+
+      val encoded = res.serialized.asValue
+      val expected =
+        if Context().featureSupport.keepOutputValues
+        then
+          Map(
+            "str" -> Null.asOutputValue(isSecret = true, dependencies = Nil),
+            "b" -> Null.asOutputValue(isSecret = true, dependencies = Nil),
+            "helper" -> Null.asOutputValue(isSecret = true, dependencies = Nil)
+          ).asValue
+        else Map.empty[String, Value].asValue
+
+      assertEqualsValue(encoded, expected, encoded.toProtoString)
+    }
   }
 end ProviderArgsEncoderTest
 
 class Regression383Test extends munit.FunSuite with ValueAssertions:
   import Regression383Test.*
 
-  test("#383 regression") {
-    given Context = DummyContext().unsafeRunSync()
-    val e         = summon[ArgsEncoder[SecretArgs]]
+  runWithBothOutputCodecs {
+    test(s"#383 regression (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val e = summon[ArgsEncoder[SecretArgs]]
 
-    val (_, encoded) = e.encode(SecretArgs(), _ => false).unsafeRunSync()
-    val expected     = Map.empty[String, Value].asValue
+      val (_, encoded) = e.encode(SecretArgs(), _ => false).unsafeRunSync()
+      val expected =
+        if Context().featureSupport.keepOutputValues
+        then
+          Map(
+            "data" -> Null.asOutputValue(isSecret = true, dependencies = Nil) // Output[None]
+          ).asValue
+        else Map.empty[String, Value].asValue
 
-    assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
+      assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
+    }
   }
 
 object Regression383Test:
@@ -523,8 +673,22 @@ class InternalTest extends munit.FunSuite:
   for isSecret <- List(true, false)
   do {
     test(s"isEmptySecretValue (isSecret: $isSecret)") {
-      val value = if isSecret then Null.asSecret else Null
+      val value = if isSecret then Null.asSecretValue else Null
       assertEquals(isEmptySecretValue(value), isSecret)
+    }
+  }
+
+  for
+    isKnown  <- List(true, false)
+    isSecret <- List(true, false)
+  do {
+    test(s"isEmptySecretOutputValue (isKnown: $isKnown, isSecret: $isSecret)") {
+      val value = {
+        if isKnown
+        then "a".asValue
+        else Null
+      }.asOutputValue(isSecret = isSecret, dependencies = Nil)
+      assertEquals(value.outputValue.map(o => o.isSecret && o.notKnown).getOrElse(false), isSecret && !isKnown)
     }
   }
 
@@ -534,6 +698,7 @@ class InternalTest extends munit.FunSuite:
     assertEquals(SpecialSig.fromString(SpecialSig.ArchiveSig.asString), Some(SpecialSig.ArchiveSig))
     assertEquals(SpecialSig.fromString(SpecialSig.SecretSig.asString), Some(SpecialSig.SecretSig))
     assertEquals(SpecialSig.fromString(SpecialSig.ResourceSig.asString), Some(SpecialSig.ResourceSig))
+    assertEquals(SpecialSig.fromString(SpecialSig.OutputSig.asString), Some(SpecialSig.OutputSig))
     assertEquals(SpecialSig.fromString("wrong"), None)
   }
 end InternalTest

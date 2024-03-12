@@ -36,9 +36,9 @@ trait ValueAssertions extends munit.Assertions:
   ): Unit =
     (actual.kind, expected.kind) match
       case (Kind.NullValue(_), Kind.NullValue(_))     => ()
-      case (Kind.NumberValue(_), Kind.NumberValue(_)) => assertEquals(actual, expected)
-      case (Kind.StringValue(_), Kind.StringValue(_)) => assertEquals(actual, expected)
-      case (Kind.BoolValue(_), Kind.BoolValue(_))     => assertEquals(actual, expected)
+      case (Kind.NumberValue(_), Kind.NumberValue(_)) => assertEquals(actual, expected, clue)
+      case (Kind.StringValue(_), Kind.StringValue(_)) => assertEquals(actual, expected, clue)
+      case (Kind.BoolValue(_), Kind.BoolValue(_))     => assertEquals(actual, expected, clue)
       case (Kind.StructValue(a), Kind.StructValue(b)) =>
         (a.fields.keys ++ b.fields.keys).toSeq.distinct.foreach { key =>
           val actualFieldValue   = a.fields.get(key)
@@ -50,7 +50,7 @@ trait ValueAssertions extends munit.Assertions:
                |-> parent clue: $clue""".stripMargin
           )
         }
-      case (Kind.ListValue(_), Kind.ListValue(_)) => assertEquals(actual, expected)
+      case (Kind.ListValue(_), Kind.ListValue(_)) => assertEquals(actual, expected, clue)
       case _ =>
         compare.failEqualsComparison(
           obtained = actual,
