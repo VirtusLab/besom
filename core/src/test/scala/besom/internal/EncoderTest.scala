@@ -516,3 +516,24 @@ class RecurrentArgsTest extends munit.FunSuite with ValueAssertions:
     assertEqualsValue(encoded, expected, encoded.toProtoString)
   }
 end RecurrentArgsTest
+
+class InternalTest extends munit.FunSuite:
+  import ProtobufUtil.*
+
+  for isSecret <- List(true, false)
+  do {
+    test(s"isEmptySecretValue (isSecret: $isSecret)") {
+      val value = if isSecret then Null.asSecret else Null
+      assertEquals(isEmptySecretValue(value), isSecret)
+    }
+  }
+
+  test("SpecialSig from String") {
+    import Constants.SpecialSig
+    assertEquals(SpecialSig.fromString(SpecialSig.AssetSig.asString), Some(SpecialSig.AssetSig))
+    assertEquals(SpecialSig.fromString(SpecialSig.ArchiveSig.asString), Some(SpecialSig.ArchiveSig))
+    assertEquals(SpecialSig.fromString(SpecialSig.SecretSig.asString), Some(SpecialSig.SecretSig))
+    assertEquals(SpecialSig.fromString(SpecialSig.ResourceSig.asString), Some(SpecialSig.ResourceSig))
+    assertEquals(SpecialSig.fromString("wrong"), None)
+  }
+end InternalTest

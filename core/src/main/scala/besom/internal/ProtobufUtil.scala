@@ -1,6 +1,6 @@
 package besom.internal
 
-import besom.internal.Constants.{SecretValueName, SpecialSecretSig, SpecialSigKey}
+import besom.internal.Constants.*
 import com.google.protobuf.struct.*
 import com.google.protobuf.struct.Value.Kind
 import com.google.protobuf.util.JsonFormat
@@ -50,15 +50,35 @@ object ProtobufUtil:
         case Some(a) => a.asValue
         case None    => Null
 
+  given ToValue[SpecialSig] with
+    extension (s: SpecialSig) def asValue: Value = s.asString.asValue
+
+  given ToValue[SecretValue] with
+    extension (s: SecretValue)
+      def asValue: Value = Map(
+        SpecialSig.Key -> SpecialSig.SecretSig.asValue,
+        SecretValueName -> s.value
+      ).asValue
+
   extension (v: Value)
     def asJsonString: Either[Throwable, String] = Try(printer.print(Value.toJavaProto(v))).toEither
     def asJsonStringOrThrow: String             = asJsonString.fold(t => throw Exception("Expected a JSON", t), identity)
 
     def struct: Option[Struct] = v.kind.structValue
+    def asSecret: Value        = SecretValue(v).asValue
 
-    def asSecret: Value = Map(
-      SpecialSigKey -> SpecialSecretSig.asValue,
-      SecretValueName -> v
-    ).asValue
+    def withSpecialSignature[A](f: (Struct, SpecialSig) => A): Option[A] =
+      for
+        struct: Struct <- v.struct
+        sig: SpecialSig <- struct.specialSignature
+      yield f(struct, sig)
+
+  extension (s: Struct)
+    def specialSignatureString: Option[String] =
+      s.fields.get(SpecialSig.Key).flatMap(_.kind.stringValue)
+    def specialSignature: Option[SpecialSig] =
+      s.specialSignatureString.flatMap(SpecialSig.fromString)
 
 end ProtobufUtil
+
+case class SecretValue(value: Value)

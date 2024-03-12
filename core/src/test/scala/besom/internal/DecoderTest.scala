@@ -93,10 +93,10 @@ class DecoderTest extends munit.FunSuite:
 
   test("special struct signature can be extracted") {
     val secretStructSample: Value = Map(
-      SpecialSigKey -> SpecialSecretSig.asValue
+      SpecialSig.Key -> SpecialSig.SecretSig.asValue
     ).asValue
 
-    assert(extractSpecialStructSignature(secretStructSample).get == SpecialSecretSig)
+    assert(secretStructSample.struct.flatMap(_.specialSignature).get == SpecialSig.SecretSig)
   }
 
   test("decode case class") {
