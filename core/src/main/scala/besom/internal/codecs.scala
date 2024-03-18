@@ -73,6 +73,12 @@ end Constants
 
 case class DecodingError(message: String, cause: Throwable = null, label: Label) extends Exception(message, cause)
 case class AggregatedDecodingError(errors: NonEmptyVector[DecodingError]) extends Exception(errors.map(_.message).toVector.mkString("\n"))
+
+/** Decoders handle the details of the deserialization.
+  *
+  * @see
+  *   also [[Encoder]]
+  */
 /*
  * Would be awesome to make error reporting better, ie:
  *  - render yamled or jsoned version of top Value on error (so at the bottom of the stack!)
@@ -86,6 +92,8 @@ case class AggregatedDecodingError(errors: NonEmptyVector[DecodingError]) extend
 trait Decoder[A]:
   self =>
 
+  /** Deserialize the given gRPC value into `OutputData[A]` or return an error
+    */
   def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A]] =
     Decoder
       .decodeAsPossibleSecretOrOutput(value, label)
@@ -145,21 +153,21 @@ object NameUnmangler:
 object Decoder extends DecoderInstancesLowPrio1:
   import besom.json.*
 
-  given Decoder[Unit] with
+  given unitDecoder: Decoder[Unit] with
     def mapping(value: Value, label: Label): Validated[DecodingError, Unit] = ().valid
 
   // for recursive stuff like Map[String, Value]
-  given Decoder[Value] with
+  given valueDecoder: Decoder[Value] with
     def mapping(value: Value, label: Label): Validated[DecodingError, Value] = value.valid
 
-  given Decoder[Double] with
+  given doubleDecoder: Decoder[Double] with
     def mapping(v: Value, label: Label): Validated[DecodingError, Double] =
       if v.kind.isNumberValue then v.getNumberValue.valid
       else error(s"$label: Expected a number, got: '${v.kind}'", label).invalid
 
-  given intDecoder(using dblDecoder: Decoder[Double]): Decoder[Int] =
-    dblDecoder.emap { (dbl, label) =>
-      if (dbl % 1 == 0) ValidatedResult.valid(dbl.toInt)
+  given intDecoder(using doubleDecoder: Decoder[Double]): Decoder[Int] =
+    doubleDecoder.emap { (double, label) =>
+      if (double % 1 == 0) ValidatedResult.valid(double.toInt)
       else error(s"$label: Numeric value was expected to be integer, but had a decimal value", label).invalidResult
     }
 
@@ -176,13 +184,13 @@ object Decoder extends DecoderInstancesLowPrio1:
           case Failure(exception) => error(s"$label: Expected a valid URN string", label, exception).invalid
       else error(s"$label: Expected a string, got: '${value.kind}'", label).invalid
 
-  given Decoder[Boolean] with
+  given boolDecoder: Decoder[Boolean] with
     def mapping(v: Value, label: Label): Validated[DecodingError, Boolean] =
       if v.kind.isBoolValue then v.getBoolValue.valid
       else error(s"$label: Expected a boolean, got: '${v.kind}'", label).invalid
 
   given jsonDecoder: Decoder[JsValue] with
-    def convertToJsValue(value: Value): JsValue =
+    private def convertToJsValue(value: Value): JsValue =
       value.kind match
         case Kind.Empty                => JsNull
         case Kind.NullValue(_)         => JsNull
@@ -192,11 +200,11 @@ object Decoder extends DecoderInstancesLowPrio1:
         case Kind.StructValue(struct)  => convertStructToJsObject(struct)
         case Kind.ListValue(listValue) => convertListValueToJsArray(listValue)
 
-    def convertStructToJsObject(struct: Struct): JsObject =
+    private def convertStructToJsObject(struct: Struct): JsObject =
       val fields = struct.fields.view.mapValues(convertToJsValue).toMap
       JsObject(fields)
 
-    def convertListValueToJsArray(listValue: ListValue): JsArray =
+    private def convertListValueToJsArray(listValue: ListValue): JsArray =
       val values = listValue.values.map(convertToJsValue)
       JsArray(values: _*)
 
@@ -238,7 +246,7 @@ object Decoder extends DecoderInstancesLowPrio1:
                   innerDecoder.decode(v, label.atIndex(i))
                 }
                 .foldLeft[ValidatedResult[DecodingError, Vector[OutputData[A]]]](ValidatedResult.valid(Vector.empty))(
-                  accumulatedOutputDatasOrErrors(_, _, "list", label)
+                  accumulatedOutputDataOrErrors(_, _, "list", label)
                 )
                 .map(_.toList)
                 .map(OutputData.sequence)
@@ -262,7 +270,7 @@ object Decoder extends DecoderInstancesLowPrio1:
                   innerDecoder.decode(v, label.atIndex(i))
                 }
                 .foldLeft[ValidatedResult[DecodingError, Vector[OutputData[A]]]](ValidatedResult.valid(Vector.empty))(
-                  accumulatedOutputDatasOrErrors(_, _, "list", label)
+                  accumulatedOutputDataOrErrors(_, _, "list", label)
                 )
                 .map(_.toSet)
                 .map(OutputData.sequence)
@@ -282,14 +290,14 @@ object Decoder extends DecoderInstancesLowPrio1:
             if !v.kind.isStructValue then error(s"$label: Expected a struct kind, got: '${v.kind}'", label).invalidResult
             else
               v.getStructValue.fields.iterator
-                .filterNot { (key, _) => key.startsWith("__") }
+                .filterNot { (key, _) => key.startsWith("__") } // we filter out internal pulumi fields
                 .map { (k, v) =>
                   innerDecoder.decode(v, label.withKey(k)).map(_.map(nv => (k, nv)))
                 }
                 .foldLeft[ValidatedResult[DecodingError, Vector[OutputData[(String, A)]]]](
                   ValidatedResult.valid(Vector.empty)
                 )(
-                  accumulatedOutputDatasOrErrors(_, _, "struct", label)
+                  accumulatedOutputDataOrErrors(_, _, "struct", label)
                 )
                 .map(OutputData.sequence)
                 .map(_.map(_.toMap))
@@ -306,7 +314,7 @@ object Decoder extends DecoderInstancesLowPrio1:
         decodeAsPossibleSecretOrOutput(value, label).flatMap { odv =>
           odv
             .traverseValidatedResult { innerValue =>
-              innerValue.struct.flatMap(_.specialSignature) match
+              innerValue.kind.structValue.flatMap(_.specialSignature) match
                 case None => error(s"$label: Expected a special struct signature", label).invalidResult
                 case Some(Constants.SpecialSig.ResourceSig) =>
                   val structValue = innerValue.getStructValue
@@ -363,7 +371,7 @@ object Decoder extends DecoderInstancesLowPrio1:
       decodeAsPossibleSecretOrOutput(value, label).flatMap { odv =>
         odv
           .traverseValidatedResult { innerValue =>
-            innerValue.struct.flatMap(_.specialSignature) match
+            innerValue.kind.structValue.flatMap(_.specialSignature) match
               case None => error(s"$label: Expected a special struct signature", label).invalidResult
               case Some(Constants.SpecialSig.ResourceSig) =>
                 val structValue = innerValue.getStructValue
@@ -398,7 +406,7 @@ object Decoder extends DecoderInstancesLowPrio1:
       decodeAsPossibleSecretOrOutput(value, label).flatMap { odv =>
         odv
           .traverseValidatedResult { innerValue =>
-            innerValue.struct.flatMap(_.specialSignature) match
+            innerValue.kind.structValue.flatMap(_.specialSignature) match
               case None => error(s"$label: Expected a special struct signature", label).invalidResult
               case Some(extractedSpecialSig) =>
                 if extractedSpecialSig != specialSig then
@@ -665,63 +673,72 @@ trait DecoderHelpers:
       override def mapping(value: Value, label: Label): Validated[DecodingError, A] = ???
 
   def decodeAsPossibleSecretOrOutput(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Value]] =
-    value.struct.flatMap(_.specialSignature) match
-      case Some(SpecialSig.SecretSig) =>
-        val innerValue = value.getStructValue.fields
-          .get(ValueName)
-          .map(ValidatedResult.valid)
-          .getOrElse(error(s"$label: Secrets must have a field called $ValueName", label).invalidResult)
-
-        innerValue.map(OutputData(_, isSecret = true))
-      case Some(SpecialSig.OutputSig) =>
-        val innerValue: ValidatedResult[DecodingError, Option[Value]] =
-          value.getStructValue.fields
+    value
+      .withSpecialSignature {
+        case (struct, SpecialSig.SecretSig) =>
+          val innerValue = struct.fields
             .get(ValueName)
-            .validResult
-        val isSecret: ValidatedResult[DecodingError, Boolean] =
-          value.getStructValue.fields
-            .get(SecretName)
-            .collectFirst({ case Value(Kind.BoolValue(b), _) => b })
-            .getOrElse(false)
-            .validResult
+            .map(ValidatedResult.valid)
+            .getOrElse(error(s"$label: Secrets must have a field called $ValueName", label).invalidResult)
 
-        val deps: ValidatedResult[DecodingError, Vector[Resource]] =
-          value.getStructValue.fields
-            .get(DependenciesName)
-            .map { v =>
-              if !v.kind.isListValue then error(s"$label: Expected a dependencies list in output, got ${v.kind}", label).invalidResult
-              else
-                val depsLabel = label.withKey(DependenciesName)
-                v.getListValue.values.zipWithIndex
-                  .map { case (v, i) =>
-                    val l = depsLabel.atIndex(i)
-                    v.getStringValue.validResult
-                      .flatMap(URN.from(_).toEither.left.map(e => error(s"$l: Expected a valid URN string", l, e)).toValidatedResult)
-                      .map(urn => DependencyResource(Output(urn)))
-                  }
-                  .foldLeft[ValidatedResult[DecodingError, Vector[Resource]]](ValidatedResult.valid(Vector.empty)) { (acc, vr) =>
-                    acc.zipWith(vr) { (acc, v) =>
-                      acc :+ v
+          innerValue.map { (v: Value) =>
+            // handle secret unknown values
+            if v.kind.stringValue.map(_ == Constants.UnknownStringValue).getOrElse(false)
+            then OutputData.unknown(isSecret = true)
+            else OutputData(v, isSecret = true)
+          }
+        case (struct, SpecialSig.OutputSig) =>
+          val innerValue: ValidatedResult[DecodingError, Option[Value]] =
+            struct.fields
+              .get(ValueName)
+              .validResult
+          val isSecret: ValidatedResult[DecodingError, Boolean] =
+            struct.fields
+              .get(SecretName)
+              .collectFirst({ case Value(Kind.BoolValue(b), _) => b })
+              .getOrElse(false)
+              .validResult
+
+          val deps: ValidatedResult[DecodingError, Vector[Resource]] =
+            struct.fields
+              .get(DependenciesName)
+              .map { v =>
+                if !v.kind.isListValue then error(s"$label: Expected a dependencies list in output, got ${v.kind}", label).invalidResult
+                else
+                  val depsLabel = label.withKey(DependenciesName)
+                  v.getListValue.values.zipWithIndex
+                    .map { case (v, i) =>
+                      val l = depsLabel.atIndex(i)
+                      v.getStringValue.validResult
+                        .flatMap(URN.from(_).toEither.left.map(e => error(s"$l: Expected a valid URN string", l, e)).toValidatedResult)
+                        .map(urn => DependencyResource(Output(urn)))
                     }
-                  }
-            }
-            .getOrElse(ValidatedResult.valid(Vector.empty))
+                    .foldLeft[ValidatedResult[DecodingError, Vector[Resource]]](ValidatedResult.valid(Vector.empty)) { (acc, vr) =>
+                      acc.zipWith(vr) { (acc, v) =>
+                        acc :+ v
+                      }
+                    }
+              }
+              .getOrElse(ValidatedResult.valid(Vector.empty))
 
-        for
-          innerValue: Option[Value] <- innerValue
-          isSecret: Boolean         <- isSecret
-          deps: Vector[Resource]    <- deps
-        yield
-          if innerValue.isEmpty
-          then OutputData.unknown(isSecret, deps.toSet)
-          else OutputData(deps.toSet, innerValue, isSecret)
-      case _ =>
+          for
+            innerValue: Option[Value] <- innerValue
+            isSecret: Boolean         <- isSecret
+            deps: Vector[Resource]    <- deps
+          yield
+            if innerValue.isEmpty
+            then OutputData.unknown(isSecret, deps.toSet)
+            else OutputData(deps.toSet, innerValue, isSecret)
+      }
+      .getOrElse {
+        // handle plain unknown values
         if value.kind.isStringValue && Constants.UnknownStringValue == value.getStringValue
         then ValidatedResult.valid(OutputData.unknown(isSecret = false))
         else ValidatedResult.valid(OutputData(value))
+      }
   end decodeAsPossibleSecretOrOutput
 
-  def accumulatedOutputDatasOrErrors[A](
+  private[internal] def accumulatedOutputDataOrErrors[A](
     acc: ValidatedResult[DecodingError, Vector[OutputData[A]]],
     elementValidatedResult: ValidatedResult[DecodingError, OutputData[A]],
     typ: String,
@@ -739,12 +756,15 @@ trait DecoderHelpers:
 
 end DecoderHelpers
 
-/** ArgsEncoder - this is a separate typeclass required for serialization of top-level *Args classes
+/** Encoders handle the details of serialization.
   *
-  * ProviderArgsEncoder - this is a separate typeclass required for serialization of top-level ProviderArgs classes that have all fields
-  * serialized as JSON strings
+  * High-level encoders:
+  *   - [[ArgsEncoder]] - this is a separate typeclass required for serialization of top-level *Args classes
+  *   - [[ProviderArgsEncoder]] - this is a separate typeclass required for serialization of top-level ProviderArgs classes that have all
+  *     fields serialized as JSON strings
   *
-  * JsonEncoder - this is a separate typeclass required for json-serialized fields of ProviderArgs
+  * @see
+  *   also [[Decoder]]
   */
 @implicitNotFound("""Instance of Encoder[${A}] is missing! Most likely you are trying to use structured
     |stack exports and you have defined a case class that holds your exported values.
@@ -755,23 +775,28 @@ end DecoderHelpers
     |case class MyExportedValues(...) derives Encoder""")
 trait Encoder[A]:
   self =>
-  def encode(a: A)(using Context): Result[(Set[Resource], Value)]
+
+  /** Serializes the given object to gRPC value and Pulumi [[Metadata]]
+    */
+  def encode(a: A)(using Context): Result[(Metadata, Value)]
   def contramap[B](f: B => A): Encoder[B] = new Encoder[B]:
-    def encode(b: B)(using Context): Result[(Set[Resource], Value)] = self.encode(f(b))
+    def encode(b: B)(using Context): Result[(Metadata, Value)] = self.encode(f(b))
 
 object Encoder:
   import Constants.*
   import besom.json.*
 
+  // noinspection ScalaWeakerAccess
   def encoderSum[A](mirror: Mirror.SumOf[A], nameEncoderPairs: => List[(String, Encoder[?])]): Encoder[A] =
     new Encoder[A]:
       // TODO We only serialize dumb enums!!
       // private val encoderMap                                    = nameEncoderPairs.toMap
-      override def encode(a: A)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> a.toString.asValue)
+      override def encode(a: A)(using Context): Result[(Metadata, Value)] = Result.pure(Metadata.empty -> a.toString.asValue)
 
+  // noinspection ScalaWeakerAccess
   def encoderProduct[A](nameEncoderPairs: => List[(String, Encoder[?])]): Encoder[A] =
     new Encoder[A]:
-      override def encode(a: A)(using Context): Result[(Set[Resource], Value)] =
+      override def encode(a: A)(using Context): Result[(Metadata, Value)] =
         Result
           .sequence {
             a.asInstanceOf[Product]
@@ -784,12 +809,11 @@ object Encoder:
           }
           .map { lst =>
             val (resources, labelsToValuesMap) =
-              lst.foldLeft[(Set[Resource], Map[String, Value])](Set.empty -> Map.empty) {
-                case ((allResources, props), (label, (fieldResources, value))) =>
-                  val concatResources = allResources ++ fieldResources
-                  if value.kind.isNullValue then (concatResources, props)
-                  else if Encoder.isEmptySecretValue(value) then (concatResources, props) // skip nulls in secrets
-                  else concatResources -> (props + (label -> value))
+              lst.foldLeft[(Metadata, Map[String, Value])](Metadata.empty -> Map.empty) {
+                case ((allMetadata, props), (label, (fieldMetadata, fieldValue))) =>
+                  val concatMetadata = allMetadata.combine(fieldMetadata)
+                  if fieldMetadata.empty then (concatMetadata, props) // we treat properties with NullValue values as if they do not exist
+                  else concatMetadata -> (props + (label -> fieldValue))
               }
 
             resources -> labelsToValuesMap.asValue
@@ -808,82 +832,70 @@ object Encoder:
     outputURNEnc: Encoder[Output[URN]]
   ): Encoder[A] =
     new Encoder[A]:
-      def encode(a: A)(using ctx: Context): Result[(Set[Resource], Value)] =
-        outputIdEnc.encode(a.id).flatMap { (idResources, idValue) =>
+      def encode(a: A)(using ctx: Context): Result[(Metadata, Value)] =
+        outputIdEnc.encode(a.id).flatMap { (idMetadata, idValue) =>
           if ctx.featureSupport.keepResources then
-            outputURNEnc.encode(a.urn).flatMap { (urnResources, urnValue) =>
-              val fixedIdValue =
-                if idValue.kind.isStringValue && idValue.getStringValue == UnknownStringValue
-                then Value(Kind.StringValue(""))
-                else idValue
-
-              val result = Map(
-                SpecialSig.Key -> SpecialSig.ResourceSig.asValue,
-                ResourceUrnName -> urnValue,
-                ResourceIdName -> fixedIdValue
+            outputURNEnc.encode(a.urn).flatMap { (urnMetadata, urnValue) =>
+              ResourceValue(urnValue, idValue).fold(
+                e => Result.fail(e),
+                r => Result.pure(idMetadata.combine(urnMetadata) -> r.asValue)
               )
-
-              Result.pure((idResources ++ urnResources) -> result.asValue)
             }
-          else Result.pure(idResources -> idValue)
+          else Result.pure(idMetadata -> idValue) // return plain urn for backward compatibility
         }
 
   given componentResourceEncoder[A <: ComponentResource](using
     outputURNEnc: Encoder[Output[URN]]
   ): Encoder[A] =
     new Encoder[A]:
-      def encode(a: A)(using ctx: Context): Result[(Set[Resource], Value)] =
-        outputURNEnc.encode(a.urn).flatMap { (urnResources, urnValue) =>
+      def encode(a: A)(using ctx: Context): Result[(Metadata, Value)] =
+        outputURNEnc.encode(a.urn).flatMap { (urnMetadata, urnValue) =>
           if ctx.featureSupport.keepResources then
-            val result = Map(
-              SpecialSig.Key -> SpecialSig.ResourceSig.asValue,
-              ResourceUrnName -> urnValue
+            ResourceValue(urnValue).fold(
+              e => Result.fail(e),
+              r => Result.pure(urnMetadata -> r.asValue)
             )
-
-            Result.pure(urnResources -> result.asValue)
-          else Result.pure(urnResources -> urnValue)
+          else Result.pure(urnMetadata -> urnValue) // return plain urn for backward compatibility
         }
 
   given remoteComponentResourceEncoder[A <: RemoteComponentResource](using
     outputURNEnc: Encoder[Output[URN]]
   ): Encoder[A] =
     new Encoder[A]:
-      def encode(a: A)(using ctx: Context): Result[(Set[Resource], Value)] =
-        outputURNEnc.encode(a.urn).flatMap { (urnResources, urnValue) =>
+      def encode(a: A)(using ctx: Context): Result[(Metadata, Value)] =
+        outputURNEnc.encode(a.urn).flatMap { (urnMetadata, urnValue) =>
           if ctx.featureSupport.keepResources then
-            val result = Map(
-              SpecialSig.Key -> SpecialSig.ResourceSig.asValue,
-              ResourceUrnName -> urnValue
+            ResourceValue(urnValue).fold(
+              e => Result.fail(e),
+              r => Result.pure(urnMetadata -> r.asValue)
             )
-
-            Result.pure(urnResources -> result.asValue)
-          else Result.pure(urnResources -> urnValue)
+          else Result.pure(urnMetadata -> urnValue) // return plain urn for backward compatibility
         }
 
   given stringEncoder: Encoder[String] with
-    def encode(str: String)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> str.asValue)
+    def encode(str: String)(using Context): Result[(Metadata, Value)] = Result.pure(Metadata.empty -> str.asValue)
 
   given urnEncoder: Encoder[URN] with
-    def encode(urn: URN)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> urn.asString.asValue)
+    def encode(urn: URN)(using Context): Result[(Metadata, Value)] = Result.pure(Metadata.empty -> urn.asString.asValue)
 
   given idEncoder: Encoder[ResourceId] with
-    def encode(id: ResourceId)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> id.asString.asValue)
+    def encode(id: ResourceId)(using Context): Result[(Metadata, Value)] = Result.pure(Metadata.empty -> id.asString.asValue)
 
-  given Encoder[NonEmptyString] with
-    def encode(nestr: NonEmptyString)(using Context): Result[(Set[Resource], Value)] =
-      Result.pure(Set.empty -> Value(Kind.StringValue(nestr.asString)))
+  given nesEncoder: Encoder[NonEmptyString] with
+    def encode(nes: NonEmptyString)(using Context): Result[(Metadata, Value)] =
+      Result.pure(Metadata.empty -> Value(Kind.StringValue(nes.asString)))
 
-  given Encoder[Int] with
-    def encode(int: Int)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> int.asValue)
+  given intEncoder: Encoder[Int] with
+    def encode(int: Int)(using Context): Result[(Metadata, Value)] = Result.pure(Metadata.empty -> int.asValue)
 
-  given Encoder[Double] with
-    def encode(dbl: Double)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> dbl.asValue)
+  given doubleEncoder: Encoder[Double] with
+    def encode(dbl: Double)(using Context): Result[(Metadata, Value)] = Result.pure(Metadata.empty -> dbl.asValue)
 
-  given Encoder[Value] with
-    def encode(vl: Value)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> vl)
+  given valueEncoder: Encoder[Value] with
+    def encode(vl: Value)(using Context): Result[(Metadata, Value)] = Result.pure(Metadata.empty -> vl)
 
-  given Encoder[Boolean] with
-    def encode(bool: Boolean)(using Context): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> bool.asValue)
+  given boolEncoder: Encoder[Boolean] with
+    def encode(bool: Boolean)(using Context): Result[(Metadata, Value)] = Result.pure(Metadata.empty -> bool.asValue)
 
   given jsonEncoder: Encoder[JsValue] with
     // TODO not stack-safe
@@ -897,49 +909,38 @@ object Encoder:
         case JsFalse           => false.asValue
         case JsNull            => Null
 
-    def encode(json: JsValue)(using Context): Result[(Set[Resource], Value)] =
-      Result.pure(Set.empty -> encodeInternal(json))
+    def encode(json: JsValue)(using Context): Result[(Metadata, Value)] =
+      Result.pure(Metadata.empty -> encodeInternal(json))
 
   given optEncoder[A](using inner: Encoder[A]): Encoder[Option[A]] with
-    def encode(optA: Option[A])(using Context): Result[(Set[Resource], Value)] =
-      optA match
+    def encode(opt: Option[A])(using Context): Result[(Metadata, Value)] =
+      opt match
         case Some(value) => inner.encode(value)
-        case None        => Result.pure(Set.empty -> Null)
+        case None        =>
+          // It is important to understand that we are sending a "known empty value" here
+          // as opposed to an unknown value, see `outputEncoder` for more details.
+          Result.pure(Metadata(known = true, secret = false, empty = true, Nil) -> Null)
 
   given outputEncoder[A](using inner: Encoder[Option[A]]): Encoder[Output[A]] with
-    def encode(outA: Output[A])(using ctx: Context): Result[(Set[Resource], Value)] =
-      if ctx.featureSupport.keepOutputValues then
-        outA.getData.flatMap {
-          case OutputData.Unknown(resources, secret) =>
+    def encode(out: Output[A])(using ctx: Context): Result[(Metadata, Value)] =
+      out.getData.flatMap {
+        case OutputData.Unknown(resources, secret) =>
+          for urns <- urns(resources)
+          yield
+            // It is important to understand that unknown value is neither empty nor non-empty
+            // but we have no ability to express this directly, what we do is:
+            // - we make sure the `empty == false` to not short-circuit the Metadata#combine method
+            // - we use Metadata#render to determine the appropriate wire representation for gRPC
+            val metadata = Metadata(known = false, secret = secret, empty = false, urns)
+            metadata -> metadata.render(Null) // we pass null, but in this case it can be anything, because Metadata#render will decide
+        case OutputData.Known(resources, secret, maybeValue) =>
+          inner.encode(maybeValue).flatMap { (innerMetadata, serializedValue) =>
             for urns <- urns(resources)
-            yield resources -> OutputValue(
-              value = Null,
-              isSecret = secret,
-              dependencies = urns
-            ).asValue
-          case OutputData.Known(resources, secret, maybeValue) =>
-            inner.encode(maybeValue).flatMap { (innerResources, serializedValue) =>
-              val aggregatedResources = resources ++ innerResources
-              for urns <- urns(aggregatedResources)
-              yield aggregatedResources -> OutputValue(
-                value = serializedValue,
-                isSecret = secret,
-                dependencies = urns
-              ).asValue
-            }
-        }
-      else
-        outA.getData.flatMap {
-          case OutputData.Unknown(resources, _) =>
-            Result.pure(resources -> UnknownStringValue.asValue)
-          case OutputData.Known(resources, isSecret, maybeValue) =>
-            inner.encode(maybeValue).map { (innerResources, serializedValue) =>
-              val aggregatedResources = resources ++ innerResources
-              if isSecret
-              then aggregatedResources -> serializedValue.asSecretValue
-              else aggregatedResources -> serializedValue
-            }
-        }
+            yield
+              val combinedMetadata = Metadata(known = true, secret, serializedValue.kind.isNullValue, urns).combine(innerMetadata)
+              combinedMetadata -> combinedMetadata.render(serializedValue)
+          }
+      }
 
     private def urns(r: Set[Resource]): Result[List[URN]] = Result
       .sequence {
@@ -959,32 +960,32 @@ object Encoder:
   ).asValue
 
   given fileAssetEncoder: Encoder[FileAsset] = new Encoder[FileAsset]:
-    def encode(fileAsset: FileAsset)(using Context): Result[(Set[Resource], Value)] = Result {
-      Set.empty -> assetWrapper(Constants.AssetOrArchivePathName, fileAsset.path.asValue)
+    def encode(fileAsset: FileAsset)(using Context): Result[(Metadata, Value)] = Result {
+      Metadata.empty -> assetWrapper(Constants.AssetOrArchivePathName, fileAsset.path.asValue)
     }
 
   given remoteAssetEncoder: Encoder[RemoteAsset] = new Encoder[RemoteAsset]:
-    def encode(remoteAsset: RemoteAsset)(using Context): Result[(Set[Resource], Value)] = Result {
-      Set.empty -> assetWrapper(Constants.AssetOrArchiveUriName, remoteAsset.uri.asValue)
+    def encode(remoteAsset: RemoteAsset)(using Context): Result[(Metadata, Value)] = Result {
+      Metadata.empty -> assetWrapper(Constants.AssetOrArchiveUriName, remoteAsset.uri.asValue)
     }
 
   given stringAssetEncoder: Encoder[StringAsset] = new Encoder[StringAsset]:
-    def encode(stringAsset: StringAsset)(using Context): Result[(Set[Resource], Value)] = Result {
-      Set.empty -> assetWrapper(Constants.AssetTextName, stringAsset.text.asValue)
+    def encode(stringAsset: StringAsset)(using Context): Result[(Metadata, Value)] = Result {
+      Metadata.empty -> assetWrapper(Constants.AssetTextName, stringAsset.text.asValue)
     }
 
   given fileArchiveEncoder: Encoder[FileArchive] = new Encoder[FileArchive]:
-    def encode(fileArchive: FileArchive)(using Context): Result[(Set[Resource], Value)] = Result {
-      Set.empty -> archiveWrapper(Constants.AssetOrArchivePathName, fileArchive.path.asValue)
+    def encode(fileArchive: FileArchive)(using Context): Result[(Metadata, Value)] = Result {
+      Metadata.empty -> archiveWrapper(Constants.AssetOrArchivePathName, fileArchive.path.asValue)
     }
 
   given remoteArchiveEncoder: Encoder[RemoteArchive] = new Encoder[RemoteArchive]:
-    def encode(remoteArchive: RemoteArchive)(using Context): Result[(Set[Resource], Value)] = Result {
-      Set.empty -> archiveWrapper(Constants.AssetOrArchiveUriName, remoteArchive.uri.asValue)
+    def encode(remoteArchive: RemoteArchive)(using Context): Result[(Metadata, Value)] = Result {
+      Metadata.empty -> archiveWrapper(Constants.AssetOrArchiveUriName, remoteArchive.uri.asValue)
     }
 
   given assetArchiveEncoder: Encoder[AssetArchive] = new Encoder[AssetArchive]:
-    def encode(assetArchive: AssetArchive)(using Context): Result[(Set[Resource], Value)] =
+    def encode(assetArchive: AssetArchive)(using Context): Result[(Metadata, Value)] =
       val serializedAssets =
         assetArchive.assets.toVector.map { case (key, assetOrArchive) =>
           assetOrArchiveEncoder.encode(assetOrArchive).map((key, _))
@@ -993,15 +994,13 @@ object Encoder:
       Result.sequence(serializedAssets).map { vec =>
         val (keys, depsAndValues) = vec.unzip
         val (deps, values)        = depsAndValues.unzip
-        val allDeps = deps.foldLeft(Set.empty[Resource]) { case (acc, resources) =>
-          acc ++ resources
-        }
+        val allMetadata           = deps.foldLeft(Metadata.empty)(_.combine(_))
 
-        allDeps -> archiveWrapper(Constants.ArchiveAssetsName, keys.zip(values).toMap.asValue)
+        allMetadata -> archiveWrapper(Constants.ArchiveAssetsName, keys.zip(values).toMap.asValue)
       }
 
   given assetEncoder: Encoder[Asset] = new Encoder[Asset]:
-    def encode(asset: Asset)(using Context): Result[(Set[Resource], Value)] =
+    def encode(asset: Asset)(using Context): Result[(Metadata, Value)] =
       asset match
         case fa: FileAsset   => fileAssetEncoder.encode(fa)
         case ra: RemoteAsset => remoteAssetEncoder.encode(ra)
@@ -1010,7 +1009,7 @@ object Encoder:
         //   Result.fail(Exception("Cannot serialize invalid asset")) // TODO is this necessary?
 
   given archiveEncoder: Encoder[Archive] = new Encoder[Archive]:
-    def encode(archive: Archive)(using Context): Result[(Set[Resource], Value)] =
+    def encode(archive: Archive)(using Context): Result[(Metadata, Value)] =
       archive match
         case fa: FileArchive   => fileArchiveEncoder.encode(fa)
         case ra: RemoteArchive => remoteArchiveEncoder.encode(ra)
@@ -1019,46 +1018,44 @@ object Encoder:
         //   Result.fail(Exception("Cannot serialize invalid archive")) // TODO is this necessary?
 
   given assetOrArchiveEncoder: Encoder[AssetOrArchive] = new Encoder[AssetOrArchive]:
-    def encode(assetOrArchive: AssetOrArchive)(using Context): Result[(Set[Resource], Value)] =
+    def encode(assetOrArchive: AssetOrArchive)(using Context): Result[(Metadata, Value)] =
       assetOrArchive match
         case a: Asset   => assetEncoder.encode(a)
         case a: Archive => archiveEncoder.encode(a)
 
   given listEncoder[A](using innerEncoder: Encoder[A]): Encoder[List[A]] = new Encoder[List[A]]:
-    def encode(lstA: List[A])(using Context): Result[(Set[Resource], Value)] =
+    def encode(list: List[A])(using Context): Result[(Metadata, Value)] =
       Result
-        .sequence(lstA.map(innerEncoder.encode(_)))
+        .sequence(list.map(innerEncoder.encode(_)))
         .map { lst =>
           val (resources, values) = lst.unzip
-          val joinedResources     = resources.foldLeft(Set.empty[Resource])(_ ++ _)
+          val joinedMetadata      = resources.foldLeft(Metadata.empty)(_.combine(_))
 
-          joinedResources -> values.asValue
+          joinedMetadata -> values.asValue
         }
 
   // TODO is this ever necessary?
   given vectorEncoder[A](using lstEncoder: Encoder[List[A]]): Encoder[Vector[A]] =
     new Encoder[Vector[A]]:
-      def encode(vecA: Vector[A])(using Context): Result[(Set[Resource], Value)] = lstEncoder.encode(vecA.toList)
+      def encode(vector: Vector[A])(using Context): Result[(Metadata, Value)] = lstEncoder.encode(vector.toList)
 
   given mapEncoder[A](using inner: Encoder[A]): Encoder[Map[String, A]] = new Encoder[Map[String, A]]:
-    def encode(map: Map[String, A])(using Context): Result[(Set[Resource], Value)] =
+    def encode(map: Map[String, A])(using Context): Result[(Metadata, Value)] =
       Result
         .sequence {
           map.toList.map { case (key, value) =>
-            inner.encode(value).map { encodingResultTuple =>
-              key -> encodingResultTuple
-            }
+            inner.encode(value).map(key -> _)
           }
         }
-        .map { lst =>
-          val (resources, map) = lst.foldLeft(Set.empty[Resource] -> Map.empty[String, Value]) {
-            case ((allResources, map), (key, (resources, value))) =>
-              val concatResources = allResources ++ resources
-              if value.kind.isNullValue then (concatResources, map) // we treat properties with null values as if they do not exist.
-              else concatResources -> (map + (key -> value))
+        .map { (entries: List[(String, (Metadata, Value))]) =>
+          val (metadata, map) = entries.foldLeft(Metadata.empty -> Map.empty[String, Value]) {
+            case ((allMetadata, map), (key, (metadata, value))) =>
+              val concatMetadata = allMetadata.combine(metadata)
+              if metadata.empty then (concatMetadata, map) // we treat properties with null values as if they do not exist.
+              else concatMetadata -> (map + (key -> value))
           }
 
-          resources -> map.asValue
+          metadata -> map.asValue
         }
 
   // Support for Scala 3 Union Types or Tagged Unions vel Either below:
@@ -1077,7 +1074,7 @@ object Encoder:
               case (Some(enc1), Some(enc2)) =>
                 '{
                   new Encoder[U]:
-                    def encode(aOrB: U)(using Context): Result[(Set[Resource], Value)] = aOrB match
+                    def encode(aOrB: U)(using Context): Result[(Metadata, Value)] = aOrB match
                       case a: t1 => ${ enc1 }.encode(a)
                       case b: t2 => ${ enc2 }.encode(b)
                 }
@@ -1090,36 +1087,32 @@ object Encoder:
 
   given eitherEncoder[A, B](using innerA: Encoder[A], innerB: Encoder[B]): Encoder[Either[A, B]] =
     new Encoder[Either[A, B]]:
-      def encode(optA: Either[A, B])(using Context): Result[(Set[Resource], Value)] =
+      def encode(optA: Either[A, B])(using Context): Result[(Metadata, Value)] =
         optA match
           case Left(a)  => innerA.encode(a)
           case Right(b) => innerB.encode(b)
 
-  private[internal] def isEmptySecretValue(value: Value): Boolean =
-    value
-      .withSpecialSignature {
-        case (struct, SpecialSig.SecretSig) =>
-          struct.fields.get(ValueName).exists(_.kind.isNullValue)
-        case (_, _) => false
-      }
-      .getOrElse(false)
-  end isEmptySecretValue
-
 end Encoder
 
 // ArgsEncoder and ProviderArgsEncoder are nearly the same with the small difference of
-// ProviderArgsEncoder summoning JsonEncoder instances instead of Encoder (because all
-// of the fields in provider arguments are serialized to JSON strings)
+// ProviderArgsEncoder all fields in being serialized to JSON strings
 trait ArgsEncoder[A]:
-  def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Set[Resource]], Struct)]
+  def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Metadata], Struct)]
 
 object ArgsEncoder:
-  def argsEncoderProduct[A](
+  inline def derived[A <: Product](using m: Mirror.ProductOf[A]): ArgsEncoder[A] =
+    lazy val labels: List[String]        = CodecMacros.summonLabels[m.MirroredElemLabels]
+    lazy val instances: List[Encoder[?]] = CodecMacros.summonEncoders[m.MirroredElemTypes]
+    lazy val nameEncoderPairs            = labels.zip(instances)
+
+    argsEncoderProduct(nameEncoderPairs)
+
+  private def argsEncoderProduct[A](
     elems: List[(String, Encoder[?])]
   ): ArgsEncoder[A] =
     new ArgsEncoder[A]:
       import Constants.*
-      override def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Set[Resource]], Struct)] =
+      override def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Metadata], Struct)] =
         Result
           .sequence {
             a.asInstanceOf[Product]
@@ -1131,208 +1124,110 @@ object ArgsEncoder:
               .toList
           }
           .map(_.toMap)
-          .map { serializedMap =>
-            val (mapOfResources, mapOfValues) =
-              serializedMap.foldLeft[(Map[String, Set[Resource]], Map[String, Value])](Map.empty -> Map.empty) {
-                case ((mapOfResources, mapOfValues), (label, (resources, value))) =>
-                  if filterOut(label) then (mapOfResources, mapOfValues) // skip filtered
-                  else if Encoder.isEmptySecretValue(value) then (mapOfResources, mapOfValues) // skip nulls in secrets
-                  else if value.kind.isNullValue then
-                    (mapOfResources, mapOfValues) // we treat properties with NullValue values as if they do not exist
-                  else (mapOfResources + (label -> resources), mapOfValues + (label -> value))
+          .flatMap { serializedMap =>
+            val (mapOfMetadata: Map[String, Metadata], mapOfValues: Map[String, Value]) =
+              serializedMap.foldLeft[(Map[String, Metadata], Map[String, Value])](Map.empty -> Map.empty) {
+                case ((mapOfMetadata, mapOfValues), (label, (metadata, value))) =>
+                  if filterOut(label) then (mapOfMetadata, mapOfValues) // skip filtered
+                  else if metadata.empty then
+                    (mapOfMetadata, mapOfValues) // we treat properties with NullValue values as if they do not exist
+                  else (mapOfMetadata + (label -> metadata), mapOfValues + (label -> value))
               }
 
-            val struct = mapOfValues.asStruct
-
-            mapOfResources -> struct
+            if (mapOfMetadata.keySet != mapOfValues.keySet)
+              Result.fail(
+                Exception(
+                  s"Post-condition: expected ArgsEncoder to return metadata and values for the same keys, " +
+                    s"got: ${mapOfMetadata.keys.mkString(",")}, ${mapOfValues.keys.mkString(",")}"
+                )
+              )
+            else
+              Result.pure(mapOfMetadata -> mapOfValues.asStruct)
           }
+end ArgsEncoder
 
-  inline def derived[A <: Product](using m: Mirror.ProductOf[A]): ArgsEncoder[A] =
+// ProviderArgsEncoder and ArgsEncoder are nearly the same with the small difference of
+// ProviderArgsEncoder all fields in being serialized to JSON strings
+trait ProviderArgsEncoder[A] extends ArgsEncoder[A]:
+  def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Metadata], Struct)]
+
+object ProviderArgsEncoder:
+  inline def derived[A <: Product](using m: Mirror.ProductOf[A]): ProviderArgsEncoder[A] =
     lazy val labels: List[String]        = CodecMacros.summonLabels[m.MirroredElemLabels]
     lazy val instances: List[Encoder[?]] = CodecMacros.summonEncoders[m.MirroredElemTypes]
     lazy val nameEncoderPairs            = labels.zip(instances)
 
-    argsEncoderProduct(nameEncoderPairs)
-end ArgsEncoder
+    providerArgsEncoderProduct(nameEncoderPairs)
 
-trait ProviderArgsEncoder[A] extends ArgsEncoder[A]:
-  def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Set[Resource]], Struct)]
-
-object ProviderArgsEncoder:
-  def providerArgsEncoderProduct[A](
-    elems: List[(String, JsonEncoder[?])]
+  private def providerArgsEncoderProduct[A](
+    elems: List[(String, Encoder[?])]
   ): ProviderArgsEncoder[A] =
     new ProviderArgsEncoder[A]:
       import Constants.*
-      override def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Set[Resource]], Struct)] =
+      override def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Metadata], Struct)] =
         Result
           .sequence {
             a.asInstanceOf[Product]
               .productIterator
               .zip(elems)
               .map { case (v, (label, encoder)) =>
-                encoder.asInstanceOf[JsonEncoder[Any]].encode(v).map(res => label -> res)
+                encoder.asInstanceOf[Encoder[Any]].encode(v).flatMap {
+                  case (metadata: Metadata, value: Value) => {
+                    // We need to unwrap pulumi special structures for outputs and secrets before we serialize the payload to json,
+                    // and before we serialize the payload to Json we need to:
+                    // - remove all of the special structures to reintroduce them at high level
+                    // - bypass null and string protobuf values
+                    // - retain the special output structures metadata (i.e. secretness, dependencies)
+                    for jsonValue <- maybeWrapAsJson(removeSpecialStructures(value))
+                    yield label -> (metadata, metadata.render(jsonValue))
+                  }
+                }
               }
               .toList
           }
           .map(_.toMap)
-          .map { serializedMap =>
-            val (mapOfResources, mapOfValues) =
-              serializedMap.foldLeft[(Map[String, Set[Resource]], Map[String, Value])](Map.empty -> Map.empty) {
-                case ((mapOfResources, mapOfValues), (label, (resources, value))) =>
-                  if filterOut(label) then (mapOfResources, mapOfValues)
-                  else if value.kind.isNullValue then (mapOfResources, mapOfValues)
-                  else if Encoder.isEmptySecretValue(value) then (mapOfResources, mapOfValues) // skip nulls in secrets
-                  else (mapOfResources + (label -> resources), mapOfValues + (label -> value))
+          .flatMap { (serializedMap: Map[String, (Metadata, Value)]) =>
+            val (mapOfMetadata, mapOfValues) =
+              serializedMap.foldLeft[(Map[String, Metadata], Map[String, Value])](Map.empty -> Map.empty) {
+                case ( /* acc */ (mapOfMetadata, mapOfValues), /* fields */ (label, (metadata, value))) =>
+                  if filterOut(label) then (mapOfMetadata, mapOfValues)
+                  else if metadata.empty then
+                    (mapOfMetadata, mapOfValues) // we treat properties with NullValue values as if they do not exist
+                  else (mapOfMetadata + (label -> metadata), mapOfValues + (label -> value))
               }
 
-            val struct = mapOfValues.asStruct
-
-            mapOfResources -> struct
+            if (mapOfMetadata.keySet != mapOfValues.keySet)
+              Result.fail(
+                Exception(
+                  s"Post-condition: expected ProviderArgsEncoder to return metadata and values for the same keys, " +
+                    s"got: ${mapOfMetadata.keys.mkString(",")}, ${mapOfValues.keys.mkString(",")}"
+                )
+              )
+            else
+              Result.pure(mapOfMetadata -> mapOfValues.asStruct)
           }
 
-  inline def derived[A <: Product](using m: Mirror.ProductOf[A]): ProviderArgsEncoder[A] =
-    lazy val labels: List[String]            = CodecMacros.summonLabels[m.MirroredElemLabels]
-    lazy val instances: List[JsonEncoder[?]] = CodecMacros.summonJsonEncoders[m.MirroredElemTypes]
-    lazy val nameEncoderPairs                = labels.zip(instances)
-
-    providerArgsEncoderProduct(nameEncoderPairs)
-end ProviderArgsEncoder
-
-trait JsonEncoder[A]:
-  def encode(a: A)(using Context): Result[(Set[Resource], Value)]
-
-object JsonEncoder:
-  given jsonEncoder[A](using enc: Encoder[A]): JsonEncoder[A] =
-    new JsonEncoder[A]:
-      def encode(a: A)(using Context): Result[(Set[Resource], Value)] =
-        // we need to unwrap pulumi special structures for outputs and secrets before we serialize the payload to json
-        // with the following requirements:
-        // - bypass null and string protobuf values
-        // - bypass empty special secret structures (legacy)
-        // - retain the special output structures metadata (i.e. secretness, dependencies)
-        enc.encode(a).flatMap { (r, v: Value) =>
-          parse(Context().featureSupport.keepOutputValues)(v).asJsonValue.map(r -> _)
-        }
-
-  import IntermediateValue.*
-
-  private[internal] def parse(keepOutputValues: Boolean)(value: Value): Tree =
-    println("=======")
-    val root = Tree(value, Metadata(NoIntermediateValue, value.isKnown, false, Nil))
-    mutate(keepOutputValues)(root)
-    root
-
-  import scala.collection.mutable
-  case class Tree(parent: Option[Tree], var value: Value, var metadata: Metadata, children: mutable.TreeMap[String, Tree]):
-    def isRoot: Boolean           = parent.isEmpty
-    // overwrite to make this noe recurrent - otherwise will cause stack overflow
-    override def toString: String = s"Tree(value: $value, metadata: $metadata, children[${children.size}]: ...)"
-  object Tree:
-    def apply(parent: Tree, value: Value, metadata: Metadata): Tree =
-      new Tree(Some(parent), value, metadata, children = mutable.TreeMap.empty)
-    def apply(value: Value, metadata: Metadata): Tree =
-      new Tree(None, value, metadata, children = mutable.TreeMap.empty)
-
-    extension (t: Tree)
-      def asJsonValue: Result[Value] =
-        // let's recover the metadata
-        val jsonValue = maybeWrapAsJson(if t.metadata.known then t.value else Null)
-        t.metadata.intermediate match
-          // nothing to recover
-          case NoIntermediateValue => jsonValue
-          // recover special secret struct with aggregated metadata
-          case SecretIntermediateValue =>
-            jsonValue.map(SecretValue(_).asValue)
-          // recover special output struct with aggregated metadata
-          case OutputIntermediateValue =>
-            jsonValue.map(
-              OutputValue(
-                _,
-                t.metadata.secret,
-                t.metadata.dependencies
-              ).asValue
-            )
-  end Tree
-
-  case class Metadata(
-    intermediate: IntermediateValue,
-    known: Boolean,
-    secret: Boolean,
-    dependencies: List[URN]
-  ):
-    def combine(that: Metadata): Metadata =
-      Metadata(
-        intermediate.combine(that.intermediate),
-        known && that.known,
-        secret || that.secret,
-        dependencies ++ that.dependencies
-      )
-  end Metadata
-
-  enum IntermediateValue:
-    case NoIntermediateValue
-    case SecretIntermediateValue
-    case OutputIntermediateValue
-
-    def combine(that: IntermediateValue): IntermediateValue =
-      val result = (this, that) match
-        case (_, OutputIntermediateValue) | (OutputIntermediateValue, _)                   => OutputIntermediateValue
-        case (NoIntermediateValue, SecretIntermediateValue) | (SecretIntermediateValue, _) => SecretIntermediateValue
-        case (NoIntermediateValue, NoIntermediateValue)                                    => NoIntermediateValue
-      println(s"#### => ($this, $that) = $result")
-      result
-  end IntermediateValue
-
-  private[internal] def mutate(keepOutputValues: Boolean)(
-    tree: Tree
-  ): Unit =
-    println(s"# => ${tree.value.kind.getClass.getSimpleName} ($tree)")
-    tree.value match
-      // unwrap special structures preserving the metadata
-      case OutputValue(o) =>
-        println(s"## => struct output")
-        tree.metadata = tree.metadata.combine(
-          Metadata(OutputIntermediateValue, o.isKnown, o.isSecret, o.dependencies)
-        )
-        tree.value = o.value
-        mutate(keepOutputValues)(tree)
-      case SecretValue(s) =>
-        println(s"## => struct secret")
-        tree.metadata = tree.metadata.combine(
-          Metadata(SecretIntermediateValue, s.isKnown, true, Nil)
-        )
-        tree.value = s.value
-        mutate(keepOutputValues)(tree)
-      // introspect all other protobuf structures
+  private def removeSpecialStructures(value: Value): Value =
+    value match
+      case OutputValue(o) => removeSpecialStructures(o.asRawValueOrUnknown)
+      case SecretValue(s) => removeSpecialStructures(s.value)
       case Value(Kind.StructValue(s), _) =>
-        println(s"## => struct other")
-        // iterate over the structure field values
-        val subTrees: Iterable[(String, Tree)] =
-          s.fields.map { case (k, v) =>
-            println(s"## => $k")
-            k -> {
-              val branch = Tree(tree, v, Metadata(NoIntermediateValue, v.isKnown, false, Nil))
-              mutate(keepOutputValues)(branch)
-              branch
-            }
+        Struct(fields = s.fields.map {
+          case (k, v) => {
+            k -> removeSpecialStructures(v)
           }
-        tree.children.addAll(subTrees)
-      // nothing more to introspect
-      case _ => ()
-    end match
-  end mutate
+        }).asValue
+      case v => v
 
-  private[internal] def maybeWrapAsJson(value: Value): Result[Value] = value match
+  private def maybeWrapAsJson(value: Value): Result[Value] = value match
+    // if the value is an empty secret, we don't want to serialize it as a JSON string, ProviderArgsEncoder will filter it out
     case v if v.kind.isNullValue   => Result.pure(v)
     case v if v.kind.isStringValue => Result.pure(v)
-    // if the value is an empty secret, we don't want to serialize it as a JSON string, ProviderArgsEncoder will filter it out
-    case v @ SecretValue(s) if s.notKnown => Result.pure(v)
-    case v                                => wrapAsJson(v)
+    case v                         => wrapAsJson(v)
 
-  private[internal] def wrapAsJson(value: Value): Result[Value] =
+  private def wrapAsJson(value: Value): Result[Value] =
     Result.evalEither(value.asJsonString).transform {
       case Left(e)           => Left(Exception("Encountered a malformed protobuf Value that could not be serialized to JSON", e))
       case Right(jsonString) => Right(jsonString.asValue)
     }
-end JsonEncoder
+end ProviderArgsEncoder

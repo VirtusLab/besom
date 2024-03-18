@@ -70,7 +70,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       val resourceLabel = mdc.get(Key.LabelKey)
       summon[Decoder[R]].decode(resultAsValue, resourceLabel).asResult.flatMap {
         case Validated.Invalid(errs) =>
-          Result.fail(new AggregatedDecodingError(errs))
+          Result.fail(AggregatedDecodingError(errs))
         case Validated.Valid(value) =>
           Result.pure(value.withDependencies(props.values.flatten.toSet))
       }
@@ -199,14 +199,14 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     resolver: ResourceResolver[R],
     state: ResourceState
   ): Result[Unit] =
-    val debugMessageSuffix = eitherErrorOrResult.fold(t => s"an error: ${t.getMessage()}", _ => "a result")
+    val debugMessageSuffix = eitherErrorOrResult.fold(t => s"an error: ${t.getMessage}", _ => "a result")
 
     for
       _         <- log.debug(s"Resolving resource ${state.asLabel} with $debugMessageSuffix")
       _         <- log.trace(s"Resolving resource ${state.asLabel} with: ${pprint(eitherErrorOrResult)}")
       errOrUnit <- resolver.resolve(eitherErrorOrResult).either
       _         <- errOrUnit.fold(ctx.fail, _ => Result.unit) // fail context if resource resolution fails
-      errOrUnitMsg = errOrUnit.fold(t => s"with an error: ${t.getMessage()}", _ => "successfully")
+      errOrUnitMsg = errOrUnit.fold(t => s"with an error: ${t.getMessage}", _ => "successfully")
       failResult   = errOrUnit.fold(t => Result.fail(t), _ => Result.unit)
       _ <- log.debug(s"Resolved resource ${state.asLabel} $errOrUnitMsg") *> failResult
     yield ()

@@ -28,19 +28,12 @@ object PropertiesSerializer:
     args: A,
     filter: String => Boolean
   )(using Context): Result[SerializationResult] =
-    summon[ArgsEncoder[A]].encode(args, filter).map { case (fieldsToResources, value) =>
-      SerializationResult(value, detectUnknowns(Value(Kind.StructValue(value))), fieldsToResources)
+    summon[ArgsEncoder[A]].encode(args, filter).map { case (fieldsToMetadata, value) =>
+      SerializationResult(value, detectUnknowns(fieldsToMetadata), fieldsToResources(fieldsToMetadata))
     }
 
-  private[internal] def detectUnknowns(value: Value): Boolean =
-    value.kind match
-      case StringValue(str) => str == Constants.UnknownStringValue
-      case StructValue(struct) =>
-        struct.fields.foldLeft(false) { case (prev, (_, value)) =>
-          prev || detectUnknowns(value)
-        }
-      case ListValue(list) =>
-        list.values.foldLeft(false) { case (prev, value) =>
-          prev || detectUnknowns(value)
-        }
-      case _ => false // all other leaf types
+  private[internal] def detectUnknowns(metadata: Map[String, Metadata]): Boolean = metadata.values.exists(_.unknown)
+  private[internal] def fieldsToResources(metadata: Map[String, Metadata])(using Context): Map[String, Set[Resource]] =
+    metadata.map { case (k, m) =>
+      (k, m.dependencies.map(urn => DependencyResource(Output(urn)).asInstanceOf[Resource]).toSet)
+    }

@@ -21,7 +21,7 @@ class ReSerializerTest extends munit.FunSuite:
     assertEquals(reSerialize(List(1, 2, 3)).unsafeRunSync(), List(1, 2, 3))
     assertEquals(reSerialize(List(1.0, 2.0, 3.0)).unsafeRunSync(), List(1.0, 2.0, 3.0))
     assertEquals(reSerialize(Map.empty[String, String]).unsafeRunSync(), Map.empty[String, String])
-    assertEquals(reSerialize(Map("asdf" -> Option.empty[String])).unsafeRunSync(), Map.empty)
+    assertEquals(reSerialize(Map("asdf" -> Option.empty[String])).unsafeRunSync(), Map.empty) // special case, we remove null values in maps
     assertEquals(reSerialize(Map("asdf" -> Option("qwer"))).unsafeRunSync(), Map("asdf" -> Option("qwer")))
     assertEquals(reSerialize(Map("asdf" -> List("qwer"))).unsafeRunSync(), Map("asdf" -> List("qwer")))
 

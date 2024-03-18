@@ -52,9 +52,9 @@ object RegistersOutputs:
           .unique(encoder.asTerm, "encode")
           .appliedTo(fieldExpr.asTerm)
           .appliedTo(ctx.asTerm)
-          .asExprOf[Result[(Set[Resource], Value)]]
+          .asExprOf[Result[(Metadata, Value)]]
 
-      '{ $encoded.map(depsAndValue => (${ Expr(fieldName) }, depsAndValue._2)) } // discard dependencies
+      '{ $encoded.map(metaAndValue => (${ Expr(fieldName) }, metaAndValue._2)) } // discard dependencies
     }
 
     val listOfResults = Expr.ofSeq(extractedFields)

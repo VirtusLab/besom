@@ -17,7 +17,7 @@ val scalaPluginVersion              = coreVersion
 val providerRandomSchemaVersion     = "4.15.1"
 val providerTlsSchemaVersion        = "5.0.0"
 val providerPurrlSchemaVersion      = "0.5.0"
-val providerKubernetesSchemaVersion = "4.7.1"
+val providerKubernetesSchemaVersion = "4.8.1"
 
 val languagePluginDir = os.pwd / ".out" / "language-plugin"
 

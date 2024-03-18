@@ -11,8 +11,11 @@ trait ResourceDecoder[A <: Resource]: // TODO rename to something more sensible
   def makeResolver(using Context, BesomMDC[Label]): Result[(A, ResourceResolver[A])]
 
 object ResourceDecoder:
+  inline def derived[A <: Resource]: ResourceDecoder[A] = ${ derivedImpl[A] }
+
   class CustomPropertyExtractor[A](propertyName: String, decoder: Decoder[A]):
 
+    // noinspection ScalaUnusedSymbol
     def extract(
       fields: Map[String, Value],
       dependencies: Map[String, Set[Resource]],
@@ -23,7 +26,7 @@ object ResourceDecoder:
     ): ValidatedResult[DecodingError, OutputData[A]] =
       val resourceLabel = mdc.get(Key.LabelKey)
 
-      val fieldDependencies = dependencies.get(propertyName).getOrElse(Set.empty)
+      val fieldDependencies = dependencies.getOrElse(propertyName, Set.empty)
       val propertyLabel     = resourceLabel.withKey(propertyName)
 
       val outputData =
@@ -67,8 +70,8 @@ object ResourceDecoder:
     )
 
     Promise[OutputData[URN]]().zip(Promise[OutputData[ResourceId]]()).zip(customPropertiesResults).map {
-      case (urnPromise, idPromise, customPopertiesPromises) =>
-        val allPromises = Vector(urnPromise, idPromise) ++ customPopertiesPromises.toList
+      case (urnPromise, idPromise, customPropertiesPromises) =>
+        val allPromises = Vector(urnPromise, idPromise) ++ customPropertiesPromises.toList
 
         val propertiesOutputs = allPromises.map(promise => Output.ofData(promise.get)).toArray
         val resource          = fromProduct(Tuple.fromArray(propertiesOutputs))
@@ -102,7 +105,7 @@ object ResourceDecoder:
                 val dependencies = rawResourceResult.dependencies
 
                 val propertiesFulfilmentResults =
-                  customPopertiesPromises.zip(customPropertyExtractors).map { (promise, extractor) =>
+                  customPropertiesPromises.zip(customPropertyExtractors).map { (promise, extractor) =>
                     extractor.extract(fields, dependencies, resource).asResult.flatMap {
                       case Validated.Valid(outputData) => promise.fulfillAny(outputData)
                       case Validated.Invalid(errs)     => promise.fail(AggregatedDecodingError(errs))
@@ -125,9 +128,7 @@ object ResourceDecoder:
     }
   end makeResolver
 
-  inline def derived[A <: Resource]: ResourceDecoder[A] = ${ derivedImpl[A] }
-
-  def derivedImpl[A <: Resource: Type](using q: Quotes): Expr[ResourceDecoder[A]] =
+  private def derivedImpl[A <: Resource: Type](using q: Quotes): Expr[ResourceDecoder[A]] =
     Expr.summon[Mirror.Of[A]].get match
       case '{
             $m: Mirror.ProductOf[A] { type MirroredElemLabels = elementLabels; type MirroredElemTypes = elementTypes }

@@ -116,9 +116,8 @@ class ExportsTest extends munit.FunSuite with ValueAssertions:
             qux = Output.secret("qux")
           )
 
-      val stackOutputs = stack.getExports.result.unsafeRunSync()
-
-      val encoded = Value(Kind.StructValue(stackOutputs))
+      val stackStruct = stack.getExports.result.unsafeRunSync()
+      val encoded     = stackStruct.asValue
 
       val expected =
         if Context().featureSupport.keepOutputValues
@@ -137,7 +136,7 @@ class ExportsTest extends munit.FunSuite with ValueAssertions:
             "qux" -> "qux".asValue.asSecretValue
           ).asValue
 
-      assertEquals(encoded.struct.get.fields.size, 4)
+      assertEquals(stackStruct.fields.size, 4)
       assertEqualsValue(encoded, expected, encoded.toProtoString)
     }
   }

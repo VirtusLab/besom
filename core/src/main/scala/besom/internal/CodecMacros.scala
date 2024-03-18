@@ -50,22 +50,6 @@ object CodecMacros:
         exprOfEncoder :: recSummonEncodersImpl(Type.of[tail])
       case _ => report.errorAndAbort("This can be ONLY called on tuples!")
 
-  inline def summonJsonEncoders[A]: List[JsonEncoder[?]] = ${ summonJsonEncodersImpl[A] }
-
-  private def summonJsonEncodersImpl[A: Type](using Quotes): Expr[List[JsonEncoder[?]]] =
-    Expr.ofList(recSummonJsonEncodersImpl(Type.of[A]))
-
-  private def recSummonJsonEncodersImpl(t: Type[?])(using Quotes): List[Expr[JsonEncoder[?]]] =
-    import quotes.reflect.*
-    t match
-      case '[EmptyTuple] => Nil
-      case '[head *: tail] =>
-        val exprOfJsonEncoder = Expr.summon[JsonEncoder[head]].getOrElse {
-          report.errorAndAbort(s"JsonEncoder for ${Type.show[head]} was not found!")
-        }
-        exprOfJsonEncoder :: recSummonJsonEncodersImpl(Type.of[tail])
-      case _ => report.errorAndAbort("This can be ONLY called on tuples!")
-
   // inline def summonTypeclasses[A, TC[_]]: List[TC[Any]] = ${ summonTypeclassesImpl[A, TC] }
 
   // private def summonTypeclassesImpl[A: Type, TC[_]: Type](using Quotes): Expr[List[TC[Any]]] =
