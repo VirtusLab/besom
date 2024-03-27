@@ -48,6 +48,7 @@ object aliases:
     object StackRef extends besom.internal.ResourceOptsVariant.StackRef
     object Custom extends besom.internal.ResourceOptsVariant.Custom
     object Component extends besom.internal.ResourceOptsVariant.Component
+  type CustomTimeouts = besom.internal.CustomTimeouts
 
   export besom.internal.InvokeOptions
 end aliases

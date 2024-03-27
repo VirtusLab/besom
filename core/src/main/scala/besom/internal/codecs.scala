@@ -689,13 +689,13 @@ object Encoder:
   import Constants.*
   import besom.json.*
 
-  def encoderSum[A](mirror: Mirror.SumOf[A], nameEncoderPairs: List[(String, Encoder[?])]): Encoder[A] =
+  def encoderSum[A](mirror: Mirror.SumOf[A], nameEncoderPairs: => List[(String, Encoder[?])]): Encoder[A] =
     new Encoder[A]:
       // TODO We only serialize dumb enums!!
       // private val encoderMap                                    = nameEncoderPairs.toMap
       override def encode(a: A): Result[(Set[Resource], Value)] = Result.pure(Set.empty -> a.toString.asValue)
 
-  def encoderProduct[A](nameEncoderPairs: List[(String, Encoder[?])]): Encoder[A] =
+  def encoderProduct[A](nameEncoderPairs: => List[(String, Encoder[?])]): Encoder[A] =
     new Encoder[A]:
       override def encode(a: A): Result[(Set[Resource], Value)] =
         Result

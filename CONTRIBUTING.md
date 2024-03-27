@@ -288,7 +288,7 @@ After the release, you can bump the version to the next `-SNAPSHOT` version:
 just cli version bump X.Y.Z-SNAPSHOT
 ```
 
-Add `//> using repository sonatype:snapshots` to `project.scala` files.
+Remember to release the snapshot to maven. 
 
 ### Testing examples locally
 
