@@ -32,6 +32,9 @@ object ProtobufUtil:
   given ToValue[Struct] with
     extension (s: Struct) def asValue: Value = Value(Kind.StructValue(s))
 
+  given ToValue[ListValue] with
+    extension (l: ListValue) def asValue: Value = Value(Kind.ListValue(l))
+
   given ToValue[Value] with
     extension (v: Value) def asValue: Value = v
 
@@ -92,19 +95,19 @@ case class ResourceValue private (urn: Value, id: Option[Value])
 object ResourceValue:
   def apply(urn: Value, id: Value): Either[Exception, ResourceValue] =
     val fixedIdValue = id match
-      case OutputValue(o) => Right(o.value.getOrElse(ResourceId.empty.asValue))
+      case OutputValue(o)                                             => Right(o.value.getOrElse(ResourceId.empty.asValue))
       case Value(Kind.StringValue(id), _) if id == UnknownStringValue => Right(ResourceId.empty.asValue)
-      case v@Value(Kind.StringValue(_), _) => Right(v)
-      case v => Left(Exception(s"Unexpected id value type: ${v.valueType}"))
+      case v @ Value(Kind.StringValue(_), _)                          => Right(v)
+      case v                                                          => Left(Exception(s"Unexpected id value type: ${v.valueType}"))
     for
       base <- apply(urn)
       id   <- fixedIdValue
     yield base.copy(id = Some(id))
-  def apply(urn: Value): Either[Exception, ResourceValue] = 
+  def apply(urn: Value): Either[Exception, ResourceValue] =
     urn match
-      case OutputValue(o) => Right(ResourceValue(o.value.getOrElse(URN.empty.asString.asValue), None))
+      case OutputValue(o)                  => Right(ResourceValue(o.value.getOrElse(URN.empty.asString.asValue), None))
       case Value(Kind.StringValue(urn), _) => Right(ResourceValue(urn.asValue, None))
-      case v => Left(Exception(s"Unexpected urn value type: ${v.valueType}"))
+      case v                               => Left(Exception(s"Unexpected urn value type: ${v.valueType}"))
 
   extension (r: ResourceValue)
     def asValue: Value = {

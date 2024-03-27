@@ -540,14 +540,19 @@ The most important information about our serde:
 - upstream uses special structures signatures [besom.internal.Constants.SpecialSig](core/src/main/scala/besom/internal/codecs.scala)
   to encode internal metadata that Pulumi uses
 
-Serialization entry points:
+Serialization main points:
 - [besom.internal.RegistersOutputs](core/src/main/scala/besom/internal/RegistersOutputs.scala)
 - [besom.internal.PropertiesSerializer](core/src/main/scala/besom/internal/PropertiesSerializer.scala)
 - [besom.internal.Encoder](core/src/main/scala/besom/internal/codecs.scala)
 
-Deserialization entry points:
+Deserialization main entry points:
 - [besom.internal.ResourceDecoder](core/src/main/scala/besom/internal/ResourceDecoder.scala)
 - [besom.internal.Decoder](core/src/main/scala/besom/internal/codecs.scala)
+
+Other important files:
+- [besom.internal.CodecMacros](core/src/main/scala/besom/internal/CodecMacros.scala)
+- [besom.internal.ResourceOps#invokeInternal](core/src/main/scala/besom/internal/ResourceOps.scala)
+- [besom.internal.ProtobufUtil](core/src/main/scala/besom/internal/ProtobufUtil.scala)
 
 ## Getting Help
 

@@ -760,8 +760,8 @@ end DecoderHelpers
   *
   * High-level encoders:
   *   - [[ArgsEncoder]] - this is a separate typeclass required for serialization of top-level *Args classes
-  *   - [[ProviderArgsEncoder]] - this is a separate typeclass required for serialization of top-level ProviderArgs classes that have all
-  *     fields serialized as JSON strings
+  *   - [[ProviderArgsEncoder]] - this is a separate typeclass required for serialization of top-level ProviderArgs classes that have most
+  *     fields serialized as JSON strings, with the exception of `null` and `String`
   *
   * @see
   *   also [[Decoder]]
@@ -1094,8 +1094,8 @@ object Encoder:
 
 end Encoder
 
-// ArgsEncoder and ProviderArgsEncoder are nearly the same with the small difference of
-// ProviderArgsEncoder all fields in being serialized to JSON strings
+// ArgsEncoder and ProviderArgsEncoder are nearly the same with the small difference, that in ProviderArgsEncoder
+// some fields in being serialized to JSON strings, with the exception of `null` and `String`
 trait ArgsEncoder[A]:
   def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Metadata], Struct)]
 
@@ -1134,20 +1134,19 @@ object ArgsEncoder:
                   else (mapOfMetadata + (label -> metadata), mapOfValues + (label -> value))
               }
 
-            if (mapOfMetadata.keySet != mapOfValues.keySet)
+            if mapOfMetadata.keySet != mapOfValues.keySet then
               Result.fail(
                 Exception(
                   s"Post-condition: expected ArgsEncoder to return metadata and values for the same keys, " +
                     s"got: ${mapOfMetadata.keys.mkString(",")}, ${mapOfValues.keys.mkString(",")}"
                 )
               )
-            else
-              Result.pure(mapOfMetadata -> mapOfValues.asStruct)
+            else Result.pure(mapOfMetadata -> mapOfValues.asStruct)
           }
 end ArgsEncoder
 
-// ProviderArgsEncoder and ArgsEncoder are nearly the same with the small difference of
-// ProviderArgsEncoder all fields in being serialized to JSON strings
+// ProviderArgsEncoder and ArgsEncoder are nearly the same with the small difference, that in ProviderArgsEncoder
+// some fields in being serialized to JSON strings, with the exception of `null` and `String`
 trait ProviderArgsEncoder[A] extends ArgsEncoder[A]:
   def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Metadata], Struct)]
 
@@ -1217,6 +1216,8 @@ object ProviderArgsEncoder:
             k -> removeSpecialStructures(v)
           }
         }).asValue
+      case Value(Kind.ListValue(l), _) =>
+        ListValue(values = l.values.map(removeSpecialStructures)).asValue
       case v => v
 
   private def maybeWrapAsJson(value: Value): Result[Value] = value match

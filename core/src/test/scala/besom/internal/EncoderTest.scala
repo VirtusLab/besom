@@ -335,8 +335,16 @@ end ArgsEncoderTest
 object ProviderArgsEncoderTest:
   import EncoderTest.*
 
-  case class TestProviderArgs(`type`: Output[String], pcc: Output[PlainCaseClass]) derives ProviderArgsEncoder
-  case class TestProviderOptionArgs(`type`: Output[Option[String]], pcc: Output[Option[PlainCaseClass]]) derives ProviderArgsEncoder
+  case class TestProviderArgs(
+    `type`: Output[String],
+    pcc: Output[PlainCaseClass],
+    ls: Output[List[Output[String]]]
+  ) derives ProviderArgsEncoder
+  case class TestProviderOptionArgs(
+    `type`: Output[Option[String]],
+    pcc: Output[Option[PlainCaseClass]],
+    ls: Output[Option[List[Output[String]]]]
+  ) derives ProviderArgsEncoder
 
   case class ExampleResourceArgs(
     str: Output[Option[String]],
@@ -405,7 +413,8 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
         .encode(
           TestProviderArgs(
             Output("SOME-TEST-PROVIDER"),
-            Output(PlainCaseClass(data = "werks?", moreData = 123))
+            Output(PlainCaseClass(data = "werks?", moreData = 123)),
+            Output(List(Output("a"), Output("b"), Output("c")))
           ),
           _ => false
         )
@@ -422,7 +431,8 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
             "pcc" -> Map(
               "data" -> "werks?".asValue,
               "moreData" -> 123.asValue
-            ).asValue.asJsonStringOrThrow.asValue.asOutputValue(isSecret = false, dependencies = Nil).asValue
+            ).asValue.asJsonStringOrThrow.asValue.asOutputValue(isSecret = false, dependencies = Nil).asValue,
+            "ls" -> List("a", "b", "c").asValue.asJsonStringOrThrow.asValue.asOutputValue(isSecret = false, dependencies = Nil).asValue
           ).asValue
         else
           Map(
@@ -430,7 +440,8 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
             "pcc" -> Map(
               "data" -> "werks?".asValue,
               "moreData" -> 123.asValue
-            ).asValue.asJsonStringOrThrow.asValue
+            ).asValue.asJsonStringOrThrow.asValue,
+            "ls" -> List("a", "b", "c").asValue.asJsonStringOrThrow.asValue
           ).asValue
 
       assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
@@ -442,6 +453,7 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
       val pae = summon[ProviderArgsEncoder[TestProviderOptionArgs]]
 
       val args = TestProviderOptionArgs(
+        Output(None),
         Output(None),
         Output(None)
       )
