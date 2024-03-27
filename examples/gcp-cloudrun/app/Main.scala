@@ -2,6 +2,7 @@ package org.virtuslab.besom.example
 
 import sttp.tapir.*
 import sttp.tapir.server.jdkhttp.*
+import java.util.concurrent.Executors
 
 @main def main(): Unit =
   // required by Cloud Run Container runtime contract https://cloud.google.com/run/docs/reference/container-contract
@@ -13,8 +14,8 @@ import sttp.tapir.server.jdkhttp.*
 
   println(s"Starting server on $host:$port")
   val _ = JdkHttpServer()
+    .executor(Executors.newVirtualThreadPerTaskExecutor())
     .host(host)
     .port(port)
     .addEndpoint(handler)
     .start()
-end main
