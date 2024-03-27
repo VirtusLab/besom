@@ -1,7 +1,7 @@
 package besom.codegen
 
-import besom.codegen.Config.ProviderConfig
 import besom.codegen.SchemaName
+import besom.codegen.Utils.PulumiPackageOps
 
 import scala.meta.*
 import scala.meta.dialects.Scala33
@@ -10,8 +10,6 @@ import scala.meta.dialects.Scala33
 class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
 
   import besom.codegen.metaschema.{Java, Language, Meta, PulumiPackage}
-
-  implicit val logger: Logger = new Logger
 
   val schemaDir = os.pwd / ".out" / "schemas"
 
@@ -216,8 +214,13 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
 
   tests.foreach { data =>
     test(s"Type: ${data.typeToken}".withTags(data.tags)) {
-      implicit val providerConfig: ProviderConfig = Config.providersConfigs(data.schemaName)
-      val coords                                  = PulumiToken(data.typeToken).toCoordinates(data.pulumiPackage)
+      given config: Config                 = Config()
+      given Logger                         = Logger()
+      given Config.Provider                = config.providers(data.schemaName)
+      given schemaProvider: SchemaProvider = DownloadingSchemaProvider()
+
+      val packageInfo = schemaProvider.packageInfo(data.pulumiPackage.toPackageMetadata(), data.pulumiPackage)
+      val coords      = PulumiToken(data.typeToken).toCoordinates(packageInfo)
 
       data.expected.foreach {
         case ResourceClassExpectations(fullPackageName, fullyQualifiedTypeRef, filePath, asArgsType) =>
@@ -236,15 +239,15 @@ class PulumiDefinitionCoordinatesTest extends munit.FunSuite {
           assertEquals(ec.typeRef.syntax, fullyQualifiedTypeRef)
           assertEquals(ec.filePath.osSubPath.toString(), filePath)
         case FunctionClassExpectations(fullPackageName, fullyQualifiedTypeRef, filePath, args, result) =>
-          val m = coords.resourceMethod
+          val m = coords.asFunctionClass
           assertEquals(m.packageRef.syntax, fullPackageName)
           assertEquals(m.typeRef.syntax, fullyQualifiedTypeRef)
           assertEquals(m.filePath.osSubPath.toString(), filePath)
-          val ac = coords.methodArgsClass
+          val ac = coords.asFunctionArgsClass
           assertEquals(ac.packageRef.syntax, args.fullPackageName)
           assertEquals(ac.typeRef.syntax, args.fullyQualifiedTypeRef)
           assertEquals(ac.filePath.osSubPath.toString(), args.filePath)
-          val rc = coords.methodResultClass
+          val rc = coords.asFunctionResultClass
           assertEquals(rc.packageRef.syntax, result.fullPackageName)
           assertEquals(rc.typeRef.syntax, result.fullyQualifiedTypeRef)
           assertEquals(rc.filePath.osSubPath.toString(), result.filePath)

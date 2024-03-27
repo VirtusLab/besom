@@ -47,7 +47,7 @@ case class PulumiDefinitionCoordinates private (
       case _ => throw PulumiDefinitionCoordinatesError(s"Invalid definition name '$definitionName'")
   }
 
-  def resourceMethod(implicit logger: Logger): ScalaDefinitionCoordinates = {
+  def asFunctionClass(using Logger): ScalaDefinitionCoordinates = {
     val (methodPrefix, methodName) = splitMethodName(definitionName)
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
@@ -56,7 +56,7 @@ case class PulumiDefinitionCoordinates private (
       selectionName = Some(mangleMethodName(methodName))
     )
   }
-  def methodArgsClass(implicit logger: Logger): ScalaDefinitionCoordinates = {
+  def asFunctionArgsClass(using Logger): ScalaDefinitionCoordinates = {
     val (methodPrefix, methodName) = splitMethodName(definitionName)
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
@@ -64,7 +64,7 @@ case class PulumiDefinitionCoordinates private (
       definitionName = Some((methodPrefix.toSeq :+ mangleTypeName(methodName)).mkString("") + "Args")
     )
   }
-  def methodResultClass(implicit logger: Logger): ScalaDefinitionCoordinates = {
+  def asFunctionResultClass(using Logger): ScalaDefinitionCoordinates = {
     val (methodPrefix, methodName) = splitMethodName(definitionName)
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
@@ -73,7 +73,7 @@ case class PulumiDefinitionCoordinates private (
     )
   }
 
-  def asConfigClass(implicit logger: Logger): ScalaDefinitionCoordinates = {
+  def asConfigClass(using Logger): ScalaDefinitionCoordinates = {
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,

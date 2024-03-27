@@ -6,6 +6,8 @@
 //> using dep com.lihaoyi::os-lib:0.9.3
 //> using test.dep org.scalameta::munit::1.0.0-M10
 
+//> using exclude "resources/*"
+
 //> using publish.name "besom-codegen"
 //> using publish.organization "org.virtuslab"
 //> using publish.url "https://github.com/VirtusLab/besom"

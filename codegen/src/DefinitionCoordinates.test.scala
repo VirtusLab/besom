@@ -1,14 +1,13 @@
 package besom.codegen
 
 import besom.codegen.metaschema.PulumiPackage
+import besom.codegen.Utils.PulumiPackageOps
 
 import scala.meta.*
 import scala.meta.dialects.Scala33
 
 //noinspection ScalaFileName,TypeAnnotation
 class DefinitionCoordinatesTest extends munit.FunSuite {
-  implicit val logger: Logger                        = new Logger
-  implicit val providerConfig: Config.ProviderConfig = Config.ProviderConfig()
 
   case class Data(
     token: PulumiToken,
@@ -60,8 +59,16 @@ class DefinitionCoordinatesTest extends munit.FunSuite {
 
   tests.foreach(data => {
     test(s"Type: ${data.token.asString}".withTags(data.tags.toSet)) {
+      given config: Config                 = Config()
+      given logger: Logger                 = Logger()
+      given schemaProvider: SchemaProvider = DownloadingSchemaProvider()
+
       val pulumiPackage = PulumiPackage("test")
-      val coords        = data.token.toCoordinates(pulumiPackage)
+      val packageInfo   = schemaProvider.packageInfo(pulumiPackage.toPackageMetadata(), pulumiPackage)
+
+      val coords = data.token.toCoordinates(packageInfo)
+
+      given Config.Provider = packageInfo.providerConfig
 
       data.expected.foreach {
         case ResourceClassExpectations(fullPackageName, fullyQualifiedTypeRef, filePath, asArgsType) =>

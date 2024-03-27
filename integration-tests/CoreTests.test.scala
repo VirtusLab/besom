@@ -11,7 +11,7 @@ import scala.concurrent.duration.*
 class CoreTests extends munit.FunSuite {
   override val munitTimeout = 5.minutes
 
-  implicit val codegenConfig: Config.CodegenConfig = Config.CodegenConfig()
+  given config: Config = Config()
 
   val wd = os.pwd / "integration-tests"
 
@@ -236,5 +236,29 @@ class CoreTests extends munit.FunSuite {
           |  namespace: test
           |""".stripMargin
     )
+  }
+
+  FunFixture[pulumi.FixtureContext](
+    setup = {
+      val schemaName = "kubernetes"
+      val result     = codegen.generatePackage(PackageMetadata(schemaName, providerKubernetesSchemaVersion))
+      scalaCli.publishLocal(result.outputDir).call()
+      pulumi.fixture.setup(
+        wd / "resources" / "kubernetes-crd",
+        projectFiles = Map(
+          "project.scala" ->
+            (defaultProjectFile + CodeGen.packageDependency(schemaName, providerKubernetesSchemaVersion))
+        )
+      )
+    },
+    teardown = pulumi.fixture.teardown
+  ).test("kubernetes provider should work with CRDs") { ctx =>
+    val result = pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env, check = false)
+    if result.exitCode != 0 then
+      println(result.out.text())
+      println(result.err.text())
+      fail(s"pulumi up failed with exit code ${result.exitCode}")
+
+    // todo read files and check content
   }
 }

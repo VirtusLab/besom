@@ -1,6 +1,6 @@
 package besom.codegen.metaschema
 
-import besom.codegen.Config.CodegenConfig
+import besom.codegen.Config
 import besom.codegen._
 
 import scala.meta._
@@ -110,16 +110,15 @@ class PropertyInfoTest extends munit.FunSuite {
     )
   ).foreach(data =>
     test(data.name.withTags(data.tags)) {
-      implicit val config: Config.CodegenConfig = CodegenConfig()
-      implicit val logger: Logger               = new Logger(config.logLevel)
+      given Config                         = Config()
+      given Logger                         = Logger()
+      given schemaProvider: SchemaProvider = DownloadingSchemaProvider()
 
-      implicit val schemaProvider: SchemaProvider =
-        new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
-      val (_, packageInfo) = data.metadata match {
+      val packageInfo = data.metadata match {
         case m @ TestPackageMetadata => schemaProvider.packageInfo(m, PulumiPackage(name = m.name))
         case _                       => schemaProvider.packageInfo(data.metadata)
       }
-      implicit val tm: TypeMapper = new TypeMapper(packageInfo, schemaProvider)
+      given TypeMapper = TypeMapper(packageInfo)
 
       val (name, definition) = UpickleApi.read[Map[String, PropertyDefinition]](data.json).head
       val property           = PropertyInfo.from(name, definition, isPropertyRequired = false)

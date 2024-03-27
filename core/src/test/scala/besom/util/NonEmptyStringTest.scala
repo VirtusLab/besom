@@ -48,11 +48,11 @@ class NonEmptyStringTest extends munit.FunSuite with CompileAssertions:
 
   test("NonEmptyString can be used in place of normal string") {
     compiles("""
-    import besom.util.NonEmptyString.*
-    def test(param: String) = s"Got: $param"
-    test(NonEmptyString.from("a random string"))
-    val str: String = NonEmptyString.from("a random string")
-    """)
+      import besom.util.NonEmptyString.*
+      def test(param: String) = s"Got: $param"
+      test(NonEmptyString.from("a random string"))
+      val str: String = NonEmptyString.from("a random string")
+      """)
   }
 
   test("compiles with non-empty string multiplicated if the multiplier is constant and > 0") {

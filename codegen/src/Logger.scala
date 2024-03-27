@@ -2,7 +2,7 @@ package besom.codegen
 
 import scala.collection.mutable.ListBuffer
 
-class Logger(val printLevel: Logger.Level = Logger.Level.Info) {
+class Logger(val printLevel: Logger.Level) {
   import Logger.Level.*
 
   private val buffer     = ListBuffer.empty[String]
@@ -40,6 +40,8 @@ class Logger(val printLevel: Logger.Level = Logger.Level.Info) {
 }
 
 object Logger {
+  def apply()(using config: Config) = new Logger(config.logLevel)
+
   sealed abstract class Level(val level: Int) extends Ordered[Level] {
     override def compare(that: Level): Int = level.compare(that.level)
   }

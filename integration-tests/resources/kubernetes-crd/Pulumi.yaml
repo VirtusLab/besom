@@ -1,0 +1,6 @@
+name: kubernetes-secrets
+description: Minimal Kubernetes CRD test
+runtime:
+  name: scala
+  options:
+    logtostderr: true

@@ -1,7 +1,6 @@
 package besom.scripts
 
 import besom.codegen.*
-import besom.codegen.Config.CodegenConfig
 import besom.model.SemanticVersion
 import coursier.error.ResolutionError.CantDownloadModule
 import org.virtuslab.yaml.*
@@ -295,7 +294,7 @@ object Packages:
           val versionOrLatest = m.version.getOrElse("latest")
           Progress.report(label = s"${m.name}:${versionOrLatest}")
           try
-            implicit val codegenConfig: CodegenConfig = CodegenConfig(
+            given Config = Config(
               schemasDir = schemasDir,
               codegenDir = codegenDir
             )

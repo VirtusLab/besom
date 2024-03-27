@@ -78,6 +78,35 @@ object types:
 
     private[besom] def unsafeOf(s: String): ResourceType = s
 
+    private val ResourceTypeRegexpPattern = "^(.+):(.+):(.+)$"
+    private val ResourceTypeRegexp        = ResourceTypeRegexpPattern.r
+
+    /** Checks whether a string is a legal ResourceType. */
+    def isResourceType(s: String): Boolean = s.nonEmpty && ResourceTypeRegexp.findFirstIn(s).isDefined
+
+    /** Parse a resource type string into a [[ResourceType]].
+      * @param s
+      *   a resource type string to parse
+      * @return
+      *   a [[ResourceType]] if the string is valid, otherwise an error
+      */
+    def parse(s: String): Either[Exception, ResourceType] =
+      if isResourceType(s)
+      then Right(s)
+      else Left(Exception(s"ResourceType must match the pattern '${ResourceTypeRegexpPattern}"))
+
+    def parseOutput(s: String)(using Context): Output[ResourceType] =
+      import besom.util.eitherOps
+      parse(s).asOutput
+
+    /** Parse a resource type string into a [[ResourceType]].
+      * @param s
+      *   a resource type string to parse
+      * @return
+      *   a [[ResourceType]] if the string is valid, otherwise None
+      */
+    def apply(s: String): Option[ResourceType] = parse(s).toOption
+
   end ResourceType
 
   /** A special [[ResourceType]] that identifies a Pulumi provider.
@@ -88,7 +117,7 @@ object types:
     */
   object ProviderType:
 
-    /** Create a [[ProviderType]] with a provided `provider`` identifier, in format `pulumi:providers:${provider}`.
+    /** Create a [[ProviderType]] with a provided `provider` identifier, in format `pulumi:providers:${provider}`.
       *
       * @param provider
       *   a provider identifier
