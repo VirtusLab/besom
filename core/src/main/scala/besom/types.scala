@@ -1,7 +1,6 @@
 package besom
 
 import besom.internal.*
-import besom.internal.ProtobufUtil.*
 import besom.util.*
 import com.google.protobuf.struct.*
 
@@ -253,8 +252,8 @@ object types:
         .findFirstMatchIn(urn)
         .fold(Vector.empty) { m =>
           m.group("parentType") match
-            case s if s.isEmpty() => Vector.empty
-            case s                => s.split('$').toVector.map(ResourceType.unsafeOf)
+            case s if s.isEmpty => Vector.empty
+            case s              => s.split('$').toVector.map(ResourceType.unsafeOf)
         }
 
       /** @return
@@ -337,13 +336,17 @@ object types:
     private lazy val valuesToInstances: Map[V, E] = allInstances.map(instance => instance.value -> instance).toMap
 
     extension [A](a: A)
-      def asValueAny: Value = a match
-        case a: Int     => a.asValue
-        case a: Double  => a.asValue
-        case a: Boolean => a.asValue
-        case a: String  => a.asValue
+      private def asValueAny: Value =
+        import besom.internal.ProtobufUtil.given
+        a match
+          case a: Int     => a.asValue
+          case a: Double  => a.asValue
+          case a: Boolean => a.asValue
+          case a: String  => a.asValue
 
-    given Encoder[E] = (a: E) => Result.pure(Set.empty -> a.value.asValueAny)
+    given Encoder[E] = new Encoder[E]:
+      def encode(a: E)(using Context): Result[(Metadata, Value)] = Result.pure(Metadata.empty -> a.value.asValueAny)
+
     given (using decV: Decoder[V]): Decoder[E] =
       decV.emap { (value, label) =>
         valuesToInstances

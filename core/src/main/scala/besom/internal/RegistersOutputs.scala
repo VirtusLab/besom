@@ -4,18 +4,20 @@ import com.google.protobuf.struct.*
 import scala.quoted.*
 
 trait RegistersOutputs[A <: ComponentResource & Product]:
-  def serializeOutputs(a: A): Result[Struct]
+  def serializeOutputs(a: A)(using Context): Result[Struct]
 
 object RegistersOutputs:
   def apply[A <: ComponentResource & Product](using ro: RegistersOutputs[A]): RegistersOutputs[A] = ro
 
   inline given derived[A <: ComponentResource & Product]: RegistersOutputs[A] = new RegistersOutputs[A] {
-    def serializeOutputs(a: A): Result[Struct] = derivedImpl[A](a)
+    def serializeOutputs(a: A)(using Context): Result[Struct] = derivedImpl[A](a)
   }
 
-  private inline def derivedImpl[A](a: A): Result[Struct] = ${ serializeOutputsImpl[A]('a) }
+  // noinspection ScalaUnusedSymbol
+  private inline def derivedImpl[A](a: A)(using ctx: Context): Result[Struct] = ${ serializeOutputsImpl[A]('ctx, 'a) }
 
-  def serializeOutputsImpl[A: Type](using Quotes)(a: Expr[Any]): Expr[Result[Struct]] = {
+  // noinspection ScalaUnusedSymbol
+  private def serializeOutputsImpl[A: Type](using Quotes)(ctx: Expr[Context], a: Expr[Any]): Expr[Result[Struct]] = {
     import quotes.reflect.*
     val tpe          = TypeRepr.of[A]
     val fields       = tpe.typeSymbol.caseFields
@@ -46,9 +48,13 @@ object RegistersOutputs:
             .asExprOf[Encoder[?]]
 
       val encoded =
-        Select.unique(encoder.asTerm, "encode").appliedTo(fieldExpr.asTerm).asExprOf[Result[(Set[Resource], Value)]]
+        Select
+          .unique(encoder.asTerm, "encode")
+          .appliedTo(fieldExpr.asTerm)
+          .appliedTo(ctx.asTerm)
+          .asExprOf[Result[(Metadata, Value)]]
 
-      '{ $encoded.map(depsAndValue => (${ Expr(fieldName) }, depsAndValue._2)) } // discard dependencies
+      '{ $encoded.map(metaAndValue => (${ Expr(fieldName) }, metaAndValue._2)) } // discard dependencies
     }
 
     val listOfResults = Expr.ofSeq(extractedFields)

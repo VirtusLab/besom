@@ -1,12 +1,13 @@
 package besom.internal
 
-import besom.internal
 import besom.internal.RunResult.{*, given}
 import besom.types.{Output as _, *}
 import besom.util.Validated
 import com.google.protobuf.struct.*
 
 class ReSerializerTest extends munit.FunSuite:
+
+  given Context = DummyContext().unsafeRunSync()
 
   test("serialize-deserialize common types") {
     assertEquals(reSerialize(Option.empty[String]).unsafeRunSync(), Option.empty[String])
@@ -20,7 +21,7 @@ class ReSerializerTest extends munit.FunSuite:
     assertEquals(reSerialize(List(1, 2, 3)).unsafeRunSync(), List(1, 2, 3))
     assertEquals(reSerialize(List(1.0, 2.0, 3.0)).unsafeRunSync(), List(1.0, 2.0, 3.0))
     assertEquals(reSerialize(Map.empty[String, String]).unsafeRunSync(), Map.empty[String, String])
-    assertEquals(reSerialize(Map("asdf" -> Option.empty[String])).unsafeRunSync(), Map.empty)
+    assertEquals(reSerialize(Map("asdf" -> Option.empty[String])).unsafeRunSync(), Map.empty) // special case, we remove null values in maps
     assertEquals(reSerialize(Map("asdf" -> Option("qwer"))).unsafeRunSync(), Map("asdf" -> Option("qwer")))
     assertEquals(reSerialize(Map("asdf" -> List("qwer"))).unsafeRunSync(), Map("asdf" -> List("qwer")))
 
@@ -44,7 +45,8 @@ class ReSerializerTest extends munit.FunSuite:
       besom.json.JsObject("asdf" -> besom.json.JsNull)
     )
 
-    import besom.json.*, DefaultJsonProtocol.*
+    import besom.json.*
+    import DefaultJsonProtocol.*
     assertEquals(reSerialize("""{}""".toJson)(e, d).unsafeRunSync(), """{}""".toJson)
     assertEquals(reSerialize("""[]""".toJson)(e, d).unsafeRunSync(), """[]""".toJson)
     assertEquals(reSerialize("""{"asdf": null}""".toJson)(e, d).unsafeRunSync(), """{"asdf": null}""".toJson)
