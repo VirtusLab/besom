@@ -15,7 +15,7 @@ class RegistersOutputsDerivationTest extends munit.FunSuite {
       val instance   = summon[RegistersOutputs[TestRegistersOutputs]]
 
       val testRegistersOutputs = TestRegistersOutputs(Output(1))
-      val serializedStruct     = instance.serializeOutputs(testRegistersOutputs).unsafeRunSync()
+      val serializedStruct     = instance.serializeOutputs(Output(testRegistersOutputs)).unsafeRunSync()
       val expectedStruct = Struct(
         Map("a" -> intEncoder.encode(testRegistersOutputs.a).map(_._2).unsafeRunSync())
       )
@@ -38,7 +38,7 @@ class RegistersOutputsDerivationTest extends munit.FunSuite {
       val instance       = summon[RegistersOutputs[TestRegistersOutputs3]]
 
       val testRegistersOutputs = TestRegistersOutputs3(Output(1), Output("XD"), Output(false))
-      val serializedStruct     = instance.serializeOutputs(testRegistersOutputs).unsafeRunSync()
+      val serializedStruct     = instance.serializeOutputs(Output(testRegistersOutputs)).unsafeRunSync()
       val expectedStruct = Struct(
         Map(
           "aField" -> intEncoder.encode(testRegistersOutputs.aField).map(_._2).unsafeRunSync(),
@@ -51,7 +51,7 @@ class RegistersOutputsDerivationTest extends munit.FunSuite {
     }
   }
 
-  test("not derive an instance for a class with non-Output case fields".ignore /* TODO(kπ) */ ) {
+  test("not derive an instance for a class with non-Output case fields") {
     val errors = compileErrors(
       """given Context = DummyContext().unsafeRunSync()
          case class TestRegistersOutputs2(a: Output[Int], b: String) extends ComponentResource {
@@ -62,5 +62,4 @@ class RegistersOutputsDerivationTest extends munit.FunSuite {
     )
     assert(errors.nonEmpty)
   }
-
 }

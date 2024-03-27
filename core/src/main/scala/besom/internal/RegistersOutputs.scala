@@ -4,38 +4,39 @@ import com.google.protobuf.struct.*
 import scala.quoted.*
 
 trait RegistersOutputs[A <: ComponentResource & Product]:
-  def serializeOutputs(a: A)(using Context): Result[Struct]
+  def serializeOutputs(a: Output[A])(using Context): Result[Struct]
 
 object RegistersOutputs:
   def apply[A <: ComponentResource & Product](using ro: RegistersOutputs[A]): RegistersOutputs[A] = ro
 
   inline given derived[A <: ComponentResource & Product]: RegistersOutputs[A] = new RegistersOutputs[A] {
-    def serializeOutputs(a: A)(using Context): Result[Struct] = derivedImpl[A](a)
+    def serializeOutputs(a: Output[A])(using Context): Result[Struct] = derivedImpl[A](a)
   }
 
   // noinspection ScalaUnusedSymbol
-  private inline def derivedImpl[A](a: A)(using ctx: Context): Result[Struct] = ${ serializeOutputsImpl[A]('ctx, 'a) }
+  private inline def derivedImpl[A](a: Output[A])(using ctx: Context): Result[Struct] = ${ serializeOutputsImpl[A]('ctx, 'a) }
 
   // noinspection ScalaUnusedSymbol
-  private def serializeOutputsImpl[A: Type](using Quotes)(ctx: Expr[Context], a: Expr[Any]): Expr[Result[Struct]] = {
+  private def serializeOutputsImpl[A: Type](using Quotes)(ctx: Expr[Context], a: Expr[Output[Any]]): Expr[Result[Struct]] = {
     import quotes.reflect.*
+
     val tpe          = TypeRepr.of[A]
     val fields       = tpe.typeSymbol.caseFields
     val outputSymbol = Symbol.requiredClass("besom.internal.Output")
 
-    val fieldInfoSyms = fields.map { field =>
+    val fieldInfoSymbols = fields.map { field =>
       val tpeRepr = field.tree match
         case v: ValDef => v.tpt.tpe
         case d: DefDef => d.returnTpt.tpe
       tpeRepr.typeSymbol
     }
 
-    if fieldInfoSyms.exists(_ != outputSymbol) then
+    if fieldInfoSymbols.exists(_ != outputSymbol) then
       report.errorAndAbort("Cannot derive RegistersOutputs for a component with non-Output fields")
 
     val extractedFields = fields.map { field =>
       val fieldName = field.name
-      val fieldExpr = Select.unique(a.asTerm, fieldName).asExprOf[Output[Any]]
+      val fieldExpr = '{ ($a.asInstanceOf[Output[A]]).flatMap(r => ${ Select.unique('r.asTerm, fieldName).asExprOf[Output[A]] }) }
       val fieldTpe = field.tree match
         case v: ValDef => v.tpt.tpe
         case d: DefDef => d.returnTpt.tpe

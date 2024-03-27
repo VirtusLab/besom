@@ -31,7 +31,8 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
             storageClassName = "manual",
             capacity = Map("storage" -> "128Mi"),
             accessModes = List("ReadWriteOnce"),
-            hostPath = HostPathVolumeSourceArgs(path = s"/tmp/redis/data-$num")
+            hostPath = HostPathVolumeSourceArgs(path = s"/tmp/redis/data-$num"),
+            persistentVolumeReclaimPolicy = "Delete" // never do this in production
           )
         )
       )
@@ -44,15 +45,18 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
           labels = labels,
           name = s"redis-cluster-configmap-$name"
         ),
-        data = Map("redis.conf" -> s"""cluster-enabled yes
-                            |cluster-require-full-coverage no
-                            |cluster-node-timeout 15000
-                            |cluster-config-file /data/nodes.conf
-                            |cluster-migration-barrier 1
-                            |appendonly yes
-                            |protected-mode no
-                            |bind 0.0.0.0
-                            |port 6379""".stripMargin)
+        data = Map(
+          "redis.conf" ->
+            s"""cluster-enabled yes
+               |cluster-require-full-coverage no
+               |cluster-node-timeout 15000
+               |cluster-config-file /data/nodes.conf
+               |cluster-migration-barrier 1
+               |appendonly yes
+               |protected-mode no
+               |bind 0.0.0.0
+               |port 6379""".stripMargin
+        )
       )
     )
 

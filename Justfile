@@ -460,8 +460,7 @@ clean-slate-liftoff: clean-sdk
 	#!/usr/bin/env sh
 	just publish-local-core
 	just publish-local-compiler-plugin
-	scala-cli run codegen -- named kubernetes 4.2.0
-	scala-cli --power publish local .out/codegen/kubernetes/4.2.0/ --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+	just cli packages local kubernetes:4.9.1
 	just clean-liftoff
 	just liftoff
 
