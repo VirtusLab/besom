@@ -31,6 +31,8 @@ object JsonReader {
   implicit def func2Reader[T](f: JsValue => T): JsonReader[T] = new JsonReader[T] {
     def read(json: JsValue) = f(json)
   }
+
+  inline def derived[T <: Product](using JsonProtocol): JsonReader[T] = summon[JsonProtocol].jsonFormatN[T]
 }
 
 /** Provides the JSON serialization for type T.
@@ -44,6 +46,8 @@ object JsonWriter {
   implicit def func2Writer[T](f: T => JsValue): JsonWriter[T] = new JsonWriter[T] {
     def write(obj: T) = f(obj)
   }
+
+  inline def derived[T <: Product](using JsonProtocol): JsonWriter[T] = summon[JsonProtocol].jsonFormatN[T]
 }
 
 /** Provides the JSON deserialization and serialization for type T.
@@ -51,7 +55,7 @@ object JsonWriter {
 trait JsonFormat[T] extends JsonReader[T] with JsonWriter[T]
 
 object JsonFormat:
-  inline def derived[T <: Product](using JsonProtocol) = summon[JsonProtocol].jsonFormatN[T]
+  inline def derived[T <: Product](using JsonProtocol): JsonFormat[T] = summon[JsonProtocol].jsonFormatN[T]
 
 /** A special JsonReader capable of reading a legal JSON root object, i.e. either a JSON array or a JSON object.
   */

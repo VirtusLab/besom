@@ -27,6 +27,35 @@ object ProductFormatsMacro:
   import scala.deriving.*
   import scala.quoted.*
 
+  private def findDefaultParams[T](using quotes: Quotes, tpe: Type[T]): Expr[Map[String, Any]] =
+    import quotes.reflect.*
+
+    TypeRepr.of[T].classSymbol match
+      case None => '{ Map.empty[String, Any] }
+      case Some(sym) =>
+        val comp = sym.companionClass
+        try
+          val mod = Ref(sym.companionModule)
+          val names =
+            for p <- sym.caseFields if p.flags.is(Flags.HasDefault)
+            yield p.name
+          val namesExpr: Expr[List[String]] =
+            Expr.ofList(names.map(Expr(_)))
+
+          val body = comp.tree.asInstanceOf[ClassDef].body
+          val idents: List[Ref] =
+            for
+              case deff @ DefDef(name, _, _, _) <- body
+              if name.startsWith("$lessinit$greater$default")
+            yield mod.select(deff.symbol)
+          val typeArgs = TypeRepr.of[T].typeArgs
+          val identsExpr: Expr[List[Any]] =
+            if typeArgs.isEmpty then Expr.ofList(idents.map(_.asExpr))
+            else Expr.ofList(idents.map(_.appliedToTypes(typeArgs).asExpr))
+
+          '{ $namesExpr.zip($identsExpr).toMap }
+        catch case cce: ClassCastException => '{ Map.empty[String, Any] } // TODO drop after https://github.com/lampepfl/dotty/issues/19732
+
   def jsonFormatImpl[T <: Product: Type](prodFormats: Expr[ProductFormats])(using Quotes): Expr[RootJsonFormat[T]] =
     Expr.summon[Mirror.Of[T]].get match
       case '{
@@ -50,25 +79,26 @@ object ProductFormatsMacro:
 
         // instances are in correct order of fields of the product
         val allInstancesExpr = Expr.ofList(prepareInstances(Type.of[elementLabels], Type.of[elementTypes]))
+        val defaultArguments = findDefaultParams[T]
 
         '{
           new RootJsonFormat[T]:
             private val allInstances = ${ allInstancesExpr }
             private val fmts         = ${ prodFormats }
+            private val defaultArgs  = ${ defaultArguments }
+
             def read(json: JsValue): T = json match
               case JsObject(fields) =>
                 val values = allInstances.map { case (fieldName, fieldFormat, isOption) =>
-                  val fieldValue =
-                    try fieldFormat.read(fields(fieldName))
-                    catch
-                      case e: NoSuchElementException =>
-                        if isOption then None
-                        else
-                          throw DeserializationException("Object is missing required member '" ++ fieldName ++ "'", null, fieldName :: Nil)
-                      case DeserializationException(msg, cause, fieldNames) =>
-                        throw DeserializationException(msg, cause, fieldName :: fieldNames)
-
-                  fieldValue
+                  try fieldFormat.read(fields(fieldName))
+                  catch
+                    case e: NoSuchElementException =>
+                      if isOption then
+                        if defaultArgs.contains(fieldName) then defaultArgs(fieldName)
+                        else None
+                      else throw DeserializationException("Object is missing required member '" ++ fieldName ++ "'", null, fieldName :: Nil)
+                    case DeserializationException(msg, cause, fieldNames) =>
+                      throw DeserializationException(msg, cause, fieldName :: fieldNames)
                 }
                 $m.fromProduct(Tuple.fromArray(values.toArray))
 
