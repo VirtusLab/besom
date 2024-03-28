@@ -72,7 +72,10 @@ object Constants:
 end Constants
 
 case class DecodingError(message: String, cause: Throwable = null, label: Label) extends Exception(message, cause)
-case class AggregatedDecodingError(errors: NonEmptyVector[DecodingError]) extends Exception(errors.map(_.message).toVector.mkString("\n"))
+case class AggregatedDecodingError(errors: NonEmptyVector[DecodingError])
+    extends Exception(errors.map(_.message).toVector.mkString("\n"), errors.headOption.orNull):
+  errors.tail.foreach(addSuppressed)
+end AggregatedDecodingError
 
 /** Decoders handle the details of the deserialization.
   *
