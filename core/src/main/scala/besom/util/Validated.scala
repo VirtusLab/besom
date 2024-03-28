@@ -165,6 +165,12 @@ final case class NonEmptyVector[+A](head: A, tail: Vector[A]):
   def toVector: Vector[A] = head +: tail
   def map[B](f: A => B): NonEmptyVector[B] =
     NonEmptyVector(f(head), tail.map(f))
+  def foreach(f: A => Unit): Unit =
+    f(head)
+    tail.foreach(f)
+  def size: Int = 1 + tail.size
+  def mkString(start: String, sep: String, end: String): String =
+    toVector.mkString(start, sep, end)
 
 object NonEmptyVector:
   def apply[A](head: A, tail: A*): NonEmptyVector[A] = NonEmptyVector(head, tail.toVector)
