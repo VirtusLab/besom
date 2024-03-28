@@ -108,10 +108,17 @@ trait BesomSyntax:
                 case output: Output[A] @unchecked => output
                 case a: A                         => Output(Result.pure(a))
             catch case e: Exception => Output(Result.fail(e))
-            
-          val serializedOutputs = RegistersOutputs[A].serializeOutputs(componentOutput)
-          ctx.registerResourceOutputs(name, typ, urnRes, serializedOutputs) *> componentOutput.getData
+
+          val componentResult = componentOutput.getValueOrFail {
+            s"Component resource $name of type $typ did not return a value. This should not happen."
+          }
+
+          componentResult.flatMap { a =>
+            val serializedOutputs = RegistersOutputs[A].serializeOutputs(a)
+            ctx.registerResourceOutputs(name, typ, urnRes, serializedOutputs) *> Result.pure(a)
+          }
         }
+        .map(OutputData(_))
     }
   end component
 
