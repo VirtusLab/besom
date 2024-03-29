@@ -141,13 +141,29 @@ To export values from a stack in Besom, use the [`Stack.exports`](exports.md) fu
 
 ##### Stack References
 
-[Stack Reference](https://www.pulumi.com/docs/concepts/stack/#stackreferences) allows you to use outputs from other [stacks](#stacks) in your [program](#programs).
+[Stack Reference](https://www.pulumi.com/docs/concepts/stack/#stackreferences) allows you to use [outputs](#stack-outputs) from 
+other [stacks](#stacks) in your [program](#programs).
 
 To reference values from another stack, create an instance of the `StackReference` type using the fully qualified
 name of the stack as an input, and then read exported stack outputs by their name.
 
-`StackReference` is not implemented yet in Besom, coming soon.
+Here's an example of how to use them:
 
+```scala
+@main def main = Pulumi.run {
+  // ...
+  Stack.exports(
+    someOutput = "Hello world!",
+  )
+}
+```
+```scala
+@main def main = Pulumi.run {
+  val otherStack = besom.StackReference("stackRef", StackReferenceArgs("organization/source-stack-test/my-stack-name"))
+  val otherStackOutput = otherStack.output[String]("someOutput")
+  // ...
+}
+```
 ### Resources
 
 Resources are the primary [construct of Pulumi](https://www.pulumi.com/docs/concepts/resources/) programs.
