@@ -987,4 +987,31 @@ class InternalTest extends munit.FunSuite with ValueAssertions:
         )
   }
 
+  test("AggregatedDecodingError - aggregated message") {
+    val errors = NonEmptyVector(
+      DecodingError("error1", label = Label.fromNameAndType("dummy1", "dummy:pkg:Dummy1"), cause = Exception("cause1")),
+      DecodingError("error2", label = Label.fromNameAndType("dummy2", "dummy:pkg:Dummy1")),
+      DecodingError("error3", label = Label.fromNameAndType("dummy3", "dummy:pkg:Dummy1"))
+    )
+    val aggregated = AggregatedDecodingError(errors)
+    val expectedMessage =
+      """Decoding Errors [3]:
+        |  error1
+        |  error2
+        |  error3
+        |(with aggregate stack trace)""".stripMargin
+    assertEquals(aggregated.message, expectedMessage)
+
+    val t = interceptMessage[AggregatedDecodingError](expectedMessage) {
+      throw aggregated
+    }
+
+    val stackTrace = com.google.common.base.Throwables.getStackTraceAsString(t)
+
+    assert(stackTrace.contains("Caused by: besom.internal.DecodingError: [dummy1[dummy:pkg:Dummy1]] error1"), stackTrace)
+    assert(stackTrace.contains("Suppressed: besom.internal.DecodingError: [dummy2[dummy:pkg:Dummy1]] error2"), stackTrace)
+    assert(stackTrace.contains("Suppressed: besom.internal.DecodingError: [dummy3[dummy:pkg:Dummy1]] error3"), stackTrace)
+    assert(stackTrace.contains("Caused by: java.lang.Exception: cause1"), stackTrace)
+  }
+
 end InternalTest

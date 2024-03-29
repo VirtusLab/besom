@@ -51,7 +51,7 @@ object AggregateCodegenError {
     def message(t: Throwable) = s"[${t.getClass.getSimpleName}] '${Option(t.getMessage).getOrElse("no message")}'"
     val msg                   = s"""Multiple Errors: ${errors.map(message).mkString(", ")}"""
     val cause = errors.headOption.map { head =>
-      errors.foreach(head.addSuppressed)
+      errors.tail.foreach(head.addSuppressed)
       head
     }
     new AggregateCodegenError(Some(msg), cause, errors)

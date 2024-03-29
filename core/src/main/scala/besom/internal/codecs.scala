@@ -71,8 +71,33 @@ object Constants:
   final val StatePropertyName      = "state"
 end Constants
 
-case class DecodingError(message: String, cause: Throwable = null, label: Label) extends Exception(message, cause)
-case class AggregatedDecodingError(errors: NonEmptyVector[DecodingError]) extends Exception(errors.map(_.message).toVector.mkString("\n"))
+@SerialVersionUID(1L)
+case class DecodingError(message: String, label: Label, cause: Option[Throwable])
+    extends Exception(s"""[$label] ${message}""", cause.orNull)
+    with Product
+    with Serializable
+object DecodingError:
+  def apply(message: String, cause: Throwable, label: Label): DecodingError = new DecodingError(message, label, Some(cause))
+  def apply(message: String, label: Label): DecodingError                   = new DecodingError(message, label, None)
+end DecodingError
+@SerialVersionUID(1L)
+case class AggregatedDecodingError private (message: String, cause: Throwable, errors: NonEmptyVector[DecodingError])
+    extends Exception(message, cause)
+    with Product
+    with Serializable:
+end AggregatedDecodingError
+object AggregatedDecodingError:
+  def apply(errors: NonEmptyVector[DecodingError]): AggregatedDecodingError =
+    val msg =
+      if errors.size > 1
+      then s"""Decoding Errors [${errors.size}]:
+           |${errors.map(_.message).mkString("  ", "\n  ", "")}
+           |(with aggregate stack trace)""".stripMargin
+      else errors.head.message
+
+    errors.tail.foreach(errors.head.addSuppressed)
+    new AggregatedDecodingError(msg, errors.head, errors)
+  end apply
 
 /** Decoders handle the details of the deserialization.
   *
