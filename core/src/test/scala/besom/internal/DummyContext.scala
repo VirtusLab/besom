@@ -50,7 +50,8 @@ object DummyContext:
       logger       <- BesomLogger.local()
       config       <- Config(runInfo.project, isProjectName = true, configMap = configMap, configSecretKeys = configSecretKeys)
       resources    <- Resources()
-      given Context = Context.create(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, stackPromise)
+      memo         <- Memo()
+      given Context = Context.create(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, memo, stackPromise)
       _ <- stackPromise.fulfill(StackResource()(using ComponentBase(Output(besom.types.URN.empty))))
     yield summon[Context]
 

@@ -21,6 +21,7 @@ object SomeTlsResources:
 //noinspection UnitMethodIsParameterless,TypeAnnotation
 @main def main = Pulumi.run {
   // this seems like it would create this resource on every call of this function
+  // ps this runs register resource call under the hood
   def sshKey = tls.PrivateKey(
     "sshKey",
     tls.PrivateKeyArgs(
@@ -43,13 +44,22 @@ object SomeTlsResources:
   yield last
   // end intermission
 
-  // intermission for idempotence of get methods
-  def fetched = tls.PrivateKey.get("sshKey", sshKey.id)
+  // intermission for idempotence of get methods (which execute ReadResource calls (sic!))
+  def readResource = tls.PrivateKey.get("sshKey", sshKey.id)
 
-  val manyEvalsOfGet = for
-    _    <- fetched
-    _    <- fetched
-    last <- fetched
+  val manyEvalsOfReadResource = for
+    _    <- readResource
+    _    <- readResource
+    last <- readResource
+  yield last
+  // end intermission
+
+  // intermission for idempotence of get resource calls
+  def getResource = tls.PrivateKey("read-sshKey", tls.PrivateKeyArgs(algorithm = "RSA", rsaBits = 4096), opts(urn = sshKey.urn))
+  val manyEvalsOfGetResource = for
+    _    <- getResource
+    _    <- getResource
+    last <- getResource
   yield last
   // end intermission
 
@@ -61,9 +71,10 @@ object SomeTlsResources:
     _    <- getGoogleCert
     last <- getGoogleCert
   yield last
+  // end intermission
 
   // so this should work without any issues
-  Stack(manyEvalsOfComponent, manyEvalsOfGet, manyEvalsOfInvoke).exports(
+  Stack(manyEvalsOfComponent, manyEvalsOfReadResource, manyEvalsOfInvoke, manyEvalsOfGetResource).exports(
     sshKeyRsaBits = sshKeyRsaBits,
     sshKeyUrn = sshKey.urn,
     sshKeyAlgo = sshKeyAlgo

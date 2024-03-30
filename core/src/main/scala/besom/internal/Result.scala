@@ -158,6 +158,8 @@ enum Result[+A]:
   case Sleep(r: () => Result[A], duration: Long, debug: Debug)
   case GetFinalizers(debug: Debug) extends Result[Finalizers]
 
+  def withFilter(p: A => Boolean)(using Debug): Result[A] = this
+
   def flatMap[B](f: A => Result[B])(using Debug): Result[B] = BiFlatMap(
     this,
     {

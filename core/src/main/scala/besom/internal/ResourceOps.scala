@@ -13,14 +13,27 @@ import scala.annotation.unused
 
 type Providers = Map[String, ProviderResource]
 
+enum Mode(val logStr: String):
+  case GetWithUrn(urn: URN) extends Mode("Getting")
+  case ReadWithId(id: ResourceId) extends Mode("Reading")
+  case Register extends Mode("Registering")
+
+  override def toString(): String = logStr
+
+  def suffix: String = this match
+    case GetWithUrn(urn) => s"from Pulumi state with URN ${urn.asString}"
+    case ReadWithId(id)  => s"from infrastructure with foreign id (import id) ${id}"
+    case Register        => ""
+
 class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
 
+  // register resource outputs *NEEDS TO* be memoized
   private[besom] def registerResourceOutputsInternal(
     urnResult: Result[URN],
     outputs: Result[Struct]
   ): Result[Unit] =
     urnResult.flatMap { urn =>
-      outputs.flatMap { struct =>
+      val runSideEffects = outputs.flatMap { struct =>
         val request = RegisterResourceOutputsRequest(
           urn = urn.asString,
           outputs = if struct.fields.isEmpty then None else Some(struct)
@@ -28,6 +41,8 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
 
         ctx.monitor.registerResourceOutputs(request)
       }
+
+      ctx.memo.memoize("registerResourceOutputs", urn.asString, runSideEffects)
     }
 
   private[besom] def readOrRegisterResourceInternal[R <: Resource: ResourceDecoder, A: ArgsEncoder](
@@ -37,34 +52,30 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     options: ResourceOptions,
     remote: Boolean
   ): Result[R] =
-    summon[ResourceDecoder[R]].makeResolver.flatMap { (resource, resolver) =>
-      // this order is then repeated in registerReadOrGetResource
-      val modeResult = options.hasURN.zip(options.hasImportId).map { case (hasUrn, hasImportId) =>
-        if hasUrn then "Getting" else if hasImportId then "Reading" else "Registering"
-      }
+    resolveMode(options).flatMap { mode =>
+      def runSideEffects =
+        for
+          (resource, resolver) <- ResourceDecoder.forResource[R].makeResourceAndResolver
+          _                    <- log.debug(s"$mode resource ${mode.suffix}")
+          options              <- options.resolve
+          _                    <- log.debug(s"$mode resource, added to cache...")
+          state                <- createResourceState(typ, name, resource, options, remote)
+          _                    <- log.debug(s"Created resource state")
+          _                    <- ctx.resources.add(resource, state)
+          _                    <- log.debug(s"Added resource to resources")
+          inputs               <- prepareResourceInputs(resource, state, args, options)
+          _                    <- log.debug(s"Prepared inputs for resource")
+          _                    <- addChildToParentResource(resource, options.parent)
+          _                    <- log.debug(s"Added child to parent (isDefined: ${options.parent.isDefined})")
+          _                    <- registerReadOrGetResource(resource, state, resolver, inputs, options, remote)
+        yield resource
 
-      modeResult.flatMap { mode =>
-        log.debug(s"$mode resource, trying to add to cache...") *>
-          ctx.resources.cacheResource(typ, name, args, options, resource).flatMap { addedToCache =>
-            if addedToCache then
-              for
-                options <- options.resolve
-                _       <- log.debug(s"$mode resource, added to cache...")
-                state   <- createResourceState(typ, name, resource, options, remote)
-                _       <- log.debug(s"Created resource state")
-                _       <- ctx.resources.add(resource, state)
-                _       <- log.debug(s"Added resource to resources")
-                inputs  <- prepareResourceInputs(resource, state, args, options)
-                _       <- log.debug(s"Prepared inputs for resource")
-                _       <- addChildToParentResource(resource, options.parent)
-                _       <- log.debug(s"Added child to parent (isDefined: ${options.parent.isDefined})")
-                _       <- registerReadOrGetResource(resource, state, resolver, inputs, options, remote)
-              yield resource
-            else ctx.resources.getCachedResource(typ, name, args, options).map(_.asInstanceOf[R])
-          }
-      }
+      mode match
+        case Mode.GetWithUrn(_)                 => runSideEffects // DO NOT memoize Get
+        case Mode.Register | Mode.ReadWithId(_) => ctx.memo.memoize(typ, name, runSideEffects) // DO memoize Register and Read
     }
 
+  // invoke is not memoized
   private[besom] def invokeInternal[A: ArgsEncoder, R: Decoder](tok: FunctionToken, args: A, opts: InvokeOptions): Output[R] =
     def decodeResponse(resultAsValue: Value, props: Map[String, Set[Resource]]): Result[OutputData[R]] =
       val resourceLabel = mdc.get(Key.LabelKey)
@@ -132,12 +143,24 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     for
       maybeProviderId <- maybeProviderIdResult
       req             <- buildInvokeRequest(invokeArgs.serialized, maybeProviderId, version)
-      _               <- log.debug(s"Invoke RPC prepared, req=${pprint(req)}")
+      _               <- log.debug(s"Invoke RPC prepared, req:\n${pprint(req)}")
       res             <- ctx.monitor.invoke(req)
-      _               <- log.debug(s"Invoke RPC executed, res=${pprint(res)}")
+      _               <- log.debug(s"Invoke RPC executed, res:\n${pprint(res)}")
       parsed          <- parseInvokeResponse(tok, res)
     yield parsed
   end executeInvoke
+
+  private[internal] def resolveMode(options: ResourceOptions): Result[Mode] =
+    // this order is then repeated in registerReadOrGetResource
+    options.hasURN.zip(options.hasImportId).flatMap { case (hasUrn, hasImportId) =>
+      if hasUrn then options.getURN.map(Mode.GetWithUrn(_))
+      else if hasImportId then
+        options.getImportId.flatMap {
+          case Some(importId) => Result.pure(Mode.ReadWithId(importId))
+          case None           => Result.fail(Exception("importId can't be empty here :|")) // sanity check
+        }
+      else Result.pure(Mode.Register)
+    }
 
   private[internal] def registerReadOrGetResource[R <: Resource](
     resource: Resource,
@@ -203,7 +226,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
 
     for
       _         <- log.debug(s"Resolving resource ${state.asLabel} with $debugMessageSuffix")
-      _         <- log.trace(s"Resolving resource ${state.asLabel} with: ${pprint(eitherErrorOrResult)}")
+      _         <- log.trace(s"Resolving resource ${state.asLabel} with:\n${pprint(eitherErrorOrResult)}")
       errOrUnit <- resolver.resolve(eitherErrorOrResult).either
       _         <- errOrUnit.fold(ctx.fail, _ => Result.unit) // fail context if resource resolution fails
       errOrUnitMsg = errOrUnit.fold(t => s"with an error: ${t.getMessage}", _ => "successfully")
@@ -387,14 +410,14 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         .flatMap { req =>
           for
             _    <- log.debug(s"Executing ReadResourceRequest for ${state.asLabel}")
-            _    <- log.trace(s"ReadResourceRequest for ${state.asLabel}: ${pprint(req)}")
+            _    <- log.trace(s"ReadResourceRequest for ${state.asLabel}:\n${pprint(req)}")
             resp <- ctx.monitor.readResource(req)
           yield resp
         }
         .flatMap { response =>
           for
             _                 <- log.debug(s"Received ReadResourceResponse for ${state.asLabel}")
-            _                 <- log.trace(s"ReadResourceResponse for ${state.asLabel}: ${pprint(response)}")
+            _                 <- log.trace(s"ReadResourceResponse for ${state.asLabel}:\n${pprint(response)}")
             rawResourceResult <- RawResourceResult.fromResponse(response, id)
           yield rawResourceResult
         }
@@ -488,14 +511,14 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         .flatMap { req =>
           for
             _    <- log.debug(s"Executing RegisterResourceRequest for ${state.asLabel}")
-            _    <- log.trace(s"RegisterResourceRequest for ${state.asLabel}: ${pprint(req)}")
+            _    <- log.trace(s"RegisterResourceRequest for ${state.asLabel}:\n${pprint(req)}")
             resp <- ctx.monitor.registerResource(req)
           yield resp
         }
         .flatMap { response =>
           for
             _                 <- log.debug(s"Received RegisterResourceResponse for ${state.asLabel}")
-            _                 <- log.trace(s"RegisterResourceResponse for ${state.asLabel}: ${pprint(response)}")
+            _                 <- log.trace(s"RegisterResourceResponse for ${state.asLabel}:\n${pprint(response)}")
             rawResourceResult <- RawResourceResult.fromResponse(response)
           yield rawResourceResult
         }

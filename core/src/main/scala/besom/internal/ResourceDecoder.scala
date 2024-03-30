@@ -8,9 +8,11 @@ import besom.internal.logging.*
 import besom.types.{Label, URN, ResourceId}
 
 trait ResourceDecoder[A <: Resource]: // TODO rename to something more sensible
-  def makeResolver(using Context, BesomMDC[Label]): Result[(A, ResourceResolver[A])]
+  def makeResourceAndResolver(using Context, BesomMDC[Label]): Result[(A, ResourceResolver[A])]
 
 object ResourceDecoder:
+  inline def forResource[R <: Resource: ResourceDecoder]: ResourceDecoder[R] = summon[ResourceDecoder[R]]
+
   inline def derived[A <: Resource]: ResourceDecoder[A] = ${ derivedImpl[A] }
 
   class CustomPropertyExtractor[A](propertyName: String, decoder: Decoder[A]):
@@ -60,7 +62,7 @@ object ResourceDecoder:
 
   end CustomPropertyExtractor
 
-  def makeResolver[A <: Resource](
+  private[ResourceDecoder] def makeResourceAndResolver[A <: Resource](
     fromProduct: Product => A,
     customPropertyExtractors: Vector[CustomPropertyExtractor[?]]
   )(using Context, BesomMDC[Label]): Result[(A, ResourceResolver[A])] =
@@ -126,7 +128,7 @@ object ResourceDecoder:
 
         (resource, resolver)
     }
-  end makeResolver
+  end makeResourceAndResolver
 
   private def derivedImpl[A <: Resource: Type](using q: Quotes): Expr[ResourceDecoder[A]] =
     Expr.summon[Mirror.Of[A]].get match
@@ -156,8 +158,8 @@ object ResourceDecoder:
 
         '{
           new ResourceDecoder[A]:
-            def makeResolver(using Context, BesomMDC[Label]): Result[(A, ResourceResolver[A])] =
-              ResourceDecoder.makeResolver(
+            def makeResourceAndResolver(using Context, BesomMDC[Label]): Result[(A, ResourceResolver[A])] =
+              ResourceDecoder.makeResourceAndResolver(
                 fromProduct = ${ m }.fromProduct,
                 customPropertyExtractors = ${ customPropertyExtractorsExpr }.toVector
               )

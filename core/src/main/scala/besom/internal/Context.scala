@@ -21,6 +21,7 @@ trait Context extends TaskTracker:
   private[besom] def resources: Resources
   private[besom] def runInfo: RunInfo
   private[besom] def monitor: Monitor
+  private[besom] def memo: Memo
   private[besom] def getParentURN: Result[URN]
   private[besom] def config: Config
   private[besom] def isDryRun: Boolean
@@ -106,6 +107,7 @@ class ContextImpl(
   private[besom] val engine: Engine,
   private[besom] val taskTracker: TaskTracker,
   private[besom] val resources: Resources,
+  private[besom] val memo: Memo,
   private val stackPromise: Promise[StackResource]
 ) extends Context
     with TaskTracker:
@@ -229,9 +231,10 @@ object Context:
     engine: Engine,
     taskTracker: TaskTracker,
     resources: Resources,
+    memo: Memo,
     stackPromise: Promise[StackResource]
   ): Context =
-    new ContextImpl(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, stackPromise)
+    new ContextImpl(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, memo, stackPromise)
 
   def apply(
     runInfo: RunInfo,
@@ -244,8 +247,9 @@ object Context:
   ): Result[Context] =
     for
       resources    <- Resources()
+      memo         <- Memo()
       stackPromise <- Promise[StackResource]()
-    yield Context.create(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, stackPromise)
+    yield Context.create(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, memo, stackPromise)
 
   def apply(
     runInfo: RunInfo,
