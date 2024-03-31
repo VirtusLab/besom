@@ -13,7 +13,7 @@ import besom.json.*
     StackReferenceResourceOptions()
   )
 
-  val justForTesting = for 
+  val justForTesting = for
     _ <- sourceStack
     _ <- sourceStack
   yield ()
