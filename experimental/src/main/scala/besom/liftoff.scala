@@ -294,10 +294,9 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
     def orElse[B >: A](alternative: Output[Option[B]]): Output[Option[B]] =
       output.flatMap(o => alternative.map(a => o.orElse(a)))
 
-  extension [A](output: Output[Option[List[A]]])
-    def headOption: Output[Option[A]] = output.map(_.flatMap(_.headOption))
+  extension [A](output: Output[Option[List[A]]]) def headOption: Output[Option[A]] = output.map(_.flatMap(_.headOption))
 
-  val maybeIngress = nginxService.status.loadBalancer.ingress.headOption
+  val maybeIngress                         = nginxService.status.loadBalancer.ingress.headOption
   val hostnameOrIp: Output[Option[String]] = maybeIngress.hostname.orElse(maybeIngress.ip)
 
   Stack.exports(
