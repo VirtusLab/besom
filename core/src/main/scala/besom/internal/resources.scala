@@ -82,7 +82,6 @@ class Resources private (private val resources: Ref[Map[Resource, ResourceState]
 
 end Resources
 
-//noinspection ScalaFileName
 object Resources:
   def apply(): Result[Resources] =
     for resources <- Ref(Map.empty[Resource, ResourceState])
