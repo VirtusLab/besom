@@ -1,12 +1,6 @@
 package besom.internal
 
-import scala.annotation.unused
-
-//noinspection ScalaFileName
-class Resources private (
-  private val resources: Ref[Map[Resource, ResourceState]],
-  private val cache: Ref[Map[(String, String), Promise[Resource]]]
-):
+class Resources private (private val resources: Ref[Map[Resource, ResourceState]]):
   def add(resource: ProviderResource, state: ProviderResourceState): Result[Unit] =
     resources.update(_ + (resource -> state))
 
@@ -86,26 +80,9 @@ class Resources private (
   def updateStateFor(resource: Resource)(f: ResourceState => ResourceState): Result[Unit] =
     resources.update(_.updatedWith(resource)(_.map(f)))
 
-  def cacheResource(typ: String, name: String, @unused args: Any, @unused opts: ResourceOptions, resource: Resource): Result[Boolean] =
-    cache.get.flatMap(_.get((typ, name)) match
-      case Some(_) => Result.pure(false)
-      case None =>
-        Promise[Resource]().flatMap { promise =>
-          cache
-            .update(_.updated((typ, name), promise))
-            .flatMap(_ => promise.fulfill(resource) *> Result.pure(true))
-        }
-    )
-
-  def getCachedResource(typ: String, name: String, @unused args: Any, @unused opts: ResourceOptions): Result[Resource] =
-    cache.get.flatMap(_((typ, name)).get)
-
 end Resources
 
-//noinspection ScalaFileName
 object Resources:
   def apply(): Result[Resources] =
-    for
-      resources <- Ref(Map.empty[Resource, ResourceState])
-      cache     <- Ref(Map.empty[(String, String), Promise[Resource]])
-    yield new Resources(resources, cache)
+    for resources <- Ref(Map.empty[Resource, ResourceState])
+    yield new Resources(resources)

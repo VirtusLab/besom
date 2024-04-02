@@ -68,7 +68,7 @@ class ResourceDecoderTest extends munit.FunSuite:
         )
       )
 
-      val (resource, resourceResolver) = resourceDecoder.makeResolver.unsafeRunSync()
+      val (resource, resourceResolver) = resourceDecoder.makeResourceAndResolver.unsafeRunSync()
 
       resourceResolver.resolve(errorOrResourceResult).unsafeRunSync()
 
@@ -110,7 +110,7 @@ class ResourceDecoderTest extends munit.FunSuite:
         )
       )
 
-      val (resource, resourceResolver) = resourceDecoder.makeResolver.unsafeRunSync()
+      val (resource, resourceResolver) = resourceDecoder.makeResourceAndResolver.unsafeRunSync()
 
       resourceResolver.resolve(errorOrResourceResult).unsafeRunSync()
 
@@ -151,7 +151,7 @@ class ResourceDecoderTest extends munit.FunSuite:
         )
       )
 
-      val (resource, resourceResolver) = resourceDecoder.makeResolver.unsafeRunSync()
+      val (resource, resourceResolver) = resourceDecoder.makeResourceAndResolver.unsafeRunSync()
 
       resourceResolver.resolve(errorOrResourceResult).unsafeRunSync()
 

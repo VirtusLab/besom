@@ -116,6 +116,47 @@ class CoreTests extends munit.FunSuite {
       pulumi.fixture.setup(
         FixtureOpts(),
         FixtureArgs(
+          wd / "resources" / "memoization" / "source-stack",
+          projectFiles = Map(
+            "project.scala" ->
+              (defaultProjectFile + CodeGen.packageDependency(schemaName, providerTlsSchemaVersion))
+          )
+        ),
+        FixtureArgs(
+          wd / "resources" / "memoization" / "target-stack"
+        )
+      )
+    },
+    teardown = pulumi.fixture.teardown
+  ).test("resource memoization should work for all kinds of resources") {
+    case pulumi.FixtureMultiContext(ctx, Vector(ctx1, ctx2)) =>
+      println(s"Source stack name: ${ctx1.stackName}, pulumi home: ${ctx.home}")
+      pulumi.up(ctx1.stackName).call(cwd = ctx1.programDir, env = ctx1.env)
+      val outputs1 = upickle.default.read[Map[String, ujson.Value]](
+        pulumi.outputs(ctx1.stackName, "--show-secrets").call(cwd = ctx1.programDir, env = ctx1.env).out.text()
+      )
+
+      println(s"Target stack name: ${ctx2.stackName}, pulumi home: ${ctx.home}")
+      pulumi
+        .up(ctx2.stackName, "--config", s"sourceStack=organization/source-stack-test/${ctx1.stackName}")
+        .call(cwd = ctx2.programDir, env = ctx2.env)
+      val outputs2 = upickle.default.read[Map[String, ujson.Value]](
+        pulumi.outputs(ctx2.stackName, "--show-secrets").call(cwd = ctx2.programDir, env = ctx2.env).out.text()
+      )
+
+      assertEquals(outputs1, outputs2)
+
+    case _ => throw new Exception("Invalid number of contexts")
+  }
+
+  FunFixture[pulumi.FixtureMultiContext](
+    setup = {
+      val schemaName = "tls"
+      val result     = codegen.generatePackage(PackageMetadata(schemaName, providerTlsSchemaVersion))
+      scalaCli.publishLocal(result.outputDir).call()
+      pulumi.fixture.setup(
+        FixtureOpts(),
+        FixtureArgs(
           wd / "resources" / "references" / "source-stack",
           projectFiles = Map(
             "project.scala" ->

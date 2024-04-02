@@ -1,0 +1,5 @@
+name: source-stack-test
+description: Besom cross stack references source stack
+runtime:
+  name: scala
+

@@ -183,6 +183,11 @@ sealed trait ResourceOptions:
 
   private[besom] def hasURN: Result[Boolean] = urn.map(_.isDefined).getValueOrElse(false)
 
+  private[besom] def getURN: Result[URN] = urn.getValueOrElse(None).flatMap {
+    case Some(urn) => Result.pure(urn)
+    case None      => Result.fail(Exception("URN is not defined"))
+  }
+
   private[besom] def hasImportId(using Context): Result[Boolean] = this match
     case cr: CustomResourceOptions         => cr.importId.map(_.isDefined).getValueOrElse(false)
     case sr: StackReferenceResourceOptions => sr.importId.map(_.isDefined).getValueOrElse(false)
