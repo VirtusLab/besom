@@ -1,26 +1,20 @@
 import besom.*
-import besom.api.aws
-import besom.api.eks
-import besom.api.kubernetes as k8s
+import besom.api.{awsx, eks, kubernetes as k8s}
 
 @main def main = Pulumi.run {
-  // Get the default VPC and select the default subnet
-  val vpc = aws.ec2.getVpc(aws.ec2.GetVpcArgs(default = true))
-  val subnet = vpc.flatMap(vpc =>
-    aws.ec2.getSubnet(
-      aws.ec2.GetSubnetArgs(
-        vpcId = vpc.id,
-        defaultForAz = true
-      )
-    )
-  )
+  val appName   = "hello-world"
+  val appLabels = Map("appClass" -> appName)
+  val appPort   = 80
+
+  // Get the default VPC
+  val vpc = awsx.ec2.Vpc("my-vpc", awsx.ec2.VpcArgs(cidrBlock = "10.0.0.0/16"))
 
   // Create an EKS cluster using the default VPC and subnet
   val cluster = eks.Cluster(
-    "my-cluster",
+    appName,
     eks.ClusterArgs(
-      vpcId = vpc.id,
-      subnetIds = List(subnet.id),
+      vpcId = vpc.vpcId,
+      subnetIds = vpc.publicSubnetIds,
       instanceType = "t2.medium",
       desiredCapacity = 2,
       minSize = 1,
@@ -29,32 +23,71 @@ import besom.api.kubernetes as k8s
     )
   )
 
-  val k8sProvider = k8s.Provider(
-    "k8s-provider",
-    k8s.ProviderArgs(
-      kubeconfig = cluster.kubeconfigJson
-    )
+  val defaultProvider = cluster.core.provider
+
+  // Create a kubernetes namespace
+  val namespace = k8s.core.v1.Namespace(
+    name = appName,
+    opts = opts(provider = defaultProvider)
+  )
+  val namespaceName = namespace.metadata.name
+
+  // Create default metadata
+  val defaultMetadata = k8s.meta.v1.inputs.ObjectMetaArgs(
+    namespace = namespaceName,
+    labels = appLabels
   )
 
-  val pod = k8s.core.v1.Pod(
-    "mypod",
-    k8s.core.v1.PodArgs(
-      spec = k8s.core.v1.inputs.PodSpecArgs(
-        containers = List(
-          k8s.core.v1.inputs.ContainerArgs(
-            name = "echo",
-            image = "k8s.gcr.io/echoserver:1.4"
+  // Define the "Hello World" deployment.
+  val deployment = k8s.apps.v1.Deployment(
+    name = appName,
+    k8s.apps.v1.DeploymentArgs(
+      metadata = defaultMetadata,
+      spec = k8s.apps.v1.inputs.DeploymentSpecArgs(
+        selector = k8s.meta.v1.inputs.LabelSelectorArgs(matchLabels = appLabels),
+        replicas = 1,
+        template = k8s.core.v1.inputs.PodTemplateSpecArgs(
+          metadata = k8s.meta.v1.inputs.ObjectMetaArgs(labels = appLabels),
+          spec = k8s.core.v1.inputs.PodSpecArgs(
+            containers = k8s.core.v1.inputs.ContainerArgs(
+              name = appName,
+              image = "nginx:latest",
+              ports = List(
+                k8s.core.v1.inputs.ContainerPortArgs(containerPort = 80)
+              )
+            ) :: Nil
           )
         )
       )
     ),
-    opts = opts(
-      provider = k8sProvider,
-      dependsOn = cluster,
-      deletedWith = cluster // skip deletion to save time, since it will be deleted with the cluster
-    )
+    opts = opts(provider = defaultProvider)
   )
 
-  // Export the cluster's kubeconfig
-  Stack(cluster, pod).exports(kubeconfig = cluster.kubeconfig)
+  // Define the "Hello World" service.
+  val service = k8s.core.v1.Service(
+    name = appName,
+    k8s.core.v1.ServiceArgs(
+      spec = k8s.core.v1.inputs.ServiceSpecArgs(
+        selector = appLabels,
+        `type` = k8s.core.v1.enums.ServiceSpecType.LoadBalancer,
+        ports = List(
+          k8s.core.v1.inputs.ServicePortArgs(
+            port = appPort,
+            targetPort = 80
+          )
+        )
+      ),
+      metadata = defaultMetadata
+    ),
+    opts = opts(provider = defaultProvider, dependsOn = deployment)
+  )
+
+  val serviceHostname =
+    service.status.loadBalancer.ingress.map(_.flatMap(_.head.hostname).get)
+
+  // Export the cluster's kubeconfig and url
+  Stack(cluster, service).exports(
+    kubeconfig = cluster.kubeconfig,
+    url = p"http://$serviceHostname:$appPort"
+  )
 }

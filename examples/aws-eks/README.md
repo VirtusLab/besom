@@ -24,10 +24,12 @@ These values are indicated with `***`.
    pulumi config set aws:region us-west-2
    ```
 
-   We recommend using `us-west-2` to host your EKS cluster as other regions (notably `us-east-1`) may have capacity issues that prevent EKS
+   We recommend using `us-west-2` to host your EKS cluster as other regions (notably `us-east-1`) may have capacity
+   issues that prevent EKS
    clusters from creating.
-   
-   We are tracking enabling the creation of VPCs limited to specific AZs to unblock this in `us-east-1`: pulumi/pulumi-awsx#32
+
+   We are tracking enabling the creation of VPCs limited to specific AZs to unblock this in `us-east-1`:
+   pulumi/pulumi-awsx#32
 
 3. Stand up the EKS cluster:
 
@@ -41,13 +43,19 @@ These values are indicated with `***`.
    pulumi stack output kubeconfig --show-secrets > kubeconfig.json
    ```
 
-    Once you have this file in hand, you can interact with your new cluster as usual via `kubectl`:
+   Once you have this file in hand, you can interact with your new cluster as usual via `kubectl`:
 
    ```bash
    kubectl --kubeconfig=./kubeconfig.json get pods --all-namespaces
    ```
 
-5. To clean up resources, destroy your stack and remove it:
+5. And finally - open the application in your browser to see the running application.
+
+   ```bash
+   curl $(pulumi stack output url)
+   ```
+
+6. To clean up resources, destroy your stack and remove it:
 
    ```bash
    pulumi destroy
