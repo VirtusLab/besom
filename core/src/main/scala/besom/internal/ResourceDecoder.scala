@@ -7,7 +7,7 @@ import besom.util.*, Validated.ValidatedResult
 import besom.internal.logging.*
 import besom.types.{Label, URN, ResourceId}
 
-trait ResourceDecoder[A <: Resource]: // TODO rename to something more sensible
+trait ResourceDecoder[A <: Resource]:
   def makeResourceAndResolver(using Context, BesomMDC[Label]): Result[(A, ResourceResolver[A])]
 
 object ResourceDecoder:

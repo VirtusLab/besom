@@ -42,6 +42,8 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         ctx.monitor.registerResourceOutputs(request)
       }
 
+      /** see docs: [[Memo]]
+        */
       ctx.memo.memoize("registerResourceOutputs", urn.asString, runSideEffects)
     }
 
@@ -70,9 +72,14 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
           _                    <- registerReadOrGetResource(resource, state, resolver, inputs, options, remote)
         yield resource
 
+      /** see docs: [[Memo]]
+        */
       mode match
-        case Mode.GetWithUrn(_)                 => runSideEffects // DO NOT memoize Get
-        case Mode.Register | Mode.ReadWithId(_) => ctx.memo.memoize(typ, name, runSideEffects) // DO memoize Register and Read
+        // DO NOT memoize Get, it's the only grpc call that doesn't need to be memoized
+        case Mode.GetWithUrn(_) => runSideEffects
+        // DO memoize Register and Read, if we don't, they crash the engine on second invocation
+        // and laziness means WE WILL evaluate them more than once usually
+        case Mode.Register | Mode.ReadWithId(_) => ctx.memo.memoize(typ, name, runSideEffects)
     }
 
   // invoke is not memoized
