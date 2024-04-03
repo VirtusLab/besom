@@ -38,6 +38,6 @@ object RunInfo:
           logger.error(s"Error during initial run configuration resolution: ${error.getMessage}") *>
             Result.pure(Left(error))
         case Right(runInfo) =>
-          logger.debug(s"Run configuration resolved successfully!") *> logger.trace(s"${pprint(runInfo)}") *>
+          logger.debug(s"Run configuration resolved successfully!") *> logger.trace(s"${printer.render(runInfo)}") *>
             Result.pure(Right(runInfo))
       }

@@ -2,6 +2,7 @@ package besom.internal
 
 import com.google.protobuf.struct.*
 import besom.types.*
+import besom.util.printer
 
 case class RawResourceResult(urn: URN, id: Option[ResourceId], data: Struct, dependencies: Map[String, Set[Resource]])
 
@@ -56,10 +57,10 @@ object RawResourceResult:
     value match
       case Value(Value.Kind.StructValue(struct), _) =>
         lazy val missingUrnErr =
-          Result.fail(Exception(s"Expected invoke $tok to return a struct with a urn field but it's missing:\n${pprint(struct)}"))
+          Result.fail(Exception(s"Expected invoke $tok to return a struct with a urn field but it's missing:\n${printer.render(struct)}"))
 
         lazy val urnNotStringErr =
-          Result.fail(Exception(s"Expected invoke $tok response to contain a valid URN, got\n${pprint(struct)}"))
+          Result.fail(Exception(s"Expected invoke $tok response to contain a valid URN, got\n${printer.render(struct)}"))
 
         val urnResult =
           struct.fields
@@ -70,7 +71,7 @@ object RawResourceResult:
             }
 
         lazy val idNotStringErr =
-          Result.fail(Exception(s"Expected invoke $tok response to contain a valid ID, got\n${pprint(struct)}"))
+          Result.fail(Exception(s"Expected invoke $tok response to contain a valid ID, got\n${printer.render(struct)}"))
 
         lazy val missingId = Result.pure(None)
 
@@ -80,10 +81,10 @@ object RawResourceResult:
         }
 
         lazy val missingStateErr =
-          Result.fail(Exception(s"Expected invoke $tok to return a struct with a state field but it's missing:\n${pprint(struct)}"))
+          Result.fail(Exception(s"Expected invoke $tok to return a struct with a state field but it's missing:\n${printer.render(struct)}"))
 
         lazy val stateNotStructErr =
-          Result.fail(Exception(s"Expected invoke $tok response to contain a valid state, got\n${pprint(struct)}"))
+          Result.fail(Exception(s"Expected invoke $tok response to contain a valid state, got\n${printer.render(struct)}"))
 
         val stateResult = struct.fields.get(Constants.StatePropertyName).fold(missingStateErr) { value =>
           if value.kind.isStructValue then Result(value.getStructValue)
@@ -102,6 +103,6 @@ object RawResourceResult:
         )
 
       case differentResult =>
-        Result.fail(Exception(s"Expected struct value from invoke of $tok, got ${pprint(differentResult)}"))
+        Result.fail(Exception(s"Expected struct value from invoke of $tok, got ${printer.render(differentResult)}"))
 
 end RawResourceResult
