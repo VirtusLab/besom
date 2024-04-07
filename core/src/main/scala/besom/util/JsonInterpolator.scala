@@ -12,9 +12,8 @@ object JsonInterpolator:
 
   private val NL = System.lineSeparator()
 
-  given {} with
-    extension (inline sc: StringContext)
-      inline def json(inline args: Any*)(using ctx: besom.internal.Context): Output[JsValue] = ${ jsonImpl('sc, 'args, 'ctx) }
+  extension (inline sc: StringContext)
+    inline def json(inline args: Any*)(using ctx: besom.internal.Context): Output[JsValue] = ${ jsonImpl('sc, 'args, 'ctx) }
 
   private def jsonImpl(sc: Expr[StringContext], args: Expr[Seq[Any]], ctx: Expr[Context])(using Quotes): Expr[Output[JsValue]] =
     import quotes.reflect.*

@@ -50,6 +50,7 @@ const sidebars = {
         'lifting',
         'interpolator',
         'components',
+        'json',
         'compiler_plugin',
         'missing'
       ],

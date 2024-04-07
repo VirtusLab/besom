@@ -51,6 +51,8 @@ const config = {
     besomVersion: besomVersion
   },
 
+  trailingSlash: true,
+
   presets: [
     [
       'classic',

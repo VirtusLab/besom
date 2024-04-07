@@ -1,7 +1,6 @@
 package besom.util
 
 import munit.*
-import besom.json.JsonParser
 import scala.annotation.unused
 
 class Outer[A](@unused a: A)
@@ -11,7 +10,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
   test("json interpolator should compile with correct json strings") {
     // baseline
     compiles(
-      """import besom.util.JsonInterpolator.given
+      """import besom.json.*
          import besom.internal.DummyContext
          import besom.internal.RunResult.*
          given besom.internal.Context = DummyContext().unsafeRunSync()
@@ -20,7 +19,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
     )
 
     compiles(
-      """import besom.util.JsonInterpolator.given
+      """import besom.json.*
          import besom.internal.DummyContext
          import besom.internal.RunResult.*
          given besom.internal.Context = DummyContext().unsafeRunSync()
@@ -32,7 +31,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
 
   test("json interpolator should catch invalid jsons") {
     failsToCompile(
-      """import besom.util.JsonInterpolator.given
+      """import besom.json.*
          import besom.internal.DummyContext
          import besom.internal.RunResult.*
          given besom.internal.Context = DummyContext().unsafeRunSync()
@@ -41,7 +40,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
     )
 
     failsToCompile(
-      """import besom.util.JsonInterpolator.given
+      """import besom.json.*
          import besom.internal.DummyContext
          import besom.internal.RunResult.*
          given besom.internal.Context = DummyContext().unsafeRunSync()
@@ -50,7 +49,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
     )
 
     failsToCompile(
-      """import besom.util.JsonInterpolator.given
+      """import besom.json.*
          import besom.internal.DummyContext
          import besom.internal.RunResult.*
          given besom.internal.Context = DummyContext().unsafeRunSync()
@@ -60,7 +59,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
   }
 
   test("json interpolator should interpolate primitives into json strings correctly") {
-    import besom.util.JsonInterpolator.given
+    import besom.json.*
     import besom.internal.DummyContext
     import besom.internal.RunResult.given
     import besom.internal.RunOutput.{*, given}
@@ -83,7 +82,6 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
 
   test("json interpolator should interpolate JsValues into json strings correctly") {
     import besom.json.*
-    import besom.util.JsonInterpolator.given
     import besom.internal.DummyContext
     import besom.internal.RunResult.given
     import besom.internal.RunOutput.{*, given}
@@ -100,7 +98,6 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
 
   test("json interpolator can interpolate wrapped values correctly") {
     import besom.json.*
-    import besom.util.JsonInterpolator.given
     import besom.internal.DummyContext
     import besom.internal.RunResult.given
     import besom.internal.RunOutput.{*, given}
@@ -132,7 +129,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
 
   test("json interpolator fails to compile when interpolating values that can't be interpolated with nice error messages") {
     failsToCompile(
-      """import besom.util.JsonInterpolator.given
+      """import besom.json.*
          import besom.internal.DummyContext
          import besom.internal.RunResult.*
          given besom.internal.Context = DummyContext().unsafeRunSync()
@@ -141,7 +138,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
     )
 
     failsToCompile(
-      """import besom.util.JsonInterpolator.given
+      """import besom.json.*
          import besom.internal.DummyContext
          import besom.internal.RunResult.*
          given besom.internal.Context = DummyContext().unsafeRunSync()
@@ -150,7 +147,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
     )
 
     val errsWrappedOutput = scala.compiletime.testing.typeCheckErrors(
-      """import besom.util.JsonInterpolator.given
+      """import besom.json.*
          import besom.internal.{Output, DummyContext}
          import besom.internal.RunOutput.{*, given}
          given besom.internal.Context = DummyContext().unsafeRunSync()
@@ -171,7 +168,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
     assertEquals(errsWrappedOutput.head.message, expectedErrorWrappedOutput)
 
     val errsWrappedOption = scala.compiletime.testing.typeCheckErrors(
-      """import besom.util.JsonInterpolator.given
+      """import besom.json.*
          import besom.internal.{Output, DummyContext}
          import besom.internal.RunOutput.{*, given}
          given besom.internal.Context = DummyContext().unsafeRunSync()
@@ -192,7 +189,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
     assertEquals(errsWrappedOption.head.message, expectedErrorWrappedOption)
 
     val errsWrappedOutputOption = scala.compiletime.testing.typeCheckErrors(
-      """import besom.util.JsonInterpolator.given
+      """import besom.json.*
          import besom.internal.{Output, DummyContext}
          import besom.internal.RunOutput.{*, given}
          given besom.internal.Context = DummyContext().unsafeRunSync()
@@ -213,7 +210,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
     assertEquals(errsWrappedOutputOption.head.message, expectedErrorWrappedOutputOption)
 
     val errsWrappedOptionOutput = scala.compiletime.testing.typeCheckErrors(
-      """import besom.util.JsonInterpolator.given
+      """import besom.json.*
          import besom.internal.{Output, DummyContext}
          import besom.internal.RunOutput.{*, given}
          given besom.internal.Context = DummyContext().unsafeRunSync()
@@ -234,7 +231,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
     assertEquals(errsWrappedOptionOutput.head.message, expectedErrorWrappedOptionOutput)
 
     val errsWrappedOutputOutput = scala.compiletime.testing.typeCheckErrors(
-      """import besom.util.JsonInterpolator.given
+      """import besom.json.*
          import besom.internal.{Output, DummyContext}
          import besom.internal.RunOutput.{*, given}
          given besom.internal.Context = DummyContext().unsafeRunSync()
@@ -255,7 +252,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
     assertEquals(errsWrappedOutputOutput.head.message, expectedErrorWrappedOutputOutput)
 
     val errsWrappedOptionOption = scala.compiletime.testing.typeCheckErrors(
-      """import besom.util.JsonInterpolator.given
+      """import besom.json.*
          import besom.internal.{Output, DummyContext}
          import besom.internal.RunOutput.{*, given}
          given besom.internal.Context = DummyContext().unsafeRunSync()
@@ -276,7 +273,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
     assertEquals(errsWrappedOptionOption.head.message, expectedErrorWrappedOptionOption)
 
     val errsWrappedOuter = scala.compiletime.testing.typeCheckErrors(
-      """import besom.util.JsonInterpolator.given
+      """import besom.json.*
          import besom.internal.{Output, DummyContext}
          import besom.internal.RunOutput.{*, given}
          given besom.internal.Context = DummyContext().unsafeRunSync()
@@ -299,7 +296,6 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
 
   test("json interpolator sanitizes strings when interpolating") {
     import besom.json.*
-    import besom.util.JsonInterpolator.given
     import besom.internal.DummyContext
     import besom.internal.RunResult.given
     import besom.internal.RunOutput.{*, given}

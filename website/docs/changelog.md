@@ -2,6 +2,79 @@
 title: Changelog
 ---
 
+0.3.0 (08-04-2024)
+---
+
+## API Changes and New Features
+
+* Added new besom.json interpolation API. Now this snippet from our tutorial:
+```scala
+s3.BucketPolicyArgs(
+  bucket = feedBucket.id,
+  policy = JsObject(
+    "Version" -> JsString("2012-10-17"),
+    "Statement" -> JsArray(
+      JsObject(
+        "Sid" -> JsString("PublicReadGetObject"),
+        "Effect" -> JsString("Allow"),
+        "Principal" -> JsObject(
+          "AWS" -> JsString("*")
+        ),
+        "Action" -> JsArray(JsString("s3:GetObject")),
+        "Resource" -> JsArray(JsString(s"arn:aws:s3:::${name}/*"))
+      )
+    )
+  ).prettyPrint
+)
+```
+can be rewritten as:
+```scala
+s3.BucketPolicyArgs(
+  bucket = feedBucket.id,
+  policy = json"""{
+    "Version": "2012-10-17",
+    "Statement": [{
+      "Sid": "PublicReadGetObject",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "*"
+      },
+      "Action": ["s3:GetObject"],
+      "Resource": ["arn:aws:s3::${name}/*"]
+    }]
+  }""".map(_.prettyPrint)
+)
+```
+The json interpolator returns an `Output[JsValue]` and is fully compile-time type safe and verifies JSON string for correctness. 
+The only types that can be interpolated are `String`, `Int`, `Short`, `Long`, `Float`, `Double`, `JsValue` and `Option` and `Output` 
+of the former (in whatever amount of nesting). If you need to interpolate a more complex type it's advised to derive a `JsonFormat` 
+for it and convert it to `JsValue`.
+
+* Package besom.json was modified to ease the use of `JsonFormat` derivation. This change is breaking compatibility by exporting 
+default instances from `DefaultJsonProtocol` and providing a given `JsonProtocol` instance for use with `derives JsonFormat`.
+If you need to define a custom `JsonProcol` change the import to `import besom.json.custom.*` which preserves the older semantics
+from spray-json and requires manual extension of `DefaultJsonProtocol`.
+
+* Derived `JsonFormat` from package `besom.json` now respects arguments with default values. In conjunction with the previous change 
+it means one can now use it like this:
+```scala
+import besom.json.*
+
+case class Color(name: String, red: Int, green: Int, blue: Int = 160) derives JsonFormat
+val color = Color("CadetBlue", 95, 158)
+
+val json = """{"name":"CadetBlue","red":95,"green":158}"""
+
+assert(color.toJson.convertTo[Color] == color)
+assert(json.parseJson.convertTo[Color] == color)
+```
+
+## Bug Fixes
+
+## Other Changes
+
+**Full Changelog**: https://github.com/VirtusLab/besom/compare/v0.2.2...v0.3.0
+
 0.2.2 (22-02-2024)
 ---
 

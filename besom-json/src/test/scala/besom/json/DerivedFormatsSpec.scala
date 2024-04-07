@@ -17,7 +17,7 @@ class DerivedFormatsSpec extends Specification {
     "be able to support default argument values" in {
       import besom.json.*
 
-      case class Color(name: String, red: Int, green: Int, blue: Option[Int] = Some(255)) derives JsonFormat
+      case class Color(name: String, red: Int, green: Int, blue: Int = 160) derives JsonFormat
       val color = Color("CadetBlue", 95, 158)
 
       val json = """{"name":"CadetBlue","red":95,"green":158}"""
