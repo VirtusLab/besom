@@ -14,9 +14,7 @@ import besom.*
   import besom.json.*, DefaultJsonProtocol.*
   val names = config.requireObject[List[String]]("names")
 
-  case class Foo(name: String, age: Int) derives Encoder
-  object Foo:
-    given JsonFormat[Foo] = jsonFormatN
+  case class Foo(name: String, age: Int) derives Encoder, JsonFormat
 
   val foo = config.requireObject[Foo]("foo")
 
