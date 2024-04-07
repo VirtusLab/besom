@@ -3,7 +3,6 @@ package besom.internal
 import besom.*
 import besom.internal.RunResult.{*, given}
 import besom.json.*
-import besom.json.DefaultJsonProtocol.*
 
 class ConfigTest extends munit.FunSuite {
 

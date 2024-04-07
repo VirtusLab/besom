@@ -43,7 +43,7 @@ object Env:
   private[internal] def getMaybe(key: String): Option[NonEmptyString] =
     sys.env.get(key).flatMap(NonEmptyString(_))
 
-  import besom.json.*, DefaultJsonProtocol.*
+  import besom.json.*
 
   given nesJF(using jfs: JsonFormat[String]): JsonFormat[NonEmptyString] =
     new JsonFormat[NonEmptyString]:

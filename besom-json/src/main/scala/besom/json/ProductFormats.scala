@@ -19,7 +19,8 @@ package besom.json
 trait ProductFormats:
   self: StandardFormats with AdditionalFormats =>
 
-  def writeNulls: Boolean = false
+  def writeNulls: Boolean             = false
+  def requireNullsForOptions: Boolean = false
 
   inline def jsonFormatN[T <: Product]: RootJsonFormat[T] = ${ ProductFormatsMacro.jsonFormatImpl[T]('self) }
 
@@ -93,9 +94,12 @@ object ProductFormatsMacro:
                   try fieldFormat.read(fields(fieldName))
                   catch
                     case e: NoSuchElementException =>
-                      if isOption then
-                        if defaultArgs.contains(fieldName) then defaultArgs(fieldName)
-                        else None
+                      // if field has a default value, use it, we didn't find anything in the JSON
+                      if defaultArgs.contains(fieldName) then defaultArgs(fieldName)
+                      // if field is optional and requireNullsForOptions is disabled, return None
+                      // otherwise we require an explicit null value
+                      else if isOption && !fmts.requireNullsForOptions then None
+                      // it's missing so we throw an exception
                       else throw DeserializationException("Object is missing required member '" ++ fieldName ++ "'", null, fieldName :: Nil)
                     case DeserializationException(msg, cause, fieldNames) =>
                       throw DeserializationException(msg, cause, fieldName :: fieldNames)

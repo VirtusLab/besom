@@ -45,12 +45,11 @@ private[json] trait DefaultExports:
   implicit def enrichAny[T](any: T): RichAny[T]         = new RichAny(any)
   implicit def enrichString(string: String): RichString = new RichString(string)
 
-object DefaultJsonExports extends DefaultExports
+private[json] trait DefaultProtocol:
+  implicit val defaultProtocol: JsonProtocol = DefaultJsonProtocol
 
-export DefaultJsonExports.*
-
-/** This allows to perform a single import: `import besom.json.default.*` to get basic JSON behaviour. If you need to extend JSON handling
-  * in any way, please use `import besom.json.*`, then extend `DefaultJsonProtocol`:
+/** This allows to perform a single import: `import besom.json.*` to get basic JSON behaviour. If you need to extend JSON handling in any
+  * way, please use `import besom.json.custom.*`, then extend `DefaultJsonProtocol`:
   *
   * ```
   *   object MyCustomJsonProtocol extends DefaultJsonProtocol:
@@ -63,8 +62,14 @@ export DefaultJsonExports.*
   *   case class MyCaseClass(a: String, b: Int) derives JsonFormat
   * ```
   */
-object default:
-  export DefaultJsonExports.*
-  export DefaultJsonProtocol.*
+object custom extends DefaultExports:
+  export besom.json.{JsonProtocol, DefaultJsonProtocol}
+  export besom.json.{JsonFormat, JsonReader, JsonWriter}
+  export besom.json.{RootJsonFormat, RootJsonReader, RootJsonWriter}
+  export besom.json.{DeserializationException, SerializationException}
+  export besom.json.{JsValue, JsObject, JsArray, JsString, JsNumber, JsBoolean, JsNull}
 
-  implicit val defaultProtocol: JsonProtocol = DefaultJsonProtocol
+object DefaultJsonExports extends DefaultExports with DefaultProtocol
+
+export DefaultJsonExports.*
+export DefaultJsonProtocol.*

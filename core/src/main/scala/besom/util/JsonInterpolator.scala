@@ -3,9 +3,9 @@ package besom.util
 import besom.json.*
 import besom.internal.{Context, Output}
 import scala.util.{Failure, Success}
-import besom.json.JsValue
 import interpolator.interleave
 import java.util.Objects
+import besom.json.JsValue
 
 object JsonInterpolator:
   import scala.quoted.*
@@ -13,35 +13,109 @@ object JsonInterpolator:
   private val NL = System.lineSeparator()
 
   given {} with
-    extension (sc: StringContext)
+    extension (inline sc: StringContext)
       inline def json(inline args: Any*)(using ctx: besom.internal.Context): Output[JsValue] = ${ jsonImpl('sc, 'args, 'ctx) }
 
   private def jsonImpl(sc: Expr[StringContext], args: Expr[Seq[Any]], ctx: Expr[Context])(using Quotes): Expr[Output[JsValue]] =
     import quotes.reflect.*
 
-    // this function traverses the tree of the given expression and tries to extract the constant string context tree from it in Right
-    // if it fails, it returns a Left with the final tree that couldn't be extracted from
-    def resolveStringContext(tree: Term, i: Int = 0): Either[Term, Seq[Expr[String]]] =
-      tree match
-        // resolve reference if possible
-        case t if t.tpe.termSymbol != Symbol.noSymbol && t.tpe <:< TypeRepr.of[StringContext] =>
-          t.tpe.termSymbol.tree match
-            case ValDef(_, _, Some(rhs)) => resolveStringContext(rhs, i + 1)
-            case _                       => Left(t)
+    def defaultFor(field: Expr[Any], tpe: Type[_], wrappers: List[Type[_]] = Nil): Any = tpe match
+      case '[String]    => JsString("")
+      case '[Short]     => JsNumber(0)
+      case '[Int]       => JsNumber(0)
+      case '[Long]      => JsNumber(0L)
+      case '[Float]     => JsNumber(0f)
+      case '[Double]    => JsNumber(0d)
+      case '[Boolean]   => JsBoolean(true)
+      case '[JsValue]   => JsNull
+      case '[Output[t]] => defaultFor(field, TypeRepr.of[t].asType, TypeRepr.of[Output[_]].asType :: wrappers)
+      case '[Option[t]] => defaultFor(field, TypeRepr.of[t].asType, TypeRepr.of[Option[_]].asType :: wrappers)
+      case '[t] => // this is a non-supported type! let's reduce wrappers (if any) and produce a nice error message
+        val tpeRepr = TypeRepr.of[t]
+        if wrappers.nonEmpty then
+          // we apply types from the most inner to the most outer
+          val fullyAppliedType = wrappers.foldLeft(tpeRepr) { case (inner, outer) =>
+            outer match
+              case '[o] =>
+                val outerSym = TypeRepr.of[o].typeSymbol
+                val applied  = AppliedType(outerSym.typeRef, List(inner))
 
-        // maybe resolved reference?
-        case other =>
-          tree.asExpr match
-            case '{ scala.StringContext.apply(${ Varargs(parts) }: _*) } =>
-              Right(parts)
-            case _ =>
-              Left(other)
+                applied
+          }
 
-    resolveStringContext(sc.asTerm) match
-      case Left(badTerm) =>
-        report.errorAndAbort(s"$sc -> $badTerm is not a string context :O") // this should never happen
+          // and now we have a full type available for error!
+          report.errorAndAbort(
+            s"Value of type `${fullyAppliedType.show}` is not a valid JSON interpolation type because of type `${tpeRepr.show}`.$NL$NL" +
+              s"Types available for interpolation are: " +
+              s"String, Int, Short, Long, Float, Double, Boolean, JsValue and Options and Outputs containing these types.$NL" +
+              s"If you want to interpolate a custom data type - derive or implement a JsonFormat for it and convert it to JsValue.$NL"
+          )
+        else
+          // t is a simple type
+          report.errorAndAbort(
+            s"Value of type `${tpeRepr.show}: ${tpeRepr.typeSymbol.fullName}` is not a valid JSON interpolation type.$NL$NL" +
+              s"Types available for interpolation are: " +
+              s"String, Int, Short, Long, Float, Double, Boolean, JsValue and Options and Outputs containing these types.$NL" +
+              s"If you want to interpolate a custom data type - derive or implement a JsonFormat for it and convert it to JsValue.$NL"
+          )
+    end defaultFor
 
-      case Right(parts) =>
+    // recursively convert all Exprs of arguments from user to Exprs of Output[JsValue]
+    def convert(arg: Expr[Any]): Expr[Output[JsValue]] =
+      arg match
+        case '{ $arg: String } =>
+          '{
+            Output($arg)(using $ctx).map { str =>
+              val sb = java.lang.StringBuilder()
+              if str == null then JsNull
+              else
+                besom.json.CompactPrinter.print(JsString(str), sb) // escape strings
+                sb.toString()
+                JsString(str)
+            }
+          }
+        case '{ $arg: Int }     => '{ Output(JsNumber($arg))(using $ctx) }
+        case '{ $arg: Short }   => '{ Output(JsNumber($arg))(using $ctx) }
+        case '{ $arg: Long }    => '{ Output(JsNumber($arg))(using $ctx) }
+        case '{ $arg: Float }   => '{ Output(JsNumber($arg))(using $ctx) }
+        case '{ $arg: Double }  => '{ Output(JsNumber($arg))(using $ctx) }
+        case '{ $arg: Boolean } => '{ Output(JsBoolean($arg))(using $ctx) }
+        case '{ $arg: JsValue } => '{ Output($arg)(using $ctx) }
+        case _ =>
+          arg.asTerm.tpe.asType match
+            case '[Output[Option[t]]] =>
+              '{
+                $arg.asInstanceOf[Output[Option[t]]].flatMap {
+                  case Some(value) => ${ convert('value) }
+                  case None        => Output(JsNull)(using $ctx)
+                }
+              }
+            case '[Output[t]] =>
+              '{
+                $arg.asInstanceOf[Output[t]].flatMap { value =>
+                  ${ convert('value) }
+                }
+              }
+
+            case '[Option[t]] =>
+              '{
+                $arg.asInstanceOf[Option[t]] match
+                  case Some(value) => ${ convert('value) }
+                  case None        => Output(JsNull)(using $ctx)
+              }
+
+            case '[t] =>
+              val tpeRepr = TypeRepr.of[t]
+              report.errorAndAbort(
+                s"Value of type `${tpeRepr.show}` is not a valid JSON interpolation type.$NL$NL" +
+                  s"Types available for interpolation are: " +
+                  s"String, Int, Short Long, Float, Double, Boolean, JsValue and Options and Outputs containing these types.$NL" +
+                  s"If you want to interpolate a custom data type - derive or implement a JsonFormat for it and convert it to JsValue.$NL$NL"
+              )
+    end convert
+
+    sc match
+      case '{ scala.StringContext.apply(${ Varargs(parts) }: _*) } =>
         args match
           case Varargs(argExprs) =>
             if argExprs.isEmpty then
@@ -54,28 +128,8 @@ object JsonInterpolator:
                     case Success(value) =>
                       '{ Output(JsonParser(ParserInput.apply(${ Expr(str) })))(using $ctx) }
             else
-              val defaults = argExprs.map {
-                case '{ $part: String }          => ""
-                case '{ $part: Int }             => 0
-                case '{ $part: Long }            => 0L
-                case '{ $part: Float }           => 0f
-                case '{ $part: Double }          => 0d
-                case '{ $part: Boolean }         => true
-                case '{ $part: JsValue }         => JsNull
-                case '{ $part: Output[String] }  => ""
-                case '{ $part: Output[Int] }     => 0
-                case '{ $part: Output[Long] }    => 0L
-                case '{ $part: Output[Float] }   => 0f
-                case '{ $part: Output[Double] }  => 0d
-                case '{ $part: Output[Boolean] } => true
-                case '{ $part: Output[JsValue] } => JsNull
-                case '{ $other: t } =>
-                  report.errorAndAbort(
-                    s"`Value ${other.show}: ${Type.show[t]}` is not a valid JSON interpolation type.$NL$NL" +
-                      s"Types Available for interpolation are: " +
-                      s"String, Int, Long, Float, Double, Boolean, JsValue and Outputs of those types.$NL" +
-                      s"If you want to interpolate a custom data type - derive or implement a JsonFormat for it and convert it to JsValue.$NL$NL"
-                  )
+              val defaults = argExprs.map { arg =>
+                defaultFor(arg, arg.asTerm.tpe.asType)
               }
 
               val str = interleave(parts.map(_.valueOrAbort).toList, defaults.map(_.toString()).toList).reduce(_ + _)
@@ -84,43 +138,7 @@ object JsonInterpolator:
                 case Failure(exception) =>
                   report.errorAndAbort(s"Failed to parse JSON (default values inserted at compile time):$NL  ${exception.getMessage}")
                 case Success(value) =>
-                  val liftedSeqOfExpr: Seq[Expr[Output[?]]] = argExprs.map {
-                    case '{ $part: String } =>
-                      '{
-                        Output($part)(using $ctx).map { str =>
-                          val sb = java.lang.StringBuilder()
-                          besom.json.CompactPrinter.print(JsString(str), sb) // escape strings
-                          sb.toString().drop(1).dropRight(1) // json strings start and end with "
-                        }
-                      }
-                    case '{ $part: Int }     => '{ Output($part)(using $ctx) }
-                    case '{ $part: Long }    => '{ Output($part)(using $ctx) }
-                    case '{ $part: Float }   => '{ Output($part)(using $ctx) }
-                    case '{ $part: Double }  => '{ Output($part)(using $ctx) }
-                    case '{ $part: Boolean } => '{ Output($part)(using $ctx) }
-                    case '{ $part: JsValue } => '{ Output($part)(using $ctx) }
-                    case '{ $part: Output[String] } =>
-                      '{
-                        $part.map { str =>
-                          val sb = java.lang.StringBuilder()
-                          besom.json.CompactPrinter.print(JsString(str), sb) // escape strings
-                          sb.toString().drop(1).dropRight(1) // json strings start and end with "
-                        }
-                      }
-                    case '{ $part: Output[Int] }     => part
-                    case '{ $part: Output[Long] }    => part
-                    case '{ $part: Output[Float] }   => part
-                    case '{ $part: Output[Double] }  => part
-                    case '{ $part: Output[Boolean] } => part
-                    case '{ $part: Output[JsValue] } => part
-                    case '{ $other: t } =>
-                      report.errorAndAbort(
-                        s"`Value ${other.show}: ${Type.show[t]}` is not a valid JSON interpolation type.$NL$NL" +
-                          s"Types Available for interpolation are: " +
-                          s"String, Int, Long, Float, Double, Boolean, JsValue and Outputs of those types.$NL" +
-                          s"If you want to interpolate a custom data type - derive or implement a JsonFormat for it and convert it to JsValue.$NL$NL"
-                      )
-                  }
+                  val liftedSeqOfExpr: Seq[Expr[Output[?]]] = argExprs.map(convert)
 
                   val liftedExprOfSeq = Expr.ofSeq(liftedSeqOfExpr)
                   val liftedParts     = Expr.ofSeq(parts)
