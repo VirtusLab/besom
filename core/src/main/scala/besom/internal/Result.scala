@@ -328,7 +328,7 @@ object Result:
           }
           .map(_.result())
       }
-      .flatMap(identity)
+      .flatten
 
   def parSequence[A, CC[X] <: IterableOnce[X], To](
     coll: CC[Result[A]]
@@ -352,7 +352,7 @@ object Result:
           }
           .map(_.result())
       }
-      .flatMap(identity)
+      .flatten
 
   def sequenceMap[K, V](map: Map[K, Result[V]])(using Debug): Result[Map[K, V]] =
     sequence(map.view.map { case (k, v) => v.map(k -> _) }.toVector).map(_.toMap)
