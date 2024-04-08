@@ -318,41 +318,37 @@ object Result:
   def sequence[A, CC[X] <: IterableOnce[X], To](
     coll: CC[Result[A]]
   )(using bf: BuildFrom[CC[Result[A]], A, To], d: Debug): Result[To] =
-    Result
-      .defer {
-        coll.iterator
-          .foldLeft(pure(bf.newBuilder(coll))) { (acc, curr) =>
-            acc.product(curr).map { case (b, r) =>
-              b += r
-            }
+    Result.defer {
+      coll.iterator
+        .foldLeft(pure(bf.newBuilder(coll))) { (acc, curr) =>
+          acc.product(curr).map { case (b, r) =>
+            b += r
           }
-          .map(_.result())
-      }
-      .flatten
+        }
+        .map(_.result())
+    }.flatten
 
   def parSequence[A, CC[X] <: IterableOnce[X], To](
     coll: CC[Result[A]]
   )(using bf: BuildFrom[CC[Result[A]], A, To], d: Debug): Result[To] =
-    Result
-      .defer {
-        coll.iterator
-          .foldLeft(pure(bf.newBuilder(coll))) { (acc, curr) =>
-            Promise[A]().flatMap { promise =>
-              val forkedCurr = curr.transformM {
-                case l @ Left(err) => promise.fail(err).map(_ => l)
-                case r @ Right(a)  => promise.fulfill(a).map(_ => r)
-              }.fork
+    Result.defer {
+      coll.iterator
+        .foldLeft(pure(bf.newBuilder(coll))) { (acc, curr) =>
+          Promise[A]().flatMap { promise =>
+            val forkedCurr = curr.transformM {
+              case l @ Left(err) => promise.fail(err).map(_ => l)
+              case r @ Right(a)  => promise.fulfill(a).map(_ => r)
+            }.fork
 
-              val aggregateResults = acc.zip(promise.get).map { case (b, r) =>
-                b += r
-              }
-
-              forkedCurr *> aggregateResults
+            val aggregateResults = acc.zip(promise.get).map { case (b, r) =>
+              b += r
             }
+
+            forkedCurr *> aggregateResults
           }
-          .map(_.result())
-      }
-      .flatten
+        }
+        .map(_.result())
+    }.flatten
 
   def sequenceMap[K, V](map: Map[K, Result[V]])(using Debug): Result[Map[K, V]] =
     sequence(map.view.map { case (k, v) => v.map(k -> _) }.toVector).map(_.toMap)
