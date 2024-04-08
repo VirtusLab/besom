@@ -138,4 +138,60 @@ class OutputTest extends munit.FunSuite:
     Context().waitForAllTasks.unsafeRunSync()
   }
 
+  test("Output.sequence works with all kinds of collections") {
+    given Context = DummyContext().unsafeRunSync()
+
+    assertEquals(Output.sequence(List(Output("value"), Output("value2"))).getData.unsafeRunSync(), OutputData(List("value", "value2")))
+    assertEquals(Output.sequence(Vector(Output("value"), Output("value2"))).getData.unsafeRunSync(), OutputData(Vector("value", "value2")))
+    assertEquals(Output.sequence(Set(Output("value"), Output("value2"))).getData.unsafeRunSync(), OutputData(Set("value", "value2")))
+    assertEquals(
+      Output.sequence(Array(Output("value"), Output("value2")).toList).getData.unsafeRunSync(),
+      OutputData(List("value", "value2"))
+    )
+    val iter: Iterable[String] = List("value", "value2")
+    assertEquals(Output.sequence(iter.map(Output(_))).getData.unsafeRunSync(), OutputData(List("value", "value2")))
+
+    Context().waitForAllTasks.unsafeRunSync()
+  }
+
+  test("extensions for sequence and traverse work will all kinds of collections") {
+    import besom.* // test global import
+    given Context = DummyContext().unsafeRunSync()
+
+    assertEquals(List(Output("value"), Output("value2")).sequence.getData.unsafeRunSync(), OutputData(List("value", "value2")))
+    assertEquals(Vector(Output("value"), Output("value2")).sequence.getData.unsafeRunSync(), OutputData(Vector("value", "value2")))
+    assertEquals(Set(Output("value"), Output("value2")).sequence.getData.unsafeRunSync(), OutputData(Set("value", "value2")))
+    assertEquals(
+      Array("value", "value2").toList.traverse(x => Output(x)).getData.unsafeRunSync(),
+      OutputData(List("value", "value2"))
+    )
+
+    Context().waitForAllTasks.unsafeRunSync()
+  }
+
+  test("issue 430") {
+    import java.io.File
+    import besom.*
+    object s3:
+      def BucketObject(name: NonEmptyString)(using Context): Output[Unit] = Output(())
+
+    given Context = DummyContext().unsafeRunSync()
+
+    val uploads = File(".").listFiles().toList.traverse { file =>
+      val name = NonEmptyString(file.getName) match
+        case Some(name) => Output(name)
+        case None       => Output(None).map(_ => throw new RuntimeException("Unexpected empty file name"))
+
+      name.flatMap {
+        s3.BucketObject(
+          _
+        )
+      }
+    }
+
+    uploads.getData.unsafeRunSync()
+
+    Context().waitForAllTasks.unsafeRunSync()
+  }
+
 end OutputTest
