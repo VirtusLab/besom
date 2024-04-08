@@ -26,7 +26,7 @@ assert(json.parseJson.convertTo[Color] == color)
 
 #### JSON Interpolator
 
-Besom-json package has also a convenient json interpolator that allows one to rewrite snippets like this
+The `besom-json` package has also a convenient JSON interpolator that allows one to rewrite snippets like this
 where cloud provider API expects a JSON string:
 
 ```scala
