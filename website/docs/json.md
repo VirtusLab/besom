@@ -72,6 +72,6 @@ s3.BucketPolicyArgs(
 For ease of use with Besom Inputs in provider packages interpolator returns an `Output[JsValue]`.
 
 The JSON interpolator is available when using `import besom.json.*` or `import besom.util.JsonInterpolator.*` imports. Interpolator is 
-completely compile-time type safe and verifies JSON string for correctness by substituting . The only types that can be interpolated are 
+completely **compile-time type safe** and verifies JSON string for correctness by substituting. The only types that can be interpolated are 
 `String`, `Int`, `Short`, `Long`, `Float`, `Double`, `JsValue` and `Option` and `Output` of the former (in whatever amount of nesting). 
 If you need to interpolate a more complex type it's advised to derive a `JsonFormat` for it and convert it to `JsValue`.
