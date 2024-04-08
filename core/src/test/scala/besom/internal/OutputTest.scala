@@ -226,6 +226,56 @@ class OutputTest extends munit.FunSuite:
     Context().waitForAllTasks.unsafeRunSync()
   }
 
+  test("Output#flatMap on non supported datatypes have nice and informative compile error") {
+    val shouldCompile = scala.compiletime.testing.typeCheckErrors(
+      """import besom.*
+         import besom.internal.{Output, DummyContext}
+         import besom.internal.RunOutput.{*, given}
+         given besom.internal.Context = DummyContext().unsafeRunSync()
+
+         val out: Output[Int] = Output(1).flatMap(x => Output(x + 1))"""
+    )
+
+    assert(shouldCompile.isEmpty)
+
+    val shouldNotCompile = scala.compiletime.testing.typeCheckErrors(
+      """import besom.*
+         import besom.internal.{Output, DummyContext}
+         import besom.internal.RunOutput.{*, given}
+         given besom.internal.Context = DummyContext().unsafeRunSync()
+
+         val out: Output[Int] = Output(1).flatMap(x => Option(x + 1))"""
+    )
+
+    assert(shouldNotCompile.size == 1)
+
+    val expected = """Could not find a given ToFuture instance for type Option.
+                     |
+                     |Besom offers the following instances:
+                     |  * besom-core provides a ToFuture instance for scala.concurrent.Future
+                     |  * besom-zio provides a ToFuture instance for zio.Task
+                     |  * besom-cats provides a ToFuture instance for cats.effect.IO""".stripMargin
+
+    assertEquals(shouldNotCompile.head.message, expected)
+
+    val shouldNotCompileFlatMapRawValue = scala.compiletime.testing.typeCheckErrors(
+      """import besom.*
+         import besom.internal.{Output, DummyContext}
+         import besom.internal.RunOutput.{*, given}
+         given besom.internal.Context = DummyContext().unsafeRunSync()
+
+         val out: Output[Int] = Output(1).flatMap(_ => 1)"""
+    )
+
+    assert(shouldNotCompileFlatMapRawValue.size == 1)
+
+    val expectedFlatMapRawValue =
+      """Output#flatMap can only be used with functions that return an Output or a structure like scala.concurrent.Future, cats.effect.IO or zio.Task.
+        |If you want to map over the value of an Output, use the map method instead.""".stripMargin
+
+    assertEquals(shouldNotCompileFlatMapRawValue.head.message, expectedFlatMapRawValue)
+  }
+
   Vector(
     (true, "value", Some("value")),
     (false, "value", None)

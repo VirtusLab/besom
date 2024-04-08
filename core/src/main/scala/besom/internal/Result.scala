@@ -381,6 +381,14 @@ object Result:
       _             <- finalizersRef.update(_.updatedWith(scope)(finalizers => Some(release(a) :: finalizers.toList.flatten)))
     yield a
 
+  @implicitNotFound(
+    """Could not find a given ToFuture instance for type ${F}.
+
+Besom offers the following instances:
+  * besom-core provides a ToFuture instance for scala.concurrent.Future
+  * besom-zio provides a ToFuture instance for zio.Task
+  * besom-cats provides a ToFuture instance for cats.effect.IO"""
+  )
   trait ToFuture[F[_]]:
     def eval[A](fa: => F[A]): () => Future[A]
 end Result
