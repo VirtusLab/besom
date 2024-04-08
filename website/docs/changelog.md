@@ -50,7 +50,7 @@ The only types that can be interpolated are `String`, `Int`, `Short`, `Long`, `F
 of the former (in whatever amount of nesting). If you need to interpolate a more complex type it's advised to derive a `JsonFormat` 
 for it and convert it to `JsValue`.
 
-* Package besom.json was modified to ease the use of `JsonFormat` derivation. This change is breaking compatibility by exporting 
+* Package `besom.json` was modified to ease the use of `JsonFormat` derivation. This change is breaking compatibility by exporting 
 default instances from `DefaultJsonProtocol` and providing a given `JsonProtocol` instance for use with `derives JsonFormat`.
 If you need to define a custom `JsonProcol` change the import to `import besom.json.custom.*` which preserves the older semantics
 from spray-json and requires manual extension of `DefaultJsonProtocol`.
