@@ -230,6 +230,58 @@ trait ResultSpec[F[+_]: RunResult] extends munit.FunSuite:
     assertEquals(firstEval, secondEval)
   }
 
+  test("parallel variant of sequence yields the same results") {
+    val seq        = Result.parSequence(List(Result("value"), Result("value2")))
+    val firstEval  = seq.unsafeRunSync()
+    val secondEval = seq.unsafeRunSync()
+
+    assertEquals(firstEval, secondEval)
+    assertEquals(firstEval, List("value", "value2"))
+  }
+
+  // am not proud of this test: lbialy
+  test("parallel variant of sequence works in parallel") {
+    val program =
+      for
+        ref    <- Ref[String]("")
+        refPar <- Ref[String]("")
+        getTime   = Result(System.currentTimeMillis())
+        totalTime = [A] => (f: Result[A]) => getTime.flatMap(start => f.flatMap(_ => getTime.map(end => end - start)))
+        append    = (s: String) => ref.update(_ + s)
+        appendPar = (s: String) => refPar.update(_ + s)
+        totalTimeSeq <- totalTime {
+          Result.sequence(
+            List(
+              Result.sleep(150).flatMap(_ => append("a")),
+              Result.sleep(100).flatMap(_ => append("b")),
+              Result.sleep(50).flatMap(_ => append("c"))
+            )
+          )
+        }
+        // append "a", "b", "c" in parallel, each next after shorter delay than previous
+        totalTimePar <- totalTime {
+          Result.parSequence(
+            List(
+              Result.sleep(150).flatMap(_ => appendPar("a")),
+              Result.sleep(100).flatMap(_ => appendPar("b")),
+              Result.sleep(50).flatMap(_ => appendPar("c"))
+            )
+          )
+        }
+
+        res    <- ref.get
+        resPar <- refPar.get
+      yield (res, resPar, totalTimeSeq, totalTimePar)
+
+    val (res, resPar, totalTimeSeq, totalTimePar) = program.unsafeRunSync()
+
+    assertEquals(res, "abc")
+    assertEquals(resPar, "cba")
+    assert(totalTimePar < totalTimeSeq, s"Expected $totalTimePar < $totalTimeSeq")
+    assert(totalTimePar < 170, s"Expected $totalTimePar < 170ms") // 20ms of leeway
+    assert(totalTimeSeq > 150 && totalTimeSeq < 320, s"Expected $totalTimeSeq < 320ms") // 20ms of leeway
+  }
+
 end ResultSpec
 
 // TODO test laziness of operators (for Future mostly) somehow

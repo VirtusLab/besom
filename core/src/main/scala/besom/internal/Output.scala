@@ -88,10 +88,16 @@ trait OutputExtensionsFactory:
       def sequence[To](using BuildFrom[CC[Output[A]], A, To], Context): Output[To] =
         Output.sequence(coll)
 
+      def parSequence[To](using BuildFrom[CC[Output[A]], A, To], Context): Output[To] =
+        Output.parSequence(coll)
+
   implicit object OutputTraverseOps:
     extension [A, CC[X] <: Iterable[X]](coll: CC[A])
       def traverse[B, To](f: A => Output[B])(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] =
         Output.sequence(coll.map(f).asInstanceOf[CC[Output[B]]])
+
+      def parTraverse[B, To](f: A => Output[B])(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] =
+        coll.map(f).asInstanceOf[CC[Output[B]]].parSequence
 
   implicit final class OutputOptionOps[A](output: Output[Option[A]]):
     def getOrElse[B >: A: Typeable](default: => B | Output[B])(using ctx: Context): Output[B] =
@@ -133,6 +139,24 @@ object Output:
           .map(_.result())
       }
     }.flatten
+
+  def parSequence[A, CC[X] <: IterableOnce[X], To](
+    coll: CC[Output[A]]
+  )(using bf: BuildFrom[CC[Output[A]], A, To], ctx: Context): Output[To] =
+    Output {
+      Result
+        .defer {
+          Result.parSequence(coll.iterator.map(_.dataResult).toVector)
+        }
+        .flatten
+        .map { vecOfOutputData =>
+          vecOfOutputData.map(Output.ofData(_))
+        }
+    }.flatMap { vecOfOutput =>
+      Output.sequence(vecOfOutput).map { vecOfA =>
+        bf.fromSpecific(coll)(vecOfA)
+      }
+    }
 
   def empty(isSecret: Boolean = false)(using ctx: Context): Output[Nothing] =
     new Output(ctx.registerTask(Result.pure(OutputData.empty[Nothing](isSecret = isSecret))))
