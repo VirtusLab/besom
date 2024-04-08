@@ -80,14 +80,18 @@ trait OutputFactory:
   )(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] = sequence(coll.map(f).asInstanceOf[CC[Output[B]]])
 
   def fail(t: Throwable)(using Context): Output[Nothing] = Output.fail(t)
-trait OutputExtensionsFactory:
-  implicit final class OutputSequenceOps[A, CC[X] <: Iterable[X], To](coll: CC[Output[A]]):
-    def sequence(using BuildFrom[CC[Output[A]], A, To], Context): Output[To] =
-      Output.sequence(coll)
+end OutputFactory
 
-  implicit final class OutputTraverseOps[A, CC[X] <: Iterable[X]](coll: CC[A]):
-    def traverse[B, To](f: A => Output[B])(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] =
-      coll.map(f).asInstanceOf[CC[Output[B]]].sequence
+trait OutputExtensionsFactory:
+  implicit object OutputSequenceOps:
+    extension [A, CC[X] <: Iterable[X]](coll: CC[Output[A]])
+      def sequence[To](using BuildFrom[CC[Output[A]], A, To], Context): Output[To] =
+        Output.sequence(coll)
+
+  implicit object OutputTraverseOps:
+    extension [A, CC[X] <: Iterable[X]](coll: CC[A])
+      def traverse[B, To](f: A => Output[B])(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] =
+        Output.sequence(coll.map(f).asInstanceOf[CC[Output[B]]])
 
   implicit final class OutputOptionOps[A](output: Output[Option[A]]):
     def getOrElse[B >: A: Typeable](default: => B | Output[B])(using ctx: Context): Output[B] =
@@ -108,6 +112,7 @@ trait OutputExtensionsFactory:
               case b: Output[Option[B]] => b
               case b: Option[B]         => Output(b)
       }
+end OutputExtensionsFactory
 
 object Output:
   // should be NonEmptyString
