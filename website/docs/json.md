@@ -3,7 +3,9 @@ title: JSON API
 ---
 
 Besom comes with it's own JSON library to avoid any issues with classpath clashes with mainstream JSON libraries when embedding
-Besom infrastructural programs in Scala applications via AutomationAPI. Package `besom.json` is a fork of well-known, battle-tested 
+Besom infrastructural programs in Scala applications via AutomationAPI. 
+
+Package `besom.json` is a fork of well-known, battle-tested 
 [spray-json](https://github.com/spray/spray-json) library. Specifically, the `spray-json` has been ported to Scala 3 with some 
 breaking changes and received support for `derives` keyword. Another change is that import of `besom.json.*` brings all the 
 `JsonFormat` instances from `DefaultJsonProtocol` into scope and to get the old experience to how `spray-json` operated one needs 
