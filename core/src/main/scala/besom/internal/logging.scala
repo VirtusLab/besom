@@ -299,6 +299,7 @@ object logging:
   import scribe.LogRecord
   import scribe.output.{LogOutput, CompositeOutput, TextOutput, EmptyOutput}
   import scribe.file.*
+  import scribe.writer.CacheWriter
   import java.nio.file.Paths
   import java.time.LocalDateTime, java.time.format.DateTimeFormatter
 
@@ -351,6 +352,28 @@ object logging:
         formatter = logFileFormatter
       )
       .replace()
+  }
+
+  /** For tests only
+    *
+    * @param handler
+    *   LogHandler
+    * @return
+    */
+  private[besom] def enableLogCapturing(level: Level, maxLines: Int = Int.MaxValue): Result[CacheWriter] = Result.defer {
+    val writer = CacheWriter(max = maxLines)
+
+    scribe.Logger.root
+      .clearHandlers()
+      .clearModifiers()
+      .withHandler(
+        minimumLevel = Some(level),
+        writer = writer,
+        formatter = logFileFormatter
+      )
+      .replace()
+
+    writer
   }
 
   def enableTraceLevelFileLogging(): Result[Unit] = Result.defer {

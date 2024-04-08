@@ -193,8 +193,6 @@ class ResourceDecoderTest extends munit.FunSuite:
 
   runWithBothOutputCodecs {
     test(s"partially valid resource") {
-      besom.internal.logging.setLogLevel(scribe.Level.Trace).unsafeRunSync()
-
       val resourceDecoder = summon[ResourceDecoder[ContainerGroup]]
 
       val errorOrResourceResult = Right(
