@@ -10,201 +10,208 @@ import k8s.core.v1.{ConfigMap, ConfigMapArgs, Namespace, Service, ServiceArgs, P
 import io.github.iltotore.iron.*
 import io.github.iltotore.iron.constraint.numeric.*
 
-case class Redis(connectionString: Output[String])(using ComponentBase) extends ComponentResource derives RegistersOutputs
+case class Redis private (connectionString: Output[String])(using ComponentBase) extends ComponentResource derives RegistersOutputs
 object Redis:
   extension (r: Output[Redis]) def connectionString: Output[String] = r.flatMap(_.connectionString)
 
-def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): Output[Redis] =
-  component(name, "besom:liftoff:Redis", ComponentResourceOptions()) {
-    val redisClusterPrefix = "redis-cluster"
-    val redisNamespace     = Namespace(s"$redisClusterPrefix-namespace-$name")
+  def apply(using Context)(
+    name: NonEmptyString,
+    nodes: Input[Int :| Positive],
+    options: ComponentResourceOptions = ComponentResourceOptions()
+  ): Output[Redis] =
+    component(name, "besom:liftoff:Redis", options) {
+      val redisClusterPrefix = "redis-cluster"
+      val redisNamespace     = Namespace(s"$redisClusterPrefix-namespace-$name")
+      val labels             = Map("app" -> name)
 
-    val labels = Map("app" -> name)
+      val persistentVolumeLabels = Map("type" -> "local") ++ labels
+      val persistentVolumeTemplate = PersistentVolumeSpecArgs(
+        storageClassName = "manual",
+        capacity = Map("storage" -> "128Mi"),
+        accessModes = List("ReadWriteOnce"),
+        persistentVolumeReclaimPolicy = "Delete" // never do this in production
+      )
 
-    val persistentVolumeLabels = Map("type" -> "local") ++ labels
-    val persistentVolumeTemplate = PersistentVolumeSpecArgs(
-      storageClassName = "manual",
-      capacity = Map("storage" -> "128Mi"),
-      accessModes = List("ReadWriteOnce"),
-      persistentVolumeReclaimPolicy = "Delete" // never do this in production
-    )
+      def createHostPathVolume(num: Int): Output[PersistentVolume] =
+        PersistentVolume(
+          s"$redisClusterPrefix-pv-$num-$name",
+          PersistentVolumeArgs(
+            metadata = ObjectMetaArgs(
+              name = s"$redisClusterPrefix-pv-$num-$name",
+              namespace = redisNamespace.metadata.name,
+              labels = persistentVolumeLabels
+            ),
+            spec = PersistentVolumeSpecArgs(
+              storageClassName = persistentVolumeTemplate.storageClassName,
+              capacity = persistentVolumeTemplate.capacity,
+              accessModes = persistentVolumeTemplate.accessModes,
+              persistentVolumeReclaimPolicy = persistentVolumeTemplate.persistentVolumeReclaimPolicy,
+              hostPath = HostPathVolumeSourceArgs(path = s"/tmp/redis/data-$num")
+            )
+          )
+        )
 
-    def createHostPathVolume(num: Int): Output[PersistentVolume] =
-      PersistentVolume(
-        s"$redisClusterPrefix-pv-$num-$name",
-        PersistentVolumeArgs(
+      val nodeNumbers: Output[List[Int]] = nodes.asOutput().map(max => (1 to max).toList)
+      val persistentVolumes              = nodeNumbers.map(_.map(createHostPathVolume)).flatMap(Output.sequence(_))
+
+      val redisPersistentVolumeClaimName = "data"
+      val redisClusterPortName           = "client"
+      val redisClusterPortNumber         = 6379
+
+      val redisConfigMap = ConfigMap(
+        s"$redisClusterPrefix-configmap-$name",
+        ConfigMapArgs(
           metadata = ObjectMetaArgs(
-            name = s"$redisClusterPrefix-pv-$num-$name",
             namespace = redisNamespace.metadata.name,
-            labels = persistentVolumeLabels
+            labels = labels,
+            name = s"$redisClusterPrefix-configmap-$name"
           ),
-          spec = PersistentVolumeSpecArgs(
-            storageClassName = persistentVolumeTemplate.storageClassName,
-            capacity = persistentVolumeTemplate.capacity,
-            accessModes = persistentVolumeTemplate.accessModes,
-            persistentVolumeReclaimPolicy = persistentVolumeTemplate.persistentVolumeReclaimPolicy,
-            hostPath = HostPathVolumeSourceArgs(path = s"/tmp/redis/data-$num")
+          data = Map(
+            "redis.conf" ->
+              s"""cluster-enabled yes
+                 |cluster-require-full-coverage no
+                 |cluster-node-timeout 15000
+                 |cluster-config-file /data/nodes.conf
+                 |cluster-migration-barrier 1
+                 |appendonly yes
+                 |protected-mode no
+                 |bind 0.0.0.0
+                 |port $redisClusterPortNumber""".stripMargin
           )
         )
       )
 
-    val persistentVolumes = Output.sequence((1 to nodes).toList.map(createHostPathVolume))
-
-    val redisPersistentVolumeClaimName = "data"
-    val redisClusterPortName           = "client"
-    val redisClusterPortNumber         = 6379
-
-    val redisConfigMap = ConfigMap(
-      s"$redisClusterPrefix-configmap-$name",
-      ConfigMapArgs(
-        metadata = ObjectMetaArgs(
-          namespace = redisNamespace.metadata.name,
-          labels = labels,
-          name = s"$redisClusterPrefix-configmap-$name"
-        ),
-        data = Map(
-          "redis.conf" ->
-            s"""cluster-enabled yes
-               |cluster-require-full-coverage no
-               |cluster-node-timeout 15000
-               |cluster-config-file /data/nodes.conf
-               |cluster-migration-barrier 1
-               |appendonly yes
-               |protected-mode no
-               |bind 0.0.0.0
-               |port $redisClusterPortNumber""".stripMargin
-        )
-      )
-    )
-
-    val redisStatefulSet = StatefulSet(
-      s"$redisClusterPrefix-statefulset-$name",
-      StatefulSetArgs(
-        metadata = ObjectMetaArgs(
-          name = s"$redisClusterPrefix-statefulset-$name",
-          namespace = redisNamespace.metadata.name,
-          labels = labels
-        ),
-        spec = StatefulSetSpecArgs(
-          serviceName = s"$redisClusterPrefix-statefulset-$name",
-          replicas = nodes,
-          selector = LabelSelectorArgs(
-            matchLabels = labels
+      val redisStatefulSet = StatefulSet(
+        s"$redisClusterPrefix-statefulset-$name",
+        StatefulSetArgs(
+          metadata = ObjectMetaArgs(
+            name = s"$redisClusterPrefix-statefulset-$name",
+            namespace = redisNamespace.metadata.name,
+            labels = labels
           ),
-          template = PodTemplateSpecArgs(
-            metadata = ObjectMetaArgs(
-              name = s"$redisClusterPrefix-statefulset-$name",
-              namespace = redisNamespace.metadata.name,
-              labels = labels
+          spec = StatefulSetSpecArgs(
+            serviceName = s"$redisClusterPrefix-statefulset-$name",
+            replicas = nodes,
+            selector = LabelSelectorArgs(
+              matchLabels = labels
             ),
-            spec = PodSpecArgs(
-              containers = ContainerArgs(
-                name = "redis",
-                image = "redis:6.2.5",
-                command = List("redis-server"),
-                args = List("/conf/redis.conf"),
-                env = List(
-                  EnvVarArgs(
-                    name = "REDIS_CLUSTER_ANNOUNCE_IP",
-                    valueFrom = EnvVarSourceArgs(
-                      fieldRef = ObjectFieldSelectorArgs(
-                        fieldPath = "status.podIP"
+            template = PodTemplateSpecArgs(
+              metadata = ObjectMetaArgs(
+                name = s"$redisClusterPrefix-statefulset-$name",
+                namespace = redisNamespace.metadata.name,
+                labels = labels
+              ),
+              spec = PodSpecArgs(
+                containers = ContainerArgs(
+                  name = "redis",
+                  image = "redis:6.2.5",
+                  command = List("redis-server"),
+                  args = List("/conf/redis.conf"),
+                  env = List(
+                    EnvVarArgs(
+                      name = "REDIS_CLUSTER_ANNOUNCE_IP",
+                      valueFrom = EnvVarSourceArgs(
+                        fieldRef = ObjectFieldSelectorArgs(
+                          fieldPath = "status.podIP"
+                        )
                       )
                     )
-                  )
-                ),
-                ports = List(
-                  ContainerPortArgs(name = redisClusterPortName, containerPort = redisClusterPortNumber),
-                  ContainerPortArgs(name = "gossip", containerPort = 16379)
-                ),
-                volumeMounts = List(
-                  VolumeMountArgs(
-                    name = "conf",
-                    mountPath = "/conf"
                   ),
-                  VolumeMountArgs(
+                  ports = List(
+                    ContainerPortArgs(name = redisClusterPortName, containerPort = redisClusterPortNumber),
+                    ContainerPortArgs(name = "gossip", containerPort = 16379)
+                  ),
+                  volumeMounts = List(
+                    VolumeMountArgs(
+                      name = "conf",
+                      mountPath = "/conf"
+                    ),
+                    VolumeMountArgs(
+                      name = "data",
+                      mountPath = "/data"
+                    )
+                  )
+                ) :: Nil,
+                volumes = List(
+                  VolumeArgs(
+                    name = "conf",
+                    configMap = ConfigMapVolumeSourceArgs(
+                      name = redisConfigMap.metadata.name
+                    )
+                  ),
+                  VolumeArgs(
                     name = "data",
-                    mountPath = "/data"
+                    persistentVolumeClaim = PersistentVolumeClaimVolumeSourceArgs(
+                      claimName = redisPersistentVolumeClaimName
+                    )
                   )
                 )
-              ) :: Nil,
-              volumes = List(
-                VolumeArgs(
-                  name = "conf",
-                  configMap = ConfigMapVolumeSourceArgs(
-                    name = redisConfigMap.metadata.name
-                  )
+              )
+            ),
+            volumeClaimTemplates = List(
+              PersistentVolumeClaimArgs(
+                metadata = ObjectMetaArgs(
+                  name = redisPersistentVolumeClaimName,
+                  labels = labels,
+                  namespace = redisNamespace.metadata.name
                 ),
-                VolumeArgs(
-                  name = "data",
-                  persistentVolumeClaim = PersistentVolumeClaimVolumeSourceArgs(
-                    claimName = redisPersistentVolumeClaimName
+                // propagate the PV settings to the PVC
+                spec = PersistentVolumeClaimSpecArgs(
+                  /*selector = LabelSelectorArgs(
+                    matchLabels = persistentVolumeLabels
+                  ),*/
+                  accessModes = persistentVolumeTemplate.accessModes,
+                  storageClassName = persistentVolumeTemplate.storageClassName,
+                  resources = VolumeResourceRequirementsArgs(
+                    requests = persistentVolumeTemplate.capacity // request max capacity available on the volume
                   )
                 )
               )
+            ),
+            persistentVolumeClaimRetentionPolicy = k8s.apps.v1.inputs.StatefulSetPersistentVolumeClaimRetentionPolicyArgs(
+              whenDeleted = persistentVolumeTemplate.persistentVolumeReclaimPolicy, // propagate the retention policy to the PVs
+              whenScaled = "Retain"
             )
+          )
+        ),
+        opts(dependsOn = persistentVolumes)
+      )
+
+      val redisServiceName: NonEmptyString =
+        s"$redisClusterPrefix-service-$name" // FIXME: explicit type needed for the compiler to infer the type of the constant
+      val redisService = Service(
+        redisServiceName,
+        ServiceArgs(
+          metadata = ObjectMetaArgs(
+            name = redisServiceName,
+            labels = labels,
+            namespace = redisNamespace.metadata.name
           ),
-          volumeClaimTemplates = List(
-            PersistentVolumeClaimArgs(
-              metadata = ObjectMetaArgs(
-                name = redisPersistentVolumeClaimName,
-                labels = labels,
-                namespace = redisNamespace.metadata.name
-              ),
-              // propagate the PV settings to the PVC
-              spec = PersistentVolumeClaimSpecArgs(
-                /*selector = LabelSelectorArgs(
-                  matchLabels = persistentVolumeLabels
-                ),*/
-                accessModes = persistentVolumeTemplate.accessModes,
-                storageClassName = persistentVolumeTemplate.storageClassName,
-                resources = VolumeResourceRequirementsArgs(
-                  requests = persistentVolumeTemplate.capacity // request max capacity available on the volume
-                )
+          spec = ServiceSpecArgs(
+            ports = List(
+              ServicePortArgs(
+                name = redisClusterPortName,
+                port = redisClusterPortNumber,
+                targetPort = redisClusterPortNumber
               )
-            )
-          ),
-          persistentVolumeClaimRetentionPolicy = k8s.apps.v1.inputs.StatefulSetPersistentVolumeClaimRetentionPolicyArgs(
-            whenDeleted = persistentVolumeTemplate.persistentVolumeReclaimPolicy, // propagate the retention policy to the PVs
-            whenScaled = "Retain"
+            ),
+            selector = labels
           )
         )
-      ),
-      opts(dependsOn = persistentVolumes)
-    )
-
-    val redisServiceName: NonEmptyString =
-      s"$redisClusterPrefix-service-$name" // FIXME: explicit type needed for the compiler to infer the type of the constant
-    val redisService = Service(
-      redisServiceName,
-      ServiceArgs(
-        metadata = ObjectMetaArgs(
-          name = redisServiceName,
-          labels = labels,
-          namespace = redisNamespace.metadata.name
-        ),
-        spec = ServiceSpecArgs(
-          ports = List(
-            ServicePortArgs(
-              name = redisClusterPortName,
-              port = redisClusterPortNumber,
-              targetPort = redisClusterPortNumber
-            )
-          ),
-          selector = labels
-        )
       )
-    )
 
-    for
-      _ <- redisNamespace
-      _ <- redisConfigMap
-      _ <- redisStatefulSet
-      _ <- redisService
-    yield Redis(Output(s"redis://$redisServiceName:$redisClusterPortNumber"))
-  }
+      val url = for
+        _ <- redisNamespace
+        _ <- redisConfigMap
+        _ <- redisStatefulSet
+        _ <- redisService
+      yield s"redis://$redisServiceName:$redisClusterPortNumber"
 
-@main def main = Pulumi.run {
+      Redis(url)
+    }
+end Redis
+
+@main def main(): Unit = Pulumi.run {
   val labels                                      = Map("app" -> "nginx")
   val appNamespace: Output[k8s.core.v1.Namespace] = Namespace("liftoff")
 
@@ -288,7 +295,7 @@ def redisCluster(name: NonEmptyString, nodes: Int :| Positive)(using Context): O
     opts(dependsOn = nginxDeployment)
   )
 
-  val redis = redisCluster("cache", 3)
+  val redis: Output[Redis] = Redis("cache", 3)
 
   extension [A](output: Output[Option[A]])
     def orElse[B >: A](alternative: Output[Option[B]]): Output[Option[B]] =
