@@ -45,7 +45,7 @@ s3.BucketPolicyArgs(
   }""".map(_.prettyPrint)
 )
 ```
-The json interpolator returns an `Output[JsValue]` and is fully compile-time type safe and verifies JSON string for correctness. 
+The json interpolator returns an `Output[JsValue]` and is fully **compile-time type safe** and verifies JSON string for correctness. 
 The only types that can be interpolated are `String`, `Int`, `Short`, `Long`, `Float`, `Double`, `JsValue` and `Option` and `Output` 
 of the former (in whatever amount of nesting). If you need to interpolate a more complex type it's advised to derive a `JsonFormat` 
 for it and convert it to `JsValue`.
