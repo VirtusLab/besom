@@ -7,7 +7,7 @@ title: Changelog
 
 ## API Changes and New Features
 
-* Added new besom.json interpolation API. Now this snippet from our tutorial:
+* Added new `besom.json` interpolation API. Now this snippet from our tutorial:
 ```scala
 s3.BucketPolicyArgs(
   bucket = feedBucket.id,
