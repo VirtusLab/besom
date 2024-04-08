@@ -52,4 +52,30 @@ trait ZIOModule extends BesomModule:
   // override def run(program: Context ?=> Output[Exports]): Future[Unit] = ???
 
 object Pulumi extends ZIOModule
-export Pulumi.{*, given}
+export Pulumi.{component => _, *, given}
+
+import scala.reflect.Typeable
+
+// this proxy is only necessary due to https://github.com/scala/scala3/issues/17930
+/** Creates a new component resource.
+  *
+  * @param name
+  *   The unique name of the resource.
+  * @param typ
+  *   The type of the resource.
+  * @param opts
+  *   A bag of options that control this resource's behavior.
+  * @param f
+  *   The function that will create the component resource.
+  * @tparam A
+  *   The type of the component resource.
+  * @return
+  *   The component resource.
+  */
+def component[A <: ComponentResource & Product: RegistersOutputs: Typeable](using ctx: Context)(
+  name: NonEmptyString,
+  typ: ResourceType,
+  opts: ComponentResourceOptions = ComponentResourceOptions()
+)(
+  f: Context ?=> ComponentBase ?=> A
+): Output[A] = Pulumi.component(name, typ, opts)(f)
