@@ -3,6 +3,11 @@ package besom.util
 trait CompileAssertions:
   self: munit.FunSuite =>
 
+  import scala.language.dynamics
+
+  object code extends Dynamic:
+    transparent inline def selectDynamic(name: String): name.type = name
+
   private val NL = System.lineSeparator()
 
   inline def failsToCompile(inline code: String): Unit =

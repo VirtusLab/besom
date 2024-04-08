@@ -14,37 +14,62 @@
  * limitations under the License.
  */
 
-package besom
+package besom.json
 
 import scala.language.implicitConversions
 
-package object json {
+def deserializationError(msg: String, cause: Throwable = null, fieldNames: List[String] = Nil) =
+  throw new DeserializationException(msg, cause, fieldNames)
 
+def serializationError(msg: String) = throw new SerializationException(msg)
+
+case class DeserializationException(msg: String, cause: Throwable = null, fieldNames: List[String] = Nil)
+    extends RuntimeException(msg, cause)
+class SerializationException(msg: String) extends RuntimeException(msg)
+
+private[json] class RichAny[T](any: T) {
+  def toJson(implicit writer: JsonWriter[T]): JsValue = writer.write(any)
+}
+
+private[json] class RichString(string: String) {
+  def parseJson: JsValue                               = JsonParser(string)
+  def parseJson(settings: JsonParserSettings): JsValue = JsonParser(string, settings)
+}
+
+private[json] trait DefaultExports:
   type JsField = (String, JsValue)
-
-  def deserializationError(msg: String, cause: Throwable = null, fieldNames: List[String] = Nil) =
-    throw new DeserializationException(msg, cause, fieldNames)
-  def serializationError(msg: String) = throw new SerializationException(msg)
 
   def jsonReader[T](implicit reader: JsonReader[T]) = reader
   def jsonWriter[T](implicit writer: JsonWriter[T]) = writer
 
   implicit def enrichAny[T](any: T): RichAny[T]         = new RichAny(any)
   implicit def enrichString(string: String): RichString = new RichString(string)
-}
 
-package json {
+private[json] trait DefaultProtocol:
+  implicit val defaultProtocol: JsonProtocol = DefaultJsonProtocol
 
-  case class DeserializationException(msg: String, cause: Throwable = null, fieldNames: List[String] = Nil)
-      extends RuntimeException(msg, cause)
-  class SerializationException(msg: String) extends RuntimeException(msg)
+/** This allows to perform a single import: `import besom.json.*` to get basic JSON behaviour. If you need to extend JSON handling in any
+  * way, please use `import besom.json.custom.*`, then extend `DefaultJsonProtocol`:
+  *
+  * ```
+  *   object MyCustomJsonProtocol extends DefaultJsonProtocol:
+  *     given someCustomTypeFormat: JsonFormat[A] = ...
+  * ```
+  * build your customized protocol that way and set it up for your `derives` clauses using:
+  * ```
+  *   given JsonProtocol = MyCustomJsonProtocol
+  *
+  *   case class MyCaseClass(a: String, b: Int) derives JsonFormat
+  * ```
+  */
+object custom extends DefaultExports:
+  export besom.json.{JsonProtocol, DefaultJsonProtocol}
+  export besom.json.{JsonFormat, JsonReader, JsonWriter}
+  export besom.json.{RootJsonFormat, RootJsonReader, RootJsonWriter}
+  export besom.json.{DeserializationException, SerializationException}
+  export besom.json.{JsValue, JsObject, JsArray, JsString, JsNumber, JsBoolean, JsNull}
 
-  private[json] class RichAny[T](any: T) {
-    def toJson(implicit writer: JsonWriter[T]): JsValue = writer.write(any)
-  }
+object DefaultJsonExports extends DefaultExports with DefaultProtocol
 
-  private[json] class RichString(string: String) {
-    def parseJson: JsValue                               = JsonParser(string)
-    def parseJson(settings: JsonParserSettings): JsValue = JsonParser(string, settings)
-  }
-}
+export DefaultJsonExports.*
+export DefaultJsonProtocol.*

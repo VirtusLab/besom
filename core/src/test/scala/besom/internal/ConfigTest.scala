@@ -3,7 +3,6 @@ package besom.internal
 import besom.*
 import besom.internal.RunResult.{*, given}
 import besom.json.*
-import besom.json.DefaultJsonProtocol.*
 
 class ConfigTest extends munit.FunSuite {
 
@@ -203,9 +202,7 @@ class ConfigTest extends munit.FunSuite {
     assertEquals(actual, expected)
   }
 
-  case class Foo(a: Int, b: Int)
-  object Foo:
-    given JsonFormat[Foo] = jsonFormatN
+  case class Foo(a: Int, b: Int) derives JsonFormat
   testConfig("get case class Foo")(
     configMap = Map("foo" -> """{"a":1,"b":2}"""),
     configSecretKeys = Set("foo"),
