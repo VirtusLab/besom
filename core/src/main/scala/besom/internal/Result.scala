@@ -169,6 +169,8 @@ enum Result[+A]:
     Debug()
   )
 
+  def flatten[B](using A <:< Result[B], Debug): Result[B] = flatMap(a => a)
+
   def recover[A2 >: A](f: Throwable => Result[A2])(using Debug): Result[A2] = BiFlatMap(
     this,
     {
@@ -316,17 +318,37 @@ object Result:
   def sequence[A, CC[X] <: IterableOnce[X], To](
     coll: CC[Result[A]]
   )(using bf: BuildFrom[CC[Result[A]], A, To], d: Debug): Result[To] =
-    Result
-      .defer {
-        coll.iterator
-          .foldLeft(pure(bf.newBuilder(coll))) { (acc, curr) =>
-            acc.product(curr).map { case (b, r) =>
+    Result.defer {
+      coll.iterator
+        .foldLeft(pure(bf.newBuilder(coll))) { (acc, curr) =>
+          acc.product(curr).map { case (b, r) =>
+            b += r
+          }
+        }
+        .map(_.result())
+    }.flatten
+
+  def parSequence[A, CC[X] <: IterableOnce[X], To](
+    coll: CC[Result[A]]
+  )(using bf: BuildFrom[CC[Result[A]], A, To], d: Debug): Result[To] =
+    Result.defer {
+      coll.iterator
+        .foldLeft(pure(bf.newBuilder(coll))) { (acc, curr) =>
+          Promise[A]().flatMap { promise =>
+            val forkedCurr = curr.transformM {
+              case l @ Left(err) => promise.fail(err).map(_ => l)
+              case r @ Right(a)  => promise.fulfill(a).map(_ => r)
+            }.fork
+
+            val aggregateResults = acc.zip(promise.get).map { case (b, r) =>
               b += r
             }
+
+            forkedCurr *> aggregateResults
           }
-          .map(_.result())
-      }
-      .flatMap(identity)
+        }
+        .map(_.result())
+    }.flatten
 
   def sequenceMap[K, V](map: Map[K, Result[V]])(using Debug): Result[Map[K, V]] =
     sequence(map.view.map { case (k, v) => v.map(k -> _) }.toVector).map(_.toMap)

@@ -168,7 +168,7 @@ compile-json:
 
 # Runs tests for json module
 test-json:
-	scala-cli --power test besom-json --suppress-experimental-feature-warning
+	scala-cli --power test besom-json --suppress-experimental-feature-warning -v -v -v 
 
 # Cleans json module
 clean-json:

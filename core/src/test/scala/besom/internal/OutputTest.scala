@@ -123,6 +123,38 @@ class OutputTest extends munit.FunSuite:
     Context().waitForAllTasks.unsafeRunSync()
   }
 
+  test("multiple evaluations of parSequence") {
+    given Context = DummyContext().unsafeRunSync()
+
+    val seq = Output.parSequence(List(Output("value"), Output("value2")))
+
+    val firstEval = seq.getData.unsafeRunSync()
+    assertEquals(firstEval, OutputData(List("value", "value2")))
+
+    val secondEval = seq.getData.unsafeRunSync()
+    assertEquals(secondEval, OutputData(List("value", "value2")))
+
+    Context().waitForAllTasks.unsafeRunSync()
+  }
+
+  // also not very proud of this test
+  test("parSequence works in parallel") {
+    given Context = DummyContext().unsafeRunSync()
+
+    def sleepAndReturn[A](value: A): Output[A] =
+      Output.apply(Result.sleep(50).map(_ => value))
+
+    def timeOutput(output: Output[?]): Output[Long] =
+      Output(Result.defer(System.currentTimeMillis())).zip(output).map { case (start, _) => System.currentTimeMillis() - start }
+
+    val time = timeOutput(Output.parSequence(List(sleepAndReturn("value"), sleepAndReturn("value2"), sleepAndReturn("value3"))))
+
+    val firstEval = time.getData.unsafeRunSync()
+    assert(firstEval.getValue.getOrElse { throw Exception("Expected a value") } < 70) // 20ms of leeway
+
+    Context().waitForAllTasks.unsafeRunSync()
+  }
+
   test("multiple evaluations of traverse") {
     given Context = DummyContext().unsafeRunSync()
 
