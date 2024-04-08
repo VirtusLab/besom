@@ -1,11 +1,13 @@
 package besom.internal
 
-import com.google.protobuf.struct.Value
-import scala.quoted.*
-import scala.deriving.Mirror
-import besom.util.*, Validated.ValidatedResult
 import besom.internal.logging.*
-import besom.types.{Label, URN, ResourceId}
+import besom.types.{Label, ResourceId, URN}
+import besom.util.*
+import besom.util.Validated.ValidatedResult
+import com.google.protobuf.struct.Value
+
+import scala.deriving.Mirror
+import scala.quoted.*
 
 trait ResourceDecoder[A <: Resource]:
   def makeResourceAndResolver(using Context, BesomMDC[Label]): Result[(A, ResourceResolver[A])]
@@ -31,33 +33,32 @@ object ResourceDecoder:
       val fieldDependencies = dependencies.getOrElse(propertyName, Set.empty)
       val propertyLabel     = resourceLabel.withKey(propertyName)
 
-      val outputData =
-        fields
-          .get(NameUnmangler.unmanglePropertyName(propertyName))
-          .map { value =>
-            val decoded = decoder
-              .decode(value, propertyLabel)
-              .map(_.withDependency(resource))
-              .tapBoth(
-                err => log.debug(s"failed to extract custom property '$propertyName' from '$value': '$err'"),
-                value => log.debug(s"extracted custom property '$propertyName' from '$value'")
-              )
+      fields
+        .get(NameUnmangler.unmanglePropertyName(propertyName))
+        .map { value =>
+          val decoded = decoder
+            .decode(value, propertyLabel)
+            .map(_.withDependency(resource))
+            .tapBoth(
+              err => log.debug(s"$propertyLabel failed to decode from: '${printer.render(value)}': '$err'"),
+              decoded => log.debug(s"$propertyLabel was decoded from '${printer.render(decoded)}'")
+            )
 
-            ValidatedResult.transparent(decoded).in { result =>
-              log.debug(s"extracting custom property '$propertyName' from '$value' using decoder '$decoder'") *> result
-            }
+          ValidatedResult.transparent(decoded).in { result =>
+            log.debug(
+              s"extracting custom property '$propertyLabel' from '${printer.render(value)}' using decoder '${decoder.getClass.getCanonicalName}'"
+            ) *> result
           }
-          .getOrElse {
-            if ctx.isDryRun then ValidatedResult.valid(OutputData.unknown().withDependency(resource))
-            // TODO: formatted DecodingError
-            else
-              ValidatedResult.invalid(
-                DecodingError(s"Missing property '$propertyName' in resource '$resourceLabel'", label = propertyLabel)
-              )
-          }
-          .map(_.withDependencies(fieldDependencies))
-
-      outputData
+        }
+        .getOrElse {
+          if ctx.isDryRun then ValidatedResult.valid(OutputData.unknown().withDependency(resource))
+          // TODO: formatted DecodingError
+          else
+            ValidatedResult.invalid(
+              DecodingError(s"Missing property '$propertyName' in resource '$resourceLabel'", label = propertyLabel)
+            )
+        }
+        .map(_.withDependencies(fieldDependencies))
     end extract
 
   end CustomPropertyExtractor
@@ -120,8 +121,7 @@ object ResourceDecoder:
                 ) ++ propertiesFulfilmentResults
 
                 for
-                  _ <- ctx.logger
-                    .trace(s"Resolve resource: fulfilling ${fulfilmentResults.size} promises")
+                  _ <- ctx.logger.trace(s"Resolve resource: fulfilling ${fulfilmentResults.size} promises")
                   _ <- Result.sequence(fulfilmentResults).void
                   _ <- ctx.logger.debug(s"Resolve resource: resolved successfully")
                 yield ()

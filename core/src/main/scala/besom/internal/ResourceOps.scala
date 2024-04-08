@@ -150,9 +150,9 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     for
       maybeProviderId <- maybeProviderIdResult
       req             <- buildInvokeRequest(invokeArgs.serialized, maybeProviderId, version)
-      _               <- log.debug(s"Invoke RPC prepared, req:\n${pprint(req)}")
+      _               <- log.debug(s"Invoke RPC prepared, req:\n${printer.render(req)}")
       res             <- ctx.monitor.invoke(req)
-      _               <- log.debug(s"Invoke RPC executed, res:\n${pprint(res)}")
+      _               <- log.debug(s"Invoke RPC executed, res:\n${printer.render(res)}")
       parsed          <- parseInvokeResponse(tok, res)
     yield parsed
   end executeInvoke
@@ -233,7 +233,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
 
     for
       _         <- log.debug(s"Resolving resource ${state.asLabel} with $debugMessageSuffix")
-      _         <- log.trace(s"Resolving resource ${state.asLabel} with:\n${pprint(eitherErrorOrResult)}")
+      _         <- log.trace(s"Resolving resource ${state.asLabel} with:\n${printer.render(eitherErrorOrResult)}")
       errOrUnit <- resolver.resolve(eitherErrorOrResult).either
       _         <- errOrUnit.fold(ctx.fail, _ => Result.unit) // fail context if resource resolution fails
       errOrUnitMsg = errOrUnit.fold(t => s"with an error: ${t.getMessage}", _ => "successfully")
@@ -377,7 +377,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       _                 <- log.trace(s"Preparing inputs: gathering direct dependencies")
       _                 <- log.trace(s"Preparing inputs: serializing resource properties")
       serResult         <- PropertiesSerializer.serializeResourceProperties(args)
-      _                 <- log.trace(s"Preparing inputs: serialized resource properties:\n${pprint(serResult)}")
+      _                 <- log.trace(s"Preparing inputs: serialized resource properties:\n${printer.render(serResult)}")
       _                 <- log.trace(s"Preparing inputs: getting parent URN")
       parentUrnOpt      <- resolveParentUrn(state.typ, options)
       _                 <- log.trace(s"Preparing inputs: got parent URN, getting deletedWith URN")
@@ -417,14 +417,14 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         .flatMap { req =>
           for
             _    <- log.debug(s"Executing ReadResourceRequest for ${state.asLabel}")
-            _    <- log.trace(s"ReadResourceRequest for ${state.asLabel}:\n${pprint(req)}")
+            _    <- log.trace(s"ReadResourceRequest for ${state.asLabel}:\n${printer.render(req)}")
             resp <- ctx.monitor.readResource(req)
           yield resp
         }
         .flatMap { response =>
           for
             _                 <- log.debug(s"Received ReadResourceResponse for ${state.asLabel}")
-            _                 <- log.trace(s"ReadResourceResponse for ${state.asLabel}:\n${pprint(response)}")
+            _                 <- log.trace(s"ReadResourceResponse for ${state.asLabel}:\n${printer.render(response)}")
             rawResourceResult <- RawResourceResult.fromResponse(response, id)
           yield rawResourceResult
         }
@@ -487,7 +487,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
             ,
             version = inputs.options.version.getOrElse(""), // protobuf expects empty string and not null
             ignoreChanges = inputs.options.ignoreChanges,
-            acceptSecrets = true, // TODO doing like java does it
+            acceptSecrets = true, // our implementation supports secrets from day one
             acceptResources = ctx.runInfo.acceptResources,
             additionalSecretOutputs = inputs.options match
               case CustomResolvedResourceOptions(_, _, _, additionalSecretOutputs, _) => additionalSecretOutputs
@@ -518,14 +518,14 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         .flatMap { req =>
           for
             _    <- log.debug(s"Executing RegisterResourceRequest for ${state.asLabel}")
-            _    <- log.trace(s"RegisterResourceRequest for ${state.asLabel}:\n${pprint(req)}")
+            _    <- log.trace(s"RegisterResourceRequest for ${state.asLabel}:\n${printer.render(req)}")
             resp <- ctx.monitor.registerResource(req)
           yield resp
         }
         .flatMap { response =>
           for
             _                 <- log.debug(s"Received RegisterResourceResponse for ${state.asLabel}")
-            _                 <- log.trace(s"RegisterResourceResponse for ${state.asLabel}:\n${pprint(response)}")
+            _                 <- log.trace(s"RegisterResourceResponse for ${state.asLabel}:\n${printer.render(response)}")
             rawResourceResult <- RawResourceResult.fromResponse(response)
           yield rawResourceResult
         }

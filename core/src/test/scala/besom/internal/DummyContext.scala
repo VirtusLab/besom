@@ -7,7 +7,9 @@ import pulumirpc.provider.InvokeResponse
 import pulumirpc.engine.*
 import besom.NonEmptyString
 import besom.internal.logging.BesomLogger
+import besom.util.printer
 
+//noinspection TypeAnnotation
 object DummyContext:
   val dummyRunInfo        = RunInfo(Some("test-organization"), "test-project", "test-stack", true, 4, false, "dummy", "dummy")
   val dummyFeatureSupport = FeatureSupport(true, true, true, true)
@@ -19,7 +21,7 @@ object DummyContext:
     def readResource(readResourceRequest: ReadResourceRequest): Result[ReadResourceResponse] =
       Result.fail(Exception("Not implemented"))
     def registerResource(registerResourceRequest: RegisterResourceRequest): Result[RegisterResourceResponse] =
-      Result.fail(Exception(s"Not implemented\n${pprint.apply(registerResourceRequest)}"))
+      Result.fail(Exception(s"Not implemented\n${printer.render(registerResourceRequest)}"))
     def registerResourceOutputs(registerResourceOutputsRequest: RegisterResourceOutputsRequest): Result[Unit] =
       Result.fail(Exception("Not implemented"))
     def supportsFeature(supportsFeatureRequest: SupportsFeatureRequest): Result[SupportsFeatureResponse] =

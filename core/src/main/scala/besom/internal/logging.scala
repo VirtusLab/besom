@@ -10,12 +10,13 @@ import scala.language.implicitConversions
 import pulumirpc.engine.{LogRequest, LogSeverity}
 import besom.types.Label
 import besom.types.URN
+import besom.util.printer
 
 object logging:
 
   class Key[A](val value: String)
   object Key:
-    val LabelKey = Key[Label]("resource")
+    val LabelKey: Key[Label] = Key[Label]("resource")
 
   class BesomMDC[A](private[logging] val inner: ScribeMDC) extends ScribeMDC:
     private[besom] def get[B](key: Key[B])(using ev: A <:< B): B =
@@ -72,7 +73,7 @@ object logging:
 
   // TODO this is probably way too wide
   // forcing a `derives` clause is quite limiting on the other hand
-  given structuredLoggingSupport[A <: Product]: Conversion[A, LoggableMessage] = (a: A) => pprint(a).toString
+  given structuredLoggingSupport[A <: Product]: Conversion[A, LoggableMessage] = (a: A) => printer.render(a).toString
 
   extension (record: LogRecord)
     def toSeverity: LogSeverity =
