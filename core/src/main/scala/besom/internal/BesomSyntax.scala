@@ -91,7 +91,7 @@ trait BesomSyntax:
     typ: ResourceType,
     opts: ComponentResourceOptions = ComponentResourceOptions()
   )(
-    f: Context ?=> ComponentBase ?=> A | Output[A]
+    f: Context ?=> ComponentBase ?=> A
   ): Output[A] =
     Output.ofData {
       ctx
@@ -103,10 +103,7 @@ trait BesomSyntax:
 
           val componentContext = ComponentContext(ctx, urnRes)
           val componentOutput =
-            try
-              f(using componentContext)(using componentBase) match
-                case output: Output[A] @unchecked => output
-                case a: A                         => Output(Result.pure(a))
+            try Output(Result.pure(f(using componentContext)(using componentBase)))
             catch case e: Exception => Output(Result.fail(e))
 
           val componentResult = componentOutput.getValueOrFail {
