@@ -64,12 +64,12 @@ case class ScalaDefinitionCoordinates private (
       )
   }
 
-  def filePath(implicit providerConfig: Config.ProviderConfig): FilePath = {
+  def filePath(using providerConfig: Config.Provider): FilePath = {
     // we DO NOT remove index from the file path, we add it if necessary
     val moduleParts = sanitizeParts(modulePackageParts) match {
       case moduleName :: tail =>
         // HACK: we need to exclude a module it does not compile
-        if (providerConfig.noncompiledModules.contains(moduleName)) {
+        if (providerConfig.nonCompiledModules.contains(moduleName)) {
           println(s"Excluding module: $moduleName")
           s".${moduleName}" +: tail // A leading dot excludes a directory from scala-cli sources
         } else {

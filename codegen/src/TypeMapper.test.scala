@@ -9,8 +9,6 @@ import scala.meta.dialects.Scala33
 class TypeMapperTest extends munit.FunSuite {
   import besom.codegen.metaschema.*
 
-  implicit val logger: Logger = new Logger
-
   object TestPackageMetadata extends PackageMetadata("test-as-scala-type", Some(PackageVersion.default))
 
   case class Data(
@@ -124,12 +122,14 @@ class TypeMapperTest extends munit.FunSuite {
 
   tests.foreach { data =>
     test(s"${data.`type`.getClass.getSimpleName}".withTags(data.tags)) {
-      val schemaProvider = new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
-      val (_, packageInfo) = data.metadata match {
+      given Config                         = Config()
+      given Logger                         = Logger()
+      given schemaProvider: SchemaProvider = DownloadingSchemaProvider()
+      val packageInfo = data.metadata match {
         case m @ TestPackageMetadata => schemaProvider.packageInfo(m, PulumiPackage(name = m.name))
         case _                       => schemaProvider.packageInfo(data.metadata)
       }
-      implicit val tm: TypeMapper = new TypeMapper(packageInfo, schemaProvider)
+      given TypeMapper = TypeMapper(packageInfo)
 
       data.expected.foreach { e =>
         assertEquals(data.`type`.asScalaType(data.asArgsType).syntax, e.scalaType)

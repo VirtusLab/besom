@@ -1,27 +1,25 @@
 package besom.codegen
 
-import besom.codegen.Config.{CodegenConfig, ProviderConfig}
 import besom.codegen.UpickleApi.*
-import besom.codegen.metaschema.PulumiPackage
 import besom.codegen.{PackageVersion, SchemaFile}
 
 object Main {
   def main(args: Array[String]): Unit = {
     val result = args.toList match {
       case "named" :: name :: version :: Nil =>
-        implicit val codegenConfig: CodegenConfig = CodegenConfig()
+        given Config = Config()
         generator.generatePackageSources(metadata = PackageMetadata(name, version))
       case "named" :: name :: version :: outputDir :: Nil =>
-        implicit val codegenConfig: CodegenConfig = CodegenConfig(outputDir = Some(os.rel / outputDir))
+        given Config = Config(outputDir = Some(os.rel / outputDir))
         generator.generatePackageSources(metadata = PackageMetadata(name, version))
       case "metadata" :: metadataPath :: Nil =>
-        implicit val codegenConfig: CodegenConfig = CodegenConfig()
+        given Config = Config()
         generator.generatePackageSources(metadata = PackageMetadata.fromJsonFile(os.Path(metadataPath)))
       case "metadata" :: metadataPath :: outputDir :: Nil =>
-        implicit val codegenConfig: CodegenConfig = CodegenConfig(outputDir = Some(os.rel / outputDir))
+        given Config = Config(outputDir = Some(os.rel / outputDir))
         generator.generatePackageSources(metadata = PackageMetadata.fromJsonFile(os.Path(metadataPath)))
       case "schema" :: name :: version :: schemaPath :: Nil =>
-        implicit val codegenConfig: CodegenConfig = CodegenConfig()
+        given Config = Config()
         generator.generatePackageSources(
           metadata = PackageMetadata(name, version),
           schema = Some(os.Path(schemaPath))
@@ -70,26 +68,24 @@ object generator {
   def generatePackageSources(
     metadata: PackageMetadata,
     schema: Option[SchemaFile] = None
-  )(implicit config: CodegenConfig): Result = {
-    implicit val logger: Logger = new Logger(config.logLevel)
-    implicit val schemaProvider: DownloadingSchemaProvider = new DownloadingSchemaProvider(
-      schemaCacheDirPath = config.schemasDir
-    )
+  )(using config: Config): Result = {
+    given logger: Logger                            = Logger()
+    given schemaProvider: DownloadingSchemaProvider = DownloadingSchemaProvider()
 
     // detect possible problems with GH API throttling
     // noinspection ScalaUnusedSymbol
     if !sys.env.contains("GITHUB_TOKEN") then logger.warn("Setting GITHUB_TOKEN environment variable might solve some problems")
 
-    val (pulumiPackage, packageInfo) = schemaProvider.packageInfo(metadata, schema)
-    val packageName                  = packageInfo.name
-    val packageVersion               = packageInfo.version
+    val packageInfo    = schemaProvider.packageInfo(metadata, schema)
+    val packageName    = packageInfo.name
+    val packageVersion = packageInfo.version
 
-    implicit val providerConfig: ProviderConfig = Config.providersConfigs(packageName)
+    given typeMapper: TypeMapper = TypeMapper(packageInfo)
 
     val outputDir: os.Path =
       config.outputDir.getOrElse(os.rel / packageName / packageVersion.asString).resolveFrom(config.codegenDir)
 
-    val total = generatePackageSources(pulumiPackage, packageInfo, outputDir)
+    val total = generatePackageSources(packageInfo, outputDir)
     logger.info(s"Finished generating package '$packageName:$packageVersion' codebase (${total} files)")
 
     val dependencies = schemaProvider.dependencies(packageName, packageVersion).map { case (name, version) =>
@@ -107,31 +103,28 @@ object generator {
   }
 
   private def generatePackageSources(
-    pulumiPackage: PulumiPackage,
     packageInfo: PulumiPackageInfo,
     outputDir: os.Path
-  )(implicit
+  )(using
     logger: Logger,
-    codegenConfig: CodegenConfig,
-    providerConfig: ProviderConfig,
-    schemaProvider: SchemaProvider
+    config: Config,
+    schemaProvider: SchemaProvider,
+    typeMapper: TypeMapper
   ): Int = {
     // Print diagnostic information
     logger.info {
       val relOutputDir = outputDir.relativeTo(os.pwd)
       s"""|Generating package '${packageInfo.name}:${packageInfo.version}' into '$relOutputDir'
-          | - Besom version   : ${codegenConfig.besomVersion}
-          | - Scala version   : ${codegenConfig.scalaVersion}
-          | - Java version    : ${codegenConfig.javaVersion}
+          | - Besom version   : ${config.besomVersion}
+          | - Scala version   : ${config.scalaVersion}
+          | - Java version    : ${config.javaVersion}
           |
-          | - Resources: ${pulumiPackage.resources.size}
-          | - Types    : ${pulumiPackage.types.size}
-          | - Functions: ${pulumiPackage.functions.size}
-          | - Config   : ${pulumiPackage.config.variables.size}
+          | - Resources: ${packageInfo.pulumiPackage.resources.size}
+          | - Types    : ${packageInfo.pulumiPackage.types.size}
+          | - Functions: ${packageInfo.pulumiPackage.functions.size}
+          | - Config   : ${packageInfo.pulumiPackage.config.variables.size}
           |""".stripMargin
     }
-
-    implicit val typeMapper: TypeMapper = new TypeMapper(packageInfo, schemaProvider)
 
     // make sure we don't have a dirty state
     os.remove.all(outputDir)
@@ -139,7 +132,7 @@ object generator {
 
     val codeGen = new CodeGen
     try {
-      val sources = codeGen.sourcesFromPulumiPackage(pulumiPackage, packageInfo)
+      val sources = codeGen.sourcesFromPulumiPackage(packageInfo)
       sources
         .foreach { sourceFile =>
           val filePath = outputDir / sourceFile.filePath.osSubPath

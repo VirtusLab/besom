@@ -45,8 +45,7 @@ class PackageMetadataTest extends munit.FunSuite {
 }
 
 class PackageVersionTest extends munit.FunSuite {
-
-  implicit val logger: Logger = new Logger
+  given Logger = new Logger(Logger.Level.Info)
 
   test("parse") {
     assertEquals(PackageVersion("v6.7.0").map(_.asString), Some("6.7.0"))

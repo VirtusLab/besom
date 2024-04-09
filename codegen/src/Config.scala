@@ -2,6 +2,25 @@ package besom.codegen
 
 import besom.model.SemanticVersion
 
+case class Config(
+  logLevel: Logger.Level = Logger.Level.Info,
+  besomVersion: String = Config.DefaultBesomVersion,
+  javaVersion: String = Config.DefaultJavaVersion,
+  scalaVersion: String = Config.DefaultScalaVersion,
+  schemasDir: os.Path = Config.DefaultSchemasDir,
+  codegenDir: os.Path = Config.DefaultCodegenDir,
+  overlaysDir: os.Path = Config.DefaultOverlaysDir,
+  outputDir: Option[os.RelPath] = None,
+  providers: String => Config.Provider = Config.DefaultProvidersConfigs
+):
+  val coreShortVersion: String = SemanticVersion
+    .parseTolerant(besomVersion)
+    .fold(
+      e => throw GeneralCodegenException(s"Invalid besom version: ${besomVersion}", e),
+      _.copy(patch = 0).toShortString
+    )
+end Config
+
 // noinspection ScalaWeakerAccess
 object Config {
 
@@ -14,33 +33,19 @@ object Config {
     } catch {
       case ex: java.nio.file.NoSuchFileException =>
         throw GeneralCodegenException(
-          "Expected './version.txt' file or explicit 'besom.codegen.Config.CodegenConfig(besomVersion = \"1.2.3\")",
+          "Expected './version.txt' file or explicit 'besom.codegen.Config(besomVersion = \"1.2.3\")",
           ex
         )
     }
   }
-  val DefaultSchemasDir: os.Path = os.pwd / ".out" / "schemas"
-  val DefaultCodegenDir: os.Path = os.pwd / ".out" / "codegen"
+  val DefaultSchemasDir: os.Path  = os.pwd / ".out" / "schemas"
+  val DefaultCodegenDir: os.Path  = os.pwd / ".out" / "codegen"
+  val DefaultOverlaysDir: os.Path = os.pwd / "codegen" / "resources" / "overlays"
 
-  case class CodegenConfig(
-    besomVersion: String = DefaultBesomVersion,
-    schemasDir: os.Path = DefaultSchemasDir,
-    codegenDir: os.Path = DefaultCodegenDir,
-    outputDir: Option[os.RelPath] = None,
-    scalaVersion: String = DefaultScalaVersion,
-    javaVersion: String = DefaultJavaVersion,
-    logLevel: Logger.Level = Logger.Level.Info
-  ):
-    val coreShortVersion: String = SemanticVersion
-      .parseTolerant(besomVersion)
-      .fold(
-        e => throw GeneralCodegenException(s"Invalid besom version: ${besomVersion}", e),
-        _.copy(patch = 0).toShortString
-      )
-
-  case class ProviderConfig(
-    noncompiledModules: Seq[String] = Seq.empty
+  case class Provider(
+    nonCompiledModules: Seq[String] = Seq.empty,
+    moduleToPackages: Map[String, String] = Map.empty
   )
 
-  val providersConfigs: Map[String, ProviderConfig] = Map().withDefaultValue(ProviderConfig())
+  val DefaultProvidersConfigs: Map[String, Provider] = Map().withDefault(_ => Config.Provider())
 }

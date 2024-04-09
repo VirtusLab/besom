@@ -1,7 +1,5 @@
 package besom.codegen
 
-import besom.codegen.metaschema.PulumiPackage
-
 import scala.util.matching.Regex
 
 /** The parsed Pulumi type token used in Pulumi schema in a clean, canonical form, that enforces all three parts present
@@ -18,18 +16,16 @@ case class PulumiToken private (provider: String, module: String, name: String, 
   def asString: String = PulumiToken.concat(provider, module, name)
 
   /** Transform the Pulumi type token to a Pulumi definition coordinates
-    * @param pulumiPackage
+    * @param packageInfo
     *   the Pulumi package containing the schema information
     * @return
     *   the Pulumi definition coordinates for the given Pulumi type token
     */
-  def toCoordinates(pulumiPackage: PulumiPackage): PulumiDefinitionCoordinates = {
-    import besom.codegen.Utils.PulumiPackageOps
-
+  def toCoordinates(packageInfo: PulumiPackageInfo): PulumiDefinitionCoordinates = {
     PulumiDefinitionCoordinates.fromToken(
       typeToken = this,
-      moduleToPackageParts = pulumiPackage.moduleToPackageParts,
-      providerToPackageParts = pulumiPackage.providerToPackageParts
+      moduleToPackageParts = packageInfo.moduleToPackageParts,
+      providerToPackageParts = packageInfo.providerToPackageParts
     )
   }
 }

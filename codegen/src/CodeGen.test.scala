@@ -1,7 +1,8 @@
 package besom.codegen.metaschema
 
 import besom.codegen.*
-import besom.codegen.Config.{CodegenConfig, ProviderConfig}
+import besom.codegen.Config
+import besom.codegen.Utils.PulumiPackageOps
 
 import scala.meta.*
 import scala.meta.dialects.Scala33
@@ -809,23 +810,23 @@ class CodeGenTest extends munit.FunSuite {
     )
   ).foreach(data =>
     test(data.name.withTags(data.tags)) {
-      implicit val config: Config.CodegenConfig = CodegenConfig()
-      implicit val logger: Logger               = new Logger(config.logLevel)
+      given config: Config                 = Config()
+      given logger: Logger                 = Logger()
+      given schemaProvider: SchemaProvider = DownloadingSchemaProvider()
 
-      implicit val schemaProvider: SchemaProvider =
-        new DownloadingSchemaProvider(schemaCacheDirPath = Config.DefaultSchemasDir)
-      val (pulumiPackage, packageInfo) = schemaProvider.packageInfo(
-        PackageMetadata(defaultTestSchemaName, "0.0.0"),
-        PulumiPackage.fromString(data.json)
+      val pulumiPackage = PulumiPackage.fromString(data.json)
+      val packageInfo = schemaProvider.packageInfo(
+        pulumiPackage.toPackageMetadata(),
+        pulumiPackage
       )
-      implicit val providerConfig: ProviderConfig = Config.providersConfigs(packageInfo.name)
-      implicit val tm: TypeMapper                 = new TypeMapper(packageInfo, schemaProvider)
+
+      given TypeMapper = TypeMapper(packageInfo)
 
       val codegen = new CodeGen
       if (data.expectedError.isDefined)
-        interceptMessage[Exception](data.expectedError.get)(codegen.scalaFiles(pulumiPackage, packageInfo))
+        interceptMessage[Exception](data.expectedError.get)(codegen.scalaFiles(packageInfo))
       else
-        codegen.scalaFiles(pulumiPackage, packageInfo).foreach {
+        codegen.scalaFiles(packageInfo).foreach {
           case SourceFile(FilePath(f: String), code: String) if data.expected.contains(f) =>
             assertNoDiff(code, data.expected(f))
             code.parse[Source].get

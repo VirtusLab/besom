@@ -4,7 +4,6 @@ import scala.meta.*
 
 //noinspection ScalaFileName,TypeAnnotation
 class ScalaDefinitionCoordinatesTest extends munit.FunSuite {
-  implicit val providerConfig: Config.ProviderConfig = Config.ProviderConfig()
 
   case class Data(
     providerPackageParts: Seq[String],
@@ -56,6 +55,8 @@ class ScalaDefinitionCoordinatesTest extends munit.FunSuite {
 
   tests.foreach { data =>
     test(s"Type: ${data.definitionName}".withTags(data.tags.toSet)) {
+      given Config.Provider = Config().providers(data.providerPackageParts.head)
+
       val coords: ScalaDefinitionCoordinates = ScalaDefinitionCoordinates(
         providerPackageParts = data.providerPackageParts,
         modulePackageParts = data.modulePackageParts,

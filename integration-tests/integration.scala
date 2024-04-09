@@ -1,6 +1,5 @@
 package besom.integration.common
 
-import besom.codegen.Config.CodegenConfig
 import besom.codegen.generator.Result
 import besom.codegen.{Config, PackageMetadata}
 import munit.{Tag, Test}
@@ -303,8 +302,7 @@ object codegen {
     metadata: PackageMetadata,
     outputDir: Option[os.RelPath] = None
   ): generator.Result = {
-    // noinspection TypeAnnotation
-    implicit val config = CodegenConfig(outputDir = outputDir)
+    given Config = Config(outputDir = outputDir)
     generator.generatePackageSources(metadata)
   }
 
@@ -313,8 +311,7 @@ object codegen {
     schema: os.Path,
     outputDir: Option[os.RelPath] = None
   ): generator.Result = {
-    // noinspection TypeAnnotation
-    implicit val config = CodegenConfig(outputDir = outputDir)
+    given Config = Config(outputDir = outputDir)
     generator.generatePackageSources(metadata, Some(schema))
   }
 }
