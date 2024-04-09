@@ -354,13 +354,30 @@ object logging:
       .replace()
   }
 
-  /** For tests only
+  /** For tests only: enable capturing of log output to a cache writer CacheWriter exposes two methods of interest:
     *
-    * @param handler
-    *   LogHandler
+    * def records: List[LogRecord]
+    *
+    * def output: List[LogOutput]
+    *
+    * To get logs as string one should use
+    *
+    * `writer.output.map(_.plainText).mkString("\n")` or, alternatively,
+    *
+    * `writer.output.map(_.toString).mkString("\n")` for colored output.
+    *
+    * This method is side effecting and should be used with caution. Use in parallelized tests will cause issues as it changes global state
+    * of the logger stack.
+    *
+    * @param level
+    *   scribe.Level: the minimum level of log messages to capture
+    * @param maxLines
+    *   Int: the maximum number of log lines to capture
+    *
     * @return
+    *   a new CacheWriter: a variant of logger sink that captures log output and stores it up to `maxLines` lines
     */
-  private[besom] def enableLogCapturing(level: Level, maxLines: Int = Int.MaxValue): Result[CacheWriter] = Result.defer {
+  private[besom] def enableLogCapturing(level: Level, maxLines: Int = Int.MaxValue): CacheWriter =
     val writer = CacheWriter(max = maxLines)
 
     scribe.Logger.root
@@ -374,7 +391,6 @@ object logging:
       .replace()
 
     writer
-  }
 
   def enableTraceLevelFileLogging(): Result[Unit] = Result.defer {
     val pathBuilder = PathBuilder.static(Paths.get("logs")) / traceFileName(LocalDateTime.now())
