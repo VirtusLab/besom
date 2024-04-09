@@ -80,6 +80,10 @@ trait OutputFactory:
   )(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] = sequence(coll.map(f).asInstanceOf[CC[Output[B]]])
 
   def fail(t: Throwable)(using Context): Output[Nothing] = Output.fail(t)
+
+  def when[A: Typeable](cond: => Input.Optional[Boolean])(a: => Input.Optional[A])(using ctx: Context): Output[Option[A]] =
+    Output.when(cond)(a)
+
 end OutputFactory
 
 trait OutputExtensionsFactory:
@@ -188,4 +192,24 @@ object Output:
   def secret[A](value: A)(using ctx: Context): Output[A] =
     new Output[A](ctx.registerTask(Result.pure(OutputData(value, Set.empty, isSecret = true))))
 
+  def when[A: Typeable](cond: => Input.Optional[Boolean])(
+    a: => Input.Optional[A]
+  )(using ctx: Context): Output[Option[A]] =
+    val p: Output[Boolean] = cond.asOptionOutput(isSecret = false).flatMap {
+      case None             => Output(false)
+      case Some(b: Boolean) => Output(b)
+    }
+
+    def f(c: Boolean): Output[Option[A]] =
+      a.asOptionOutput(isSecret = false) match
+        case o: Output[A | Option[A]] if c =>
+          o.flatMap {
+            case None       => Output(None)
+            case Some(v: A) => Output(Some(v))
+            case a: A       => Output(Some(a))
+          }
+        case _ => Output(None) // return None if condition is false
+
+    p.flatMap(f)
+  end when
 end Output

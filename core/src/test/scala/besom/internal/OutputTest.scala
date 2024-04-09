@@ -226,4 +226,35 @@ class OutputTest extends munit.FunSuite:
     Context().waitForAllTasks.unsafeRunSync()
   }
 
+  Vector(
+    (true, "value", Some("value")),
+    (false, "value", None)
+  ).foreach { (cond, value, expected) =>
+    given Context = DummyContext().unsafeRunSync()
+    for
+      optCond <- Vector(true, false)
+      outCond <- Vector(true, false)
+      optVal  <- Vector(true, false)
+      outVal  <- Vector(true, false)
+    do
+      val c: Boolean | Option[Boolean] | Output[Boolean] | Output[Option[Boolean]] = (outCond, optCond) match
+        case (true, true)   => Output(Option(cond))
+        case (true, false)  => Output(cond)
+        case (false, true)  => Some(cond)
+        case (false, false) => cond
+
+      val v: String | Option[String] | Output[String] | Output[Option[String]] = (outVal, optVal) match
+        case (true, true)   => Output(Option(value))
+        case (true, false)  => Output(value)
+        case (false, true)  => Some(value)
+        case (false, false) => value
+
+      test(s"when ${cond} then ${value} (optCond: ${optCond}, outCond: ${outCond}, valOpt: ${optVal}, valOut: ${outVal})") {
+        val result = Output.when(c)(v)
+        assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+      }
+
+    Context().waitForAllTasks.unsafeRunSync()
+  }
+
 end OutputTest
