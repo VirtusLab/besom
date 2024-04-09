@@ -33,6 +33,16 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
       yield nested.flatten
     )
 
+  /** Mock variant of flatMap that will fail at compile time if used with a function that returns a value instead of an Output.
+    *
+    * @param f
+    *   function to apply to the value of the Output
+    */
+  inline def flatMap[B](f: A => B): Nothing = scala.compiletime.error(
+    """Output#flatMap can only be used with functions that return an Output or a structure like scala.concurrent.Future, cats.effect.IO or zio.Task.
+If you want to map over the value of an Output, use the map method instead."""
+  )
+
   def zip[B](that: => Output[B])(using z: Zippable[A, B]): Output[z.Out] =
     Output.ofData(dataResult.zip(that.getData).map((a, b) => a.zip(b)))
 
