@@ -12,14 +12,12 @@ The `case class` has to:
 2. have a `(using ComponentBase)` clause after it's primary constructor
 3. have a `derives RegistersOutputs` at the end of it's class declaration
 
-​
 Next step is to declare a function that will use the `component` constructor function to compose all the resources together. 
 Every `component` expects:
 - a **unique resource name** as the first argument (usually it's an information that the end user has to provide)
 - a [**resource type** which is a string formatted specifically to fit Pulumi's model](https://www.pulumi.com/docs/concepts/resources/names/#types)
 - and, as the second argument list of `component` function, the **block of code** that defines all the resources 
 that should belong to the component.
-​
 
 Here's a small example using the S3 bucket resource again:
 ```scala
@@ -33,14 +31,13 @@ case class ZooVisit(
 )(using ComponentBase) 
   extends ComponentResource 
   derives RegistersOutputs
-
-def ZooVisit(date: OffsetDateTime)(using Context): Output[ZooVisit] = 
-  component(s"zoo-visit-at-$date", "user:component:ZooVisit") { 
-    for 
-      catsUrl    <- aws.s3.Bucket(s"cats-$date").websiteEndpoint
-      parrotsUrl <- aws.s3.Bucket(s"parrot-$date").websiteEndpoint
-    yield ZooVisit(catsUrl, parrotsUrl)
-  }
+object ZooVisit:
+  def apply(date: OffsetDateTime)(using Context): Output[ZooVisit] = 
+    component(s"zoo-visit-at-$date", "user:component:ZooVisit") { 
+      val cats = aws.s3.Bucket(s"cats-$date")
+      val parrots = aws.s3.Bucket(s"parrot-$date")
+      ZooVisit(cats.websiteEndpoint, parrots.websiteEndpoint)
+    }
 
 @main def main = Pulumi.run {
   val visit = ZooVisit(OffsetDateTime.now())
