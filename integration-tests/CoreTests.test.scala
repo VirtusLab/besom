@@ -96,7 +96,7 @@ class CoreTests extends munit.FunSuite {
     setup = {
       val schemaName    = "tls"
       val latestVersion = Version.latestPackageVersion(schemaName)
-      val result = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
+      val result        = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
       scalaCli.publishLocal(result.outputDir).call()
       pulumi.fixture.setup(
         wd / "resources" / "tls-example",
@@ -155,9 +155,9 @@ class CoreTests extends munit.FunSuite {
 
   FunFixture[pulumi.FixtureMultiContext](
     setup = {
-      val schemaName = "tls"
+      val schemaName    = "tls"
       val latestVersion = Version.latestPackageVersion(schemaName)
-      val result     = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
+      val result        = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
       scalaCli.publishLocal(result.outputDir).call()
       pulumi.fixture.setup(
         FixtureOpts(),
@@ -197,9 +197,9 @@ class CoreTests extends munit.FunSuite {
 
   FunFixture[pulumi.FixtureContext](
     setup = {
-      val schemaName = "tls"
+      val schemaName    = "tls"
       val latestVersion = Version.latestPackageVersion(schemaName)
-      val result     = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
+      val result        = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
       scalaCli.publishLocal(result.outputDir).call()
       pulumi.fixture.setup(
         wd / "resources" / "zio-tls-example",
@@ -218,9 +218,9 @@ class CoreTests extends munit.FunSuite {
 
   FunFixture[pulumi.FixtureContext](
     setup = {
-      val schemaName = "purrl"
+      val schemaName    = "purrl"
       val latestVersion = Version.latestPackageVersion(schemaName)
-      val result     = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
+      val result        = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
       scalaCli.publishLocal(result.outputDir).call()
       pulumi.fixture.setup(
         wd / "resources" / "cats-purrl-example",
@@ -239,9 +239,9 @@ class CoreTests extends munit.FunSuite {
 
   FunFixture[pulumi.FixtureContext](
     setup = {
-      val schemaName = "kubernetes"
+      val schemaName    = "kubernetes"
       val latestVersion = Version.latestPackageVersion(schemaName)
-      val result     = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
+      val result        = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
       scalaCli.publishLocal(result.outputDir).call()
       pulumi.fixture.setup(
         wd / "resources" / "kubernetes-secrets",
