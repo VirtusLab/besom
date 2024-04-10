@@ -287,24 +287,338 @@ class OutputTest extends munit.FunSuite:
       optVal  <- Vector(true, false)
       outVal  <- Vector(true, false)
     do
+      // FIXME: the inference is not working without this
       val c: Boolean | Option[Boolean] | Output[Boolean] | Output[Option[Boolean]] = (outCond, optCond) match
         case (true, true)   => Output(Option(cond))
         case (true, false)  => Output(cond)
         case (false, true)  => Some(cond)
         case (false, false) => cond
 
+      // FIXME: the inference is not working without this
       val v: String | Option[String] | Output[String] | Output[Option[String]] = (outVal, optVal) match
         case (true, true)   => Output(Option(value))
         case (true, false)  => Output(value)
         case (false, true)  => Some(value)
         case (false, false) => value
 
-      test(s"when ${cond} then ${value} (optCond: ${optCond}, outCond: ${outCond}, valOpt: ${optVal}, valOut: ${outVal})") {
+      test(s"Output.when ${cond} then ${value} (optCond: ${optCond}, outCond: ${outCond}, valOpt: ${optVal}, valOut: ${outVal})") {
         val result = Output.when(c)(v)
         assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
       }
 
     Context().waitForAllTasks.unsafeRunSync()
+  }
+
+  test("Option.getOrFail get value") {
+    import besom.OutputOptionOps
+    given Context = DummyContext().unsafeRunSync()
+
+    val result = Output(Some("value")).getOrFail(Exception("error"))
+    assertEquals(result.getData.unsafeRunSync(), OutputData("value"))
+  }
+
+  test("Option.getOrFail throws") {
+    import besom.OutputOptionOps
+    given Context = DummyContext().unsafeRunSync()
+
+    val result = Output(None).getOrFail(Exception("error"))
+    interceptMessage[Exception]("error")(result.getData.unsafeRunSync())
+  }
+
+  Vector(
+    (Some("value"), "default", "value"),
+    (None, "default", "default")
+  ).foreach { (value, default, expected) =>
+    import besom.OutputOptionOps
+    given Context = DummyContext().unsafeRunSync()
+
+    for outVal <- Vector(true, false)
+    do
+      val d = outVal match
+        case true  => Output(default)
+        case false => default
+
+      test(s"Option.getOrElse ${value} or ${default} (outVal: ${outVal})") {
+        val result = Output(value).getOrElse(d)
+        assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+      }
+  }
+
+  Vector(
+    (Some("value"), Some("default"), Some("value")),
+    (None, Some("default"), Some("default")),
+    (Some("value"), None, Some("value")),
+    (None, None, None)
+  ).foreach { (value, default, expected) =>
+    import besom.OutputOptionOps
+    given Context = DummyContext().unsafeRunSync()
+
+    for outVal <- Vector(true, false)
+    do
+      val d = outVal match
+        case true  => Output(default)
+        case false => default
+
+      test(s"Option.orElse ${value} orElse ${default} (outVal: ${outVal})") {
+        val result = Output(value).orElse(d)
+        assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+      }
+  }
+
+  Vector(
+    (Some("value"), (v: String) => v.toUpperCase, Some("VALUE")),
+    (None, (v: String) => v.toUpperCase, None)
+  ).foreach { (value, f, expected) =>
+    import besom.OutputOptionOps
+    given Context = DummyContext().unsafeRunSync()
+
+    for outVal <- Vector(true, false)
+    do
+      test(s"Option.mapInner ${value} (outVal: ${outVal})") {
+        val result: Output[Option[String]] = // FIXME: the inference is not working without the explicit type
+          if outVal then Output(value).mapInner(f.andThen(Output(_)))
+          else Output(value).mapInner(f)
+        assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+      }
+  }
+
+  Vector(
+    (Some("value"), (v: String) => Some(v.toUpperCase), Some("VALUE")),
+    (None, (v: String) => Some(v.toUpperCase), None)
+  ).foreach { (value, f, expected) =>
+    import besom.OutputOptionOps
+    given Context = DummyContext().unsafeRunSync()
+
+    for outVal <- Vector(true, false)
+    do
+      test(s"Option.flatMapInner ${value} (outVal: ${outVal})") {
+        val result =
+          if outVal then Output(value).flatMapInner(f.andThen(Output(_)))
+          else Output(value).flatMapInner(f)
+        assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+      }
+  }
+
+  Vector(
+    (List.empty[String], None),
+    (List("value"), Some("value")),
+    (List("value", "value2"), Some("value"))
+  ).foreach { (value, expected) =>
+    import besom.OutputListOps
+    given Context = DummyContext().unsafeRunSync()
+
+    test(s"List.headOption ${value}") {
+      val result = Output(value).headOption
+      assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+    }
+  }
+
+  Vector(
+    (List.empty[String], None),
+    (List("value"), Some("value")),
+    (List("value", "value2"), Some("value2"))
+  ).foreach { (value, expected) =>
+    import besom.OutputListOps
+    given Context = DummyContext().unsafeRunSync()
+
+    test(s"List.lastOption ${value}") {
+      val result = Output(value).lastOption
+      assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+    }
+  }
+
+  Vector(
+    (List.empty[String], List.empty[String]),
+    (List("value"), List.empty[String]),
+    (List("value", "value2"), List("value2")),
+    (List("value", "value2", "value3"), List("value2", "value3"))
+  ).foreach { (value, expected) =>
+    import besom.OutputListOps
+    given Context = DummyContext().unsafeRunSync()
+
+    test(s"List.tailOrEmpty ${value}") {
+      val result = Output(value).tailOrEmpty
+      assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+    }
+  }
+
+  Vector(
+    (List.empty[String], List.empty[String]),
+    (List("value"), List.empty[String]),
+    (List("value", "value2"), List("value")),
+    (List("value", "value2", "value3"), List("value", "value2"))
+  ).foreach { (value, expected) =>
+    import besom.OutputListOps
+    given Context = DummyContext().unsafeRunSync()
+
+    test(s"List.initOrEmpty ${value}") {
+      val result = Output(value).initOrEmpty
+      assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+    }
+  }
+
+  Vector(
+    (List.empty[String], (v: String) => v.toUpperCase, List.empty[String]),
+    (List("value"), (v: String) => v.toUpperCase, List("VALUE")),
+    (List("value", "value2"), (v: String) => v.toUpperCase, List("VALUE", "VALUE2"))
+  ).foreach { (value, f, expected) =>
+    import besom.OutputListOps
+    given Context = DummyContext().unsafeRunSync()
+
+    for outVal <- Vector(true, false)
+    do
+      test(s"List.mapInner ${value}") {
+        val result: Output[List[String]] = // FIXME: the inference is not working without the explicit type
+          if outVal then Output(value).mapInner(f.andThen(Output(_)))
+          else Output(value).mapInner(f)
+        assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+      }
+  }
+
+  Vector(
+    (List.empty[String], (v: String) => v.toUpperCase.iterator.map(_.toString).toList, List.empty[String]),
+    (List("value"), (v: String) => v.toUpperCase.iterator.map(_.toString).toList, List("V", "A", "L", "U", "E")),
+    (
+      List("value", "value2"),
+      (v: String) => v.toUpperCase.iterator.map(_.toString).toList,
+      List("V", "A", "L", "U", "E", "V", "A", "L", "U", "E", "2")
+    )
+  ).foreach { (value, f, expected) =>
+    import besom.OutputListOps
+    given Context = DummyContext().unsafeRunSync()
+
+    for outVal <- Vector(true, false)
+    do
+      test(s"List.flatMapInner ${value}") {
+        val result =
+          if outVal then Output(value).flatMapInner(f.andThen(Output(_)))
+          else Output(value).flatMapInner(f)
+        assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+      }
+  }
+
+  Vector(
+    (Some(List.empty[String]), None),
+    (Some(List("value")), Some("value")),
+    (Some(List("value", "value2")), Some("value")),
+    (None, None)
+  ).foreach { (value, expected) =>
+    import besom.OutputOptionListOps
+    given Context = DummyContext().unsafeRunSync()
+
+    test(s"Option[List].headOption ${value}") {
+      val result = Output(value).headOption
+      assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+    }
+  }
+
+  Vector(
+    (Some(List.empty[String]), None),
+    (Some(List("value")), Some("value")),
+    (Some(List("value", "value2")), Some("value2")),
+    (None, None)
+  ).foreach { (value, expected) =>
+    import besom.OutputOptionListOps
+    given Context = DummyContext().unsafeRunSync()
+
+    test(s"Option[List].lastOption ${value}") {
+      val result = Output(value).lastOption
+      assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+    }
+  }
+
+  Vector(
+    (Some(List.empty[String]), List.empty[String]),
+    (Some(List("value")), List.empty[String]),
+    (Some(List("value", "value2")), List("value2")),
+    (Some(List("value", "value2", "value3")), List("value2", "value3")),
+    (None, List.empty[String])
+  ).foreach { (value, expected) =>
+    import besom.OutputOptionListOps
+    given Context = DummyContext().unsafeRunSync()
+
+    test(s"Option[List].tailOrEmpty ${value}") {
+      val result = Output(value).tailOrEmpty
+      assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+    }
+  }
+
+  Vector(
+    (Some(List.empty[String]), List.empty[String]),
+    (Some(List("value")), List.empty[String]),
+    (Some(List("value", "value2")), List("value")),
+    (Some(List("value", "value2", "value3")), List("value", "value2")),
+    (None, List.empty[String])
+  ).foreach { (value, expected) =>
+    import besom.OutputOptionListOps
+    given Context = DummyContext().unsafeRunSync()
+
+    test(s"Option[List].initOrEmpty ${value}") {
+      val result = Output(value).initOrEmpty
+      assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+    }
+  }
+
+  Vector(
+    (None, (v: String) => v.toUpperCase, List.empty[String]),
+    (
+      Some(List.empty[String]),
+      (v: String) => v.toUpperCase,
+      List.empty[String]
+    ),
+    (
+      Some(List("value")),
+      (v: String) => v.toUpperCase,
+      List("VALUE")
+    ),
+    (
+      Some(List("value", "value2")),
+      (v: String) => v.toUpperCase,
+      List("VALUE", "VALUE2")
+    )
+  ).foreach { (value, f, expected) =>
+    import besom.OutputOptionListOps
+    given Context = DummyContext().unsafeRunSync()
+
+    for outVal <- Vector(true, false)
+    do
+      test(s"Option[List].mapInner ${value}") {
+        val result: Output[List[String]] = // FIXME: the inference is not working without the explicit type
+          if outVal then Output(value).mapInner(f.andThen(Output(_)))
+          else Output(value).mapInner(f)
+        assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+      }
+  }
+
+  Vector(
+    (None, (v: String) => v.toUpperCase.iterator.map(_.toString).toList, List.empty[String]),
+    (
+      Some(List.empty[String]),
+      (v: String) => v.toUpperCase.iterator.map(_.toString).toList,
+      List.empty[String]
+    ),
+    (
+      Some(List("value")),
+      (v: String) => v.toUpperCase.iterator.map(_.toString).toList,
+      List("V", "A", "L", "U", "E")
+    ),
+    (
+      Some(List("value", "value2")),
+      (v: String) => v.toUpperCase.iterator.map(_.toString).toList,
+      List("V", "A", "L", "U", "E", "V", "A", "L", "U", "E", "2")
+    )
+  ).foreach { (value, f, expected) =>
+    import besom.OutputOptionListOps
+    given Context = DummyContext().unsafeRunSync()
+
+    for outVal <- Vector(true, false)
+    do
+      test(s"Option[List].flatMapInner ${value}") {
+        val result =
+          if outVal then Output(value).flatMapInner(f.andThen(Output(_)))
+          else Output(value).flatMapInner(f)
+        assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
+      }
   }
 
 end OutputTest
