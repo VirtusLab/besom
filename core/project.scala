@@ -2,7 +2,7 @@
 //> using options "-java-output-version:11", "-Ysafe-init", "-Xmax-inlines:64"
 //> using options "-Werror", "-Wunused:all", "-deprecation", "-feature", -language:noAutoTupling
 
-//> using dep "org.virtuslab::besom-json:0.2.3-SNAPSHOT"
+//> using dep "org.virtuslab::besom-json:0.3.0-SNAPSHOT"
 //> using dep "com.lihaoyi::sourcecode:0.3.1"
 //> using dep "com.google.protobuf:protobuf-java-util:3.24.4"
 //> using dep "io.grpc:grpc-netty:1.57.2"
@@ -27,4 +27,5 @@
 //> using publish.developer "prolativ|Michał Pałka|https://github.com/prolativ"
 //> using publish.developer "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban"
 //> using publish.developer "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
+//> using repository sonatype:snapshots
 //> using repository sonatype:snapshots

@@ -26,7 +26,7 @@
                 <dependency>
                     <groupId>org.virtuslab</groupId>
                     <artifactId>besom-bootstrap_3</artifactId>
-                    <version>0.2.2</version>
+                    <version>0.3.0-SNAPSHOT</version>
                     <scope>system</scope>
                     <systemPath>${besomBootstrapJar}</systemPath>
                 </dependency>
@@ -43,7 +43,7 @@
         <dependency>
             <groupId>org.virtuslab</groupId>
             <artifactId>besom-core_3</artifactId>
-            <version>0.2.2</version>
+            <version>0.3.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.virtuslab</groupId>

@@ -9,6 +9,7 @@
 //> using dep org.scoverage::scalac-scoverage-serializer:2.0.11
 //> using dep org.virtuslab::scala-yaml:0.0.8
 //> using dep io.get-coursier:coursier_2.13:2.1.9
-//> using dep org.virtuslab::besom-codegen:0.2.3-SNAPSHOT
+//> using dep org.virtuslab::besom-codegen:0.3.0-SNAPSHOT
 
+//> using repository sonatype:snapshots
 //> using repository sonatype:snapshots
