@@ -16,28 +16,26 @@ object Schemas:
         sys.exit(1)
 
   def fetchSchemas(cwd: os.Path): Unit =
-    val pulumiRepoPath     = cwd / "target" / "pulumi-codegen-testdata"
-    val pulumiJavaRepoPath = cwd / "target" / "pulumi-java-codegen-testdata"
+    val pulumiRepoPath         = cwd / "target" / "pulumi-codegen-testdata"
+    val pulumiJavaRepoPath     = cwd / "target" / "pulumi-java-codegen-testdata"
+    val relPulumiTestsPath     = os.rel / "tests" / "testdata" / "codegen"
+    val relPulumiJavaTestsPath = os.rel / "pkg" / "codegen" / "testing" / "test" / "testdata"
     val pulumiRepo = sparseCheckout(
       pulumiRepoPath,
       "github.com/pulumi/pulumi.git",
-      List(
-        os.rel / "pkg" / "codegen" / "testing" / "test" / "testdata"
-      )
+      List(relPulumiTestsPath)
     )
     val pulumiJavaRepo = sparseCheckout(
       pulumiJavaRepoPath,
       "github.com/pulumi/pulumi-java.git",
-      List(
-        os.rel / "pkg" / "codegen" / "testing" / "test" / "testdata"
-      )
+      List(relPulumiJavaTestsPath)
     )
     val targetPath = cwd / "integration-tests" / "resources" / "testdata"
     os.remove.all(targetPath)
 
     // copy test schemas
-    copySchemas(pulumiRepo / "pkg" / "codegen" / "testing" / "test" / "testdata", targetPath)
-    copySchemas(pulumiJavaRepo / "pkg" / "codegen" / "testing" / "test" / "testdata", targetPath)
+    copySchemas(relPulumiTestsPath.resolveFrom(pulumiRepo), targetPath)
+    copySchemas(relPulumiJavaTestsPath.resolveFrom(pulumiJavaRepo), targetPath)
 
     println("fetched test schema files")
 

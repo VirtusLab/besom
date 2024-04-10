@@ -282,7 +282,7 @@ To publish critical package(s):
 
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
-just cli packages maven aws azure gcp docker kubernetes random command tls eks
+just clean-out cli packages maven aws azure gcp docker kubernetes random command tls eks
 ```
 
 Tip: to check what packages are required for `examples` and `templates` use:
@@ -467,7 +467,7 @@ DO NOT remove dependencies from `project.scala`, because they are necessary in b
 
 ## Troubleshooting
 
-If you susspect the issue is related to serialization, try to skip the preview (dry run is known to be problematic):
+If you suspect the issue is related to serialization, try to skip the preview (dry run is known to be problematic):
 
 ```bash
 pulumi up --skip-preview
