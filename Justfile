@@ -38,16 +38,16 @@ default:
 clean-all: clean-json clean-sdk clean-out clean-compiler-plugin clean-codegen clean-scripts clean-test-integration clean-test-templates clean-test-examples clean-test-markdown
 
 # Compiles everything
-compile-all: compile-json compile-sdk compile-codegen compile-compiler-plugin build-language-plugin compile-scripts
+compile-all: compile-json compile-sdk compile-codegen compile-scripts compile-compiler-plugin build-language-plugin
 
 # Tests everything
-test-all: test-json test-sdk test-codegen test-integration test-templates test-examples test-markdown
+test-all: test-json test-sdk test-codegen test-scripts test-integration test-templates test-examples test-markdown
 
 # Publishes everything locally
-publish-local-all: publish-local-json publish-local-sdk publish-local-codegen install-language-plugin
+publish-local-all: publish-local-json publish-local-sdk publish-local-codegen publish-local-scripts install-language-plugin
 
 # Publishes everything to Maven
-publish-maven-all: publish-maven-json publish-maven-sdk publish-maven-codegen
+publish-maven-all: publish-maven-json publish-maven-sdk publish-maven-codegen publish-maven-scripts
 
 # Runs all necessary checks before committing
 before-commit: compile-all test-all
@@ -386,13 +386,25 @@ clean-test-markdown:
 # Scripts
 ####################
 
-# Compiles scripts module
+# Compiles Besom scripts module
 compile-scripts: publish-local-codegen
-	scala-cli --power compile scripts --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+	scala-cli --power compile scripts --suppress-experimental-feature-warning
 
-# Clean scripts module
+# Clean Besom scripts module
 clean-scripts:
 	scala-cli --power clean scripts
+
+# Runs tests for Besom scripts
+test-scripts:
+	scala-cli --power test scripts --suppress-experimental-feature-warning
+
+# Publishes locally Besom scripts module
+publish-local-scripts: test-scripts
+	scala-cli --power publish local scripts --project-version {{besom-version}} --suppress-experimental-feature-warning
+
+# Publishes Besom scripts module
+publish-maven-scripts: test-scripts
+	scala-cli --power publish scripts --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 # Use Besom scripts directly
 cli *ARGS:
