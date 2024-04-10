@@ -15,7 +15,7 @@ We discuss features and file bugs on GitHub via
 ### Issues
 
 Feel free to pick up any existing issue that looks interesting to you
-or fix a bug you stumble across while using Besom. 
+or fix a bug you stumble across while using Besom.
 No matter the size, we welcome all improvements.
 
 Before investing a lot of time, please let us know, so we can discuss the issue together.
@@ -33,6 +33,7 @@ to make sure your issue is unique, to lighten the triage burden on our maintaine
 ### Adding examples
 
 Start with a template that is closest to your use case, and modify it, e.g.:
+
 ```bash
 mkdir examples/my-example
 cd examples/my-example
@@ -42,19 +43,21 @@ pulumi --logtostderr new https://github.com/VirtusLab/besom/tree/main/templates/
 ## Branching and versioning strategy
 
 We mostly follow the Pulumi strategy:
+
 - `main` branch contains current `*-SNAPSHOT` version
 - `vX.Y.Z` tag marks the `X.Y.Z` release
 - `release/vX.Y.Z` branch contains the `X.Y.Z` release
 - PRs must have a prefix with the **name of the author and issue number** e.g. `pprazak/123-fix-bug`
 
 > [!NOTE]
-> Please make sure to **tag first** before creating a release branch. 
+> Please make sure to **tag first** before creating a release branch.
 
 Versioning is done using [Semantic Versioning](https://semver.org/), with following additions:
+
 - `x.y.z` for core version, where:
-  - `x` no guarantees are made about compatibility,
-  - `y` should not break source compatibility, 
-  - `z` should not break binary compatibility
+    - `x` no guarantees are made about compatibility,
+    - `y` should not break source compatibility,
+    - `z` should not break binary compatibility
 - `a.b.c-core.x.y` for provider version, where `a.b.c` is the schema version
 - `*-SNAPSHOT` versions are used for development versions
 
@@ -128,6 +131,7 @@ therefore might need to manipulate `PATH` to prefer the local version.
 #### Publish locally core SDK packages
 
 Publish locally and install necessary Besom packages:
+
 ```bash
 just publish-local-all 
 ```
@@ -142,6 +146,7 @@ just cli packages local azure docker gcp kubernetes random tls
 ```
 
 To generate all Provider SDKs (takes a very long time):
+
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
 just cli packages local-all
@@ -163,6 +168,7 @@ as `org.virtuslab::besom-core:X.Y.Z` and `org.virtuslab::besom-<package>:A.B.C-c
 Language host provider is published to Maven as `pulumi-language-scala-vX.Y.Z-OS-ARCH.tar.gz`.
 
 To use development version of the language host provider:
+
 ```bash
 pulumi --logtostderr plugin install language scala $(cat version.txt) --server github://api.github.com/VirtusLab/besom
 ```
@@ -172,7 +178,9 @@ To use development version of the Besom SDKs add repository in your `project.sca
 ```scala
 //> using repository sonatype:snapshots
 ```
+
 or use a command line option:
+
 ```bash
 --repository=sonatype:snapshots
 ```
@@ -187,10 +195,9 @@ pulumi --logtostderr new https://github.com/VirtusLab/besom/tree/main/templates/
 
 After all the testing is done, you can publish a release.
 
-It is recommended to use `just power-wash` before publishing a release:
-    
 ```bash
-just power-wash
+just publish-local-all
+just test-all
 ```
 
 #### Bump Besom version (skip for `SNAPSHOT` re-release)
@@ -202,17 +209,18 @@ export GITHUB_TOKEN=$(gh auth token)
 just cli version bump X.Y.Z
 ```
 
-Publish SDKs locally to test and provide fresh dependencies for scripts:
+#### Publish fresh packages locally
+
+It is recommended to use `just power-wash` before publishing a release:
+
+```bash
+just power-wash
+```
+
+Publish the new version of SDKs locally to test and provide fresh dependencies for scripts:
 
 ```bash
 just publish-local-all
-```
-
-#### Create release branch (skip for `SNAPSHOT`)
-
-```bash
-git checkout -b release/v$(cat version.txt)
-git push --set-upstream origin release/v$(cat version.txt)
 ```
 
 #### Update dependencies versions in all `project.scala` files (optional for patch versions)
@@ -224,45 +232,76 @@ export GITHUB_TOKEN=$(gh auth token)
 just cli version update
 ```
 
-#### Update versions in all other places  (skip for `SNAPSHOT`)
+#### Update versions in all other places (skip for `SNAPSHOT`)
 
 Manually update versions in all other places, specifically documentation and website, using find&replace.
 
-#### Create a release draft on GitHub
+##### Create release branch
+
+```bash
+git checkout -b release/v$(cat version.txt)
+```
+
+#### Create a release draft on GitHub and publish language host
+
+We need this done early to be able to publish the language host provider binaries.
 
 ```bash
 just upsert-gh-release
 ```
 
-#### Publish core and language host
+Publish language host provider binaries:
+
 ```bash
 just publish-language-plugins-all
+```
+
+Re-publish local language host provider binary (to fix local setup):
+
+```bash
+just install-language-plugin
+```
+
+#### Publish SDKs to maven
+
+Publishing to maven requires:
+- `OSSRH_USERNAME` - the Sonatype username
+- `OSSRH_PASSWORD` - the Sonatype password
+- `PGP_KEY_ID` - the signing key id (`gpg --list-keys` or `gpg --show-keys`)
+- `PGP_PASSWORD` - the signing key passphrase
+
+Publish main SDK packages to Maven
+
+```bash
 just publish-maven-all
 ```
 
 #### Publish packages (optional for patch versions)
 
 To publish critical package(s):
+
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
-just clean-out cli packages maven aws azure gcp docker kubernetes random command tls eks
+just cli packages maven aws azure gcp docker kubernetes random command tls eks
 ```
 
 Tip: to check what packages are required for `examples` and `templates` use:
+
 ```bash
 just cli version summary examples
 just cli version summary templates
 ```
 
 Publish all packages:
+
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
 just clean-out cli packages maven-all
 ```
 
-Cation: publishing to Maven Central is irreversible.
+**Cation**: publishing to Maven Central is **irreversible**.
 Tip: it's safer to publish the packages on-by-one or in batches due to how Maven Central behaves.
-Note: `azure-native` publishing takes a long time (1-2 hours) it is recommended to handle it separately. 
+Note: `azure-native` publishing takes a long time (1-2 hours) it is recommended to handle it separately.
 
 In case of any issues, you can try to resolve the issues manually at https://oss.sonatype.org/index.html#stagingRepositories.
 
@@ -274,11 +313,14 @@ According to our Git branching and versioning strategy, the release branch shoul
 Make sure to bump the git tag because GitHub Release probably already created the tag.
 
 ```bash
+git push --set-upstream origin release/v$(cat version.txt)
 git tag -f v$(cat version.txt)
 git push -f origin v$(cat version.txt)
 ```
 
-Make sure to merge (DO NOT squash) the release branch to `main` and delete it.
+Make sure to **DO NOT squash** but merge `release/vX.Y.Z` branch into `main` otherwise the tag will not propagate to main.
+Make sure to **DO NOT (auto) delete** the release branch on merge, but on the other hand, let the `release/vX.Y.Z-SNAPSHOT` be deleted on
+merge to not pollute git.
 
 #### After the release
 
@@ -288,7 +330,7 @@ After the release, you can bump the version to the next `-SNAPSHOT` version:
 just cli version bump X.Y.Z-SNAPSHOT
 ```
 
-Remember to release the snapshot to maven. 
+Remember to release the snapshot to maven.
 
 ### Testing examples locally
 
@@ -348,6 +390,7 @@ Both IDEs support rely on BSP and is experimental.
 ### BSP setup with `scala-compose`
 
 Build experimental `scala-compose` and place on `$PATH`:
+
 ```
 git clone git@github.com:VirtusLab/scala-compose.git
 cd scala-compose
@@ -374,18 +417,22 @@ cp out/scala-compose/base-image/nativeImage.dest/scala-cli ~/bin/scala-compose
 ```
 
 Use `scala-compose` in `besom` directory:
+
 ```bash
 scala-compose setup-ide --conf-dir .
 ```
 
 ### IntelliJ setup
+
 IntelliJ support is experimental.
 
 1. Make sure you have the latest IntelliJ
 2. Install Scala plugin and set update chanel to "Nightly Builds"
-3. Use [BSP with `scala-cli`](https://scala-cli.virtuslab.org/docs/cookbooks/intellij-multi-bsp) (also see [IntelliJ documentation](https://www.jetbrains.com/help/idea/bsp-support.html))
+3. Use [BSP with `scala-cli`](https://scala-cli.virtuslab.org/docs/cookbooks/intellij-multi-bsp) (also
+   see [IntelliJ documentation](https://www.jetbrains.com/help/idea/bsp-support.html))
 
 To make sure you have `.bsp` directories, by running:
+
 ```bash
 just setup-intellij
 ```
@@ -397,6 +444,7 @@ Additionally, please set `scalafmt` as the formatter.
 ### VSCode setup
 
 If you are using VSCode:
+
 1. Install [Metals](https://scalameta.org/metals/docs/editors/vscode#installation)
 2. Open the project in Metals.
 
@@ -405,19 +453,22 @@ Make sure you have `.bsp` directory before you open the project in VSCode.
 This might not be enough if your infrastructure is just a part (a module) of your existing Scala project.
 For this to work you have to make your build tool aware of the infrastructure code,
 for **sbt** create a corresponding module:
+
    ```scala
 lazy val infra = project.in(file("infrastructure")).settings(
-   libraryDependencies ++= Seq(
-   "org.virtuslab" %% "besom-kubernetes" % "0.1.0", // or any other sdk you are using
-   "org.virtuslab" %% "besom-core" % "0.1.0"
-   ))
+  libraryDependencies ++= Seq(
+    "org.virtuslab" %% "besom-kubernetes" % "0.1.0", // or any other sdk you are using
+    "org.virtuslab" %% "besom-core" % "0.1.0"
+  ))
    ```
+
 This just informs your IDE about the existence of the infrastructure module,
 DO NOT remove dependencies from `project.scala`, because they are necessary in both places.
 
 ## Troubleshooting
 
 If you susspect the issue is related to serialization, try to skip the preview (dry run is known to be problematic):
+
 ```bash
 pulumi up --skip-preview
 ```
@@ -425,9 +476,10 @@ pulumi up --skip-preview
 ### GitHub might be throttling your requests
 
 If you see an error like this:
+
 - `git` failed to clone or checkout the repository
 - `pulumi` failed to download the provider (401)
-GitHub might be throttling your requests, try to authenticate:
+  GitHub might be throttling your requests, try to authenticate:
 
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
@@ -439,8 +491,9 @@ Pulumi has a few options that can help with debugging.
 
 #### CLI command line
 
-You can pass [debug options](https://www.pulumi.com/docs/support/troubleshooting/#verbose-logging) 
+You can pass [debug options](https://www.pulumi.com/docs/support/troubleshooting/#verbose-logging)
 to any `pulumi` CLI command, e.g.:
+
 ```bash
 pulumi up -v9 --logtostderr 2> log.txt
 less -R log.txt
@@ -451,6 +504,7 @@ Use the flag `--logflow` to apply the same log level to resource providers (but 
 #### `Pulumi.yaml` `runtime.options`
 
 You can set `runtime.options` in `Pulumi.yaml` to pass options to the language host provider, e.g.:
+
 ```yaml
 name: example
 runtime:
@@ -473,6 +527,7 @@ More environment variables can be found in [Pulumi documentation](https://www.pu
 #### Tracing
 
 To collect and view [a trace](https://www.pulumi.com/docs/support/troubleshooting/#tracing):
+
 ```bash
 pulumi up --tracing=file:./up.trace
 PULUMI_DEBUG_COMMANDS=1 pulumi view-trace ./up.trace
@@ -480,7 +535,9 @@ PULUMI_DEBUG_COMMANDS=1 pulumi view-trace ./up.trace
 
 ### Downgrading Pulumi on Mac OS
 
-As a workaround one can downgrade `pulumi` to a version, e.g. `3.94.2` using a [commit hash](https://github.com/Homebrew/homebrew-core/commits/master/Formula/p/pulumi.rb):
+As a workaround one can downgrade `pulumi` to a version, e.g. `3.94.2` using
+a [commit hash](https://github.com/Homebrew/homebrew-core/commits/master/Formula/p/pulumi.rb):
+
 ```
 curl -L -O https://raw.githubusercontent.com/Homebrew/homebrew-core/69b97f26bc78cf68eb30eedd0ca874b6e1914b19/Formula/p/pulumi.rb
 brew install pulumi.rb
@@ -490,41 +547,49 @@ rm pulumi.rb
 ### Compilation issues
 
 Remove `.scala-build`, e.g.:
+
 ```bash
 rm -rf core/.scala-build
 ```
 
 To restart `bloop` compilation server:
+
 ```bash
 scala-cli bloop exit
 ```
 
 To clean the builds:
+
 ```bash
 just clean-all
 ```
 
 If a deep cleaning needed:
+
 ```bash
 just power-wash
 ````
 
 To set `bloop` verbosity:
+
 ```bash
 scala-cli setup-ide -v -v -v .
 ```
 
 To use a nightly version of Scala compiler:
+
 ```bash
 scala-cli compile -S 3.nightly .
 ```
 
 To increase Scala compiler verbosity:
+
 ```bash
 scala-cli compile --scalac-option -verbose .
 ```
 
 To inspect a running JVM byt its PID use `jcmd`, e.g.:
+
 ```bash
 jcmd 25776 VM.flags
 jcmd 25776 GC.heap_info
@@ -535,21 +600,25 @@ jcmd 25776 GC.heap_info
 ### Serde - gRPC/Protobuf serialization and deserialization
 
 The most important information about our serde:
+
 - unknown values are neither empty nor non-empty - we simply don't know
 - maps (structs) don't preserve `Null` protobuf value (but we do preserve unknown values)
 - upstream uses special structures signatures [besom.internal.Constants.SpecialSig](core/src/main/scala/besom/internal/codecs.scala)
   to encode internal metadata that Pulumi uses
 
 Serialization main entry points:
+
 - [besom.internal.RegistersOutputs](core/src/main/scala/besom/internal/RegistersOutputs.scala)
 - [besom.internal.PropertiesSerializer](core/src/main/scala/besom/internal/PropertiesSerializer.scala)
 - [besom.internal.Encoder](core/src/main/scala/besom/internal/codecs.scala)
 
 Deserialization main entry points:
+
 - [besom.internal.ResourceDecoder](core/src/main/scala/besom/internal/ResourceDecoder.scala)
 - [besom.internal.Decoder](core/src/main/scala/besom/internal/codecs.scala)
 
 Other important files:
+
 - [besom.internal.CodecMacros](core/src/main/scala/besom/internal/CodecMacros.scala)
 - [besom.internal.ResourceOps#invokeInternal](core/src/main/scala/besom/internal/ResourceOps.scala)
 - [besom.internal.ProtobufUtil](core/src/main/scala/besom/internal/ProtobufUtil.scala)
@@ -557,5 +626,5 @@ Other important files:
 ## Getting Help
 
 We are sure there are rough edges, and we appreciate you helping out.
-If you want to reach out to other folks in the Besom community 
+If you want to reach out to other folks in the Besom community
 please go to GitHub via [Issues](https://github.com/VirtusLab/besom/issues).
