@@ -2,6 +2,7 @@ package besom.integration.common
 
 import besom.codegen.generator.Result
 import besom.codegen.{Config, PackageMetadata}
+import besom.scripts.Version
 import munit.{Tag, Test}
 import os.Shellable
 
@@ -11,12 +12,8 @@ case object LocalOnly extends munit.Tag("LocalOnly")
 
 val javaVersion                     = Config.DefaultJavaVersion
 val scalaVersion                    = Config.DefaultScalaVersion
-val coreVersion                     = os.read(os.pwd / "version.txt").trim
+val coreVersion                     = Version.besomVersion
 val scalaPluginVersion              = coreVersion
-val providerRandomSchemaVersion     = "4.15.1"
-val providerTlsSchemaVersion        = "5.0.0"
-val providerPurrlSchemaVersion      = "0.5.0"
-val providerKubernetesSchemaVersion = "4.8.1"
 
 val languagePluginDir = os.pwd / ".out" / "language-plugin"
 
