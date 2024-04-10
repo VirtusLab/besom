@@ -1,6 +1,5 @@
 package besom.codegen
 
-import besom.codegen.Config.{CodegenConfig, ProviderConfig}
 import besom.codegen.PackageVersion
 import besom.codegen.Utils.*
 import besom.codegen.metaschema.*
@@ -10,9 +9,8 @@ import scala.meta.*
 import scala.meta.dialects.Scala33
 
 //noinspection ScalaWeakerAccess,TypeAnnotation
-class CodeGen(implicit
-  codegenConfig: CodegenConfig,
-  providerConfig: ProviderConfig,
+class CodeGen(using
+  config: Config,
   typeMapper: TypeMapper,
   schemaProvider: SchemaProvider,
   logger: Logger
@@ -20,10 +18,9 @@ class CodeGen(implicit
   import CodeGen.*
 
   def sourcesFromPulumiPackage(
-    pulumiPackage: PulumiPackage,
     packageInfo: PulumiPackageInfo
   ): Seq[SourceFile] =
-    scalaFiles(pulumiPackage, packageInfo) ++ Seq(
+    scalaFiles(packageInfo) ++ Seq(
       projectConfigFile(
         schemaName = packageInfo.name,
         packageVersion = packageInfo.version
@@ -31,27 +28,26 @@ class CodeGen(implicit
       resourcePluginMetadataFile(
         pluginName = packageInfo.name,
         pluginVersion = packageInfo.version,
-        pluginDownloadUrl = pulumiPackage.pluginDownloadURL
+        pluginDownloadUrl = packageInfo.pulumiPackage.pluginDownloadURL
       )
     )
 
   def scalaFiles(
-    pulumiPackage: PulumiPackage,
     packageInfo: PulumiPackageInfo
   ): Seq[SourceFile] = {
-    val (configFiles, configDependencies) = sourceFilesForConfig(pulumiPackage, packageInfo)
+    val (configFiles, configDependencies) = sourceFilesForConfig(packageInfo)
     configFiles ++
-      sourceFilesForProviderResource(pulumiPackage) ++
-      sourceFilesForNonResourceTypes(pulumiPackage, configDependencies) ++
-      sourceFilesForResources(pulumiPackage) ++
-      sourceFilesForFunctions(pulumiPackage)
+      sourceFilesForProviderResource(packageInfo) ++
+      sourceFilesForNonResourceTypes(packageInfo, configDependencies) ++
+      sourceFilesForResources(packageInfo) ++
+      sourceFilesForFunctions(packageInfo)
   }
 
   def projectConfigFile(schemaName: String, packageVersion: PackageVersion): SourceFile = {
-    val besomVersion     = codegenConfig.besomVersion
-    val scalaVersion     = codegenConfig.scalaVersion
-    val javaVersion      = codegenConfig.javaVersion
-    val coreShortVersion = codegenConfig.coreShortVersion
+    val besomVersion     = config.besomVersion
+    val scalaVersion     = config.scalaVersion
+    val javaVersion      = config.javaVersion
+    val coreShortVersion = config.coreShortVersion
 
     val dependencies = packageDependencies(schemaProvider.dependencies(schemaName, packageVersion))
 
@@ -105,46 +101,64 @@ class CodeGen(implicit
     SourceFile(filePath = filePath, sourceCode = fileContent)
   }
 
-  def sourceFilesForProviderResource(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
-    val typeToken              = pulumiPackage.providerTypeToken
-    val moduleToPackageParts   = pulumiPackage.moduleToPackageParts
-    val providerToPackageParts = pulumiPackage.providerToPackageParts
+  def sourceFilesForProviderResource(packageInfo: PulumiPackageInfo): Seq[SourceFile] = {
+    val typeToken              = packageInfo.providerTypeToken
+    val moduleToPackageParts   = packageInfo.moduleToPackageParts
+    val providerToPackageParts = packageInfo.providerToPackageParts
     val typeCoordinates =
       PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts)
 
+    given Config.Provider = packageInfo.providerConfig
     sourceFilesForResource(
       typeCoordinates = typeCoordinates,
-      resourceDefinition = pulumiPackage.provider,
-      methods = pulumiPackage.parsedMethods(pulumiPackage.provider),
+      resourceDefinition = packageInfo.pulumiPackage.provider,
+      methods = packageInfo.parseMethods(packageInfo.pulumiPackage.provider),
       isProvider = true
     )
   }
 
   def sourceFilesForNonResourceTypes(
-    pulumiPackage: PulumiPackage,
+    packageInfo: PulumiPackageInfo,
     configDependencies: Seq[ConfigDependency]
   ): Seq[SourceFile] = {
-    pulumiPackage.parsedTypes.flatMap { case (coordinates, typeDefinition) =>
-      typeDefinition match {
-        case enumDef: EnumTypeDefinition =>
-          sourceFilesForEnum(
-            typeCoordinates = coordinates,
-            enumDefinition = enumDef
+    given Config.Provider = packageInfo.providerConfig
+
+    packageInfo.parsedTypes.flatMap {
+      case (coordinates, (enumDef: EnumTypeDefinition, false)) =>
+        sourceFilesForEnum(
+          typeCoordinates = coordinates,
+          enumDefinition = enumDef
+        )
+      case (coordinates, (_: EnumTypeDefinition, true)) =>
+        Overlay.readFiles(
+          packageInfo,
+          coordinates.token,
+          Vector(
+            coordinates.asEnumClass
           )
-        case objectDef: ObjectTypeDefinition =>
-          sourceFilesForObjectType(
-            typeCoordinates = coordinates,
-            objectTypeDefinition = objectDef,
-            configDependencies = configDependencies
+        )
+      case (coordinates, (objectDef: ObjectTypeDefinition, false)) =>
+        sourceFilesForObjectType(
+          typeCoordinates = coordinates,
+          objectTypeDefinition = objectDef,
+          configDependencies = configDependencies
+        )
+      case (coordinates, (_: ObjectTypeDefinition, true)) =>
+        Overlay.readFiles(
+          packageInfo,
+          coordinates.token,
+          Vector(
+            coordinates.asObjectClass(asArgsType = false),
+            coordinates.asObjectClass(asArgsType = true)
           )
-      }
+        )
     }.toSeq
   }
 
   def sourceFilesForEnum(
     typeCoordinates: PulumiDefinitionCoordinates,
     enumDefinition: EnumTypeDefinition
-  ): Seq[SourceFile] = {
+  )(using Config.Provider): Seq[SourceFile] = {
     val classCoordinates = typeCoordinates.asEnumClass
 
     val enumClassName = classCoordinates.definitionTypeName.getOrElse(
@@ -210,7 +224,7 @@ class CodeGen(implicit
     typeCoordinates: PulumiDefinitionCoordinates,
     objectTypeDefinition: ObjectTypeDefinition,
     configDependencies: Seq[ConfigDependency]
-  ): Seq[SourceFile] = {
+  )(using Config.Provider): Seq[SourceFile] = {
     val typeToken            = typeCoordinates.token
     val baseClassCoordinates = typeCoordinates.asObjectClass(asArgsType = false)
     val argsClassCoordinates = typeCoordinates.asObjectClass(asArgsType = true)
@@ -256,15 +270,27 @@ class CodeGen(implicit
     Seq(baseClassSourceFile, argsClassSourceFile)
   }
 
-  def sourceFilesForResources(pulumiPackage: PulumiPackage): Seq[SourceFile] = {
-    pulumiPackage.parsedResources
-      .map { case (coordinates, resourceDefinition) =>
-        sourceFilesForResource(
-          typeCoordinates = coordinates,
-          resourceDefinition = resourceDefinition,
-          methods = pulumiPackage.parsedMethods(resourceDefinition),
-          isProvider = false
-        )
+  def sourceFilesForResources(packageInfo: PulumiPackageInfo): Seq[SourceFile] = {
+    given Config.Provider = packageInfo.providerConfig
+
+    packageInfo.parsedResources
+      .map {
+        case (coordinates, (resourceDefinition, false)) =>
+          sourceFilesForResource(
+            typeCoordinates = coordinates,
+            resourceDefinition = resourceDefinition,
+            methods = packageInfo.parseMethods(resourceDefinition),
+            isProvider = false
+          )
+        case (coordinates, (_, true)) =>
+          Overlay.readFiles(
+            packageInfo,
+            coordinates.token,
+            Vector(
+              coordinates.asResourceClass(asArgsType = false),
+              coordinates.asResourceClass(asArgsType = true)
+            )
+          )
       }
       .toSeq
       .flatten
@@ -273,9 +299,9 @@ class CodeGen(implicit
   def sourceFilesForResource(
     typeCoordinates: PulumiDefinitionCoordinates,
     resourceDefinition: ResourceDefinition,
-    methods: Map[FunctionName, (PulumiDefinitionCoordinates, FunctionDefinition)],
+    methods: Map[FunctionName, (PulumiDefinitionCoordinates, (FunctionDefinition, Boolean))],
     isProvider: Boolean
-  ): Seq[SourceFile] = {
+  )(using Config.Provider): Seq[SourceFile] = {
     val token                = typeCoordinates.token
     val baseClassCoordinates = typeCoordinates.asResourceClass(asArgsType = false)
     val argsClassCoordinates = typeCoordinates.asResourceClass(asArgsType = true)
@@ -418,30 +444,33 @@ class CodeGen(implicit
           |) extends ${resourceBaseClass}""".stripMargin.parse[Stat].get
 
     val (methodFiles, baseClassMethods) =
-      methods.map { case (name, (functionCoordinates, functionDefinition)) =>
-        val functionToken     = functionCoordinates.token
-        val methodCoordinates = functionCoordinates.resourceMethod
-        if (!methodCoordinates.definitionName.contains(name)) {
-          logger.warn(
-            s"""|Resource definition method name '${name}' (used) does not match the name
-                |in method definition '${methodCoordinates.definitionName.getOrElse("")}' (ignored)
-                |for function '${functionToken.asString}' - this is a schema error""".stripMargin
-          )
-        }
-        val (supportClassSourceFiles, argsClassRef, argsDefault, resultTypeRef) =
-          functionSupport(functionCoordinates, functionDefinition)
+      methods.map {
+        case (name, (functionCoordinates, (functionDefinition, false))) =>
+          val functionToken     = functionCoordinates.token
+          val methodCoordinates = functionCoordinates.asFunctionClass
+          if (!methodCoordinates.definitionName.contains(name)) {
+            logger.warn(
+              s"""|Resource definition method name '${name}' (used) does not match the name
+                  |in method definition '${methodCoordinates.definitionName.getOrElse("")}' (ignored)
+                  |for function '${functionToken.asString}' - this is a schema error""".stripMargin
+            )
+          }
+          val (supportClassSourceFiles, argsClassRef, argsDefault, resultTypeRef) =
+            functionSupport(functionCoordinates, functionDefinition)
 
-        val thisTypeRef  = baseClassCoordinates.typeRef
-        val tokenLiteral = Lit.String(functionToken.asString)
-        val code =
-          m"""|  def ${Term.Name(name)}(using ctx: besom.types.Context)(
-              |    args: ${argsClassRef}${argsDefault},
-              |    opts: besom.InvokeOptions = besom.InvokeOptions()
-              |  ): besom.types.Output[${resultTypeRef}] =
-              |     ctx.call[$argsClassRef, $resultTypeRef, $thisTypeRef](${tokenLiteral}, args, this, opts)
-              |""".stripMargin.parse[Stat].get
+          val thisTypeRef  = baseClassCoordinates.typeRef
+          val tokenLiteral = Lit.String(functionToken.asString)
+          val code =
+            m"""|  def ${Term.Name(name)}(using ctx: besom.types.Context)(
+                |    args: ${argsClassRef}${argsDefault},
+                |    opts: besom.InvokeOptions = besom.InvokeOptions()
+                |  ): besom.types.Output[${resultTypeRef}] =
+                |     ctx.call[$argsClassRef, $resultTypeRef, $thisTypeRef](${tokenLiteral}, args, this, opts)
+                |""".stripMargin.parse[Stat].get
 
-        (supportClassSourceFiles, code)
+          (supportClassSourceFiles, code)
+        case (_, (_, (_, true))) =>
+          throw GeneralCodegenException("Overlay files are not supported for methods, resource overlay was expected instead")
       }.unzip
 
     val hasDefaultArgsConstructor = requiredInputs.forall { propertyName =>
@@ -516,14 +545,26 @@ class CodeGen(implicit
     Seq(baseClassSourceFile, argsClassSourceFile) ++ methodFiles.flatten
   }
 
-  def sourceFilesForFunctions(pulumiPackage: PulumiPackage)(implicit logger: Logger): Seq[SourceFile] = {
-    pulumiPackage.parsedFunctions
-      .filterNot { case (_, f) => isMethod(f) }
-      .map { case (coordinates, functionDefinition) =>
-        sourceFilesForFunction(
-          functionCoordinates = coordinates,
-          functionDefinition = functionDefinition
-        )
+  def sourceFilesForFunctions(packageInfo: PulumiPackageInfo): Seq[SourceFile] = {
+    given Config.Provider = packageInfo.providerConfig
+    packageInfo.parsedFunctions
+      .filterNot { case (_, (f, _)) => isMethod(f) }
+      .map {
+        case (coordinates, (functionDefinition, false)) =>
+          sourceFilesForFunction(
+            functionCoordinates = coordinates,
+            functionDefinition = functionDefinition
+          )
+        case (coordinates, (_, true)) =>
+          Overlay.readFiles(
+            packageInfo,
+            coordinates.token,
+            Vector(
+              coordinates.asFunctionClass,
+              coordinates.asFunctionArgsClass,
+              coordinates.asFunctionResultClass
+            )
+          )
       }
       .toSeq
       .flatten
@@ -532,7 +573,7 @@ class CodeGen(implicit
   private def functionSupport(
     functionCoordinates: PulumiDefinitionCoordinates,
     functionDefinition: FunctionDefinition
-  ): (Seq[SourceFile], Type.Ref, String, Type) = {
+  )(using Config.Provider): (Seq[SourceFile], Type.Ref, String, Type) = {
     val requiredInputs = functionDefinition.inputs.required
     val inputProperties =
       functionDefinition.inputs.properties.toSeq
@@ -549,7 +590,7 @@ class CodeGen(implicit
           )
         }
 
-    val argsClassCoordinates = functionCoordinates.methodArgsClass
+    val argsClassCoordinates = functionCoordinates.asFunctionArgsClass
     val argsClassSourceFile = makeArgsClassSourceFile(
       classCoordinates = argsClassCoordinates,
       properties = inputProperties,
@@ -557,7 +598,7 @@ class CodeGen(implicit
       isProvider = false
     )
 
-    val resultClassCoordinates = functionCoordinates.methodResultClass
+    val resultClassCoordinates = functionCoordinates.asFunctionResultClass
     val resultClassSourceFileOpt = functionDefinition.outputs.objectTypeDefinition.map { outputTypeDefinition =>
       val requiredOutputs = outputTypeDefinition.required
       val outputProperties =
@@ -598,13 +639,13 @@ class CodeGen(implicit
   def sourceFilesForFunction(
     functionCoordinates: PulumiDefinitionCoordinates,
     functionDefinition: FunctionDefinition
-  ): Seq[SourceFile] = {
+  )(using Config.Provider): Seq[SourceFile] = {
     val (supportClassSourceFiles, argsClassRef, argsDefault, resultTypeRef) = functionSupport(
       functionCoordinates,
       functionDefinition
     )
     val functionToken     = functionCoordinates.token
-    val methodCoordinates = functionCoordinates.resourceMethod
+    val methodCoordinates = functionCoordinates.asFunctionClass
 
     val methodName = methodCoordinates.selectionName.getOrElse(
       throw GeneralCodegenException(
@@ -631,16 +672,15 @@ class CodeGen(implicit
   }
 
   def sourceFilesForConfig(
-    pulumiPackage: PulumiPackage,
     packageInfo: PulumiPackageInfo
   ): (Seq[SourceFile], Seq[ConfigDependency]) = {
     val PulumiToken(_, _, providerName) = PulumiToken(packageInfo.providerTypeToken)
     val coordinates = PulumiToken(providerName, Utils.configModuleName, Utils.configTypeName)
-      .toCoordinates(pulumiPackage)
+      .toCoordinates(packageInfo)
       .asConfigClass
 
-    val configsWithDefault = pulumiPackage.config.defaults
-    val configVariables    = pulumiPackage.config.variables.toSeq.sortBy(_._1)
+    val configsWithDefault = packageInfo.pulumiPackage.config.defaults
+    val configVariables    = packageInfo.pulumiPackage.config.variables.toSeq.sortBy(_._1)
     val configs = configVariables.collect { case (configName, configDefinition) =>
       val get      = Name(s"get${configName.capitalize}")
       val propType = configDefinition.typeReference.asScalaType()
@@ -695,7 +735,7 @@ class CodeGen(implicit
           |${configs.mkString("\n")}
           |""".stripMargin
 
-    if pulumiPackage.config.variables.isEmpty
+    if packageInfo.pulumiPackage.config.variables.isEmpty
     then (Seq.empty, Seq.empty)
     else {
       val _ = scalameta.parseSource(code)
@@ -704,9 +744,9 @@ class CodeGen(implicit
       val sources = Seq(SourceFile(file, code))
       val dependencies: Seq[ConfigDependency] = configVariables.flatMap { case (_, configDefinition) =>
         configDefinition.typeReference.asTokenAndDependency.flatMap {
-          case (Some(token), None) => ConfigSourceDependency(token.toCoordinates(pulumiPackage)) :: Nil
+          case (Some(token), None) => ConfigSourceDependency(token.toCoordinates(packageInfo)) :: Nil
           case (Some(token), Some(metadata)) =>
-            ConfigRuntimeDependency(token.toCoordinates(pulumiPackage), metadata) :: Nil
+            ConfigRuntimeDependency(token.toCoordinates(packageInfo), metadata) :: Nil
           case _ => Nil
         }
       }
@@ -719,7 +759,7 @@ class CodeGen(implicit
     classCoordinates: ScalaDefinitionCoordinates,
     properties: Seq[PropertyInfo],
     requiresJsonFormat: Boolean
-  ): SourceFile = {
+  )(using Config.Provider): SourceFile = {
     val className = classCoordinates.definitionTypeName.getOrElse(
       throw GeneralCodegenException(
         s"Class name for ${classCoordinates.typeRef} could not be found"
@@ -833,7 +873,7 @@ class CodeGen(implicit
     properties: Seq[PropertyInfo],
     isResource: Boolean,
     isProvider: Boolean
-  ): SourceFile = {
+  )(using Config.Provider): SourceFile = {
     val argsClass = makeArgsClass(
       classCoordinates = classCoordinates,
       inputProperties = properties
@@ -998,12 +1038,12 @@ class CodeGen(implicit
 }
 
 object CodeGen:
-  def packageDependency(name: SchemaName, version: SchemaVersion)(implicit codegenConfig: CodegenConfig): String =
+  def packageDependency(name: SchemaName, version: SchemaVersion)(using Config): String =
     packageDependencies(List((name, version)))
-  def packageDependencies(dependencies: List[(SchemaName, SchemaVersion)])(implicit codegenConfig: CodegenConfig): String =
+  def packageDependencies(dependencies: List[(SchemaName, SchemaVersion)])(using config: Config): String =
     dependencies
       .map { case (name, version) =>
-        s"""|//> using dep "org.virtuslab::besom-${name}:${version}-core.${codegenConfig.coreShortVersion}"
+        s"""|//> using dep "org.virtuslab::besom-${name}:${version}-core.${config.coreShortVersion}"
             |""".stripMargin
       }
       .mkString("\n")
