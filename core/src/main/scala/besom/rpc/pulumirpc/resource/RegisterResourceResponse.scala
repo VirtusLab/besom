@@ -20,6 +20,8 @@ package pulumirpc.resource
   *   an optional list of guaranteed-stable properties.
   * @param propertyDependencies
   *   a map from property keys to the dependencies of the property.
+  * @param result
+  *   the reason, whether the resource registration was successful, failed, or skipped.
   */
 @SerialVersionUID(0L)
 final case class RegisterResourceResponse(
@@ -29,6 +31,7 @@ final case class RegisterResourceResponse(
     stable: _root_.scala.Boolean = false,
     stables: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
     propertyDependencies: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceResponse.PropertyDependencies] = _root_.scala.collection.immutable.Map.empty,
+    result: pulumirpc.resource.Result = pulumirpc.resource.Result.SUCCESS,
     unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
     ) extends scalapb.GeneratedMessage with scalapb.lenses.Updatable[RegisterResourceResponse] {
     @transient
@@ -68,6 +71,13 @@ final case class RegisterResourceResponse(
         val __value = pulumirpc.resource.RegisterResourceResponse._typemapper_propertyDependencies.toBase(__item)
         __size += 1 + _root_.com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag(__value.serializedSize) + __value.serializedSize
       }
+      
+      {
+        val __value = result.value
+        if (__value != 0) {
+          __size += _root_.com.google.protobuf.CodedOutputStream.computeEnumSize(7, __value)
+        }
+      };
       __size += unknownFields.serializedSize
       __size
     }
@@ -115,6 +125,12 @@ final case class RegisterResourceResponse(
         _output__.writeUInt32NoTag(__m.serializedSize)
         __m.writeTo(_output__)
       };
+      {
+        val __v = result.value
+        if (__v != 0) {
+          _output__.writeEnum(7, __v)
+        }
+      };
       unknownFields.writeTo(_output__)
     }
     def withUrn(__v: _root_.scala.Predef.String): RegisterResourceResponse = copy(urn = __v)
@@ -131,6 +147,7 @@ final case class RegisterResourceResponse(
     def addPropertyDependencies(__vs: (_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceResponse.PropertyDependencies) *): RegisterResourceResponse = addAllPropertyDependencies(__vs)
     def addAllPropertyDependencies(__vs: Iterable[(_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceResponse.PropertyDependencies)]): RegisterResourceResponse = copy(propertyDependencies = propertyDependencies ++ __vs)
     def withPropertyDependencies(__v: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceResponse.PropertyDependencies]): RegisterResourceResponse = copy(propertyDependencies = __v)
+    def withResult(__v: pulumirpc.resource.Result): RegisterResourceResponse = copy(result = __v)
     def withUnknownFields(__v: _root_.scalapb.UnknownFieldSet) = copy(unknownFields = __v)
     def discardUnknownFields = copy(unknownFields = _root_.scalapb.UnknownFieldSet.empty)
     def getFieldByNumber(__fieldNumber: _root_.scala.Int): _root_.scala.Any = {
@@ -150,6 +167,10 @@ final case class RegisterResourceResponse(
         }
         case 5 => stables
         case 6 => propertyDependencies.iterator.map(pulumirpc.resource.RegisterResourceResponse._typemapper_propertyDependencies.toBase(_)).toSeq
+        case 7 => {
+          val __t = result.javaValueDescriptor
+          if (__t.getNumber() != 0) __t else null
+        }
       }
     }
     def getField(__field: _root_.scalapb.descriptors.FieldDescriptor): _root_.scalapb.descriptors.PValue = {
@@ -161,6 +182,7 @@ final case class RegisterResourceResponse(
         case 4 => _root_.scalapb.descriptors.PBoolean(stable)
         case 5 => _root_.scalapb.descriptors.PRepeated(stables.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
         case 6 => _root_.scalapb.descriptors.PRepeated(propertyDependencies.iterator.map(pulumirpc.resource.RegisterResourceResponse._typemapper_propertyDependencies.toBase(_).toPMessage).toVector)
+        case 7 => _root_.scalapb.descriptors.PEnum(result.scalaValueDescriptor)
       }
     }
     def toProtoString: _root_.scala.Predef.String = _root_.scalapb.TextFormat.printToUnicodeString(this)
@@ -177,6 +199,7 @@ object RegisterResourceResponse extends scalapb.GeneratedMessageCompanion[pulumi
     var __stable: _root_.scala.Boolean = false
     val __stables: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
     val __propertyDependencies: _root_.scala.collection.mutable.Builder[(_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceResponse.PropertyDependencies), _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceResponse.PropertyDependencies]] = _root_.scala.collection.immutable.Map.newBuilder[_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceResponse.PropertyDependencies]
+    var __result: pulumirpc.resource.Result = pulumirpc.resource.Result.SUCCESS
     var `_unknownFields__`: _root_.scalapb.UnknownFieldSet.Builder = null
     var _done__ = false
     while (!_done__) {
@@ -188,13 +211,15 @@ object RegisterResourceResponse extends scalapb.GeneratedMessageCompanion[pulumi
         case 18 =>
           __id = _input__.readStringRequireUtf8()
         case 26 =>
-          __object = Option(__object.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __object = _root_.scala.Option(__object.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 32 =>
           __stable = _input__.readBool()
         case 42 =>
           __stables += _input__.readStringRequireUtf8()
         case 50 =>
           __propertyDependencies += pulumirpc.resource.RegisterResourceResponse._typemapper_propertyDependencies.toCustom(_root_.scalapb.LiteParser.readMessage[pulumirpc.resource.RegisterResourceResponse.PropertyDependenciesEntry](_input__))
+        case 56 =>
+          __result = pulumirpc.resource.Result.fromValue(_input__.readEnum())
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -209,6 +234,7 @@ object RegisterResourceResponse extends scalapb.GeneratedMessageCompanion[pulumi
         stable = __stable,
         stables = __stables.result(),
         propertyDependencies = __propertyDependencies.result(),
+        result = __result,
         unknownFields = if (_unknownFields__ == null) _root_.scalapb.UnknownFieldSet.empty else _unknownFields__.result()
     )
   }
@@ -221,7 +247,8 @@ object RegisterResourceResponse extends scalapb.GeneratedMessageCompanion[pulumi
         `object` = __fieldsMap.get(scalaDescriptor.findFieldByNumber(3).get).flatMap(_.as[_root_.scala.Option[com.google.protobuf.struct.Struct]]),
         stable = __fieldsMap.get(scalaDescriptor.findFieldByNumber(4).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
         stables = __fieldsMap.get(scalaDescriptor.findFieldByNumber(5).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
-        propertyDependencies = __fieldsMap.get(scalaDescriptor.findFieldByNumber(6).get).map(_.as[_root_.scala.Seq[pulumirpc.resource.RegisterResourceResponse.PropertyDependenciesEntry]]).getOrElse(_root_.scala.Seq.empty).iterator.map(pulumirpc.resource.RegisterResourceResponse._typemapper_propertyDependencies.toCustom(_)).toMap
+        propertyDependencies = __fieldsMap.get(scalaDescriptor.findFieldByNumber(6).get).map(_.as[_root_.scala.Seq[pulumirpc.resource.RegisterResourceResponse.PropertyDependenciesEntry]]).getOrElse(_root_.scala.Seq.empty).iterator.map(pulumirpc.resource.RegisterResourceResponse._typemapper_propertyDependencies.toCustom(_)).toMap,
+        result = pulumirpc.resource.Result.fromValue(__fieldsMap.get(scalaDescriptor.findFieldByNumber(7).get).map(_.as[_root_.scalapb.descriptors.EnumValueDescriptor]).getOrElse(pulumirpc.resource.Result.SUCCESS.scalaValueDescriptor).number)
       )
     case _ => throw new RuntimeException("Expected PMessage")
   }
@@ -240,14 +267,19 @@ object RegisterResourceResponse extends scalapb.GeneratedMessageCompanion[pulumi
       _root_.pulumirpc.resource.RegisterResourceResponse.PropertyDependencies,
       _root_.pulumirpc.resource.RegisterResourceResponse.PropertyDependenciesEntry
     )
-  def enumCompanionForFieldNumber(__fieldNumber: _root_.scala.Int): _root_.scalapb.GeneratedEnumCompanion[_] = throw new MatchError(__fieldNumber)
+  def enumCompanionForFieldNumber(__fieldNumber: _root_.scala.Int): _root_.scalapb.GeneratedEnumCompanion[_] = {
+    (__fieldNumber: @_root_.scala.unchecked) match {
+      case 7 => pulumirpc.resource.Result
+    }
+  }
   lazy val defaultInstance = pulumirpc.resource.RegisterResourceResponse(
     urn = "",
     id = "",
     `object` = _root_.scala.None,
     stable = false,
     stables = _root_.scala.Seq.empty,
-    propertyDependencies = _root_.scala.collection.immutable.Map.empty
+    propertyDependencies = _root_.scala.collection.immutable.Map.empty,
+    result = pulumirpc.resource.Result.SUCCESS
   )
   /** PropertyDependencies describes the resources that a particular property depends on.
     *
@@ -449,7 +481,7 @@ object RegisterResourceResponse extends scalapb.GeneratedMessageCompanion[pulumi
           case 10 =>
             __key = _input__.readStringRequireUtf8()
           case 18 =>
-            __value = Option(__value.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.resource.RegisterResourceResponse.PropertyDependencies](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+            __value = _root_.scala.Option(__value.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.resource.RegisterResourceResponse.PropertyDependencies](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
           case tag =>
             if (_unknownFields__ == null) {
               _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -489,7 +521,7 @@ object RegisterResourceResponse extends scalapb.GeneratedMessageCompanion[pulumi
     )
     implicit class PropertyDependenciesEntryLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.RegisterResourceResponse.PropertyDependenciesEntry]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.resource.RegisterResourceResponse.PropertyDependenciesEntry](_l) {
       def key: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.key)((c_, f_) => c_.copy(key = f_))
-      def value: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.RegisterResourceResponse.PropertyDependencies] = field(_.getValue)((c_, f_) => c_.copy(value = Option(f_)))
+      def value: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.RegisterResourceResponse.PropertyDependencies] = field(_.getValue)((c_, f_) => c_.copy(value = _root_.scala.Option(f_)))
       def optionalValue: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[pulumirpc.resource.RegisterResourceResponse.PropertyDependencies]] = field(_.value)((c_, f_) => c_.copy(value = f_))
     }
     final val KEY_FIELD_NUMBER = 1
@@ -510,11 +542,12 @@ object RegisterResourceResponse extends scalapb.GeneratedMessageCompanion[pulumi
   implicit class RegisterResourceResponseLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.RegisterResourceResponse]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.resource.RegisterResourceResponse](_l) {
     def urn: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.urn)((c_, f_) => c_.copy(urn = f_))
     def id: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.id)((c_, f_) => c_.copy(id = f_))
-    def `object`: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getObject)((c_, f_) => c_.copy(`object` = Option(f_)))
+    def `object`: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getObject)((c_, f_) => c_.copy(`object` = _root_.scala.Option(f_)))
     def optionalObject: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.`object`)((c_, f_) => c_.copy(`object` = f_))
     def stable: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.stable)((c_, f_) => c_.copy(stable = f_))
     def stables: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.stables)((c_, f_) => c_.copy(stables = f_))
     def propertyDependencies: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceResponse.PropertyDependencies]] = field(_.propertyDependencies)((c_, f_) => c_.copy(propertyDependencies = f_))
+    def result: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.Result] = field(_.result)((c_, f_) => c_.copy(result = f_))
   }
   final val URN_FIELD_NUMBER = 1
   final val ID_FIELD_NUMBER = 2
@@ -522,6 +555,7 @@ object RegisterResourceResponse extends scalapb.GeneratedMessageCompanion[pulumi
   final val STABLE_FIELD_NUMBER = 4
   final val STABLES_FIELD_NUMBER = 5
   final val PROPERTYDEPENDENCIES_FIELD_NUMBER = 6
+  final val RESULT_FIELD_NUMBER = 7
   @transient
   private[resource] val _typemapper_propertyDependencies: _root_.scalapb.TypeMapper[pulumirpc.resource.RegisterResourceResponse.PropertyDependenciesEntry, (_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceResponse.PropertyDependencies)] = implicitly[_root_.scalapb.TypeMapper[pulumirpc.resource.RegisterResourceResponse.PropertyDependenciesEntry, (_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceResponse.PropertyDependencies)]]
   def of(
@@ -530,14 +564,16 @@ object RegisterResourceResponse extends scalapb.GeneratedMessageCompanion[pulumi
     `object`: _root_.scala.Option[com.google.protobuf.struct.Struct],
     stable: _root_.scala.Boolean,
     stables: _root_.scala.Seq[_root_.scala.Predef.String],
-    propertyDependencies: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceResponse.PropertyDependencies]
+    propertyDependencies: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceResponse.PropertyDependencies],
+    result: pulumirpc.resource.Result
   ): _root_.pulumirpc.resource.RegisterResourceResponse = _root_.pulumirpc.resource.RegisterResourceResponse(
     urn,
     id,
     `object`,
     stable,
     stables,
-    propertyDependencies
+    propertyDependencies,
+    result
   )
   // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.RegisterResourceResponse])
 }

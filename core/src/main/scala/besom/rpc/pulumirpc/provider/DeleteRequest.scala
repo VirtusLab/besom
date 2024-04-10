@@ -166,11 +166,11 @@ object DeleteRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
         case 18 =>
           __urn = _input__.readStringRequireUtf8()
         case 26 =>
-          __properties = Option(__properties.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __properties = _root_.scala.Option(__properties.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 33 =>
           __timeout = _input__.readDouble()
         case 42 =>
-          __oldInputs = Option(__oldInputs.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __oldInputs = _root_.scala.Option(__oldInputs.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -221,10 +221,10 @@ object DeleteRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
   implicit class DeleteRequestLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.DeleteRequest]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.provider.DeleteRequest](_l) {
     def id: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.id)((c_, f_) => c_.copy(id = f_))
     def urn: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.urn)((c_, f_) => c_.copy(urn = f_))
-    def properties: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getProperties)((c_, f_) => c_.copy(properties = Option(f_)))
+    def properties: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getProperties)((c_, f_) => c_.copy(properties = _root_.scala.Option(f_)))
     def optionalProperties: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.properties)((c_, f_) => c_.copy(properties = f_))
     def timeout: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Double] = field(_.timeout)((c_, f_) => c_.copy(timeout = f_))
-    def oldInputs: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getOldInputs)((c_, f_) => c_.copy(oldInputs = Option(f_)))
+    def oldInputs: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getOldInputs)((c_, f_) => c_.copy(oldInputs = _root_.scala.Option(f_)))
     def optionalOldInputs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.oldInputs)((c_, f_) => c_.copy(oldInputs = f_))
   }
   final val ID_FIELD_NUMBER = 1

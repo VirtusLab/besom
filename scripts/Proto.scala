@@ -51,21 +51,29 @@ private def fetchProto(cwd: os.Path, targetPath: os.Path): Unit =
 private def copyProto(sourcePath: os.Path, targetPath: os.Path): Unit =
   println(s"copying from $sourcePath to $targetPath")
 
-  val allowDirList = List()
-
   val allowFileList = List(
-    "alias.proto",
-    "engine.proto",
-    "plugin.proto",
-    "provider.proto",
-    "resource.proto",
-    "source.proto",
-    "status.proto"
+    os.rel / "pulumi" / "alias.proto",
+    os.rel / "pulumi" / "callback.proto",
+    os.rel / "pulumi" / "engine.proto",
+    os.rel / "pulumi" / "plugin.proto",
+    os.rel / "pulumi" / "provider.proto",
+    os.rel / "pulumi" / "resource.proto",
+    os.rel / "pulumi" / "source.proto",
+    os.rel / "google" / "protobuf" / "status.proto"
   )
 
   val allowExtensions = List("proto")
 
-  copyFilteredFiles(sourcePath, targetPath, allowDirList, allowFileList, allowExtensions)
+  os.makeDir.all(targetPath)
+  os.walk(sourcePath)
+    .filter(os.isFile(_))
+    .filter(f => allowExtensions.contains(f.ext))
+    .filter(f => allowFileList.exists(f.endsWith(_)))
+    .foreach { source =>
+      val target = targetPath / source.relativeTo(sourcePath)
+      os.copy.over(source, target, createFolders = true, replaceExisting = true)
+      println(s"copied ${source.relativeTo(sourcePath)} into ${target.relativeTo(targetPath)}")
+    }
 
 private def compileProto(cwd: os.Path, protoPath: os.Path): Unit =
   if !isProtocInstalled then

@@ -55,6 +55,8 @@ package pulumirpc.provider
   *   properties that, when changed, trigger a replacement
   * @param retainOnDelete
   *   whether to retain the resource in the cloud provider when it is deleted
+  * @param acceptsOutputValues
+  *   the engine can be passed output values back, stateDependencies can be left blank if returning output values.
   */
 @SerialVersionUID(0L)
 final case class ConstructRequest(
@@ -82,6 +84,7 @@ final case class ConstructRequest(
     ignoreChanges: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
     replaceOnChanges: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
     retainOnDelete: _root_.scala.Boolean = false,
+    acceptsOutputValues: _root_.scala.Boolean = false,
     unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
     ) extends scalapb.GeneratedMessage with scalapb.lenses.Updatable[ConstructRequest] {
     @transient
@@ -221,6 +224,13 @@ final case class ConstructRequest(
         val __value = retainOnDelete
         if (__value != false) {
           __size += _root_.com.google.protobuf.CodedOutputStream.computeBoolSize(24, __value)
+        }
+      };
+      
+      {
+        val __value = acceptsOutputValues
+        if (__value != false) {
+          __size += _root_.com.google.protobuf.CodedOutputStream.computeBoolSize(25, __value)
         }
       };
       __size += unknownFields.serializedSize
@@ -368,6 +378,12 @@ final case class ConstructRequest(
           _output__.writeBool(24, __v)
         }
       };
+      {
+        val __v = acceptsOutputValues
+        if (__v != false) {
+          _output__.writeBool(25, __v)
+        }
+      };
       unknownFields.writeTo(_output__)
     }
     def withProject(__v: _root_.scala.Predef.String): ConstructRequest = copy(project = __v)
@@ -425,6 +441,7 @@ final case class ConstructRequest(
     def addAllReplaceOnChanges(__vs: Iterable[_root_.scala.Predef.String]): ConstructRequest = copy(replaceOnChanges = replaceOnChanges ++ __vs)
     def withReplaceOnChanges(__v: _root_.scala.Seq[_root_.scala.Predef.String]): ConstructRequest = copy(replaceOnChanges = __v)
     def withRetainOnDelete(__v: _root_.scala.Boolean): ConstructRequest = copy(retainOnDelete = __v)
+    def withAcceptsOutputValues(__v: _root_.scala.Boolean): ConstructRequest = copy(acceptsOutputValues = __v)
     def withUnknownFields(__v: _root_.scalapb.UnknownFieldSet) = copy(unknownFields = __v)
     def discardUnknownFields = copy(unknownFields = _root_.scalapb.UnknownFieldSet.empty)
     def getFieldByNumber(__fieldNumber: _root_.scala.Int): _root_.scala.Any = {
@@ -492,6 +509,10 @@ final case class ConstructRequest(
           val __t = retainOnDelete
           if (__t != false) __t else null
         }
+        case 25 => {
+          val __t = acceptsOutputValues
+          if (__t != false) __t else null
+        }
       }
     }
     def getField(__field: _root_.scalapb.descriptors.FieldDescriptor): _root_.scalapb.descriptors.PValue = {
@@ -521,6 +542,7 @@ final case class ConstructRequest(
         case 22 => _root_.scalapb.descriptors.PRepeated(ignoreChanges.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
         case 23 => _root_.scalapb.descriptors.PRepeated(replaceOnChanges.iterator.map(_root_.scalapb.descriptors.PString(_)).toVector)
         case 24 => _root_.scalapb.descriptors.PBoolean(retainOnDelete)
+        case 25 => _root_.scalapb.descriptors.PBoolean(acceptsOutputValues)
       }
     }
     def toProtoString: _root_.scala.Predef.String = _root_.scalapb.TextFormat.printToUnicodeString(this)
@@ -555,6 +577,7 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
     val __ignoreChanges: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
     val __replaceOnChanges: _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String] = new _root_.scala.collection.immutable.VectorBuilder[_root_.scala.Predef.String]
     var __retainOnDelete: _root_.scala.Boolean = false
+    var __acceptsOutputValues: _root_.scala.Boolean = false
     var `_unknownFields__`: _root_.scalapb.UnknownFieldSet.Builder = null
     var _done__ = false
     while (!_done__) {
@@ -580,7 +603,7 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
         case 74 =>
           __parent = _input__.readStringRequireUtf8()
         case 82 =>
-          __inputs = Option(__inputs.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __inputs = _root_.scala.Option(__inputs.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 90 =>
           __inputDependencies += pulumirpc.provider.ConstructRequest._typemapper_inputDependencies.toCustom(_root_.scalapb.LiteParser.readMessage[pulumirpc.provider.ConstructRequest.InputDependenciesEntry](_input__))
         case 106 =>
@@ -598,7 +621,7 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
         case 146 =>
           __additionalSecretOutputs += _input__.readStringRequireUtf8()
         case 154 =>
-          __customTimeouts = Option(__customTimeouts.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.provider.ConstructRequest.CustomTimeouts](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __customTimeouts = _root_.scala.Option(__customTimeouts.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.provider.ConstructRequest.CustomTimeouts](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 162 =>
           __deletedWith = _input__.readStringRequireUtf8()
         case 168 =>
@@ -609,6 +632,8 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
           __replaceOnChanges += _input__.readStringRequireUtf8()
         case 192 =>
           __retainOnDelete = _input__.readBool()
+        case 200 =>
+          __acceptsOutputValues = _input__.readBool()
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -641,6 +666,7 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
         ignoreChanges = __ignoreChanges.result(),
         replaceOnChanges = __replaceOnChanges.result(),
         retainOnDelete = __retainOnDelete,
+        acceptsOutputValues = __acceptsOutputValues,
         unknownFields = if (_unknownFields__ == null) _root_.scalapb.UnknownFieldSet.empty else _unknownFields__.result()
     )
   }
@@ -671,7 +697,8 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
         deleteBeforeReplace = __fieldsMap.get(scalaDescriptor.findFieldByNumber(21).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
         ignoreChanges = __fieldsMap.get(scalaDescriptor.findFieldByNumber(22).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
         replaceOnChanges = __fieldsMap.get(scalaDescriptor.findFieldByNumber(23).get).map(_.as[_root_.scala.Seq[_root_.scala.Predef.String]]).getOrElse(_root_.scala.Seq.empty),
-        retainOnDelete = __fieldsMap.get(scalaDescriptor.findFieldByNumber(24).get).map(_.as[_root_.scala.Boolean]).getOrElse(false)
+        retainOnDelete = __fieldsMap.get(scalaDescriptor.findFieldByNumber(24).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
+        acceptsOutputValues = __fieldsMap.get(scalaDescriptor.findFieldByNumber(25).get).map(_.as[_root_.scala.Boolean]).getOrElse(false)
       )
     case _ => throw new RuntimeException("Expected PMessage")
   }
@@ -721,7 +748,8 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
     deleteBeforeReplace = false,
     ignoreChanges = _root_.scala.Seq.empty,
     replaceOnChanges = _root_.scala.Seq.empty,
-    retainOnDelete = false
+    retainOnDelete = false,
+    acceptsOutputValues = false
   )
   /** PropertyDependencies describes the resources that a particular property depends on.
     *
@@ -1256,7 +1284,7 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
           case 10 =>
             __key = _input__.readStringRequireUtf8()
           case 18 =>
-            __value = Option(__value.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.provider.ConstructRequest.PropertyDependencies](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+            __value = _root_.scala.Option(__value.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.provider.ConstructRequest.PropertyDependencies](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
           case tag =>
             if (_unknownFields__ == null) {
               _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -1296,7 +1324,7 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
     )
     implicit class InputDependenciesEntryLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.ConstructRequest.InputDependenciesEntry]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.provider.ConstructRequest.InputDependenciesEntry](_l) {
       def key: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.key)((c_, f_) => c_.copy(key = f_))
-      def value: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.ConstructRequest.PropertyDependencies] = field(_.getValue)((c_, f_) => c_.copy(value = Option(f_)))
+      def value: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.ConstructRequest.PropertyDependencies] = field(_.getValue)((c_, f_) => c_.copy(value = _root_.scala.Option(f_)))
       def optionalValue: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[pulumirpc.provider.ConstructRequest.PropertyDependencies]] = field(_.value)((c_, f_) => c_.copy(value = f_))
     }
     final val KEY_FIELD_NUMBER = 1
@@ -1468,7 +1496,7 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
     def `type`: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.`type`)((c_, f_) => c_.copy(`type` = f_))
     def name: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.name)((c_, f_) => c_.copy(name = f_))
     def parent: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.parent)((c_, f_) => c_.copy(parent = f_))
-    def inputs: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getInputs)((c_, f_) => c_.copy(inputs = Option(f_)))
+    def inputs: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getInputs)((c_, f_) => c_.copy(inputs = _root_.scala.Option(f_)))
     def optionalInputs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.inputs)((c_, f_) => c_.copy(inputs = f_))
     def inputDependencies: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, pulumirpc.provider.ConstructRequest.PropertyDependencies]] = field(_.inputDependencies)((c_, f_) => c_.copy(inputDependencies = f_))
     def providers: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.scala.Predef.String]] = field(_.providers)((c_, f_) => c_.copy(providers = f_))
@@ -1478,13 +1506,14 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
     def protect: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.protect)((c_, f_) => c_.copy(protect = f_))
     def aliases: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.aliases)((c_, f_) => c_.copy(aliases = f_))
     def additionalSecretOutputs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.additionalSecretOutputs)((c_, f_) => c_.copy(additionalSecretOutputs = f_))
-    def customTimeouts: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.ConstructRequest.CustomTimeouts] = field(_.getCustomTimeouts)((c_, f_) => c_.copy(customTimeouts = Option(f_)))
+    def customTimeouts: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.ConstructRequest.CustomTimeouts] = field(_.getCustomTimeouts)((c_, f_) => c_.copy(customTimeouts = _root_.scala.Option(f_)))
     def optionalCustomTimeouts: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[pulumirpc.provider.ConstructRequest.CustomTimeouts]] = field(_.customTimeouts)((c_, f_) => c_.copy(customTimeouts = f_))
     def deletedWith: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.deletedWith)((c_, f_) => c_.copy(deletedWith = f_))
     def deleteBeforeReplace: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.deleteBeforeReplace)((c_, f_) => c_.copy(deleteBeforeReplace = f_))
     def ignoreChanges: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.ignoreChanges)((c_, f_) => c_.copy(ignoreChanges = f_))
     def replaceOnChanges: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.replaceOnChanges)((c_, f_) => c_.copy(replaceOnChanges = f_))
     def retainOnDelete: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.retainOnDelete)((c_, f_) => c_.copy(retainOnDelete = f_))
+    def acceptsOutputValues: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.acceptsOutputValues)((c_, f_) => c_.copy(acceptsOutputValues = f_))
   }
   final val PROJECT_FIELD_NUMBER = 1
   final val STACK_FIELD_NUMBER = 2
@@ -1510,6 +1539,7 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
   final val IGNORECHANGES_FIELD_NUMBER = 22
   final val REPLACEONCHANGES_FIELD_NUMBER = 23
   final val RETAINONDELETE_FIELD_NUMBER = 24
+  final val ACCEPTS_OUTPUT_VALUES_FIELD_NUMBER = 25
   @transient
   private[provider] val _typemapper_config: _root_.scalapb.TypeMapper[pulumirpc.provider.ConstructRequest.ConfigEntry, (_root_.scala.Predef.String, _root_.scala.Predef.String)] = implicitly[_root_.scalapb.TypeMapper[pulumirpc.provider.ConstructRequest.ConfigEntry, (_root_.scala.Predef.String, _root_.scala.Predef.String)]]
   @transient
@@ -1540,7 +1570,8 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
     deleteBeforeReplace: _root_.scala.Boolean,
     ignoreChanges: _root_.scala.Seq[_root_.scala.Predef.String],
     replaceOnChanges: _root_.scala.Seq[_root_.scala.Predef.String],
-    retainOnDelete: _root_.scala.Boolean
+    retainOnDelete: _root_.scala.Boolean,
+    acceptsOutputValues: _root_.scala.Boolean
   ): _root_.pulumirpc.provider.ConstructRequest = _root_.pulumirpc.provider.ConstructRequest(
     project,
     stack,
@@ -1565,7 +1596,8 @@ object ConstructRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
     deleteBeforeReplace,
     ignoreChanges,
     replaceOnChanges,
-    retainOnDelete
+    retainOnDelete,
+    acceptsOutputValues
   )
   // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.ConstructRequest])
 }

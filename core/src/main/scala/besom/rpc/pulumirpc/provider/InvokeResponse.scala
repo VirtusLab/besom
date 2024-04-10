@@ -94,7 +94,7 @@ object InvokeResponse extends scalapb.GeneratedMessageCompanion[pulumirpc.provid
       _tag__ match {
         case 0 => _done__ = true
         case 10 =>
-          __return = Option(__return.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __return = _root_.scala.Option(__return.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 18 =>
           __failures += _root_.scalapb.LiteParser.readMessage[pulumirpc.provider.CheckFailure](_input__)
         case tag =>
@@ -136,7 +136,7 @@ object InvokeResponse extends scalapb.GeneratedMessageCompanion[pulumirpc.provid
     failures = _root_.scala.Seq.empty
   )
   implicit class InvokeResponseLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.InvokeResponse]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.provider.InvokeResponse](_l) {
-    def `return`: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getReturn)((c_, f_) => c_.copy(`return` = Option(f_)))
+    def `return`: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getReturn)((c_, f_) => c_.copy(`return` = _root_.scala.Option(f_)))
     def optionalReturn: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.`return`)((c_, f_) => c_.copy(`return` = f_))
     def failures: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[pulumirpc.provider.CheckFailure]] = field(_.failures)((c_, f_) => c_.copy(failures = f_))
   }

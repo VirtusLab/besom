@@ -366,7 +366,7 @@ object ReadResourceRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.r
         case 34 =>
           __parent = _input__.readStringRequireUtf8()
         case 42 =>
-          __properties = Option(__properties.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __properties = _root_.scala.Option(__properties.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 50 =>
           __dependencies += _input__.readStringRequireUtf8()
         case 58 =>
@@ -384,7 +384,7 @@ object ReadResourceRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.r
         case 122 =>
           __pluginChecksums += pulumirpc.resource.ReadResourceRequest._typemapper_pluginChecksums.toCustom(_root_.scalapb.LiteParser.readMessage[pulumirpc.resource.ReadResourceRequest.PluginChecksumsEntry](_input__))
         case 114 =>
-          __sourcePosition = Option(__sourcePosition.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.source.SourcePosition](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __sourcePosition = _root_.scala.Option(__sourcePosition.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.source.SourcePosition](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -612,7 +612,7 @@ object ReadResourceRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.r
     def `type`: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.`type`)((c_, f_) => c_.copy(`type` = f_))
     def name: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.name)((c_, f_) => c_.copy(name = f_))
     def parent: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.parent)((c_, f_) => c_.copy(parent = f_))
-    def properties: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getProperties)((c_, f_) => c_.copy(properties = Option(f_)))
+    def properties: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getProperties)((c_, f_) => c_.copy(properties = _root_.scala.Option(f_)))
     def optionalProperties: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.properties)((c_, f_) => c_.copy(properties = f_))
     def dependencies: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.dependencies)((c_, f_) => c_.copy(dependencies = f_))
     def provider: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.provider)((c_, f_) => c_.copy(provider = f_))
@@ -622,7 +622,7 @@ object ReadResourceRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.r
     def acceptResources: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.acceptResources)((c_, f_) => c_.copy(acceptResources = f_))
     def pluginDownloadURL: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.pluginDownloadURL)((c_, f_) => c_.copy(pluginDownloadURL = f_))
     def pluginChecksums: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString]] = field(_.pluginChecksums)((c_, f_) => c_.copy(pluginChecksums = f_))
-    def sourcePosition: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.source.SourcePosition] = field(_.getSourcePosition)((c_, f_) => c_.copy(sourcePosition = Option(f_)))
+    def sourcePosition: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.source.SourcePosition] = field(_.getSourcePosition)((c_, f_) => c_.copy(sourcePosition = _root_.scala.Option(f_)))
     def optionalSourcePosition: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[pulumirpc.source.SourcePosition]] = field(_.sourcePosition)((c_, f_) => c_.copy(sourcePosition = f_))
   }
   final val ID_FIELD_NUMBER = 1

@@ -101,7 +101,7 @@ object RegisterResourceOutputsRequest extends scalapb.GeneratedMessageCompanion[
         case 10 =>
           __urn = _input__.readStringRequireUtf8()
         case 18 =>
-          __outputs = Option(__outputs.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __outputs = _root_.scala.Option(__outputs.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -141,7 +141,7 @@ object RegisterResourceOutputsRequest extends scalapb.GeneratedMessageCompanion[
   )
   implicit class RegisterResourceOutputsRequestLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.RegisterResourceOutputsRequest]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.resource.RegisterResourceOutputsRequest](_l) {
     def urn: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.urn)((c_, f_) => c_.copy(urn = f_))
-    def outputs: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getOutputs)((c_, f_) => c_.copy(outputs = Option(f_)))
+    def outputs: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getOutputs)((c_, f_) => c_.copy(outputs = _root_.scala.Option(f_)))
     def optionalOutputs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.outputs)((c_, f_) => c_.copy(outputs = f_))
   }
   final val URN_FIELD_NUMBER = 1

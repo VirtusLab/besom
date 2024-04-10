@@ -37,12 +37,12 @@ object ResourceMonitorGrpc {
       .setSchemaDescriptor(_root_.scalapb.grpc.ConcreteProtoMethodDescriptorSupplier.fromMethodDescriptor(pulumirpc.resource.ResourceProto.javaDescriptor.getServices().get(0).getMethods().get(2)))
       .build()
   
-  val METHOD_CALL: _root_.io.grpc.MethodDescriptor[pulumirpc.provider.CallRequest, pulumirpc.provider.CallResponse] =
+  val METHOD_CALL: _root_.io.grpc.MethodDescriptor[pulumirpc.resource.ResourceCallRequest, pulumirpc.provider.CallResponse] =
     _root_.io.grpc.MethodDescriptor.newBuilder()
       .setType(_root_.io.grpc.MethodDescriptor.MethodType.UNARY)
       .setFullMethodName(_root_.io.grpc.MethodDescriptor.generateFullMethodName("pulumirpc.ResourceMonitor", "Call"))
       .setSampledToLocalTracing(true)
-      .setRequestMarshaller(_root_.scalapb.grpc.Marshaller.forMessage[pulumirpc.provider.CallRequest])
+      .setRequestMarshaller(_root_.scalapb.grpc.Marshaller.forMessage[pulumirpc.resource.ResourceCallRequest])
       .setResponseMarshaller(_root_.scalapb.grpc.Marshaller.forMessage[pulumirpc.provider.CallResponse])
       .setSchemaDescriptor(_root_.scalapb.grpc.ConcreteProtoMethodDescriptorSupplier.fromMethodDescriptor(pulumirpc.resource.ResourceProto.javaDescriptor.getServices().get(0).getMethods().get(3)))
       .build()
@@ -77,6 +77,16 @@ object ResourceMonitorGrpc {
       .setSchemaDescriptor(_root_.scalapb.grpc.ConcreteProtoMethodDescriptorSupplier.fromMethodDescriptor(pulumirpc.resource.ResourceProto.javaDescriptor.getServices().get(0).getMethods().get(6)))
       .build()
   
+  val METHOD_REGISTER_STACK_TRANSFORM: _root_.io.grpc.MethodDescriptor[pulumirpc.callback.Callback, com.google.protobuf.empty.Empty] =
+    _root_.io.grpc.MethodDescriptor.newBuilder()
+      .setType(_root_.io.grpc.MethodDescriptor.MethodType.UNARY)
+      .setFullMethodName(_root_.io.grpc.MethodDescriptor.generateFullMethodName("pulumirpc.ResourceMonitor", "RegisterStackTransform"))
+      .setSampledToLocalTracing(true)
+      .setRequestMarshaller(_root_.scalapb.grpc.Marshaller.forMessage[pulumirpc.callback.Callback])
+      .setResponseMarshaller(_root_.scalapb.grpc.Marshaller.forMessage[com.google.protobuf.empty.Empty])
+      .setSchemaDescriptor(_root_.scalapb.grpc.ConcreteProtoMethodDescriptorSupplier.fromMethodDescriptor(pulumirpc.resource.ResourceProto.javaDescriptor.getServices().get(0).getMethods().get(7)))
+      .build()
+  
   val SERVICE: _root_.io.grpc.ServiceDescriptor =
     _root_.io.grpc.ServiceDescriptor.newBuilder("pulumirpc.ResourceMonitor")
       .setSchemaDescriptor(new _root_.scalapb.grpc.ConcreteProtoFileDescriptorSupplier(pulumirpc.resource.ResourceProto.javaDescriptor))
@@ -87,6 +97,7 @@ object ResourceMonitorGrpc {
       .addMethod(METHOD_READ_RESOURCE)
       .addMethod(METHOD_REGISTER_RESOURCE)
       .addMethod(METHOD_REGISTER_RESOURCE_OUTPUTS)
+      .addMethod(METHOD_REGISTER_STACK_TRANSFORM)
       .build()
   
   /** ResourceMonitor is the interface a source uses to talk back to the planning monitor orchestrating the execution.
@@ -96,10 +107,11 @@ object ResourceMonitorGrpc {
     def supportsFeature(request: pulumirpc.resource.SupportsFeatureRequest): scala.concurrent.Future[pulumirpc.resource.SupportsFeatureResponse]
     def invoke(request: pulumirpc.resource.ResourceInvokeRequest): scala.concurrent.Future[pulumirpc.provider.InvokeResponse]
     def streamInvoke(request: pulumirpc.resource.ResourceInvokeRequest, responseObserver: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.InvokeResponse]): _root_.scala.Unit
-    def call(request: pulumirpc.provider.CallRequest): scala.concurrent.Future[pulumirpc.provider.CallResponse]
+    def call(request: pulumirpc.resource.ResourceCallRequest): scala.concurrent.Future[pulumirpc.provider.CallResponse]
     def readResource(request: pulumirpc.resource.ReadResourceRequest): scala.concurrent.Future[pulumirpc.resource.ReadResourceResponse]
     def registerResource(request: pulumirpc.resource.RegisterResourceRequest): scala.concurrent.Future[pulumirpc.resource.RegisterResourceResponse]
     def registerResourceOutputs(request: pulumirpc.resource.RegisterResourceOutputsRequest): scala.concurrent.Future[com.google.protobuf.empty.Empty]
+    def registerStackTransform(request: pulumirpc.callback.Callback): scala.concurrent.Future[com.google.protobuf.empty.Empty]
   }
   
   object ResourceMonitor extends _root_.scalapb.grpc.ServiceCompanion[ResourceMonitor] {
@@ -127,7 +139,7 @@ object ResourceMonitorGrpc {
         }))
       .addMethod(
         METHOD_CALL,
-        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.provider.CallRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.CallResponse]) => {
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.resource.ResourceCallRequest, observer: _root_.io.grpc.stub.StreamObserver[pulumirpc.provider.CallResponse]) => {
           serviceImpl.call(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
             executionContext)
         }))
@@ -149,6 +161,12 @@ object ResourceMonitorGrpc {
           serviceImpl.registerResourceOutputs(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
             executionContext)
         }))
+      .addMethod(
+        METHOD_REGISTER_STACK_TRANSFORM,
+        _root_.io.grpc.stub.ServerCalls.asyncUnaryCall((request: pulumirpc.callback.Callback, observer: _root_.io.grpc.stub.StreamObserver[com.google.protobuf.empty.Empty]) => {
+          serviceImpl.registerStackTransform(request).onComplete(scalapb.grpc.Grpc.completeObserver(observer))(
+            executionContext)
+        }))
       .build()
   }
   
@@ -159,10 +177,11 @@ object ResourceMonitorGrpc {
     def supportsFeature(request: pulumirpc.resource.SupportsFeatureRequest): pulumirpc.resource.SupportsFeatureResponse
     def invoke(request: pulumirpc.resource.ResourceInvokeRequest): pulumirpc.provider.InvokeResponse
     def streamInvoke(request: pulumirpc.resource.ResourceInvokeRequest): scala.collection.Iterator[pulumirpc.provider.InvokeResponse]
-    def call(request: pulumirpc.provider.CallRequest): pulumirpc.provider.CallResponse
+    def call(request: pulumirpc.resource.ResourceCallRequest): pulumirpc.provider.CallResponse
     def readResource(request: pulumirpc.resource.ReadResourceRequest): pulumirpc.resource.ReadResourceResponse
     def registerResource(request: pulumirpc.resource.RegisterResourceRequest): pulumirpc.resource.RegisterResourceResponse
     def registerResourceOutputs(request: pulumirpc.resource.RegisterResourceOutputsRequest): com.google.protobuf.empty.Empty
+    def registerStackTransform(request: pulumirpc.callback.Callback): com.google.protobuf.empty.Empty
   }
   
   class ResourceMonitorBlockingStub(channel: _root_.io.grpc.Channel, options: _root_.io.grpc.CallOptions = _root_.io.grpc.CallOptions.DEFAULT) extends _root_.io.grpc.stub.AbstractStub[ResourceMonitorBlockingStub](channel, options) with ResourceMonitorBlockingClient {
@@ -178,7 +197,7 @@ object ResourceMonitorGrpc {
       _root_.scalapb.grpc.ClientCalls.blockingServerStreamingCall(channel, METHOD_STREAM_INVOKE, options, request)
     }
     
-    override def call(request: pulumirpc.provider.CallRequest): pulumirpc.provider.CallResponse = {
+    override def call(request: pulumirpc.resource.ResourceCallRequest): pulumirpc.provider.CallResponse = {
       _root_.scalapb.grpc.ClientCalls.blockingUnaryCall(channel, METHOD_CALL, options, request)
     }
     
@@ -192,6 +211,10 @@ object ResourceMonitorGrpc {
     
     override def registerResourceOutputs(request: pulumirpc.resource.RegisterResourceOutputsRequest): com.google.protobuf.empty.Empty = {
       _root_.scalapb.grpc.ClientCalls.blockingUnaryCall(channel, METHOD_REGISTER_RESOURCE_OUTPUTS, options, request)
+    }
+    
+    override def registerStackTransform(request: pulumirpc.callback.Callback): com.google.protobuf.empty.Empty = {
+      _root_.scalapb.grpc.ClientCalls.blockingUnaryCall(channel, METHOD_REGISTER_STACK_TRANSFORM, options, request)
     }
     
     override def build(channel: _root_.io.grpc.Channel, options: _root_.io.grpc.CallOptions): ResourceMonitorBlockingStub = new ResourceMonitorBlockingStub(channel, options)
@@ -210,7 +233,7 @@ object ResourceMonitorGrpc {
       _root_.scalapb.grpc.ClientCalls.asyncServerStreamingCall(channel, METHOD_STREAM_INVOKE, options, request, responseObserver)
     }
     
-    override def call(request: pulumirpc.provider.CallRequest): scala.concurrent.Future[pulumirpc.provider.CallResponse] = {
+    override def call(request: pulumirpc.resource.ResourceCallRequest): scala.concurrent.Future[pulumirpc.provider.CallResponse] = {
       _root_.scalapb.grpc.ClientCalls.asyncUnaryCall(channel, METHOD_CALL, options, request)
     }
     
@@ -224,6 +247,10 @@ object ResourceMonitorGrpc {
     
     override def registerResourceOutputs(request: pulumirpc.resource.RegisterResourceOutputsRequest): scala.concurrent.Future[com.google.protobuf.empty.Empty] = {
       _root_.scalapb.grpc.ClientCalls.asyncUnaryCall(channel, METHOD_REGISTER_RESOURCE_OUTPUTS, options, request)
+    }
+    
+    override def registerStackTransform(request: pulumirpc.callback.Callback): scala.concurrent.Future[com.google.protobuf.empty.Empty] = {
+      _root_.scalapb.grpc.ClientCalls.asyncUnaryCall(channel, METHOD_REGISTER_STACK_TRANSFORM, options, request)
     }
     
     override def build(channel: _root_.io.grpc.Channel, options: _root_.io.grpc.CallOptions): ResourceMonitorStub = new ResourceMonitorStub(channel, options)
