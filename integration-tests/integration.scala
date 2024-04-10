@@ -10,10 +10,10 @@ import scala.util.{Failure, Success, Try}
 
 case object LocalOnly extends munit.Tag("LocalOnly")
 
-val javaVersion                     = Config.DefaultJavaVersion
-val scalaVersion                    = Config.DefaultScalaVersion
-val coreVersion                     = Version.besomVersion
-val scalaPluginVersion              = coreVersion
+val javaVersion        = Config.DefaultJavaVersion
+val scalaVersion       = Config.DefaultScalaVersion
+val coreVersion        = Version.besomVersion
+val scalaPluginVersion = coreVersion
 
 val languagePluginDir = os.pwd / ".out" / "language-plugin"
 
