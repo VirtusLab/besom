@@ -282,7 +282,7 @@ To publish critical package(s):
 
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
-just clean-out cli packages maven aws azure gcp docker kubernetes random command tls eks
+just clean-out cli packages maven aws awsx azure gcp docker kubernetes random command tls eks
 ```
 
 Tip: to check what packages are required for `examples` and `templates` use:
@@ -330,7 +330,7 @@ After the release, you can bump the version to the next `-SNAPSHOT` version:
 just cli version bump X.Y.Z-SNAPSHOT
 ```
 
-Remember to release the snapshot to maven.
+Remember to release the snapshots to maven.
 
 ### Testing examples locally
 
