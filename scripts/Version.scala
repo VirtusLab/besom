@@ -1,14 +1,18 @@
 package besom.scripts
 
-import scala.sys.exit
-import scala.util.matching.Regex
-
 import besom.model.SemanticVersion
 
+import scala.sys.exit
+import scala.util.Try
+import scala.util.matching.Regex
+
 object Version:
+  private val cwd               = besomDir
+  lazy val besomVersion: String = os.read(cwd / "version.txt").trim
+
+  private lazy val latestPackageVersions = fetchLatestPackageVersions()
+
   def main(args: String*): Unit =
-    val cwd               = besomDir
-    lazy val besomVersion = os.read(cwd / "version.txt").trim
 
     lazy val besomDependencyPattern: Regex =
       ("""^(//> using (?:test\.)?(?:dep|lib|plugin) +"?\S+::besom-)([^"]+)("?)$""").r
@@ -16,7 +20,7 @@ object Version:
     val expectedFileNames = Vector("project.scala", "project-test.scala", "run.scala")
 
     def projectFiles(path: os.Path = cwd): Map[os.Path, String] =
-      println(s"Searching for project files in $path")
+      println(s"Searching for project files in $path\n")
       os.walk(
         path,
         skip = (p: os.Path) => p.last == ".git" || p.last == ".out" || p.last == ".bsp" || p.last == ".scala-build" || p.last == ".idea"
@@ -38,7 +42,8 @@ object Version:
 
     args match
       case "show" :: Nil =>
-        println(s"Showing all Besom dependencies")
+        println(s"Besom version: $besomVersion\n")
+        println(s"Showing all Besom dependencies...\n")
         projectFiles()
           .foreachEntry { case (f, content) =>
             content.linesIterator.zipWithIndex.foreach { case (line, index) =>
@@ -104,7 +109,6 @@ object Version:
           }
       case "update" :: Nil =>
         println(s"Bumping Besom packages version to latest")
-        val latestPackages = latestPackageVersions()
         projectFiles()
           .collect {
             case (path, content) if content.linesIterator.exists(besomDependencyPattern.matches) => path -> content
@@ -114,7 +118,7 @@ object Version:
               .map {
                 case line if line.contains("besom-fake-") => line // ignore
                 case besomDependencyPattern(prefix, version, suffix) =>
-                  prefix + changeVersion(version, besomVersion, latestPackages.get) + suffix
+                  prefix + changeVersion(version, besomVersion, latestPackageVersions.get) + suffix
                 case line => line // pass through
               }
               .mkString("\n") + "\n"
@@ -137,13 +141,19 @@ object Version:
     end match
   end main
 
-  private def latestPackageVersions(): Map[String, String] =
+  def latestPackageVersion(name: String): String =
+    Try(latestPackageVersions(name)).recover { case e: NoSuchElementException =>
+      throw Exception(s"package $name not found", e)
+    }.get
+
+  private def fetchLatestPackageVersions(): Map[String, String] =
     println(s"Searching for latest package versions")
     Packages
       .readPackagesMetadata(Packages.packagesDir)
       .map { metadata =>
-        metadata.name -> metadata.version.getOrElse(throw Exception("Package version must be present after generating")).asString
+        metadata.name -> metadata.version.getOrElse(throw Exception("Package version must be present at this point")).asString
       }
       .toMap
-  end latestPackageVersions
+  end fetchLatestPackageVersions
+
 end Version
