@@ -2,7 +2,6 @@
 title: Overview
 ---
 
-
 Pulumi runtime is **asynchronous by design**. The goal is to allow the user's program to declare all the necessary resources 
 as fast as possible so that Pulumi engine can make informed decisions about which parts of the deployment plan can be 
 executed in parallel and therefore yield good performance. 
@@ -30,9 +29,10 @@ Besom stands alone in this choice and due to it **has some differences** in comp
 
 Following sections explain and showcase said differences:
 
-- [Resource constructors](constructors.md) - resource constructors are pure functions that return Outputs
 - [Context](context.md) - context is passed around implicitly via Scala's Context Function
 - [Exports](exports.md) - your program is a function that returns Stack along with its Stack Outputs
+- [Inputs and Outputs](io.md) - Outputs are static or dynamic properties passed to Inputs to configure resources
+- [Resource constructors](constructors.md) - resource constructors are pure functions that return Outputs
 - [Laziness](laziness.md) - dangling resources are possible and resource constructors are memoized
 - [Apply method](apply_methods.md) - use `map` and `flatMap` to compose Outputs, not `apply`
 - [Logging](logging.md) - all logging statements need to be composed into the main flow
