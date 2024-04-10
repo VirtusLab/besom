@@ -1,9 +1,9 @@
 //> using scala "3.3.1"
 //> using options -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
-//> using plugin "org.virtuslab::besom-compiler-plugin:0.2.3-SNAPSHOT"
+//> using plugin "org.virtuslab::besom-compiler-plugin:0.3.0-SNAPSHOT"
 
-//> using dep "org.virtuslab::besom-core:0.2.3-SNAPSHOT"
-//> using dep "org.virtuslab::besom-awsx:2.5.0-core.0.2"
-//> using dep "org.virtuslab::besom-eks:2.2.1-core.0.2"
+//> using dep "org.virtuslab::besom-core:0.3.0-SNAPSHOT"
+//> using dep "org.virtuslab::besom-awsx:2.6.0-core.0.3-SNAPSHOT"
+//> using dep "org.virtuslab::besom-eks:2.3.0-core.0.3-SNAPSHOT"
 
 //> using repository sonatype:snapshots
