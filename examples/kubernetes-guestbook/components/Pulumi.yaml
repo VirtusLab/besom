@@ -3,6 +3,6 @@ runtime: scala
 description: Kubernetes Guestbook example based on https://kubernetes.io/docs/tutorials/stateless-application/guestbook/
 template:
   config:
-    isMinikube:
-      description: Whether you are deploying to minikube
+    useLoadBalancer:
+      description: Whether to use a load balancer
       default: true
