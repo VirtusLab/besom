@@ -218,7 +218,8 @@ Inputs and Outputs are the
 primary [asynchronous data types in Pulumi](https://www.pulumi.com/docs/concepts/inputs-outputs/),
 and they signify values that will be provided by the engine later, when the resource is created and its properties can
 be fetched.
-`Input[A]` type is an alias for `Output[A]` type used by [resource](#resources) arguments.
+`Input[A]` type is an alias for `Output[A]` type used by [resource](#resources) arguments. Inputs are 
+[very elastic](io.md/#inputs) in what they can receive to facilitate preview-friendly, declarative model of programming.
 
 Outputs are values of type `Output[A]` and behave very much
 like [monads](https://en.wikipedia.org/wiki/Monad_(functional_programming)).
@@ -229,7 +230,7 @@ Outputs are used to:
 
 - automatically captures dependencies between [resources](#resources)
 - provide a way to express transformations on its value before it's known
-- deffer the evaluation of its value until it's known
+- defer the evaluation of its value until it's known
 - track the _secretness_ of its value
 
 Output transformations available in Besom:
@@ -238,9 +239,11 @@ Output transformations available in Besom:
   output
 - [lifting](lifting.md) directly read properties off an output value
 - [interpolation](interpolator.md) concatenate string outputs with other strings directly
-- `sequence` method combines multiple outputs into a single output of a list
+- `sequence` method combines multiple outputs into a single output of a collection (`parSequence` variant is also available 
+  for explicit parallel evaluation)
 - `zip` method combines multiple outputs into a single output of a tuple
-- `traverse` method transforms a map of outputs into a single output of a map
+- `traverse` method transforms a collection of values into a single output of a collection ((`parTraverse` variant is also available 
+  for explicit parallel evaluation))
 
 To create an output from a plain value, use the `Output` constructor, e.g.:
 

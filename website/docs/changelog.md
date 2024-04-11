@@ -71,7 +71,24 @@ assert(json.parseJson.convertTo[Color] == color)
 
 ## Bug Fixes
 
+* fixed infinite loop in encoders [#407](https://github.com/VirtusLab/besom/issues/407) when a recursive type is encountered 
+* fixed cause passing in AggregateException to improve debugging of decoders [#426](https://github.com/VirtusLab/besom/issues/426)
+* fixed Pulumi side effects memoization issues in Component API [#429]https://github.com/VirtusLab/besom/pull/429
+* fixed traverse problem caused by export bug in compiler with a temporary workaround [#430](https://github.com/VirtusLab/besom/issues/430)
+
 ## Other Changes
+
+* custom timeouts have scaladocs now [#419](https://github.com/VirtusLab/besom/pull/419)
+* overhauled serde layer with refied outputs implemented to improve parity with upstream Pulumi engine [#414](https://github.com/VirtusLab/besom/pull/414)
+* StackReferences are now documented [#428](https://github.com/VirtusLab/besom/pull/428)
+* updated AWS EKS hello world example [#399](https://github.com/VirtusLab/besom/pull/399/files)
+* Component API now disallows returning component instances wrapped in Outputs to prevent users from dry run issues [#441](https://github.com/VirtusLab/besom/pull/441)
+* added parSequence parSequence and parTraverse combinators on Output [#440](https://github.com/VirtusLab/besom/pull/440)
+* added Output.when combinator [#439](https://github.com/VirtusLab/besom/pull/439)
+* improved compilation errors around `Output.eval` and `Output#flatMap` [#443](https://github.com/VirtusLab/besom/pull/443)
+* all Output combinators have scaladocs now [#445](https://github.com/VirtusLab/besom/pull/445)
+* added extension-based combinators for `Output[Option[A]]`, `Output[List[A]]` etc [#445](https://github.com/VirtusLab/besom/pull/445)
+* added support for overlays (package-specific extensions) in besom codegen, this opens a way for support of Helm, magic lambdas and other advanced features [#402](https://github.com/VirtusLab/besom/pull/402)
 
 **Full Changelog**: https://github.com/VirtusLab/besom/compare/v0.2.2...v0.3.0
 

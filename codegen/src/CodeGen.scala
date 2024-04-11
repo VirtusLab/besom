@@ -498,9 +498,31 @@ class CodeGen(using
 
     val unionDecoders = unionDecoderGivens(resourceProperties)
 
+    def argsDefaultMsg = if argsDefault.isEmpty then "" else "This resource has a default configuration."
+
     val baseCompanion =
       if (hasOutputExtensions) {
         m"""|object $baseClassName extends besom.ResourceCompanion[$baseClassName]:
+            |  /** Resource constructor for $baseClassName. 
+            |    * 
+            |    * @param name [[besom.util.NonEmptyString]] The unique (stack-wise) name of the resource in Pulumi state (not on provider's side).
+            |    *        NonEmptyString is inferred automatically from non-empty string literals, even when interpolated. If you encounter any
+            |    *        issues with this, please try using `: NonEmptyString` type annotation. If you need to convert a dynamically generated
+            |    *        string to NonEmptyString, use `NonEmptyString.apply` method - `NonEmptyString(str): Option[NonEmptyString]`.
+            |    *
+            |    * @param args [[${argsClassName}]] The configuration to use to create this resource. $argsDefaultMsg
+            |    *
+            |    * @param opts [[${resourceOptsClass}]] Resource options to use for this resource. 
+            |    *        Defaults to empty options. If you need to set some options, use [[besom.opts]] function to create them, for example:
+            |    *  
+            |    *        {{{
+            |    *        val res = $baseClassName(
+            |    *          "my-resource",
+            |    *          ${argsClassName}(...), // your args
+            |    *          opts(provider = myProvider)
+            |    *        )
+            |    *        }}}
+            |    */
             |  def apply(using ctx: besom.types.Context)(
             |    name: besom.util.NonEmptyString,
             |    args: ${argsClassName}${argsDefault},
