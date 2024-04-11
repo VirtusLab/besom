@@ -75,6 +75,26 @@ class CodeGenTest extends munit.FunSuite {
               |) extends besom.ProviderResource
               |
               |object Provider extends besom.ResourceCompanion[Provider]:
+              |  /** Resource constructor for Provider. 
+              |    * 
+              |    * @param name [[besom.util.NonEmptyString]] The unique (stack-wise) name of the resource in Pulumi state (not on provider's side).
+              |    *        NonEmptyString is inferred automatically from non-empty string literals, even when interpolated. If you encounter any
+              |    *        issues with this, please try using `: NonEmptyString` type annotation. If you need to convert a dynamically generated
+              |    *        string to NonEmptyString, use `NonEmptyString.apply` method - `NonEmptyString(str): Option[NonEmptyString]`.
+              |    *
+              |    * @param args [[ProviderArgs]] The configuration to use to create this resource. This resource has a default configuration.
+              |    *
+              |    * @param opts [[besom.CustomResourceOptions]] Resource options to use for this resource. 
+              |    *        Defaults to empty options. If you need to set some options, use [[besom.opts]] function to create them, for example:
+              |    *  
+              |    *        {{{
+              |    *        val res = Provider(
+              |    *          "my-resource",
+              |    *          ProviderArgs(...), // your args
+              |    *          opts(provider = myProvider)
+              |    *        )
+              |    *        }}}
+              |    */
               |  def apply(using ctx: besom.types.Context)(
               |    name: besom.util.NonEmptyString,
               |    args: ProviderArgs = ProviderArgs(),
@@ -204,6 +224,26 @@ class CodeGenTest extends munit.FunSuite {
              |     ctx.call[besom.api.googlenative.container.v1.ClusterGetKubeconfigArgs, besom.api.googlenative.container.v1.ClusterGetKubeconfigResult, besom.api.googlenative.container.v1.Cluster]("google-native:container/v1:Cluster/getKubeconfig", args, this, opts)
              |
              |object Cluster extends besom.ResourceCompanion[Cluster]:
+             |  /** Resource constructor for Cluster. 
+             |    * 
+             |    * @param name [[besom.util.NonEmptyString]] The unique (stack-wise) name of the resource in Pulumi state (not on provider's side).
+             |    *        NonEmptyString is inferred automatically from non-empty string literals, even when interpolated. If you encounter any
+             |    *        issues with this, please try using `: NonEmptyString` type annotation. If you need to convert a dynamically generated
+             |    *        string to NonEmptyString, use `NonEmptyString.apply` method - `NonEmptyString(str): Option[NonEmptyString]`.
+             |    *
+             |    * @param args [[ClusterArgs]] The configuration to use to create this resource. This resource has a default configuration.
+             |    *
+             |    * @param opts [[besom.CustomResourceOptions]] Resource options to use for this resource. 
+             |    *        Defaults to empty options. If you need to set some options, use [[besom.opts]] function to create them, for example:
+             |    *  
+             |    *        {{{
+             |    *        val res = Cluster(
+             |    *          "my-resource",
+             |    *          ClusterArgs(...), // your args
+             |    *          opts(provider = myProvider)
+             |    *        )
+             |    *        }}}
+             |    */
              |  def apply(using ctx: besom.types.Context)(
              |    name: besom.util.NonEmptyString,
              |    args: ClusterArgs = ClusterArgs(),
