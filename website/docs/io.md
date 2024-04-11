@@ -7,8 +7,8 @@ Outputs are the [primary asynchronous data structure of Pulumi](basics.md#inputs
 ### Outputs
 
 Outputs are:
-  * pure and lazy - meaning that they suspend evaluation of code until evaluation, which is perfomed by Besom runtime
-    that runs `Pulumi.run` function at the, so called, end-of-the-world. 
+  * pure and lazy - meaning that they suspend evaluation of code until interpretation, which is perfomed by Besom 
+    runtime that runs `Pulumi.run` function at the, so called, end-of-the-world. 
 
   * monadic - meaning that they expose `map` and `flatMap` operators and can be used in for-comprehensions
 
