@@ -287,7 +287,6 @@ class OutputTest extends munit.FunSuite:
       outVal  <- Vector(true, false)
     do
       val c = if outCond then Output(cond) else cond
-
       val v = (outVal, optVal) match
         case (true, true)   => Output(Option(value))
         case (true, false)  => Output(value)
