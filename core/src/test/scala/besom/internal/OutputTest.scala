@@ -282,26 +282,19 @@ class OutputTest extends munit.FunSuite:
   ).foreach { (cond, value, expected) =>
     given Context = DummyContext().unsafeRunSync()
     for
-      optCond <- Vector(true, false)
       outCond <- Vector(true, false)
       optVal  <- Vector(true, false)
       outVal  <- Vector(true, false)
     do
-      // FIXME: the inference is not working without this
-      val c: Boolean | Option[Boolean] | Output[Boolean] | Output[Option[Boolean]] = (outCond, optCond) match
-        case (true, true)   => Output(Option(cond))
-        case (true, false)  => Output(cond)
-        case (false, true)  => Some(cond)
-        case (false, false) => cond
+      val c = if outCond then Output(cond) else cond
 
-      // FIXME: the inference is not working without this
-      val v: String | Option[String] | Output[String] | Output[Option[String]] = (outVal, optVal) match
+      val v = (outVal, optVal) match
         case (true, true)   => Output(Option(value))
         case (true, false)  => Output(value)
         case (false, true)  => Some(value)
         case (false, false) => value
 
-      test(s"Output.when ${cond} then ${value} (optCond: ${optCond}, outCond: ${outCond}, valOpt: ${optVal}, valOut: ${outVal})") {
+      test(s"Output.when ${cond} then ${value} (outCond: ${outCond}, valOpt: ${optVal}, valOut: ${outVal})") {
         val result = Output.when(c)(v)
         assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
       }
@@ -468,7 +461,7 @@ class OutputTest extends munit.FunSuite:
     for outVal <- Vector(true, false)
     do
       test(s"List.mapInner ${value}") {
-        val result: Output[List[String]] = // FIXME: the inference is not working without the explicit type
+        val result =
           if outVal then Output(value).mapInner(f.andThen(Output(_)))
           else Output(value).mapInner(f)
         assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
@@ -583,7 +576,7 @@ class OutputTest extends munit.FunSuite:
     for outVal <- Vector(true, false)
     do
       test(s"Option[List].mapInner ${value}") {
-        val result: Output[List[String]] = // FIXME: the inference is not working without the explicit type
+        val result =
           if outVal then Output(value).mapInner(f.andThen(Output(_)))
           else Output(value).mapInner(f)
         assertEquals(result.getData.unsafeRunSync(), OutputData(expected))

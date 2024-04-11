@@ -1,7 +1,6 @@
 package besom.internal
 
 import scala.collection.BuildFrom
-import scala.reflect.Typeable
 
 /** Output is a wrapper for a monadic effect used to model async execution that allows Pulumi to track information about dependencies
   * between resources and properties of data (whether it's known or a secret for instance).
@@ -31,7 +30,7 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
     * @return
     *   an Output with the flat-mapped value
     * @see
-    *   [[flatMap(A => F[B])]] for flat-mapping with an effectful function
+    *   `flatMap(A => F[B])` for flat-mapping with an effectful function
     */
   def flatMap[B](f: A => Output[B]): Output[B] =
     Output.ofData(
@@ -51,7 +50,7 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
     * @return
     *   an Output with the flat-mapped value
     * @see
-    *   [[flatMap(A => Output[B])]] for flat-mapping with Output-returning function
+    *   `flatMap(A => Output[B])` for flat-mapping with Output-returning function
     */
   def flatMap[F[_]: Result.ToFuture, B](f: A => F[B]): Output[B] =
     Output.ofData(
@@ -196,7 +195,7 @@ trait OutputFactory:
 
   /** Creates an `Output` with the given `a` if the given `condition` is `true` or returns `None` if the condition is `false`
     */
-  def when[A: Typeable](condition: => Input.Optional[Boolean])(a: => Input.Optional[A])(using ctx: Context): Output[Option[A]] =
+  def when[A](condition: => Input[Boolean])(a: => Input.Optional[A])(using ctx: Context): Output[Option[A]] =
     Output.when(condition)(a)
 
 end OutputFactory
@@ -250,14 +249,14 @@ trait OutputExtensionsFactory:
       * @return
       *   an [[Output]] with the value of the underlying [[Some]] or the `default` value if [[None]]
       */
-    def getOrElse[B >: A: Typeable](default: => B | Output[B])(using ctx: Context): Output[B] =
+    def getOrElse[B >: A](default: => B | Output[B])(using ctx: Context): Output[B] =
       output.flatMap { opt =>
         opt match
           case Some(a) => Output(a)
           case None =>
             default match
               case b: Output[B @unchecked] => b
-              case b: B                    => Output(b)
+              case b: B @unchecked         => Output(b)
       }
 
     /** Get the value of the underlying [[Option]] or fail the outer [[Output]] with the given [[Throwable]]
@@ -294,12 +293,12 @@ trait OutputExtensionsFactory:
       * @return
       *   an [[Output]] of the mapped [[Option]]
       */
-    def mapInner[B: Typeable](f: A => B | Output[B])(using ctx: Context): Output[Option[B]] =
+    def mapInner[B](f: A => B | Output[B])(using ctx: Context): Output[Option[B]] =
       output.flatMap {
         case Some(a) =>
           f(a) match
             case b: Output[B @unchecked] => b.map(Some(_))
-            case b: B                    => Output(Some(b))
+            case b: B @unchecked         => Output(Some(b))
         case None => Output(None)
       }
 
@@ -352,13 +351,13 @@ trait OutputExtensionsFactory:
       * @return
       *   an [[Output]] of the mapped [[List]]
       */
-    def mapInner[B: Typeable](f: A => B | Output[B])(using Context): Output[List[B]] = output.flatMap {
+    def mapInner[B](f: A => B | Output[B])(using Context): Output[List[B]] = output.flatMap {
       case Nil => Output(List.empty[B])
       case h :: t =>
         f(h) match
           case b: Output[B @unchecked] =>
             Output.sequence(b :: t.map(f.asInstanceOf[A => Output[B]](_)))
-          case b: B =>
+          case b: B @unchecked =>
             Output(b :: t.map(f.asInstanceOf[A => B](_)))
     }
 
@@ -419,7 +418,7 @@ trait OutputExtensionsFactory:
       * @return
       *   an [[Output]] of the mapped [[List]] or an empty list if the optional [[List]] is [[None]]
       */
-    def mapInner[B: Typeable](f: A => B | Output[B])(using Context): Output[List[B]] = output
+    def mapInner[B](f: A => B | Output[B])(using Context): Output[List[B]] = output
       .map {
         case Some(list) => list
         case None       => List.empty
@@ -511,24 +510,11 @@ object Output:
   def secret[A](value: A)(using ctx: Context): Output[A] =
     new Output[A](ctx.registerTask(Result.pure(OutputData(value, Set.empty, isSecret = true))))
 
-  def when[A: Typeable](cond: => Input.Optional[Boolean])(
+  def when[A](cond: => Input[Boolean])(
     a: => Input.Optional[A]
   )(using ctx: Context): Output[Option[A]] =
-    val p: Output[Boolean] = cond.asOptionOutput(isSecret = false).flatMap {
-      case None             => Output(false)
-      case Some(b: Boolean) => Output(b)
+    cond.asOutput().flatMap { c =>
+      if c then a.asOptionOutput(isSecret = false) else Output(None)
     }
-
-    def f(c: Boolean): Output[Option[A]] =
-      a.asOptionOutput(isSecret = false) match
-        case o: Output[A | Option[A]] if c =>
-          o.flatMap {
-            case None       => Output(None)
-            case Some(v: A) => Output(Some(v))
-            case a: A       => Output(Some(a))
-          }
-        case _ => Output(None) // return None if condition is false
-
-    p.flatMap(f)
   end when
 end Output
