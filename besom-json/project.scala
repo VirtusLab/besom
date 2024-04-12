@@ -1,5 +1,5 @@
 //> using scala "3.3.1"
-//> using options "-java-output-version:11" "-encoding:utf-8"
+//> using options "-java-output-version:11"
 //> using options "-deprecation", "-feature", "-Werror", "-Wunused:all"
 
 //> using test.resourceDir src/test/resources
