@@ -81,8 +81,10 @@ import besom.api.tls
 
   // export the kubeconfig
   Stack(assignment).exports(
-    kubeconfig = kubeconfig.map(base64Decoder)
+    kubeconfig = kubeconfig.map(base64.decode)
   )
 }
 
-private def base64Decoder: String => String = v => new String(java.util.Base64.getDecoder.decode(v.getBytes))
+object base64:
+  def decode(v: String): String =
+    new String(java.util.Base64.getDecoder.decode(v.getBytes("UTF-8")), java.nio.charset.StandardCharsets.UTF_8)
