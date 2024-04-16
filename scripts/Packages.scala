@@ -126,11 +126,13 @@ object Packages:
 
   private val pluginDownloadProblemPackages = blockedPackages ++ Vector()
 
-  private val codegenProblemPackages = blockedPackages ++ Vector()
+  private val codegenProblemPackages = blockedPackages ++ Vector(
+    "lbrlabs-eks" // schema error: https://github.com/lbrlabs/pulumi-lbrlabs-eks/issues/110
+  )
 
   private val compileProblemPackages = blockedPackages ++ Vector(
-    "aws-iam", // id parameter, schema error - components should make this viable
-    "nuage" // id parameter, schema error - components should make this viable
+    "aws-iam", // id parameter, schema error - https://github.com/pulumi/pulumi-aws-iam/issues/18
+    "nuage" // id parameter, schema error - https://github.com/nuage-studio/pulumi-nuage/issues/50
   )
 
   def generateAll(targetPath: os.Path): os.Path = {
