@@ -2,10 +2,10 @@
 title: Changelog
 ---
 
-0.3.0 (08-04-2024)
+0.3.0 (16-04-2024)
 ---
 
-## API Changes and New Features
+### API Changes and New Features
 
 * Added new `besom.json` interpolation API. Now this snippet from our tutorial:
 ```scala
@@ -69,57 +69,57 @@ assert(color.toJson.convertTo[Color] == color)
 assert(json.parseJson.convertTo[Color] == color)
 ```
 
-## Bug Fixes
+### Bug Fixes
 
 * fixed infinite loop in encoders [#407](https://github.com/VirtusLab/besom/issues/407) when a recursive type is encountered 
-* fixed cause passing in AggregateException to improve debugging of decoders [#426](https://github.com/VirtusLab/besom/issues/426)
-* fixed Pulumi side effects memoization issues in Component API [#429]https://github.com/VirtusLab/besom/pull/429
+* fixed cause passing in `AggregateException` to improve debugging of decoders [#426](https://github.com/VirtusLab/besom/issues/426)
+* fixed Pulumi side effects memoization issues in Component API [#429](https://github.com/VirtusLab/besom/pull/429)
 * fixed traverse problem caused by export bug in compiler with a temporary workaround [#430](https://github.com/VirtusLab/besom/issues/430)
 
-## Other Changes
+### Other Changes
 
 * custom timeouts have scaladocs now [#419](https://github.com/VirtusLab/besom/pull/419)
-* overhauled serde layer with refied outputs implemented to improve parity with upstream Pulumi engine [#414](https://github.com/VirtusLab/besom/pull/414)
+* overhauled serde layer with refined outputs implemented to improve parity with upstream Pulumi engine [#414](https://github.com/VirtusLab/besom/pull/414)
 * StackReferences are now documented [#428](https://github.com/VirtusLab/besom/pull/428)
 * updated AWS EKS hello world example [#399](https://github.com/VirtusLab/besom/pull/399/files)
 * Component API now disallows returning component instances wrapped in Outputs to prevent users from dry run issues [#441](https://github.com/VirtusLab/besom/pull/441)
-* added parSequence parSequence and parTraverse combinators on Output [#440](https://github.com/VirtusLab/besom/pull/440)
-* added Output.when combinator [#439](https://github.com/VirtusLab/besom/pull/439)
+* added `parSequence` and `parTraverse` combinators on `Output` [#440](https://github.com/VirtusLab/besom/pull/440)
+* added `Output.when` combinator [#439](https://github.com/VirtusLab/besom/pull/439)
 * improved compilation errors around `Output.eval` and `Output#flatMap` [#443](https://github.com/VirtusLab/besom/pull/443)
-* all Output combinators have scaladocs now [#445](https://github.com/VirtusLab/besom/pull/445)
+* all `Output` combinators have scaladocs now [#445](https://github.com/VirtusLab/besom/pull/445)
 * added extension-based combinators for `Output[Option[A]]`, `Output[List[A]]` etc [#445](https://github.com/VirtusLab/besom/pull/445)
-* added support for overlays (package-specific extensions) in besom codegen, this opens a way for support of Helm, magic lambdas and other advanced features [#402](https://github.com/VirtusLab/besom/pull/402)
+* added support for overlays (package-specific extensions) in besom `codegen`, this opens a way for support of Helm, magic lambdas and other advanced features [#402](https://github.com/VirtusLab/besom/pull/402)
 
-**Full Changelog**: https://github.com/VirtusLab/besom/compare/v0.2.2...v0.3.0
+**Full Changelog**: [GitHub (v0.2.2...v0.3.0)](https://github.com/VirtusLab/besom/compare/v0.2.2...v0.3.0)
 
 0.2.2 (22-02-2024)
 ---
 
-## Bug Fixes
+### Bug Fixes
 
 * fixed component argument serialization issue [398](https://github.com/VirtusLab/besom/pull/398)
 
-## Other Changes
+### Other Changes
 
 * added Kubernetes guestbook example [395](https://github.com/VirtusLab/besom/pull/395)
 
-**Full Changelog**: https://github.com/VirtusLab/besom/compare/v0.2.1...v0.2.2
+**Full Changelog**: [GitHub (v0.2.1...v0.2.2)](https://github.com/VirtusLab/besom/compare/v0.2.1...v0.2.2)
 
 0.2.1 (15-02-2024)
 ---
 
-## Bug Fixes
+### Bug Fixes
 
 * Fix URL validation to allow for kubernetes types [#385](https://github.com/VirtusLab/besom/pull/385)
 * Loosen up and fix URN parsing [#389](https://github.com/VirtusLab/besom/pull/389)
 * Fix serializer now skips fields with null value secrets [#386](https://github.com/VirtusLab/besom/pull/386)
 
-* Full changelog is available at [GitHub (v0.2.0...v0.2.1)](https://github.com/VirtusLab/besom/compare/v0.2.0...v0.2.1)
+**Full Changelog**: [GitHub (v0.2.0...v0.2.1)](https://github.com/VirtusLab/besom/compare/v0.2.0...v0.2.1)
 
 0.2.0 (08-02-2024)
 ---
 
-## API Changes
+### API Changes
 
 * Changed the type of main `Pulumi.run` function from `Context ?=> Output[Exports]` (a [context function](https://docs.scala-lang.org/scala3/reference/contextual/context-functions.html) providing `besom.Context` 
   instance implicitly in its scope and expecting `Output[Exports]` as returned value) to `Context ?=> Stack`. This change has one core 
@@ -151,7 +151,7 @@ and also adding a helpful error message when a key is missing [#204](https://git
 
 * Overhauled `ResourceOptions` [#355](https://github.com/VirtusLab/besom/pull/355)
 
-## New Features
+### New Features
 
 * added support for Gradle and Maven to the Besom Scala language host [#303](https://github.com/VirtusLab/besom/issues/303)
 
@@ -234,7 +234,7 @@ or deserialize to an object (`config.getObject` or `config.requireObject`) [#207
   - `"string".toNonEmptyOutput: Output[NonEmptyString]` - safe, if the string is empty the returned Output will be failed
   - `Output("string").toNonEmptyOutput: Output[NonEmptyString]` - safe, if the string inside of the Output is empty the returned Output will be failed
 
-## Bug Fixes
+### Bug Fixes
 
 * fixed logging via Pulumi RPC and added user-level MDC, now logs are properly displayed in the Pulumi console [#199](https://github.com/VirtusLab/besom/issues/199)
 * fixed failing gRPC shutdown in our core SDK by correcting the lifecycle handling, now the SDK properly shuts down [#228](https://github.com/VirtusLab/besom/issues/228)
@@ -250,11 +250,11 @@ or deserialize to an object (`config.getObject` or `config.requireObject`) [#207
 * fixed failing code generation when clashing names are present in the schema, now the generator properly handles clashing names [#275](https://github.com/VirtusLab/besom/pull/275)
 * fixed failing code generation schema deserialization for complex types used as underlying types of named types [#282](https://github.com/VirtusLab/besom/pull/282)
 
-## Other Changes
+### Other Changes
 
 * added more [examples](https://github.com/VirtusLab/besom/blob/release/v0.2.0/examples/README.md) to the Besom repository
 * introduce schema-driven integration tests for `codegen` fed from upstream Pulumi to improve reliability of the code generator
 * many internal improvements and refactorings to the codebase to improve the overall quality of the SDK and its maintainability
 
-* Full changelog is available at [GitHub (v0.1.0...v0.2.0)](https://github.com/VirtusLab/besom/compare/v0.1.0...v0.2.0)
+**Full Changelog**: [GitHub (v0.1.0...v0.2.0)](https://github.com/VirtusLab/besom/compare/v0.1.0...v0.2.0)
 

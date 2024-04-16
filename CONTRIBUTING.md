@@ -200,6 +200,20 @@ just publish-local-all
 just test-all
 ```
 
+#### Publish fresh packages locally
+
+It is recommended to use `just power-wash` before publishing a release:
+
+```bash
+just power-wash
+```
+
+Make sure the repository is clean and there are no uncommitted changes:
+
+```bash
+git status -s | grep -v -q '^\s*M' || echo "STOP: DIRTY GIT REPO"
+```
+
 #### Bump Besom version (skip for `SNAPSHOT` re-release)
 
 To bump Besom version in all `project.scala` and `version.txt` files:
@@ -207,14 +221,6 @@ To bump Besom version in all `project.scala` and `version.txt` files:
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
 just cli version bump X.Y.Z
-```
-
-#### Publish fresh packages locally
-
-It is recommended to use `just power-wash` before publishing a release:
-
-```bash
-just power-wash
 ```
 
 Publish the new version of SDKs locally to test and provide fresh dependencies for scripts:
@@ -235,6 +241,12 @@ just cli version update
 #### Update versions in all other places (skip for `SNAPSHOT`)
 
 Manually update versions in all other places, specifically documentation and website, using find&replace.
+
+Look for:
+- **DO NOT** change historical versions in `CHANGELOG.md` by mistake
+- `X.Y.Z` - the besom version
+- `core.X.Y` - core part of the provider version
+- update the provider versions in `README.md`
 
 ##### Create release branch
 
@@ -270,7 +282,9 @@ Publishing to maven requires:
 - `PGP_KEY_ID` - the signing key id (`gpg --list-keys` or `gpg --show-keys`)
 - `PGP_PASSWORD` - the signing key passphrase
 
-Publish main SDK packages to Maven
+**Wait for the CI** to pass `Besom build and test / build` before proceeding.
+
+Publish main SDK packages to Maven:
 
 ```bash
 just publish-maven-all
