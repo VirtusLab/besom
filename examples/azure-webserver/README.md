@@ -25,11 +25,11 @@ To deploy your infrastructure, follow the below steps.
 
    The supplied password must be between 6-72 characters long and must satisfy at least 3 of password complexity
    requirements from the following:
-   - Contains an uppercase character
-   - Contains a lowercase character
-   - Contains a numeric digit
-   - Contains a special character
-   - Control characters are not allowed
+    - Contains an uppercase character
+    - Contains a lowercase character
+    - Contains a numeric digit
+    - Contains a special character
+    - Control characters are not allowed
 
    ```
    $ pulumi config set azure-native:location westus    # any valid Azure region will do
@@ -46,7 +46,7 @@ To deploy your infrastructure, follow the below steps.
 
 4. Get the IP address of the newly-created instance from the stack's outputs:
 
-   Go to azure portal to service `Virtual Machines`. 
+   Go to azure portal to service `Virtual Machines`.
    Find newly created virtual machine and get `Public IP address` from it.
 
 5. Check to see that your server is now running:
