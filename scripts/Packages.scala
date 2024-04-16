@@ -132,7 +132,8 @@ object Packages:
 
   private val compileProblemPackages = blockedPackages ++ Vector(
     "aws-iam", // id parameter, schema error - https://github.com/pulumi/pulumi-aws-iam/issues/18
-    "nuage" // id parameter, schema error - https://github.com/nuage-studio/pulumi-nuage/issues/50
+    "nuage", // id parameter, schema error - https://github.com/nuage-studio/pulumi-nuage/issues/50
+    "fortios" // method collision - https://github.com/VirtusLab/besom/issues/458
   )
 
   def generateAll(targetPath: os.Path): os.Path = {
