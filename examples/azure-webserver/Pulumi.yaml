@@ -1,0 +1,3 @@
+name: azure-webserver
+description: Azure web server example
+runtime: scala
