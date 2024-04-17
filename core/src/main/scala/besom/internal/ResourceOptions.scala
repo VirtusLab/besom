@@ -149,11 +149,11 @@ sealed trait ResourceOptions:
   def urn: Output[Option[URN]]
 
   private[besom] def resolve(using ctx: Context): Result[ResolvedResourceOptions] =
-    val parentResult = ctx.getParent
+    val maybeComponentParent = ctx.getParent
 
     this match
       case cr: CustomResourceOptions =>
-        cr.common.resolve(parentResult).flatMap { common =>
+        cr.common.resolve(maybeComponentParent).flatMap { common =>
           for
             provider                <- cr.provider.getValueOrElse(None)
             importId                <- cr.importId.getValueOrElse(None)
@@ -168,7 +168,7 @@ sealed trait ResourceOptions:
           )
         }
       case sr: StackReferenceResourceOptions =>
-        sr.common.resolve(parentResult).flatMap { common =>
+        sr.common.resolve(maybeComponentParent).flatMap { common =>
           for importId <- sr.importId.getValueOrElse(None)
           yield StackReferenceResolvedResourceOptions(
             common,
@@ -176,7 +176,7 @@ sealed trait ResourceOptions:
           )
         }
       case co: ComponentResourceOptions =>
-        co.common.resolve(parentResult).flatMap { common =>
+        co.common.resolve(maybeComponentParent).flatMap { common =>
           for providers <- co.providers.getValueOrElse(List.empty)
           yield ComponentResolvedResourceOptions(
             common,
