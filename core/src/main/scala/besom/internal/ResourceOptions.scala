@@ -93,9 +93,9 @@ trait CommonResourceOptions:
 end CommonResourceOptions
 
 extension (cro: CommonResourceOptions)
-  def resolve(using Context): Result[CommonResolvedResourceOptions] =
+  def resolve(implicitParent: Option[Resource])(using Context): Result[CommonResolvedResourceOptions] =
     for
-      parent            <- cro.parent.getData
+      explicitParent    <- cro.parent.getData
       dependsOn         <- cro.dependsOn.getData
       protect           <- cro.protect.getData
       ignoreChanges     <- cro.ignoreChanges.getData
@@ -107,7 +107,8 @@ extension (cro: CommonResourceOptions)
       pluginDownloadUrl <- cro.pluginDownloadUrl.getData
       deletedWith       <- cro.deletedWith.getData
     yield CommonResolvedResourceOptions(
-      parent = parent.getValueOrElse(None),
+      // if no parent is provided by the user explicitly, use the implicit parent from Context
+      parent = explicitParent.getValueOrElse(None).orElse(implicitParent),
       dependsOn = dependsOn.getValueOrElse(List.empty),
       protect = protect.getValueOrElse(false),
       ignoreChanges = ignoreChanges.getValueOrElse(List.empty),
@@ -147,10 +148,12 @@ sealed trait ResourceOptions:
   def retainOnDelete: Output[Boolean]
   def urn: Output[Option[URN]]
 
-  private[besom] def resolve(using Context): Result[ResolvedResourceOptions] =
+  private[besom] def resolve(using ctx: Context): Result[ResolvedResourceOptions] =
+    val maybeComponentParent = ctx.getParent
+
     this match
       case cr: CustomResourceOptions =>
-        cr.common.resolve.flatMap { common =>
+        cr.common.resolve(maybeComponentParent).flatMap { common =>
           for
             provider                <- cr.provider.getValueOrElse(None)
             importId                <- cr.importId.getValueOrElse(None)
@@ -165,7 +168,7 @@ sealed trait ResourceOptions:
           )
         }
       case sr: StackReferenceResourceOptions =>
-        sr.common.resolve.flatMap { common =>
+        sr.common.resolve(maybeComponentParent).flatMap { common =>
           for importId <- sr.importId.getValueOrElse(None)
           yield StackReferenceResolvedResourceOptions(
             common,
@@ -173,13 +176,14 @@ sealed trait ResourceOptions:
           )
         }
       case co: ComponentResourceOptions =>
-        co.common.resolve.flatMap { common =>
+        co.common.resolve(maybeComponentParent).flatMap { common =>
           for providers <- co.providers.getValueOrElse(List.empty)
           yield ComponentResolvedResourceOptions(
             common,
             providers = providers
           )
         }
+  end resolve
 
   private[besom] def hasURN: Result[Boolean] = urn.map(_.isDefined).getValueOrElse(false)
 

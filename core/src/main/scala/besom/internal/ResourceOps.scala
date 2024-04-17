@@ -60,7 +60,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
           (resource, resolver) <- ResourceDecoder.forResource[R].makeResourceAndResolver
           _                    <- log.debug(s"$mode resource ${mode.suffix}")
           options              <- options.resolve
-          _                    <- log.debug(s"$mode resource, added to cache...")
+          _                    <- log.debug(s"$mode resource, resolved options:\n${printer.render(options)}")
           state                <- createResourceState(typ, name, resource, options, remote)
           _                    <- log.debug(s"Created resource state")
           _                    <- ctx.resources.add(resource, state)
@@ -597,7 +597,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       initialProviders <- getParentProviders
       _                <- log.trace(s"mergeProviders for $typ - initialProviders: $initialProviders")
       providers        <- overwriteWithProvidersFromOptions(initialProviders)
-      _                <- log.trace(s"final providers for $typ - initialProviders: $initialProviders")
+      _                <- log.trace(s"final providers for $typ - providers: $providers")
     yield providers
 
   private[internal] def getProvider(

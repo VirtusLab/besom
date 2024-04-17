@@ -268,7 +268,7 @@ trait OutputExtensionsFactory:
       * @see
       *   [[OutputFactory.fail]] for creating a failed [[Output]] with a [[Throwable]]
       */
-    def getOrFail(throwable: Throwable)(using ctx: Context): Output[A] =
+    def getOrFail(throwable: => Throwable)(using ctx: Context): Output[A] =
       output.flatMap {
         case Some(a) => Output(a)
         case None    => Output.fail(throwable)

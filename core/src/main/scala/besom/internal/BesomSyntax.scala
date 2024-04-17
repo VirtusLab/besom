@@ -101,7 +101,7 @@ trait BesomSyntax:
             s"Urn for component resource $name is not available. This should not happen."
           }
 
-          val componentContext = ComponentContext(ctx, urnRes)
+          val componentContext = ComponentContext(ctx, urnRes, componentBase)
           val componentOutput =
             try Output(Result.pure(f(using componentContext)(using componentBase)))
             catch case e: Exception => Output(Result.fail(e))

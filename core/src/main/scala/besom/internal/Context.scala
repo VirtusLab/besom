@@ -23,6 +23,7 @@ trait Context extends TaskTracker:
   private[besom] def monitor: Monitor
   private[besom] def memo: Memo
   private[besom] def getParentURN: Result[URN]
+  private[besom] def getParent: Option[Resource]
   private[besom] def config: Config
   private[besom] def isDryRun: Boolean
   private[besom] def logger: BesomLogger
@@ -93,10 +94,17 @@ trait Context extends TaskTracker:
 
 end Context
 
-class ComponentContext(private val globalContext: Context, private val componentURN: Result[URN]) extends Context:
-  export globalContext.{getParentURN => _, *}
+class ComponentContext(
+  private val globalContext: Context,
+  private val componentURN: Result[URN],
+  private val componentBase: ComponentBase
+) extends Context:
+  export globalContext.{getParentURN => _, getParent => _, *}
 
   def getParentURN: Result[URN] = componentURN
+
+  // components provide themselves as the parent to facilitate provider inheritance
+  def getParent: Option[Resource] = Some(componentBase)
 
 class ContextImpl(
   private[besom] val runInfo: RunInfo,
@@ -125,6 +133,9 @@ class ContextImpl(
       case Some(urn) => Result.pure(urn)
       case None      => Result.fail(Exception("Stack urn is not available. This should not happen."))
     }
+
+  // top level Context does not return a parent (stack is the top level resource and it's providers are default provider instances)
+  override private[besom] def getParent: Option[Resource] = None
 
   override private[besom] def initializeStack: Result[Unit] =
     StackResource.initializeStack(runInfo)(using this).flatMap(stackPromise.fulfill)
