@@ -1,0 +1,3 @@
+name: gcp-webserver
+runtime: scala
+description: Basic example of a Google Cloud web server accessible over HTTP
