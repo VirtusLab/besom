@@ -1,6 +1,7 @@
 package besom.internal
 
 import scala.collection.BuildFrom
+import besom.internal.Output.secret
 
 /** Output is a wrapper for a monadic effect used to model async execution that allows Pulumi to track information about dependencies
   * between resources and properties of data (whether it's known or a secret for instance).
@@ -70,6 +71,92 @@ class Output[+A] private[internal] (using private[besom] val ctx: Context)(
 If you want to map over the value of an Output, use the map method instead."""
   )
 
+  /** Recovers from a failed Output by applying the given function to the [[Throwable]].
+    * @param f
+    *   the function to apply to the [[Throwable]]
+    * @return
+    *   an Output with the recovered value
+    */
+  def recover[B >: A](f: Throwable => B): Output[B] =
+    Output.ofData(dataResult.recover { t => Result.pure(OutputData(f(t))) })
+
+  /** Recovers from a failed Output by applying the given effectful function to the [[Throwable]]. Can be used to recover with another
+    * property of the same type.
+    * @tparam F
+    *   the effect type
+    * @param f
+    *   the effectful function to apply to the [[Throwable]]
+    * @return
+    *   an Output with the recovered value
+    */
+  def recoverWith[B >: A](f: Throwable => Output[B]): Output[B] =
+    Output.ofData(
+      dataResult.recover { t =>
+        f(t).getData
+      }
+    )
+
+  /** Recovers from a failed Output by applying the given effectful function to the [[Throwable]]. Can be used to recover with an effect of
+    * a different type.
+    * @tparam B
+    *   the type of the recovered value
+    * @tparam F
+    *   the effect type
+    * @param f
+    *   the effectful function to apply to the [[Throwable]]
+    * @return
+    *   an Output with the recovered value
+    */
+  def recoverWith[B >: A, F[_]: Result.ToFuture](f: Throwable => F[B]): Output[B] =
+    Output.ofData(
+      dataResult.recover { t =>
+        Result.eval(f(t)).map(OutputData(_))
+      }
+    )
+
+  /** Applies the given function to the value of the Output and discards the result. Useful for logging or other side effects.
+    * @param f
+    *   the function to apply to the value
+    * @return
+    *   an Output with the original value
+    */
+  def tap(f: A => Output[Unit]): Output[A] =
+    flatMap { a =>
+      f(a).map(_ => a)
+    }
+
+  /** Applies the given function to the error of the Output and discards the result. Useful for logging or other side effects.
+    * @param f
+    *   the function to apply to the error
+    * @return
+    *   an Output with the original value
+    */
+  def tapError(f: Throwable => Output[Unit]): Output[A] =
+    Output.ofData(
+      dataResult.tapBoth {
+        case Left(t) => f(t).getData.void
+        case _       => Result.unit
+      }
+    )
+
+  /** Applies the given functions to the value and error of the Output and discards the results. Useful for logging or other side effects.
+    * Only one of the functions will be called, depending on whether the Output is a success or a failure.
+    * @param f
+    *   the function to apply to the value
+    * @param onError
+    *   the function to apply to the error
+    * @return
+    *   an Output with the original value
+    */
+  def tapBoth(f: A => Output[Unit], onError: Throwable => Output[Unit]): Output[A] =
+    Output.ofData(
+      dataResult.tapBoth {
+        case Left(t)                                => onError(t).getData.void
+        case Right(OutputData.Known(_, _, Some(a))) => f(a).getData.void
+        case Right(_)                               => Result.unit
+      }
+    )
+
   /** Combines [[Output]] with the given [[Output]] using the given [[Zippable]], the default implementation results in a [[Tuple]].
     *
     * @tparam B
@@ -112,6 +199,13 @@ If you want to map over the value of an Output, use the map method instead."""
     *   a secret [[Output]], the value is now a secret
     */
   def asSecret: Output[A] = withIsSecret(Result.pure(true))
+
+  /** Discards the value of the Output and replaces it with Unit. Useful for ignoring the value of an Output but preserving the metadata
+    * about dependencies, secrecy.
+    * @return
+    *   an Output with the value of Unit
+    */
+  def void: Output[Unit] = map(_ => ())
 
   private[internal] def getData: Result[OutputData[A]] = dataResult
 
@@ -197,6 +291,10 @@ trait OutputFactory:
     */
   def when[A](condition: => Input[Boolean])(a: => Input.Optional[A])(using ctx: Context): Output[Option[A]] =
     Output.when(condition)(a)
+
+  /** Creates an `Output` that contains Unit
+    */
+  def unit(using Context): Output[Unit] = Output(())
 
 end OutputFactory
 
@@ -440,6 +538,25 @@ trait OutputExtensionsFactory:
       .flatMapInner(f)
 
   end OutputOptionListOps
+
+  implicit class OutputOfTupleOps[A <: NonEmptyTuple](private val output: Output[A]):
+    /** Unzips the [[Output]] of a non-empty tuple into a tuple of [[Output]]s of the same arity. This operation is equivalent to:
+      *
+      * {{{o: Output[(A, B, C)] => (o.map(_._1), o.map(_._2), o.map(_._3))}}}
+      *
+      * and therefore will yield three descendants of the original [[Output]]. Evaluation of the descendants will cause the original
+      * [[Output]] to be evaluated as well and may therefore lead to unexpected side effects. This is usually not a problem with properties
+      * of resources but can be surprising if other effects are subsumed into the original [[Output]]. If this behavior is not desired,
+      * consider using [[unzipOutput]] instead.
+      *
+      * @tparam Output
+      *   the type of the [[Output]]s
+      * @return
+      *   a tuple of [[Output]]s
+      */
+    inline def unzip: Tuple.Map[A, Output] = OutputUnzip.unzip(output)
+  end OutputOfTupleOps
+
 end OutputExtensionsFactory
 
 object Output:
@@ -488,7 +605,7 @@ object Output:
   ): Output[A] =
     new Output[A](ctx.registerTask(Result.eval(value)).map(OutputData(_)))
 
-  def fail[A](t: Throwable)(using ctx: Context): Output[Nothing] =
+  def fail(t: Throwable)(using ctx: Context): Output[Nothing] =
     new Output[Nothing](ctx.registerTask(Result.fail(t)))
 
   def apply[A](value: => Result[A])(using
