@@ -360,4 +360,31 @@ class NonEmptyStringTest extends munit.FunSuite with CompileAssertions:
       case None    => ()
       case Some(_) => fail("apply doesn't work")
   }
+
+  test("issue 462") {
+    val errors = scala.compiletime.testing.typeCheckErrors("""
+    import besom.*
+    given Context = ???
+
+    def requireString(key: NonEmptyString)(using Context): Output[String] = ???
+
+    val s: Output[NonEmptyString] = requireString("stuff")
+    """)
+
+    assert(errors.size == 1)
+    assert(
+      errors.head.message.contains(
+        "This is an Output of a dynamic String which can't be inferred to be a NonEmptyString! Use `.flatMap(_.toNonEmptyOutput)` instead."
+      )
+    )
+
+    compiles("""
+    import besom.*
+    given Context = ???
+
+    def requireString(key: NonEmptyString)(using Context): Output[String] = ???
+
+    val s: Output[NonEmptyString] = requireString("stuff").flatMap(_.toNonEmptyOutput)
+    """)
+  }
 end NonEmptyStringTest

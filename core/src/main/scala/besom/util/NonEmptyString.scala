@@ -51,6 +51,10 @@ object NonEmptyString:
           handleParts(parts)
         case '{ scala.StringContext.apply(${ Varargs(parts) }: _*).pulumi(${ Varargs(_) }: _*)(using ${ xd }: Context) } =>
           handleParts(parts)
+        case _ =>
+          report.errorAndAbort(
+            "This is an Output of a dynamic String which can't be inferred to be a NonEmptyString! Use `.flatMap(_.toNonEmptyOutput)` instead."
+          )
 
     end fromStringOutputImpl
 
