@@ -4,4 +4,4 @@
 //> using dep org.virtuslab::besom-core:0.3.0
 
 //> using repository sonatype:snapshots
-//> using dep "org.virtuslab::besom-kubernetes:4.10.0-core.0.3"
+//> using dep "org.virtuslab::besom-kubernetes:4.11.0-core.0.3"

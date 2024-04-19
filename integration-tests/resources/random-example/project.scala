@@ -4,4 +4,4 @@
 //> using dep org.virtuslab::besom-core:0.3.0
 
 //> using repository sonatype:snapshots
-//> using dep "org.virtuslab::besom-random:4.16.0-core.0.3"
+//> using dep "org.virtuslab::besom-random:4.16.1-core.0.3"
