@@ -613,18 +613,6 @@ class OutputTest extends munit.FunSuite:
       }
   }
 
-  // dependent on whether we want to have ambiguous guards in for-comprehensions
-  //
-  // test("output of tuples can be deconstructed in for-comprehensions") {
-  //   given Context = DummyContext().unsafeRunSync()
-
-  //   val output =
-  //     for (a, b, c) <- Output(("string", 23, true))
-  //     yield (a, b, c)
-
-  //   assertEquals(output.getData.unsafeRunSync(), OutputData(("string", 23, true)))
-  // }
-
   test("unzip combinator is able to unzip an Output of a tuple into a tuple of Outputs") {
     object extensions extends OutputExtensionsFactory
     import extensions.*

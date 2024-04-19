@@ -1,7 +1,6 @@
 package besom.internal
 
 import scala.collection.BuildFrom
-import besom.internal.Output.secret
 
 /** Output is a wrapper for a monadic effect used to model async execution that allows Pulumi to track information about dependencies
   * between resources and properties of data (whether it's known or a secret for instance).
