@@ -18,6 +18,8 @@ title: Changelog
   * `unzip` can be called on an `Output` of a tuple to receive a tuple of `Output`s, all of which are 
   descendents of the original `Output`
 
+**Full Changelog**: [GitHub (v0.3.0...v0.3.1)](https://github.com/VirtusLab/besom/compare/v0.3.0...v0.3.1)
+
 0.3.0 (16-04-2024)
 ---
 
