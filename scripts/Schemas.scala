@@ -1,9 +1,10 @@
 package besom.scripts
 
+import besom.codegen.Config
 import os.*
 
 object Schemas:
-  val cwd: os.Path = besomDir
+  val cwd: os.Path = Config.besomDir
 
   def main(args: String*): Unit =
     args match

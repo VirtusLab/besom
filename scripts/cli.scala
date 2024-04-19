@@ -1,7 +1,9 @@
 package besom.scripts
 
+import besom.codegen.Config
+
 @main def main(args: String*): Unit =
-  val _ = besomDir
+  val _ = Config.besomDir
 
   args.headOption.getOrElse("") match
     case "schemas"  => Schemas.main(args.tail*)
