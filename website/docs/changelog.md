@@ -2,6 +2,22 @@
 title: Changelog
 ---
 
+0.3.1 (19-04-2024)
+---
+
+* Added new combinators on `Output`:
+  * `recover` allows to map an error inside of a failed `Output` to a new value
+  * `recoverWith` allows the same but using an effectful function returning either an `Output` or any 
+  other supported effect, e.g.: `Future`, `IO` or `Task`
+  * `tap` allows to access the value of an `Output` and apply an effectful function to it while 
+  discarding said function's results
+  * `tapError` allows the same but for an error of a failed `Output`
+  * `tapBoth` takes two effectful function and allows to access either error or value of an `Output` by 
+  applying one of them to the contents of the `Output`
+  * `void` discards the value of an `Output`, comes with a static constructor function - `Output.unit`
+  * `unzip` can be called on an `Output` of a tuple to receive a tuple of `Output`s, all of which are 
+  descendents of the original `Output`
+
 0.3.0 (16-04-2024)
 ---
 

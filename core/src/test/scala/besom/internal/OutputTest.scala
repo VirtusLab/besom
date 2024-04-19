@@ -613,4 +613,156 @@ class OutputTest extends munit.FunSuite:
       }
   }
 
+  test("unzip combinator is able to unzip an Output of a tuple into a tuple of Outputs") {
+    object extensions extends OutputExtensionsFactory
+    import extensions.*
+
+    given Context = DummyContext().unsafeRunSync()
+
+    val o3 = Output(("string", 23, true))
+
+    val (str, int, bool) = o3.unzip
+
+    assertEquals(str.getData.unsafeRunSync(), OutputData("string"))
+    assertEquals(int.getData.unsafeRunSync(), OutputData(23))
+    assertEquals(bool.getData.unsafeRunSync(), OutputData(true))
+
+    // explicitly tuple of 20 elements
+    val tupleOf22Elems = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22)
+
+    val o22 = Output(tupleOf22Elems)
+
+    val tupleOf22Outputs = o22.unzip
+
+    assertEquals(tupleOf22Outputs.size, 22)
+
+    // explicitly tuple of 23 elements, testing tuple xxl
+    val tupleOf23Elems = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, "23")
+
+    val o23 = Output(tupleOf23Elems)
+
+    val tupleOf23Outputs = o23.unzip
+
+    assertEquals(tupleOf23Outputs.size, 23)
+
+    tupleOf23Outputs.toArray.map(_.asInstanceOf[Output[Int | String]]).zipWithIndex.foreach { (output, idx) =>
+      if idx == 22 then assertEquals(output.getData.unsafeRunSync(), OutputData("23"))
+      else assertEquals(output.getData.unsafeRunSync(), OutputData(idx + 1))
+    }
+  }
+
+  test("recover combinator is able to recover from a failed Output") {
+    given Context = DummyContext().unsafeRunSync()
+
+    val failedOutput: Output[Int] = Output.fail(Exception("error"))
+
+    val recoveredOutput = failedOutput.recover { case _: Exception =>
+      42
+    }
+
+    assertEquals(recoveredOutput.getData.unsafeRunSync(), OutputData(42))
+  }
+
+  test("recoverWith combinator is able to recover from a failed Output with another Output") {
+    given Context = DummyContext().unsafeRunSync()
+
+    val failedOutput: Output[Int] = Output.fail(Exception("error"))
+
+    val recoveredOutput = failedOutput.recoverWith { case _: Exception =>
+      Output(42)
+    }
+
+    assertEquals(recoveredOutput.getData.unsafeRunSync(), OutputData(42))
+  }
+
+  test("recoverWith combinator is able to subsume an effect like flatMap") {
+    import scala.concurrent.Future
+    import besom.*
+
+    given Context = DummyContext().unsafeRunSync()
+
+    val failedOutput: Output[Int] = Output.fail(Exception("error"))
+
+    val recoveredOutput = failedOutput.recoverWith { case _: Exception =>
+      Future.successful(42)
+    }
+
+    assertEquals(recoveredOutput.getData.unsafeRunSync(), OutputData(42))
+  }
+
+  test("tap combinator is able to tap into the value of an Output") {
+    object Output extends OutputFactory
+
+    given Context = DummyContext().unsafeRunSync()
+
+    var tappedValue = 0
+
+    val output = Output(42).tap { value =>
+      tappedValue = value
+      Output.unit
+    }
+
+    assertEquals(output.getData.unsafeRunSync(), OutputData(42))
+    assertEquals(tappedValue, 42)
+  }
+
+  test("tapError combinator is able to tap into the error of a failed Output") {
+    object Output extends OutputFactory
+
+    given Context = DummyContext().unsafeRunSync()
+
+    var tappedError: Throwable = new RuntimeException("everything is fine")
+
+    val failedOutput = Output.fail(new RuntimeException("error")).tapError { error =>
+      tappedError = error
+      Output.unit
+    }
+
+    interceptMessage[RuntimeException]("error")(failedOutput.getData.unsafeRunSync())
+    assertEquals(tappedError.getMessage, "error")
+  }
+
+  test("tapBoth combinator is able to tap into the value and error of an Output") {
+    object Output extends OutputFactory
+
+    given Context = DummyContext().unsafeRunSync()
+
+    var tappedValue            = 0
+    var tappedError: Throwable = new RuntimeException("everything is fine")
+
+    val output = Output(42).tapBoth(
+      value => {
+        tappedValue = value
+        Output.unit
+      },
+      error => {
+        tappedError = error
+        Output.unit
+      }
+    )
+
+    assertEquals(output.getData.unsafeRunSync(), OutputData(42))
+    assertEquals(tappedValue, 42)
+    assertEquals(tappedError.getMessage, "everything is fine")
+
+    tappedValue = 0
+
+    val failedOutput = Output
+      .fail(new RuntimeException("error"))
+      .tapBoth(
+        value => {
+          tappedValue = value
+          Output.unit
+        },
+        error => {
+          tappedError = error
+          Output.unit
+        }
+      )
+
+    interceptMessage[RuntimeException]("error")(failedOutput.getData.unsafeRunSync())
+    assertEquals(tappedValue, 0)
+    assertEquals(tappedError.getMessage, "error")
+  }
+
 end OutputTest
