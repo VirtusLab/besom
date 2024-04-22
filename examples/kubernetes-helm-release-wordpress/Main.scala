@@ -25,7 +25,7 @@ import besom.json.{JsObject, JsString}
 
   // Get the status field from the wordpress service, and then grab a reference to the spec.
   val svcName       = p"${wordpress.status.namespace.map(_.get)}/${wordpress.status.name.map(_.get)}-wordpress"
-  val svcResourceId = svcName.map(name => ResourceId(NonEmptyString.apply(name).get))
+  val svcResourceId = svcName.map(name => ResourceId(NonEmptyString(name).get))
   val svc           = k8s.core.v1.Service.get(name = "wpdev-wordpress", id = svcResourceId)
 
   Stack.exports(
