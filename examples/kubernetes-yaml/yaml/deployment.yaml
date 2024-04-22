@@ -1,6 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: yaml-example
   name: nginx-deployment
 spec:
   selector:
