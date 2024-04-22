@@ -1,0 +1,3 @@
+name: kubernetes-yaml
+runtime: scala
+description: Example of a Kubernetes Application using plain YAML files
