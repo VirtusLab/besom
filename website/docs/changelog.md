@@ -5,6 +5,8 @@ title: Changelog
 0.3.1 (19-04-2024)
 ---
 
+* Support for Helm charts in Kubernetes provider 4.11.0+ is now available!
+
 * Added new combinators on `Output`:
   * `recover` allows to map an error inside of a failed `Output` to a new value
   * `recoverWith` allows the same but using an effectful function returning either an `Output` or any 
