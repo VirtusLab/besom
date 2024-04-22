@@ -1,0 +1,3 @@
+name: kubernetes-helm-release-wordpress
+runtime: scala
+description: A minimal installation of the latest version of the Wordpress Helm chart
