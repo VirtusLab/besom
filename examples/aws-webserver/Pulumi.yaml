@@ -1,4 +1,4 @@
-name: aws-java-webserver
+name: aws-webserver
 runtime: scala
 description: Basic example of an AWS web server accessible over HTTP
 template:
