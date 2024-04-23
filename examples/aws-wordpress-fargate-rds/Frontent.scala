@@ -1,6 +1,6 @@
 import besom.*
 import besom.api.{aws, awsx}
-import besom.json.{JsObject, JsString, JsArray}
+import besom.json.*
 
 case class WebServiceArgs(
   dbHost: Input[String],
@@ -73,19 +73,17 @@ object WebService:
       val role = aws.iam.Role(
         name = s"$name-task-role",
         aws.iam.RoleArgs(
-          assumeRolePolicy = JsObject(
-            "Version" -> JsString("2012-10-17"),
-            "Statement" -> JsArray(
-              JsObject(
-                "Sid" -> JsString(""),
-                "Effect" -> JsString("Allow"),
-                "Principal" -> JsObject(
-                  "Service" -> JsString("ecs-tasks.amazonaws.com")
-                ),
-                "Action" -> JsString("sts:AssumeRole")
-              )
-            )
-          ).prettyPrint
+          assumeRolePolicy = json"""{
+                                     "Version": "2012-10-17",
+                                     "Statement": [{
+                                         "Sid": "",
+                                         "Effect": "Allow",
+                                         "Principal": {
+                                             "Service": "ecs-tasks.amazonaws.com"
+                                         },
+                                         "Action": "sts:AssumeRole"
+                                     }]
+                                 }""".map(_.prettyPrint)
         )
       )
 
