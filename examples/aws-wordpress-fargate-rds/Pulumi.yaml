@@ -1,0 +1,3 @@
+name: aws-wordpress-fargate-rds
+runtime: scala
+description: Deploys Wordpress in ECS Fargate with RDS backend.
