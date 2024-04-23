@@ -1,0 +1,3 @@
+name: azure-aks-managed-identity
+description: Azure AKS cluster example
+runtime: scala
