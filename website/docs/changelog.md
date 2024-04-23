@@ -5,7 +5,8 @@ title: Changelog
 0.3.1 (19-04-2024)
 ---
 
-* Support for Helm charts in Kubernetes provider 4.11.0+ is now available!
+* Support for `ConfigGroup`, `ConfigFile` resources in [Kubernetes provider 4.11.0+](https://www.pulumi.com/blog/kubernetes-yaml-v2/) 
+  is now available in Besom!
 
 * Added new combinators on `Output`:
   * `recover` allows to map an error inside of a failed `Output` to a new value
