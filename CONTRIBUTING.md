@@ -211,7 +211,7 @@ just power-wash
 Make sure the repository is clean and there are no uncommitted changes:
 
 ```bash
-git status -s | grep -v -q '^\s*M' || echo "STOP: DIRTY GIT REPO"
+git status -s
 ```
 
 #### Bump Besom version (skip for `SNAPSHOT` re-release)
@@ -248,7 +248,7 @@ Look for:
 - `core.X.Y` - core part of the provider version
 - update the provider versions in `README.md`
 
-##### Create release branch
+#### Create release branch
 
 ```bash
 git checkout -b release/v$(cat version.txt)
@@ -292,11 +292,13 @@ just publish-maven-all
 
 #### Publish packages (optional for patch versions)
 
-To publish critical package(s):
+To publish critical provider package(s):
 
 ```bash
 export GITHUB_TOKEN=$(gh auth token)
-just clean-out cli packages maven aws awsx azure gcp docker kubernetes random command tls eks
+just clean-out
+just cli packages maven aws awsx azure gcp docker kubernetes random command tls eks
+just cli packages maven aws-native google-native azure-native
 ```
 
 Tip: to check what packages are required for `examples` and `templates` use:
