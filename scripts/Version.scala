@@ -1,5 +1,6 @@
 package besom.scripts
 
+import besom.codegen.Config
 import besom.model.SemanticVersion
 
 import scala.sys.exit
@@ -7,49 +8,33 @@ import scala.util.Try
 import scala.util.matching.Regex
 
 object Version:
-  private val cwd               = besomDir
-  lazy val besomVersion: String = os.read(cwd / "version.txt").trim
+  /** Matches scala-cli besom dependencies and plugins used for version rewriting.
+    *
+    * We have three capturing groups:
+    *   - the dependency prefix for a library or plugin, also test scope is included
+    *   - the name and version that will be processed outside of the regexp
+    *   - the suffix, an optional double-quote
+    *
+    * We support and preserve both double-quoted and non double-quoted syntax.
+    */
+  private[scripts] lazy val besomDependencyPattern: Regex =
+    """^(//> using (?:test\.)?(?:dep|lib|plugin) +"?\S+::besom-)([^"]+)("?)$""".r
 
-  private lazy val latestPackageVersions = fetchLatestPackageVersions()
+  private val cwd = Config.besomDir
 
   def main(args: String*): Unit =
-
-    lazy val besomDependencyPattern: Regex =
-      ("""^(//> using (?:test\.)?(?:dep|lib|plugin) +"?\S+::besom-)([^"]+)("?)$""").r
-
-    val expectedFileNames = Vector("project.scala", "project-test.scala", "run.scala")
-
-    def projectFiles(path: os.Path = cwd): Map[os.Path, String] =
-      println(s"Searching for project files in $path\n")
-      os.walk(
-        path,
-        skip = (p: os.Path) => p.last == ".git" || p.last == ".out" || p.last == ".bsp" || p.last == ".scala-build" || p.last == ".idea"
-      ).filter(f => expectedFileNames.contains(f.last))
-        .map((f: os.Path) => f -> os.read(f))
-        .toMap
-
-    def changeVersion(version: String, newBesomVersion: String, packageVersion: String => Option[String] = _ => None): String =
-      lazy val coreShortVersion = SemanticVersion
-        .parseTolerant(besomVersion)
-        .fold(
-          e => throw Exception(s"Invalid besom version: ${besomVersion}", e),
-          _.copy(patch = 0).toShortString
-        )
-      version match
-        case s"$a:$b-core.$_" => s"$a:${packageVersion(a).getOrElse(b)}-core.$coreShortVersion"
-        case s"$a:$_"         => s"$a:$newBesomVersion"
-    end changeVersion
+    given config: Config = Config()
 
     args match
       case "show" :: Nil =>
-        println(s"Besom version: $besomVersion\n")
+        println(s"Besom version: ${config.besomVersion}\n")
         println(s"Showing all Besom dependencies...\n")
         projectFiles()
           .foreachEntry { case (f, content) =>
             content.linesIterator.zipWithIndex.foreach { case (line, index) =>
               line match
                 case besomDependencyPattern(prefix, version, suffix) =>
-                  val changedLine = prefix + changeVersion(version, besomVersion) + suffix
+                  val changedLine = prefix + changeVersion(version, config.besomVersion) + suffix
                   println(s"$f:$index:\n$changedLine\n")
                 case _ => // ignore
             }
@@ -78,7 +63,7 @@ object Version:
             e => throw Exception(s"Invalid version: $newBesomVersionStr", e),
             v => (v.toString, v.isSnapshot)
           )
-        println(s"Bumping Besom core version from '$besomVersion' to '$newBesomVersion'")
+        println(s"Bumping Besom core version from '${config.besomVersion}' to '$newBesomVersion'")
         os.write.over(cwd / "version.txt", newBesomVersion)
         println(s"Updated version.txt")
         val filesWithBesomDeps = projectFiles()
@@ -109,6 +94,7 @@ object Version:
           }
       case "update" :: Nil =>
         println(s"Bumping Besom packages version to latest")
+        val latestPackageVersions = fetchLatestPackageVersions
         projectFiles()
           .collect {
             case (path, content) if content.linesIterator.exists(besomDependencyPattern.matches) => path -> content
@@ -118,7 +104,7 @@ object Version:
               .map {
                 case line if line.contains("besom-fake-") => line // ignore
                 case besomDependencyPattern(prefix, version, suffix) =>
-                  prefix + changeVersion(version, besomVersion, latestPackageVersions.get) + suffix
+                  prefix + changeVersion(version, config.besomVersion, latestPackageVersions.get) + suffix
                 case line => line // pass through
               }
               .mkString("\n") + "\n"
@@ -141,15 +127,43 @@ object Version:
     end match
   end main
 
-  def latestPackageVersion(name: String): String =
+  private def projectFiles(path: os.Path = cwd): Map[os.Path, String] =
+    val expectedFileNames = Vector("project.scala", "project-test.scala", "run.scala")
+    println(s"Searching for project files in $path\n")
+    os.walk(
+      path,
+      skip = (p: os.Path) => p.last == ".git" || p.last == ".out" || p.last == ".bsp" || p.last == ".scala-build" || p.last == ".idea"
+    ).filter(f => expectedFileNames.contains(f.last))
+      .map((f: os.Path) => f -> os.read(f))
+      .toMap
+
+  private def changeVersion(
+    version: String,
+    newBesomVersion: String,
+    packageVersion: String => Option[String] = _ => None
+  )(using config: Config): String =
+    lazy val coreShortVersion = SemanticVersion
+      .parseTolerant(config.besomVersion)
+      .fold(
+        e => throw Exception(s"Invalid besom version: ${config.besomVersion}", e),
+        _.copy(patch = 0).toShortString
+      )
+    version match
+      case s"$a:$b-core.$_" => s"$a:${packageVersion(a).getOrElse(b)}-core.$coreShortVersion"
+      case s"$a:$_"         => s"$a:$newBesomVersion"
+  end changeVersion
+
+  def latestPackageVersion(name: String)(using Config): String =
+    val latestPackageVersions = fetchLatestPackageVersions
     Try(latestPackageVersions(name)).recover { case e: NoSuchElementException =>
       throw Exception(s"package $name not found", e)
     }.get
 
-  private def fetchLatestPackageVersions(): Map[String, String] =
+  private def fetchLatestPackageVersions(using Config): Map[String, String] =
     println(s"Searching for latest package versions")
+    given Flags = Flags()
     Packages
-      .readPackagesMetadata(Packages.packagesDir)
+      .readOrFetchPackagesMetadata(Packages.packagesDir, Nil)
       .map { metadata =>
         metadata.name -> metadata.version.getOrElse(throw Exception("Package version must be present at this point")).asString
       }

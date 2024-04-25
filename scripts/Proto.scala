@@ -1,11 +1,12 @@
 package besom.scripts
 
+import besom.codegen.Config
 import org.apache.commons.lang3.SystemUtils
 import os.*
 
 object Proto:
   def main(args: String*): Unit =
-    val cwd       = besomDir
+    val cwd       = Config.besomDir
     val protoPath = cwd / "proto"
     args match
       case "fetch" :: Nil   => fetchProto(cwd, protoPath)

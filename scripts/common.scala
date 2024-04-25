@@ -8,11 +8,34 @@ import java.util.concurrent.atomic.AtomicInteger
 import scala.annotation.tailrec
 import scala.concurrent.duration.Duration
 
-def besomDir: os.Path =
-  if os.pwd.last != "besom" then
-    println("You have to run this command from besom project root directory")
-    sys.exit(1)
-  os.pwd
+import besom.codegen.Config
+
+object Args:
+  def parse(args: Seq[String], monoFlags: Seq[String] = Seq.empty): (Vector[String], Map[String, Int | String]) =
+    val (rest, flags) = parseInner(args, monoFlags)
+    val mergedFlags: Map[String, Int | String] = flags.groupMapReduce(_._1)(_._2) {
+      case (a: Int, b: Int)       => a + b
+      case (a: Int, b: String)    => a + Integer.parseInt(b)
+      case (a: String, b: Int)    => Integer.parseInt(a) + b
+      case (a: String, b: String) => b // last one wins
+    }
+    (rest, mergedFlags)
+
+  private def parseInner(args: Seq[String], monoFlags: Seq[String]): (Vector[String], Vector[(String, Int | String)]) =
+    args match
+      case Nil => (Vector.empty, Vector.empty)
+      case v +: tail if monoFlags.contains(s"--$v") || monoFlags.contains(s"-$v") =>
+        val (rest, flags) = parseInner(tail, monoFlags)
+        (rest, (v, 1) +: flags)
+      case s"--$name" +: value +: tail =>
+        val (rest, flags) = parseInner(tail, monoFlags)
+        (rest, (name, value) +: flags)
+      case s"-$name" +: value +: tail =>
+        val (rest, flags) = parseInner(tail, monoFlags)
+        (rest, (name, value) +: flags)
+      case head +: tail =>
+        val (rest, flags) = parseInner(tail, monoFlags)
+        (head +: rest, flags)
 
 def git(command: Shellable*)(wd: os.Path): CommandResult =
   val cmd = os.proc("git", command)
@@ -228,7 +251,26 @@ def withProgress[A](title: String, initialTotal: Int)(f: Progress ?=> A): A =
 
 end withProgress
 
-def resolveMavenPackage(name: String, defaultScalaVersion: String): Either[Exception, String] =
+import coursier.Repository
+
+def resolveMavenPackageVersion(name: String)(using config: Config): Either[Exception, String] =
+  import coursier.Repositories
+  resolvePackageVersion(
+    name,
+    config.scalaVersion,
+    Vector(Repositories.central, Repositories.sonatype("public"), Repositories.sonatype("snapshots"))
+  )
+end resolveMavenPackageVersion
+
+def resolveLocalPackageVersion(name: String)(using config: Config): Either[Exception, String] =
+  resolvePackageVersion(
+    name,
+    config.scalaVersion,
+    Vector()
+  )
+end resolveLocalPackageVersion
+
+private def resolvePackageVersion(name: String, defaultScalaVersion: String, repositories: Vector[Repository]): Either[Exception, String] =
   import coursier.*
   import coursier.parse.DependencyParser
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -241,15 +283,11 @@ def resolveMavenPackage(name: String, defaultScalaVersion: String): Either[Excep
     )
     .flatMap { dep =>
       Resolve()
-        .addRepositories(
-          Repositories.central,
-          Repositories.sonatype("public"),
-          Repositories.sonatype("snapshots")
-        )
+        .addRepositories(repositories*)
         .addDependencies(dep)
         .either()
         .flatMap {
           _.reconciledVersions.get(dep.module).toRight(Exception(s"Failed to resolve $name"))
         }
     }
-end resolveMavenPackage
+end resolvePackageVersion
