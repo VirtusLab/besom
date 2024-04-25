@@ -847,6 +847,93 @@ class CodeGenTest extends munit.FunSuite {
       tags = Set(
         munit.Ignore
       ) // FIXME: un-ignore when this is fixed: https://github.com/pulumi/pulumi-kubernetes/issues/2683
+    ),
+    Data(
+      name = "Error on urn property",
+      json = """|{
+                |  "name": "mangled-provider",
+                |  "version": "0.0.1",
+                |  "resources": {
+                |    "mangled-provider:index:mangled": {
+                |      "properties": {
+                |        "asString": {
+                |          "type": "string"
+                |        },
+                |        "toString": {
+                |          "type": "string"
+                |        },
+                |        "scala": {
+                |          "type": "string"
+                |        }
+                |      },
+                |      "type": "object"
+                |    }
+                |  }
+                |}
+                |""".stripMargin,
+      ignored = List(
+        "src/index/Provider.scala",
+        "src/index/ProviderArgs.scala",
+        "src/index/MangledArgs.scala"
+      ),
+      expected = Map(
+        "src/index/Mangled.scala" ->
+          """|package besom.api.mangledprovider
+             |
+             |final case class Mangled private(
+             |  urn: besom.types.Output[besom.types.URN],
+             |  id: besom.types.Output[besom.types.ResourceId],
+             |  asString_ : besom.types.Output[scala.Option[String]],
+             |  scala_ : besom.types.Output[scala.Option[String]],
+             |  toString_ : besom.types.Output[scala.Option[String]]
+             |) extends besom.CustomResource
+             |
+             |object Mangled extends besom.ResourceCompanion[Mangled]:
+             |  /** Resource constructor for Mangled. 
+             |    * 
+             |    * @param name [[besom.util.NonEmptyString]] The unique (stack-wise) name of the resource in Pulumi state (not on provider's side).
+             |    *        NonEmptyString is inferred automatically from non-empty string literals, even when interpolated. If you encounter any
+             |    *        issues with this, please try using `: NonEmptyString` type annotation. If you need to convert a dynamically generated
+             |    *        string to NonEmptyString, use `NonEmptyString.apply` method - `NonEmptyString(str): Option[NonEmptyString]`.
+             |    *
+             |    * @param args [[MangledArgs]] The configuration to use to create this resource. This resource has a default configuration.
+             |    *
+             |    * @param opts [[besom.CustomResourceOptions]] Resource options to use for this resource. 
+             |    *        Defaults to empty options. If you need to set some options, use [[besom.opts]] function to create them, for example:
+             |    *  
+             |    *        {{{
+             |    *        val res = Mangled(
+             |    *          "my-resource",
+             |    *          MangledArgs(...), // your args
+             |    *          opts(provider = myProvider)
+             |    *        )
+             |    *        }}}
+             |    */
+             |  def apply(using ctx: besom.types.Context)(
+             |    name: besom.util.NonEmptyString,
+             |    args: MangledArgs = MangledArgs(),
+             |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
+             |  ): besom.types.Output[Mangled] =
+             |    ctx.readOrRegisterResource[Mangled, MangledArgs]("mangled-provider:index:mangled", name, args, opts(using besom.ResourceOptsVariant.Custom))
+             |
+             |  private[besom] def typeToken: besom.types.ResourceType = "mangled-provider:index:mangled"
+             |
+             |  given resourceDecoder(using besom.types.Context): besom.types.ResourceDecoder[Mangled] =
+             |    besom.internal.ResourceDecoder.derived[Mangled]
+             |
+             |  given decoder(using besom.types.Context): besom.types.Decoder[Mangled] =
+             |    besom.internal.Decoder.customResourceDecoder[Mangled]
+             |
+             |
+             |  given outputOps: {} with
+             |    extension(output: besom.types.Output[Mangled])
+             |      def urn : besom.types.Output[besom.types.URN] = output.flatMap(_.urn)
+             |      def id : besom.types.Output[besom.types.ResourceId] = output.flatMap(_.id)
+             |      def asString_ : besom.types.Output[scala.Option[String]] = output.flatMap(_.asString_)
+             |      def scala_ : besom.types.Output[scala.Option[String]] = output.flatMap(_.scala_)
+             |      def toString_ : besom.types.Output[scala.Option[String]] = output.flatMap(_.toString_)
+             |""".stripMargin
+      )
     )
   ).foreach(data =>
     test(data.name.withTags(data.tags)) {

@@ -29,7 +29,7 @@ object Config {
 
   val DefaultBesomVersion: String = {
     try {
-      os.read(os.pwd / "version.txt").trim
+      os.read(besomDir / "version.txt").trim
     } catch {
       case ex: java.nio.file.NoSuchFileException =>
         throw GeneralCodegenException(
@@ -38,9 +38,15 @@ object Config {
         )
     }
   }
-  val DefaultSchemasDir: os.Path  = os.pwd / ".out" / "schemas"
-  val DefaultCodegenDir: os.Path  = os.pwd / ".out" / "codegen"
-  val DefaultOverlaysDir: os.Path = os.pwd / "codegen" / "resources" / "overlays"
+  val DefaultSchemasDir: os.Path  = besomDir / ".out" / "schemas"
+  val DefaultCodegenDir: os.Path  = besomDir / ".out" / "codegen"
+  val DefaultOverlaysDir: os.Path = besomDir / "codegen" / "resources" / "overlays"
+
+  def besomDir: os.Path =
+    if os.pwd.last != "besom" then
+      println("You have to run this command from besom project root directory")
+      sys.exit(1)
+    os.pwd
 
   case class Provider(
     nonCompiledModules: Seq[String] = Seq.empty,

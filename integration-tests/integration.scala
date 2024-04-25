@@ -12,7 +12,7 @@ case object LocalOnly extends munit.Tag("LocalOnly")
 
 val javaVersion        = Config.DefaultJavaVersion
 val scalaVersion       = Config.DefaultScalaVersion
-val coreVersion        = Version.besomVersion
+val coreVersion        = Config.DefaultBesomVersion
 val scalaPluginVersion = coreVersion
 
 val languagePluginDir = os.pwd / ".out" / "language-plugin"

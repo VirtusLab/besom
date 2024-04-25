@@ -14,33 +14,48 @@ import scala.sys.exit
 import scala.util.*
 import scala.util.control.NonFatal
 
+case class Flags(
+  force: Boolean = false
+)
+
 //noinspection ScalaWeakerAccess,TypeAnnotation
 object Packages:
   def main(args: String*): Unit =
-    args match
+    val (params, flags) = Args.parse(args, monoFlags = Vector("force", "f"))
+
+    given Config = Config()
+    given Flags = Flags(
+      force = flags.get("force").orElse(flags.get("f")) match
+        case Some(v: String) => v.toBoolean
+        case Some(v: Int)    => v > 0
+        case None            => false
+    )
+
+    params.toList match
+      case "local-all" :: Nil         => publishLocalAll(generateAll(packagesDir))
+      case "local" :: tail            => publishLocalSelected(generateSelected(packagesDir, tail), tail)
+      case "maven-all" :: Nil         => publishMavenAll(generateAll(packagesDir))
+      case "maven" :: tail            => publishMavenSelected(generateSelected(packagesDir, tail), tail)
+      case "metadata-all" :: Nil      => downloadPackagesMetadataAndSchema(packagesDir, selected = Nil)
+      case "metadata" :: tail         => downloadPackagesMetadataAndSchema(packagesDir, selected = tail)
+      case "generate-all" :: Nil      => generateAll(packagesDir)
+      case "generate" :: tail         => generateSelected(packagesDir, tail)
+      case "publish-local-all" :: Nil => publishLocalAll(generatedFile)
+      case "publish-local" :: tail    => publishLocalSelected(generatedFile, tail)
+      case "publish-maven-all" :: Nil => publishMavenAll(generatedFile)
+      case "publish-maven" :: tail    => publishMavenSelected(generatedFile, tail)
+      // less common use cases
       case "list" :: Nil                    => listLatestPackages(packagesDir)
-      case "list-published-to-maven" :: Nil => listPublishedPackages(publishedMavenFile)
-      case "local-all" :: Nil               => publishLocalAll(generateAll(packagesDir))
-      case "local" :: tail                  => publishLocalSelected(generateSelected(packagesDir, tail), tail)
-      case "maven-all" :: Nil               => publishMavenAll(generateAll(packagesDir))
-      case "maven" :: tail                  => publishMavenSelected(generateSelected(packagesDir, tail), tail)
-      case "metadata-all" :: Nil            => downloadPackagesMetadata(packagesDir)
-      case "metadata" :: tail               => downloadPackagesMetadata(packagesDir, selected = tail)
-      case "generate-all" :: Nil            => generateAll(packagesDir)
-      case "generate" :: tail               => generateSelected(packagesDir, tail)
-      case "publish-local-all" :: Nil       => publishLocalAll(generatedFile)
-      case "publish-local" :: tail          => publishLocalSelected(generatedFile, tail)
-      case "publish-maven-all" :: Nil       => publishMavenAll(generatedFile)
-      case "publish-maven" :: tail          => publishMavenSelected(generatedFile, tail)
       case "compile" :: tail                => compileSelected(generatedFile, tail)
-      case "publish-maven-no-deps" :: tail  => publishMavenSelectedNoDeps(generatedFile, tail)
+      case "list-published-to-maven" :: Nil => listPublishedPackages(publishedMavenFile)
+      case "resolve-maven" :: tail          => resolveMavenSelected(packagesDir, tail)
+      case "resolve-maven-all" :: Nil       => resolveMavenAll(packagesDir)
       case cmd =>
         println(s"Unknown command: $cmd\n")
         println(
           s"""Usage: packages <command>
              |
              |Commands:
-             |  list                               - list latest packages from Pulumi repository
              |  local-all                          - generate and publish all packages locally
              |  local <package>...                 - generate and publish selected packages locally
              |  maven-all                          - generate and publish all packages to Maven
@@ -53,23 +68,26 @@ object Packages:
              |  publish-local <package>...         - publish selected packages locally
              |  publish-maven-all                  - publish all packages to Maven
              |  publish-maven <package>...         - publish selected packages to Maven
+             |  
              |  compile <package>...               - compile selected packages
-             |  publish-maven-no-deps <package>... - publish selected packages to Maven without dependencies
+             |  list                               - list latest packages from Pulumi repository
+             |  list-published-to-maven            - list packages published to Maven (from local cache)
+             |  resolve-maven <package>...         - resolve selected packages from Maven
+             |  resolve-maven-all                  - resolve all packages from Maven
              |""".stripMargin
         )
         exit(1)
+    end match
   end main
 
-  val cwd             = besomDir
-  val schemasDir      = cwd / ".out" / "schemas"
-  val codegenDir      = cwd / ".out" / "codegen"
+  val cwd             = Config.besomDir
   val packagesDir     = cwd / ".out" / "packages"
   val publishLocalDir = cwd / ".out" / "publishLocal"
   val publishMavenDir = cwd / ".out" / "publishMaven"
 
-  val generatedFile      = codegenDir / "generated.json"
-  val publishedLocalFile = publishLocalDir / "published.json"
-  val publishedMavenFile = publishMavenDir / "published.json"
+  def generatedFile(using config: Config) = config.codegenDir / "generated.json"
+  val publishedLocalFile                  = publishLocalDir / "published.json"
+  val publishedMavenFile                  = publishMavenDir / "published.json"
 
   def compileOpts(heapMaxGb: Int = 32): Vector[os.Shellable] =
     println(s"Compiling with max heap size: ${heapMaxGb}G")
@@ -119,6 +137,7 @@ object Packages:
 
   private val blockedPackages = Vector(
     "azure-native-v1", // deprecated
+    "azure-quickstart-acr-geo-replication", // uses deprecated azure-native-v1
     "aws-quickstart-aurora-postgres", // archived
     "aws-quickstart-redshift", // archived
     "aws-quickstart-vpc" // archived
@@ -133,11 +152,12 @@ object Packages:
   private val compileProblemPackages = blockedPackages ++ Vector(
     "aws-iam", // id parameter, schema error - https://github.com/pulumi/pulumi-aws-iam/issues/18
     "nuage", // id parameter, schema error - https://github.com/nuage-studio/pulumi-nuage/issues/50
+    "ovh", // urn parameter, schema error - https://github.com/ovh/pulumi-ovh/issues/139
     "fortios" // method collision - https://github.com/VirtusLab/besom/issues/458
   )
 
-  def generateAll(targetPath: os.Path): os.Path = {
-    val metadata = readPackagesMetadata(targetPath)
+  def generateAll(targetPath: os.Path)(using Config, Flags): os.Path = {
+    val metadata = readOrFetchPackagesMetadata(targetPath, Nil)
       .filter {
         case m if (codegenProblemPackages ++ compileProblemPackages).contains(m.name) =>
           println(s"Skipping problematic package generation: ${m.name}")
@@ -147,9 +167,8 @@ object Packages:
     upsertGeneratedFile(generate(metadata))
   }
 
-  def publishLocalAll(sourceFile: os.Path): os.Path = {
-    val generated = PackageMetadata
-      .fromJsonList(os.read(sourceFile: os.Path))
+  def publishLocalAll(sourceFile: os.Path)(using Config, Flags): os.Path = {
+    val generated = getPackages(sourceFile)
       .filter {
         case m if compileProblemPackages.contains(m.name) =>
           println(s"Skipping problematic package publishing: ${m.name}")
@@ -160,9 +179,8 @@ object Packages:
     upsertPublishedFile(publishedLocalFile, published)
   }
 
-  def publishMavenAll(sourceFile: os.Path): os.Path = {
-    val generated = PackageMetadata
-      .fromJsonList(os.read(sourceFile: os.Path))
+  def publishMavenAll(sourceFile: os.Path)(using Config, Flags): os.Path = {
+    val generated = getPackages(sourceFile)
       .filter {
         case m if compileProblemPackages.contains(m.name) =>
           println(s"Skipping problematic package publishing: ${m.name}")
@@ -173,8 +191,8 @@ object Packages:
     upsertPublishedFile(publishedMavenFile, published)
   }
 
-  def generateSelected(targetPath: os.Path, selected: List[String]): os.Path = {
-    val readPackages = readPackagesMetadata(targetPath, selected)
+  def generateSelected(targetPath: os.Path, selected: List[String])(using config: Config, flags: Flags): os.Path = {
+    val readPackages = readOrFetchPackagesMetadata(targetPath, selected)
     val packages = selected.map { p =>
       PackageId.parse(p) match {
         case Right(name, Some(version)) =>
@@ -193,32 +211,32 @@ object Packages:
     upsertGeneratedFile(metadata)
   }
 
-  def publishLocalSelected(sourceFile: os.Path, packages: List[String]): os.Path = {
+  def publishLocalSelected(sourceFile: os.Path, packages: List[String])(using Config, Flags): os.Path = {
     val selectedPackages = resolvePackageVersions(sourceFile, packages)
     val published        = publishLocal(selectedPackages)
     upsertPublishedFile(publishedLocalFile, published)
   }
 
-  def publishMavenSelected(sourceFile: os.Path, packages: List[String]): os.Path = {
+  def publishMavenSelected(sourceFile: os.Path, packages: List[String])(using Config, Flags): os.Path = {
     val selectedPackages = resolvePackageVersions(sourceFile, packages)
     val published        = publishMaven(selectedPackages)
     upsertPublishedFile(publishedMavenFile, published)
   }
 
-  def resolvePackageVersions(sourceFile: os.Path, packages: List[String]): Vector[PackageMetadata] = {
-    lazy val generated = PackageMetadata.fromJsonList(os.read(sourceFile))
+  def resolvePackageVersions(sourceFile: os.Path, packages: List[String])(using Config): Vector[PackageMetadata] =
+    lazy val metadata = getPackages(sourceFile)
     packages.map {
       PackageId.parse(_) match
         case Right((name, Some(version))) => PackageMetadata(name, PackageVersion(version))
         case Right((name, None)) =>
-          generated
+          metadata
             .find(_.name == name)
-            .getOrElse(throw Exception(s"Package '$name' not found in the generated packages (${generated.size})"))
+            .getOrElse(throw Exception(s"Package '$name' not found in the generated packages (${metadata.size})"))
         case Left(e) => throw e
     }.toVector
-  }
+  end resolvePackageVersions
 
-  def compileSelected(sourceFile: os.Path, packages: List[String]) =
+  def compileSelected(sourceFile: os.Path, packages: List[String])(using config: Config) =
     val selectedPackages = resolvePackageVersions(sourceFile, packages)
     withProgress("Compiling packages", selectedPackages.size) {
       selectedPackages.foreach { m =>
@@ -229,7 +247,7 @@ object Packages:
             "scala-cli",
             "--power",
             "compile",
-            codegenDir / m.name / version,
+            config.codegenDir / m.name / version,
             "--suppress-experimental-feature-warning",
             "--suppress-directives-in-multiple-files-warning"
           )
@@ -245,33 +263,84 @@ object Packages:
     }
   end compileSelected
 
-  def publishMavenSelectedNoDeps(sourceFile: os.Path, packages: List[String]) =
-    val selectedPackages = resolvePackageVersions(sourceFile, packages)
-    withProgress("Publishing packages to Maven without dependencies", selectedPackages.size) {
-      selectedPackages.foreach { m =>
-        Progress.report(label = s"${m.name}:${m.version.getOrElse("latest")}")
-        val version = m.version.getOrElse(throw Exception("Package version must be provided for publishing")).asString
-        try
-          awaitPublishedToMaven(m)
-          val args: Seq[os.Shellable] = Seq(
-            "scala-cli",
-            "--power",
-            "publish",
-            codegenDir / m.name / version,
-            "--suppress-experimental-feature-warning",
-            "--suppress-directives-in-multiple-files-warning"
+  private def parsePackages(packages: List[String]): Vector[PackageMetadata] =
+    packages.map {
+      PackageId.parse(_) match
+        case Right((name, Some(version))) => PackageMetadata(name, PackageVersion(version))
+        case Right((name, None))          => PackageMetadata(name, None)
+        case Left(e)                      => throw e
+    }.toVector
+
+  def resolveMavenAll(targetDir: Path)(using config: Config): Unit =
+    val _        = downloadPackagesMetadata(targetDir, Nil)
+    val latest   = readPackagesMetadata(targetDir).map(_.copy(version = None))
+    val resolved = resolveMavenVersions(targetDir, latest)
+    compareWithLatest(targetDir, resolved, latest)
+  end resolveMavenAll
+
+  def resolveMavenSelected(targetDir: Path, selected: List[String])(using config: Config): Unit =
+    val selectedPackages = parsePackages(selected)
+    val resolved         = resolveMavenVersions(targetDir, selectedPackages)
+
+    val _              = downloadPackagesMetadata(targetDir, selected)
+    val latestPackages = readPackagesMetadata(targetDir)
+    compareWithLatest(targetDir, resolved, latestPackages)
+  end resolveMavenSelected
+
+  def resolveMavenVersions(targetDir: os.Path, packages: Vector[PackageMetadata])(using config: Config): Map[String, SemanticVersion] =
+    withProgress("Resolving packages from Maven", packages.size) {
+      packages.map { m =>
+        val dep = dependency(m)
+        val ver = m.version.getOrElse("latest")
+        Thread.sleep(100) // avoid rate limiting
+        val res = resolveMavenPackageVersion(dep)
+          .fold(
+            e => {
+              Progress.fail(s"Can't resolve '${m.name}' version '${ver}':\n ${e.getMessage}")
+              m.name -> None
+            },
+            v => {
+              SemanticVersion.parseTolerant(v) match
+                case Left(e) =>
+                  Progress.fail(s"Can't parse resolved version '${v}' for '${m.name}':\n ${e.getMessage}")
+                  m.name -> None
+                case Right(v) =>
+                  Progress.report(label = s"${m.name}:${v}")
+                  m.name -> Some(v)
+            }
           )
-          os.proc(args ++ mavenOpts).call(stdin = envOrExit("PGP_PASSWORD"), stdout = os.Inherit, mergeErrIntoOut = true)
-          println(s"[${new Date}] Successfully published provider '${m.name}' version '${version}'")
-        catch
-          case _: os.SubprocessException =>
-            Progress.fail(s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', error: sub-process failed")
-          case NonFatal(_) =>
-            Progress.fail(s"[${new Date}] Publish failed for provider '${m.name}' version '${version}'")
-        finally Progress.end
+        Progress.end
+        res
+      }
+    }.collect({ case (name, Some(version)) => name -> version }).toMap
+  end resolveMavenVersions
+
+  def compareWithLatest(
+    targetDir: os.Path,
+    resolved: Map[String, SemanticVersion],
+    latestPackages: Vector[PackageMetadata]
+  )(using config: Config): Unit =
+    withProgress("Comparing with Pulumi repository versions", resolved.size) {
+      resolved.foreach { case (name, l) =>
+        val v = SemanticVersion(l.major, l.minor, l.patch)
+        val latest =
+          latestPackages
+            .find(_.name == name)
+            .flatMap(_.version)
+            .map(SemanticVersion.parseTolerant)
+        (v, latest) match
+          case (maven: SemanticVersion, Some(Right(upstream: SemanticVersion))) if maven < upstream =>
+            Progress.report(label = s"${name}: ${maven} < ${upstream}")
+            Progress.end
+          case (maven: SemanticVersion, Some(Right(upstream: SemanticVersion))) if maven >= upstream =>
+            Progress.report(label = s"${name}: ${maven} >= ${upstream}")
+            Progress.end
+          case (m, u) =>
+            Progress.fail(s"${name}: one or both not found: ${m} ${u}")
+            Progress.end
       }
     }
-  end publishMavenSelectedNoDeps
+  end compareWithLatest
 
   type PackageId = (String, Option[String])
   object PackageId:
@@ -282,7 +351,7 @@ object Packages:
       case _                      => Left(Exception(s"Invalid package format: '$value'"))
   end PackageId
 
-  def generate(metadata: Vector[PackageMetadata]): Vector[PackageMetadata] = {
+  def generate(metadata: Vector[PackageMetadata])(using Config): Vector[PackageMetadata] = {
     val seen = mutable.HashSet.empty[PackageId]
     val todo = mutable.Queue.empty[PackageMetadata]
     val done = mutable.ListBuffer.empty[PackageMetadata]
@@ -297,10 +366,6 @@ object Packages:
           val versionOrLatest = m.version.getOrElse("latest")
           Progress.report(label = s"${m.name}:${versionOrLatest}")
           try
-            given Config = Config(
-              schemasDir = schemasDir,
-              codegenDir = codegenDir
-            )
             val result  = generator.generatePackageSources(metadata = m)
             val version = result.metadata.version.getOrElse(throw Exception("Package version must be present after generating")).asString
 
@@ -327,7 +392,7 @@ object Packages:
     done.toVector
   }
 
-  def publishLocal(generated: Vector[PackageMetadata]): Vector[PackageMetadata] = {
+  def publishLocal(generated: Vector[PackageMetadata])(using config: Config, flags: Flags): Vector[PackageMetadata] = {
     val seen = mutable.HashSet.empty[PackageId]
     val todo = mutable.Queue.empty[PackageMetadata]
     val done = mutable.ListBuffer.empty[PackageMetadata]
@@ -335,13 +400,24 @@ object Packages:
     os.makeDir.all(publishLocalDir)
 
     generated.foreach(m => {
-      todo.enqueueAll(m.dependencies) // dependencies first to avoid missing dependencies during compilation
-      todo.enqueue(m)
+      // add dependencies first to avoid missing dependencies during compilation
+      for d <- m.dependencies do if !todo.contains(d) then todo.enqueue(d)
+      if !todo.contains(m) then todo.enqueue(m)
     })
     withProgress(s"Publishing ${todo.size} packages locally", todo.size) {
       while todo.nonEmpty do
         val m             = todo.dequeue()
         val id: PackageId = (m.name, m.version.map(_.asString))
+        lazy val resolved = resolveLocalPackageVersion(dependency(m))
+        if !flags.force && !seen.contains(id) && resolved.isRight then
+          seen.add(id)
+          val v = resolved.getOrElse(throw Exception("Resolved version must be provided at this point"))
+          Progress.report(label = s"${m.name}:${v}")
+          println(s"[${new Date}] Skipping provider '${m.name}' version '${v}' (already published locally)")
+          done += m
+          Progress.end
+        end if
+
         if !seen.contains(id) then
           seen.add(id)
           val version = m.version.getOrElse(throw Exception("Package version must be provided for publishing")).asString
@@ -353,7 +429,7 @@ object Packages:
               "--power",
               "publish",
               "local",
-              codegenDir / m.name / version,
+              config.codegenDir / m.name / version,
               "--suppress-experimental-feature-warning",
               "--suppress-directives-in-multiple-files-warning"
             )
@@ -378,7 +454,7 @@ object Packages:
     done.toVector
   }
 
-  def publishMaven(generated: Vector[PackageMetadata]): Vector[PackageMetadata] = {
+  def publishMaven(generated: Vector[PackageMetadata])(using config: Config, flags: Flags): Vector[PackageMetadata] = {
     val seen = mutable.HashSet.empty[PackageId]
     val todo = mutable.Queue.empty[PackageMetadata]
     val done = mutable.ListBuffer.empty[PackageMetadata]
@@ -386,25 +462,36 @@ object Packages:
     os.makeDir.all(publishMavenDir)
 
     generated.foreach(m => {
-      todo.enqueueAll(m.dependencies) // dependencies first to avoid missing dependencies during compilation
-      todo.enqueue(m)
+      // add dependencies first to avoid missing dependencies during compilation
+      for d <- m.dependencies do if !todo.contains(d) then todo.enqueue(d)
+      if !todo.contains(m) then todo.enqueue(m)
     })
     withProgress(s"Publishing ${todo.size} packages to Maven", todo.size) {
       while todo.nonEmpty do
         val m             = todo.dequeue()
         val id: PackageId = (m.name, m.version.map(_.asString))
+        lazy val resolved = resolveMavenPackageVersion(dependency(m))
+        if !flags.force && !seen.contains(id) && resolved.isRight then
+          seen.add(id)
+          val v = resolved.getOrElse(throw Exception("Resolved version must be provided at this point"))
+          Progress.report(label = s"${m.name}:${v}")
+          println(s"[${new Date}] Skipping provider '${m.name}' version '${v}' (already published to Maven)")
+          done += m
+          Progress.end
+        end if
+
         if !seen.contains(id) then
           seen.add(id)
           val version = m.version.getOrElse(throw Exception("Package version must be provided for publishing")).asString
           Progress.report(label = s"${m.name}:${version}")
           val logFile = publishMavenDir / s"${m.name}-${version}.log"
           try
-            awaitPublishedToMaven(m)
+            awaitDependenciesPublishedToMaven(m)
             val args: Seq[Shellable] = Seq(
               "scala-cli",
               "--power",
               "publish",
-              codegenDir / m.name / version,
+              config.codegenDir / m.name / version,
               "--suppress-experimental-feature-warning",
               "--suppress-directives-in-multiple-files-warning"
             )
@@ -415,7 +502,6 @@ object Packages:
             Progress.total(todo.size)
           catch
             case e: CantDownloadModule =>
-              e.printStackTrace()
               Progress.fail(
                 s"[${new Date}] Publish failed for provider '${m.name}' version '${version}' " +
                   s"error: failed to download dependency, message: ${e.getMessage}"
@@ -437,7 +523,13 @@ object Packages:
     done.toVector
   }
 
-  private def awaitPublishedToMaven(m: PackageMetadata): Unit = {
+  def dependency(m: PackageMetadata)(using config: Config): String =
+    val version = m.version
+      .map(version => s"${version}-core.${config.coreShortVersion}")
+      .getOrElse("[0.+,999999.+)")
+    s"org.virtuslab::besom-${m.name}:${version}"
+
+  private def awaitDependenciesPublishedToMaven(m: PackageMetadata)(using config: Config): Unit = {
     // Check if dependencies are available in Maven Central before publishing
     if m.dependencies.nonEmpty then
       val timeout  = 15.minutes
@@ -445,30 +537,22 @@ object Packages:
       val deadline = timeout.fromNow
       println(s"Checking for dependencies with timeout of ${timeout}")
 
-      // TODO: clean this up, it's a bit of a mess
-      val defaultScalaVersion = Config.DefaultBesomVersion
       val shortCoreVersion = SemanticVersion
-        .parseTolerant(defaultScalaVersion)
+        .parseTolerant(config.besomVersion)
         .fold(
-          e => Left(Exception(s"Invalid besom version: ${defaultScalaVersion}", e)),
+          e => Left(Exception(s"Invalid besom version: ${config.besomVersion}", e)),
           v => Right(v.copy(patch = 0).toShortString /* drop patch version */ )
         )
-
-      def dependency(m: PackageMetadata): String =
-        s"org.virtuslab::besom-${m.name}:${m.version.get}-core.${shortCoreVersion.toTry.get}"
-
-      val allDependencies = m.dependencies.map(dependency)
+      val allDependencies = m.dependencies.map(dependency(_))
       val found           = mutable.Map.empty[String, Boolean]
 
       def foundAll = found.values.forall(identity)
 
-      allDependencies.foreach { d =>
-        found(d) = false
-      }
+      allDependencies.foreach { d => found(d) = false }
       while (deadline.hasTimeLeft && !foundAll) {
         allDependencies.foreach { d =>
-          resolveMavenPackage(d, defaultScalaVersion).fold(
-            _ => println(s"Dependency '${d}' not found"),
+          resolveMavenPackageVersion(d).fold(
+            e => println(s"Dependency '${d}' not found: ${e.getMessage}"),
             _ => found(d) = true
           )
         }
@@ -476,31 +560,45 @@ object Packages:
           println(s"Waiting for ${interval} to allow the publish to propagate")
           Thread.sleep(interval.toMillis)
       }
+      if foundAll then println("All dependencies found in Maven Central")
     end if
   }
 
-  def readPackagesMetadata(targetPath: os.Path, selected: List[String] = Nil): Vector[PackageMetadata] = {
-    // download metadata if none found
-    if !os.exists(targetPath) then downloadPackagesMetadata(targetPath, selected)
+  private def readPackageMetadataFiles(path: os.Path): Map[String, Path] = ListMap.from(
+    os
+      .list(path)
+      .filter(_.last.endsWith("metadata.json"))
+      .map(p => p.last.stripSuffix(".metadata.json") -> p)
+  )
 
-    def read(path: os.Path): ListMap[String, Path] = ListMap.from(
-      os
-        .list(path)
-        .filter(_.last.endsWith("metadata.json"))
-        .map(p => p.last.stripSuffix(".metadata.json") -> p)
-    )
+  def readPackagesMetadata(targetPath: os.Path): Vector[PackageMetadata] =
+    readPackageMetadataFiles(targetPath)
+      .map((_, p) => PackageMetadata.fromJsonFile(p))
+      .toVector
+
+  def readOrFetchPackagesMetadata(
+    targetPath: os.Path,
+    selected: List[String]
+  )(using config: Config, flags: Flags): Vector[PackageMetadata] = {
+    // download metadata if none found
+    if flags.force || !os.exists(targetPath) then
+      println(s"No packages metadata found in: '$targetPath', downloading...")
+      downloadPackagesMetadataAndSchema(targetPath, selected)
+    else println(s"Reading packages metadata from: '$targetPath'")
 
     // read cached metadata
-    val cached = read(targetPath)
+    val cached = readPackageMetadataFiles(targetPath)
 
     // download all metadata if selected packages are not found
     val selectedNames             = selected.map(_.takeWhile(_ != ':')).toSet
     val selectedAreSubsetOfCached = selectedNames.subsetOf(cached.keys.toSet)
+    if selected.nonEmpty then
+      println(s"Selected: ${selected.mkString(", ")}, cached: ${cached.keys.mkString(", ")}, subset: $selectedAreSubsetOfCached")
     val downloaded =
       if !selectedAreSubsetOfCached
       then
-        downloadPackagesMetadata(targetPath, selected)
-        read(targetPath)
+        downloadPackagesMetadataAndSchema(targetPath, selected)
+        readPackageMetadataFiles(targetPath)
       else cached
 
     // double check if selected packages are found
@@ -528,10 +626,15 @@ object Packages:
     metadata
   }
 
+  private case class PackageYAML(name: String, repo_url: String, schema_file_path: String, version: String) derives YamlCodec
+
   // downloads latest package metadata and schemas using Pulumi packages repository
-  def downloadPackagesMetadata(targetPath: os.Path, selected: List[String] = Nil): Unit = {
-    os.remove.all(targetPath)
-    os.makeDir.all(targetPath)
+  def downloadPackagesMetadataAndSchema(targetPath: os.Path, selected: List[String])(using config: Config): Unit =
+    downloadPackagesSchema(downloadPackagesMetadata(targetPath, selected))
+  end downloadPackagesMetadataAndSchema
+
+  private def downloadPackagesMetadata(targetPath: os.Path, selected: List[String])(using config: Config): Vector[PackageYAML] =
+    println("Downloading packages metadata...")
 
     val packagesRepoApi = "https://api.github.com/repos/pulumi/registry/contents/themes/default/data/registry/packages"
 
@@ -562,83 +665,88 @@ object Packages:
 
     type Error = String
 
-    case class PackageYAML(name: String, repo_url: String, schema_file_path: String, version: String) derives YamlCodec
-
     val selectedNames = selected.map(_.takeWhile(_ != ':'))
     val size          = if selectedNames.isEmpty then packages.size else selectedNames.size
-    println(selectedNames)
+    if selectedNames.nonEmpty then println(s"Selected for download: ${selectedNames.mkString(", ")}")
 
     // fetch all production schema metadata
-    val downloaded: Vector[PackageYAML] =
-      withProgress(s"Downloading $size packages metadata", size) {
-        packages
-          .filter { (name, _) =>
-            selectedNames match
-              case Nil => true
-              case s   => s.contains(name)
-          }
-          .filterNot((name, _) => blockedPackages.contains(name))
-          .map { (packageName: String, p: PackageSource) =>
-            Progress.report(label = packageName)
-            try
-              val metadataFile = p.name
-              val metadataPath = targetPath / metadataFile
-              val shaPath      = targetPath / s"${p.name}.sha"
+    val downloaded = withProgress(s"Downloading $size packages metadata", size) {
+      packages
+        .filter { (name, _) =>
+          selectedNames match
+            case Nil => true
+            case s   => s.contains(name)
+        }
+        .filterNot((name, _) => {
+          val block = blockedPackages.contains(name)
+          if block then Progress.fail(s"Skipping package: '$name', it's known to have problems")
+          block
+        })
+        .map { (packageName: String, p: PackageSource) =>
+          Progress.report(label = packageName)
+          try
+            val metadataFile = p.name
+            val metadataPath = targetPath / metadataFile
+            val shaPath      = targetPath / s"${p.name}.sha"
 
-              val hasChanged: Boolean =
-                if os.exists(shaPath) then
-                  val sha = os.read(shaPath).split(" ").head
-                  sha != p.sha
-                else true // no sha file, assume it has changed
+            val hasChanged: Boolean =
+              if os.exists(shaPath) then
+                val sha = os.read(shaPath).split(" ").head
+                sha != p.sha
+              else true // no sha file, assume it has changed
 
-              val metadataRaw: Either[Error, PackageYAML] = {
-                if hasChanged || !os.exists(metadataPath) then
-                  val schemaResponse = requests.get(p.download_url, headers = authHeader)
-                  schemaResponse.statusCode match
-                    case 200 =>
-                      val metadata = schemaResponse.text()
-                      os.write.over(metadataPath, metadata, createFolders = true)
-                      os.write.over(shaPath, s"${p.sha}  $metadataFile", createFolders = true)
-                      Right(metadata)
-                    case _ =>
-                      Left(s"failed to download metadata for package: '${p.name}'")
-                else Right(os.read(metadataPath))
-              }.flatMap {
-                _.as[PackageYAML].fold(
-                  error => Left(s"failed to deserialize metadata for package: '${p.name}', error: ${error}"),
-                  p => Right(p)
-                )
-              }
+            val metadataRaw: Either[Error, PackageYAML] = {
+              if hasChanged || !os.exists(metadataPath) then
+                val schemaResponse = requests.get(p.download_url, headers = authHeader)
+                schemaResponse.statusCode match
+                  case 200 =>
+                    val metadata = schemaResponse.text()
+                    os.write.over(metadataPath, metadata, createFolders = true)
+                    os.write.over(shaPath, s"${p.sha}  $metadataFile", createFolders = true)
+                    Right(metadata)
+                  case _ =>
+                    Left(s"failed to download metadata for package: '${p.name}'")
+              else Right(os.read(metadataPath))
+            }.flatMap {
+              _.as[PackageYAML].fold(
+                error => Left(s"failed to deserialize metadata for package: '${p.name}', error: ${error}"),
+                p => Right(p)
+              )
+            }
 
-              val metadata: Either[Error, PackageMetadata] =
-                metadataRaw.map(m => PackageMetadata(m.name, m.version).withUrl(m.repo_url))
+            val metadata: Either[Error, PackageMetadata] =
+              metadataRaw.map(m => PackageMetadata(m.name, m.version).withUrl(m.repo_url))
 
-              metadata match
-                case Left(error) => Progress.fail(error)
-                case Right(value) =>
-                  os.write.over(targetPath / s"${packageName}.metadata.json", value.toJson, createFolders = true)
+            metadata match
+              case Left(error) => Progress.fail(error)
+              case Right(value) =>
+                os.write.over(targetPath / s"${packageName}.metadata.json", value.toJson, createFolders = true)
 
-              metadataRaw
-            catch
-              case NonFatal(e) =>
-                val msg = s"Failed to download metadata for package: '${p.name}', error: ${e.getMessage}"
-                Progress.fail(msg)
-                Left(msg)
-            finally Progress.end
-            end try
-          }
-          .map(_.toOption)
-          .collect { case Some(p) => p }
-          .toVector
-      }
+            metadataRaw
+          catch
+            case NonFatal(e) =>
+              val msg = s"Failed to download metadata for package: '${p.name}', error: ${e.getMessage}"
+              Progress.fail(msg)
+              Left(msg)
+          finally Progress.end
+          end try
+        }
+        .map(_.toOption)
+        .collect { case Some(p) => p }
+        .toVector
+    }
+    println(s"Packages directory: '$targetPath'")
+    downloaded
+  end downloadPackagesMetadata
 
+  private def downloadPackagesSchema(downloaded: Vector[PackageYAML])(using config: Config): Unit = {
     // pre-fetch all available production schemas, if any are missing here code generation will use a fallback mechanism
-    withProgress(s"Downloading $size packages schemas", size) {
+    withProgress(s"Downloading ${downloaded.size} packages schemas", downloaded.size) {
       downloaded.foreach(p => {
         Progress.report(label = p.name)
         try
           val ext        = if p.schema_file_path.endsWith(".yaml") || p.schema_file_path.endsWith(".yml") then "yaml" else "json"
-          val schemaPath = schemasDir / p.name / PackageVersion(p.version).get / s"schema.$ext"
+          val schemaPath = config.schemasDir / p.name / PackageVersion(p.version).get / s"schema.$ext"
           if !os.exists(schemaPath) then
             val rawUrlPrefix   = p.repo_url.replace("https://github.com/", "https://raw.githubusercontent.com/")
             val url            = s"$rawUrlPrefix/${p.version}/${p.schema_file_path}"
@@ -657,12 +765,11 @@ object Packages:
       })
     }
 
-    println(s"Packages directory: '$targetPath'")
-    println(s"Schemas directory: '$schemasDir'")
+    println(s"Schemas directory: '${config.schemasDir}'")
   }
 
-  def listLatestPackages(targetPath: os.Path): Unit = {
-    val metadata = readPackagesMetadata(targetPath)
+  def listLatestPackages(targetPath: os.Path)(using config: Config, flags: Flags): Unit = {
+    val metadata = readOrFetchPackagesMetadata(targetPath, Nil)
     val active = metadata
       .filterNot(m => blockedPackages.contains(m.name))
       .filterNot(m => codegenProblemPackages.contains(m.name))
@@ -682,28 +789,30 @@ object Packages:
     )
   }
 
+  def getPackages(file: os.Path): Vector[PackageMetadata] =
+    if os.exists(file)
+    then PackageMetadata.fromJsonList(os.read(file))
+    else
+      println(s"File not found: $file, returning empty list")
+      Vector.empty
+  end getPackages
+
   def listPublishedPackages(file: os.Path): Unit =
-    val metadata = PackageMetadata.fromJsonList(os.read(file))
+    val metadata = getPackages(file)
     println(s"Found ${metadata.size} packages in logs published to Maven")
     metadata.foreach(m => println(s"${m.name}:${m.version.getOrElse("unknown")}"))
   end listPublishedPackages
 
-  def upsertGeneratedFile(metadata: Vector[PackageMetadata]): os.Path = {
-    val generated =
-      if os.exists(generatedFile)
-      then PackageMetadata.fromJsonList(os.read(generatedFile))
-      else Vector.empty
-    val all = deduplicate(generated ++ metadata)
+  def upsertGeneratedFile(metadata: Vector[PackageMetadata])(using Config): os.Path = {
+    val generated = getPackages(generatedFile)
+    val all       = deduplicate(generated ++ metadata)
     os.write.over(generatedFile, PackageMetadata.toJson(all), createFolders = true)
     generatedFile
   }
 
   def upsertPublishedFile(file: os.Path, metadata: Vector[PackageMetadata]): os.Path = {
-    val published =
-      if os.exists(file)
-      then PackageMetadata.fromJsonList(os.read(file))
-      else Vector.empty
-    val all = deduplicate(published ++ metadata)
+    val published = getPackages(file)
+    val all       = deduplicate(published ++ metadata)
     os.write.over(file, PackageMetadata.toJson(all), createFolders = true)
     file
   }
