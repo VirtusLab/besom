@@ -1,0 +1,3 @@
+name: aws-apigatewayv2-eventbridge
+description: An example that integrates API Gateway, EventBridge, and Lambda.
+runtime: scala
