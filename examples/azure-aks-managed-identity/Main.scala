@@ -26,7 +26,6 @@ import besom.api.tls
     name = "cluster",
     azurenative.containerservice.ManagedClusterArgs(
       resourceGroupName = resourceGroup.name,
-      // replace "dns-prefix" with your desired DNS prefix
       dnsPrefix = "dns-prefix",
       enableRBAC = true,
       identity = azurenative.containerservice.inputs.ManagedClusterIdentityArgs(
