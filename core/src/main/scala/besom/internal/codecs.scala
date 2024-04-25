@@ -153,7 +153,7 @@ trait Decoder[A]:
 end Decoder
 
 object NameUnmangler:
-  private val mangledAnyRefMethodNames = Set(
+  private val anyRefMethodNames = Set(
     "eq",
     "ne",
     "notify",
@@ -166,14 +166,29 @@ object NameUnmangler:
     "getClass",
     "hashCode",
     "isInstanceOf",
-    "toString"
-  ).map(_ + "_")
+    "toString",
+    "finalize"
+  )
 
-  /** Keep in sync with `manglePropertyName` in CodeGen.scala */
+  private val reservedMethods = Set(
+    "pulumiResourceName",
+    "asString"
+  )
+
+  private val reservedPackages = Set(
+    "java",
+    "javax",
+    "scala",
+    "besom"
+  )
+
+  private val reserved = (anyRefMethodNames ++ reservedMethods ++ reservedPackages).map(_ + "_")
+
+  // This logic must be undone the same way in codegen
+  // Keep in sync with `manglePropertyName` in CodeGen.scala
   def unmanglePropertyName(name: String): String =
-    if (mangledAnyRefMethodNames.contains(name)) {
-      name.dropRight(1)
-    } else name
+    if reserved.contains(name) then name.dropRight(1) // drop the underscore
+    else name
 
 object Decoder extends DecoderInstancesLowPrio1:
   import besom.json.*

@@ -281,4 +281,72 @@ class ResourceDecoderTest extends munit.FunSuite:
 //      assertDecodingError (resource.ipAddress.map(_.map(_.fqdn))
     }
   }
+
+  final case class Mangled(
+    urn: Output[URN],
+    id: Output[ResourceId],
+    asString_ : Output[String],
+    toString_ : Output[String],
+    scala_ : Output[String]
+  ) extends CustomResource
+  object Mangled:
+    given resourceDecoder(using Context): ResourceDecoder[Mangled] = ResourceDecoder.derived
+    given decoder(using Context): Decoder[Mangled]                 = Decoder.customResourceDecoder
+
+  runWithBothOutputCodecs {
+    test(s"mangled fields") {
+      val resourceDecoder = summon[ResourceDecoder[Mangled]]
+
+      val errorOrResourceResult = Right(
+        RawResourceResult(
+          urn = URN("urn:pulumi:dev::test::test:test:Mangled::test"),
+          id = Some(
+            ResourceId.unsafeOf(
+              "/test/1234"
+            )
+          ),
+          data = Struct(
+            fields = Map(
+              "asString" -> Value(kind = Value.Kind.StringValue(value = "test1")),
+              "toString" -> Value(kind = Value.Kind.StringValue(value = "test2")),
+              "scala" -> Value(kind = Value.Kind.StringValue(value = "test3"))
+            )
+          ),
+          dependencies = Map.empty
+        )
+      )
+
+      val (resource: Mangled, resourceResolver) = resourceDecoder.makeResourceAndResolver.unsafeRunSync()
+      resourceResolver.resolve(errorOrResourceResult).unsafeRunSync()
+
+      checkOutput(resource.urn)(
+        "urn:pulumi:dev::test::test:test:Mangled::test",
+        expectedDependencies = Set(resource),
+        expectedIsSecret = false
+      )
+
+      checkOutput(resource.id)(
+        "/test/1234",
+        expectedDependencies = Set(resource),
+        expectedIsSecret = false
+      )
+
+      checkOutput(resource.asString_)(
+        "test1",
+        expectedDependencies = Set(resource),
+        expectedIsSecret = false
+      )
+      checkOutput(resource.toString_)(
+        "test2",
+        expectedDependencies = Set(resource),
+        expectedIsSecret = false
+      )
+      checkOutput(resource.scala_)(
+        "test3",
+        expectedDependencies = Set(resource),
+        expectedIsSecret = false
+      )
+    }
+  }
+
 end ResourceDecoderTest
