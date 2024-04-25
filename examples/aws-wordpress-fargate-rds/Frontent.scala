@@ -91,7 +91,7 @@ object WebService:
         name = s"$name-task-policy",
         aws.iam.RolePolicyAttachmentArgs(
           role = role.name,
-          policyArn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+          policyArn = aws.iam.enums.ManagedPolicy.AmazonECSTaskExecutionRolePolicy.value
         )
       )
 
