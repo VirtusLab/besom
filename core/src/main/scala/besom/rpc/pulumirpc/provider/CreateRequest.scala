@@ -145,7 +145,7 @@ object CreateRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
         case 10 =>
           __urn = _input__.readStringRequireUtf8()
         case 18 =>
-          __properties = Option(__properties.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __properties = _root_.scala.Option(__properties.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 25 =>
           __timeout = _input__.readDouble()
         case 32 =>
@@ -195,7 +195,7 @@ object CreateRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
   )
   implicit class CreateRequestLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.CreateRequest]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.provider.CreateRequest](_l) {
     def urn: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.urn)((c_, f_) => c_.copy(urn = f_))
-    def properties: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getProperties)((c_, f_) => c_.copy(properties = Option(f_)))
+    def properties: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getProperties)((c_, f_) => c_.copy(properties = _root_.scala.Option(f_)))
     def optionalProperties: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.properties)((c_, f_) => c_.copy(properties = f_))
     def timeout: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Double] = field(_.timeout)((c_, f_) => c_.copy(timeout = f_))
     def preview: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.preview)((c_, f_) => c_.copy(preview = f_))

@@ -94,7 +94,7 @@ object CheckResponse extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
       _tag__ match {
         case 0 => _done__ = true
         case 10 =>
-          __inputs = Option(__inputs.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __inputs = _root_.scala.Option(__inputs.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 18 =>
           __failures += _root_.scalapb.LiteParser.readMessage[pulumirpc.provider.CheckFailure](_input__)
         case tag =>
@@ -136,7 +136,7 @@ object CheckResponse extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
     failures = _root_.scala.Seq.empty
   )
   implicit class CheckResponseLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.CheckResponse]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.provider.CheckResponse](_l) {
-    def inputs: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getInputs)((c_, f_) => c_.copy(inputs = Option(f_)))
+    def inputs: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getInputs)((c_, f_) => c_.copy(inputs = _root_.scala.Option(f_)))
     def optionalInputs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.inputs)((c_, f_) => c_.copy(inputs = f_))
     def failures: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[pulumirpc.provider.CheckFailure]] = field(_.failures)((c_, f_) => c_.copy(failures = f_))
   }

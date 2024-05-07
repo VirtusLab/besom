@@ -1,20 +1,30 @@
 package besom.internal
 
-import pulumirpc.resource.*
-import pulumirpc.provider.CallRequest
 import pulumirpc.provider.CallResponse
 import pulumirpc.provider.InvokeResponse
 import pulumirpc.engine.*
 import besom.NonEmptyString
 import besom.internal.logging.BesomLogger
 import besom.util.printer
+import pulumirpc.callback.Callback
+import pulumirpc.resource.{
+  ReadResourceRequest,
+  ReadResourceResponse,
+  RegisterResourceOutputsRequest,
+  RegisterResourceRequest,
+  RegisterResourceResponse,
+  ResourceCallRequest,
+  ResourceInvokeRequest,
+  SupportsFeatureRequest,
+  SupportsFeatureResponse
+}
 
 //noinspection TypeAnnotation
 object DummyContext:
   val dummyRunInfo        = RunInfo(Some("test-organization"), "test-project", "test-stack", true, 4, false, "dummy", "dummy")
-  val dummyFeatureSupport = FeatureSupport(true, true, true, true)
+  val dummyFeatureSupport = FeatureSupport(true, true, true, true, true)
   val dummyMonitor = new Monitor:
-    def call(callRequest: CallRequest): Result[CallResponse] =
+    def call(callRequest: ResourceCallRequest): Result[CallResponse] =
       Result.fail(Exception("Not implemented"))
     def invoke(invokeRequest: ResourceInvokeRequest): Result[InvokeResponse] =
       Result.fail(Exception("Not implemented"))
@@ -25,6 +35,8 @@ object DummyContext:
     def registerResourceOutputs(registerResourceOutputsRequest: RegisterResourceOutputsRequest): Result[Unit] =
       Result.fail(Exception("Not implemented"))
     def supportsFeature(supportsFeatureRequest: SupportsFeatureRequest): Result[SupportsFeatureResponse] =
+      Result.fail(Exception("Not implemented"))
+    def registerStackTransform(request: Callback): Result[Unit] =
       Result.fail(Exception("Not implemented"))
     def close(): Result[Unit] = Result.fail(Exception("Not implemented"))
 

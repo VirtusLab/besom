@@ -114,7 +114,7 @@ object CallResponse extends scalapb.GeneratedMessageCompanion[pulumirpc.provider
       _tag__ match {
         case 0 => _done__ = true
         case 10 =>
-          __return = Option(__return.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __return = _root_.scala.Option(__return.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 18 =>
           __returnDependencies += pulumirpc.provider.CallResponse._typemapper_returnDependencies.toCustom(_root_.scalapb.LiteParser.readMessage[pulumirpc.provider.CallResponse.ReturnDependenciesEntry](_input__))
         case 26 =>
@@ -365,7 +365,7 @@ object CallResponse extends scalapb.GeneratedMessageCompanion[pulumirpc.provider
           case 10 =>
             __key = _input__.readStringRequireUtf8()
           case 18 =>
-            __value = Option(__value.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.provider.CallResponse.ReturnDependencies](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+            __value = _root_.scala.Option(__value.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.provider.CallResponse.ReturnDependencies](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
           case tag =>
             if (_unknownFields__ == null) {
               _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -405,7 +405,7 @@ object CallResponse extends scalapb.GeneratedMessageCompanion[pulumirpc.provider
     )
     implicit class ReturnDependenciesEntryLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.CallResponse.ReturnDependenciesEntry]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.provider.CallResponse.ReturnDependenciesEntry](_l) {
       def key: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.key)((c_, f_) => c_.copy(key = f_))
-      def value: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.CallResponse.ReturnDependencies] = field(_.getValue)((c_, f_) => c_.copy(value = Option(f_)))
+      def value: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.CallResponse.ReturnDependencies] = field(_.getValue)((c_, f_) => c_.copy(value = _root_.scala.Option(f_)))
       def optionalValue: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[pulumirpc.provider.CallResponse.ReturnDependencies]] = field(_.value)((c_, f_) => c_.copy(value = f_))
     }
     final val KEY_FIELD_NUMBER = 1
@@ -424,7 +424,7 @@ object CallResponse extends scalapb.GeneratedMessageCompanion[pulumirpc.provider
   }
   
   implicit class CallResponseLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.CallResponse]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.provider.CallResponse](_l) {
-    def `return`: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getReturn)((c_, f_) => c_.copy(`return` = Option(f_)))
+    def `return`: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getReturn)((c_, f_) => c_.copy(`return` = _root_.scala.Option(f_)))
     def optionalReturn: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.`return`)((c_, f_) => c_.copy(`return` = f_))
     def returnDependencies: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, pulumirpc.provider.CallResponse.ReturnDependencies]] = field(_.returnDependencies)((c_, f_) => c_.copy(returnDependencies = f_))
     def failures: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[pulumirpc.provider.CheckFailure]] = field(_.failures)((c_, f_) => c_.copy(failures = f_))

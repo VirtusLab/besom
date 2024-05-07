@@ -141,9 +141,9 @@ object CheckRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider
         case 10 =>
           __urn = _input__.readStringRequireUtf8()
         case 18 =>
-          __olds = Option(__olds.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __olds = _root_.scala.Option(__olds.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 26 =>
-          __news = Option(__news.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __news = _root_.scala.Option(__news.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 42 =>
           __randomSeed = _input__.readBytes()
         case tag =>
@@ -192,9 +192,9 @@ object CheckRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider
   )
   implicit class CheckRequestLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.CheckRequest]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.provider.CheckRequest](_l) {
     def urn: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.urn)((c_, f_) => c_.copy(urn = f_))
-    def olds: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getOlds)((c_, f_) => c_.copy(olds = Option(f_)))
+    def olds: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getOlds)((c_, f_) => c_.copy(olds = _root_.scala.Option(f_)))
     def optionalOlds: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.olds)((c_, f_) => c_.copy(olds = f_))
-    def news: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getNews)((c_, f_) => c_.copy(news = Option(f_)))
+    def news: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getNews)((c_, f_) => c_.copy(news = _root_.scala.Option(f_)))
     def optionalNews: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.news)((c_, f_) => c_.copy(news = f_))
     def randomSeed: _root_.scalapb.lenses.Lens[UpperPB, _root_.com.google.protobuf.ByteString] = field(_.randomSeed)((c_, f_) => c_.copy(randomSeed = f_))
   }

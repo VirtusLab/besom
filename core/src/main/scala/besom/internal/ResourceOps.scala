@@ -1,12 +1,12 @@
 package besom.internal
 
 import com.google.protobuf.struct.*
-import pulumirpc.resource.*
 import pulumirpc.resource.RegisterResourceRequest.PropertyDependencies
 import besom.util.*
 import besom.types.*
 import besom.internal.logging.*
 import pulumirpc.provider.InvokeResponse
+import pulumirpc.resource.{ReadResourceRequest, RegisterResourceOutputsRequest, RegisterResourceRequest, ResourceInvokeRequest}
 
 // TODO remove
 import scala.annotation.unused
@@ -112,7 +112,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     resource: Resource,
     opts: InvokeOptions
   ): Output[R] =
-    ???
+    ??? // TODO: https://github.com/VirtusLab/besom/issues/367
 
   private[internal] def executeInvoke(tok: FunctionToken, invokeArgs: SerializationResult, opts: InvokeOptions): Result[Value] =
     def buildInvokeRequest(args: Struct, provider: Option[String], version: Option[String]): Result[ResourceInvokeRequest] =
@@ -438,33 +438,6 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     remote: Boolean
   ): Result[Either[Throwable, RawResourceResult]] =
     ctx.registerTask {
-      // X `type`: _root_.scala.Predef.String = "",
-      // X name: _root_.scala.Predef.String = "",
-      // X parent: _root_.scala.Predef.String = "",
-      // X custom: _root_.scala.Boolean = false,
-      // X `object`: _root_.scala.Option[com.google.protobuf.struct.Struct] = _root_.scala.None,
-      // X protect: _root_.scala.Boolean = false,
-      // X dependencies: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
-      // X provider: _root_.scala.Predef.String = "",
-      // X propertyDependencies: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceRequest.PropertyDependencies] = _root_.scala.collection.immutable.Map.empty,
-      // X deleteBeforeReplace: _root_.scala.Boolean = false,
-      // X version: _root_.scala.Predef.String = "",
-      // X ignoreChanges: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
-      // X acceptSecrets: _root_.scala.Boolean = false,
-      // X additionalSecretOutputs: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
-      // N @scala.deprecated(message="Marked as deprecated in proto file", "") urnAliases: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
-      // X importId: _root_.scala.Predef.String = "",
-      // X customTimeouts: _root_.scala.Option[pulumirpc.resource.RegisterResourceRequest.CustomTimeouts] = _root_.scala.None,
-      // X deleteBeforeReplaceDefined: _root_.scala.Boolean = false,
-      // X supportsPartialValues: _root_.scala.Boolean = false,
-      // X remote: _root_.scala.Boolean = false,
-      // X acceptResources: _root_.scala.Boolean = false,
-      // X providers: _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.scala.Predef.String] = _root_.scala.collection.immutable.Map.empty,
-      // X replaceOnChanges: _root_.scala.Seq[_root_.scala.Predef.String] = _root_.scala.Seq.empty,
-      // X pluginDownloadURL: _root_.scala.Predef.String = "",
-      // X retainOnDelete: _root_.scala.Boolean = false,
-      // X aliases: _root_.scala.Seq[pulumirpc.resource.Alias] = _root_.scala.Seq.empty,
-      // unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
       Result
         .defer {
           RegisterResourceRequest(
@@ -479,7 +452,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
             providers = inputs.providerRefs,
             propertyDependencies = inputs.depUrns.allDepsByProperty.map { case (key, value) =>
               key -> PropertyDependencies(value.toList.map(_.asString))
-            }.toMap,
+            },
             deleteBeforeReplaceDefined = true,
             deleteBeforeReplace = inputs.options match
               case CustomResolvedResourceOptions(_, _, deleteBeforeReplace, _, _) => deleteBeforeReplace
@@ -488,7 +461,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
             version = inputs.options.version.getOrElse(""), // protobuf expects empty string and not null
             ignoreChanges = inputs.options.ignoreChanges,
             acceptSecrets = true, // our implementation supports secrets from day one
-            acceptResources = ctx.runInfo.acceptResources,
+            acceptResources = ctx.runInfo.acceptResources, // our implementation supports resources from day one
             additionalSecretOutputs = inputs.options match
               case CustomResolvedResourceOptions(_, _, _, additionalSecretOutputs, _) => additionalSecretOutputs
               case _                                                                  => Vector.empty
@@ -500,7 +473,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
             ,
             aliases = inputs.aliases.map { alias =>
               pulumirpc.alias.Alias(pulumirpc.alias.Alias.Alias.Urn(alias))
-            }.toList,
+            },
             remote = remote,
             customTimeouts = Some(
               RegisterResourceRequest.CustomTimeouts(
@@ -511,8 +484,10 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
             ),
             pluginDownloadURL = inputs.options.pluginDownloadUrl.getOrElse(""),
             retainOnDelete = inputs.options.retainOnDelete,
-            supportsPartialValues = false, // TODO partial values
-            deletedWith = inputs.deletedWithUrn.getOrElse(URN.empty).asString
+            supportsPartialValues = false, // TODO: https://github.com/VirtusLab/besom/issues/480
+            supportsResultReporting = false, // TODO: https://github.com/VirtusLab/besom/issues/481
+            deletedWith = inputs.deletedWithUrn.getOrElse(URN.empty).asString,
+            transforms = Seq.empty // TODO: https://github.com/VirtusLab/besom/issues/413
           )
         }
         .flatMap { req =>
@@ -556,16 +531,16 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     @unused typ: ResourceType,
     @unused resourceOptions: ResolvedResourceOptions
   ): Result[List[Unit]] =
-    Result.pure(List.empty) // TODO parent transformations
+    Result.pure(List.empty) // TODO parent transformations: https://github.com/VirtusLab/besom/issues/42
 
   private[internal] def applyTransformations(
     resourceOptions: ResolvedResourceOptions,
     @unused parentTransformations: List[Unit] // TODO this needs transformations from ResourceState, not Resource
   ): Result[ResolvedResourceOptions] =
-    Result.pure(resourceOptions) // TODO resource transformations
+    Result.pure(resourceOptions) // TODO resource transformations: https://github.com/VirtusLab/besom/issues/42
 
   private[internal] def collapseAliases(@unused opts: ResolvedResourceOptions): Result[List[Output[String]]] =
-    Result.pure(List.empty) // TODO aliases
+    Result.pure(List.empty) // TODO aliases: https://github.com/VirtusLab/besom/issues/44
 
   private[internal] def mergeProviders(typ: String, opts: ResolvedResourceOptions, resources: Resources): Result[Providers] =
     def getParentProviders = opts.parent match
