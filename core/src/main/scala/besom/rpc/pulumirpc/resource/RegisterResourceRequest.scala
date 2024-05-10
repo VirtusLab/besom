@@ -73,6 +73,10 @@ package pulumirpc.resource
   *   true, but it's not necessary.
   * @param sourcePosition
   *   the optional source position of the user code that initiated the register.
+  * @param transforms
+  *   a list of transforms to apply to the resource before registering it.
+  * @param supportsResultReporting
+  *   true if the request is from an SDK that supports the result field in the response.
   */
 @SerialVersionUID(0L)
 final case class RegisterResourceRequest(
@@ -106,6 +110,8 @@ final case class RegisterResourceRequest(
     deletedWith: _root_.scala.Predef.String = "",
     aliasSpecs: _root_.scala.Boolean = false,
     sourcePosition: _root_.scala.Option[pulumirpc.source.SourcePosition] = _root_.scala.None,
+    transforms: _root_.scala.Seq[pulumirpc.callback.Callback] = _root_.scala.Seq.empty,
+    supportsResultReporting: _root_.scala.Boolean = false,
     unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
     ) extends scalapb.GeneratedMessage with scalapb.lenses.Updatable[RegisterResourceRequest] {
     @transient
@@ -285,6 +291,17 @@ final case class RegisterResourceRequest(
       if (sourcePosition.isDefined) {
         val __value = sourcePosition.get
         __size += 2 + _root_.com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag(__value.serializedSize) + __value.serializedSize
+      };
+      transforms.foreach { __item =>
+        val __value = __item
+        __size += 2 + _root_.com.google.protobuf.CodedOutputStream.computeUInt32SizeNoTag(__value.serializedSize) + __value.serializedSize
+      }
+      
+      {
+        val __value = supportsResultReporting
+        if (__value != false) {
+          __size += _root_.com.google.protobuf.CodedOutputStream.computeBoolSize(32, __value)
+        }
       };
       __size += unknownFields.serializedSize
       __size
@@ -469,6 +486,18 @@ final case class RegisterResourceRequest(
         _output__.writeUInt32NoTag(__m.serializedSize)
         __m.writeTo(_output__)
       };
+      transforms.foreach { __v =>
+        val __m = __v
+        _output__.writeTag(31, 2)
+        _output__.writeUInt32NoTag(__m.serializedSize)
+        __m.writeTo(_output__)
+      };
+      {
+        val __v = supportsResultReporting
+        if (__v != false) {
+          _output__.writeBool(32, __v)
+        }
+      };
       unknownFields.writeTo(_output__)
     }
     def withType(__v: _root_.scala.Predef.String): RegisterResourceRequest = copy(`type` = __v)
@@ -534,6 +563,11 @@ final case class RegisterResourceRequest(
     def getSourcePosition: pulumirpc.source.SourcePosition = sourcePosition.getOrElse(pulumirpc.source.SourcePosition.defaultInstance)
     def clearSourcePosition: RegisterResourceRequest = copy(sourcePosition = _root_.scala.None)
     def withSourcePosition(__v: pulumirpc.source.SourcePosition): RegisterResourceRequest = copy(sourcePosition = Option(__v))
+    def clearTransforms = copy(transforms = _root_.scala.Seq.empty)
+    def addTransforms(__vs: pulumirpc.callback.Callback *): RegisterResourceRequest = addAllTransforms(__vs)
+    def addAllTransforms(__vs: Iterable[pulumirpc.callback.Callback]): RegisterResourceRequest = copy(transforms = transforms ++ __vs)
+    def withTransforms(__v: _root_.scala.Seq[pulumirpc.callback.Callback]): RegisterResourceRequest = copy(transforms = __v)
+    def withSupportsResultReporting(__v: _root_.scala.Boolean): RegisterResourceRequest = copy(supportsResultReporting = __v)
     def withUnknownFields(__v: _root_.scalapb.UnknownFieldSet) = copy(unknownFields = __v)
     def discardUnknownFields = copy(unknownFields = _root_.scalapb.UnknownFieldSet.empty)
     def getFieldByNumber(__fieldNumber: _root_.scala.Int): _root_.scala.Any = {
@@ -622,6 +656,11 @@ final case class RegisterResourceRequest(
           if (__t != false) __t else null
         }
         case 29 => sourcePosition.orNull
+        case 31 => transforms
+        case 32 => {
+          val __t = supportsResultReporting
+          if (__t != false) __t else null
+        }
       }
     }
     def getField(__field: _root_.scalapb.descriptors.FieldDescriptor): _root_.scalapb.descriptors.PValue = {
@@ -657,6 +696,8 @@ final case class RegisterResourceRequest(
         case 27 => _root_.scalapb.descriptors.PString(deletedWith)
         case 28 => _root_.scalapb.descriptors.PBoolean(aliasSpecs)
         case 29 => sourcePosition.map(_.toPMessage).getOrElse(_root_.scalapb.descriptors.PEmpty)
+        case 31 => _root_.scalapb.descriptors.PRepeated(transforms.iterator.map(_.toPMessage).toVector)
+        case 32 => _root_.scalapb.descriptors.PBoolean(supportsResultReporting)
       }
     }
     def toProtoString: _root_.scala.Predef.String = _root_.scalapb.TextFormat.printToUnicodeString(this)
@@ -697,6 +738,8 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     var __deletedWith: _root_.scala.Predef.String = ""
     var __aliasSpecs: _root_.scala.Boolean = false
     var __sourcePosition: _root_.scala.Option[pulumirpc.source.SourcePosition] = _root_.scala.None
+    val __transforms: _root_.scala.collection.immutable.VectorBuilder[pulumirpc.callback.Callback] = new _root_.scala.collection.immutable.VectorBuilder[pulumirpc.callback.Callback]
+    var __supportsResultReporting: _root_.scala.Boolean = false
     var `_unknownFields__`: _root_.scalapb.UnknownFieldSet.Builder = null
     var _done__ = false
     while (!_done__) {
@@ -712,7 +755,7 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
         case 32 =>
           __custom = _input__.readBool()
         case 42 =>
-          __object = Option(__object.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __object = _root_.scala.Option(__object.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 48 =>
           __protect = _input__.readBool()
         case 58 =>
@@ -736,7 +779,7 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
         case 130 =>
           __importId = _input__.readStringRequireUtf8()
         case 138 =>
-          __customTimeouts = Option(__customTimeouts.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.resource.RegisterResourceRequest.CustomTimeouts](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __customTimeouts = _root_.scala.Option(__customTimeouts.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.resource.RegisterResourceRequest.CustomTimeouts](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 144 =>
           __deleteBeforeReplaceDefined = _input__.readBool()
         case 152 =>
@@ -762,7 +805,11 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
         case 224 =>
           __aliasSpecs = _input__.readBool()
         case 234 =>
-          __sourcePosition = Option(__sourcePosition.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.source.SourcePosition](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __sourcePosition = _root_.scala.Option(__sourcePosition.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.source.SourcePosition](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+        case 250 =>
+          __transforms += _root_.scalapb.LiteParser.readMessage[pulumirpc.callback.Callback](_input__)
+        case 256 =>
+          __supportsResultReporting = _input__.readBool()
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -801,6 +848,8 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
         deletedWith = __deletedWith,
         aliasSpecs = __aliasSpecs,
         sourcePosition = __sourcePosition,
+        transforms = __transforms.result(),
+        supportsResultReporting = __supportsResultReporting,
         unknownFields = if (_unknownFields__ == null) _root_.scalapb.UnknownFieldSet.empty else _unknownFields__.result()
     )
   }
@@ -837,7 +886,9 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
         aliases = __fieldsMap.get(scalaDescriptor.findFieldByNumber(26).get).map(_.as[_root_.scala.Seq[pulumirpc.alias.Alias]]).getOrElse(_root_.scala.Seq.empty),
         deletedWith = __fieldsMap.get(scalaDescriptor.findFieldByNumber(27).get).map(_.as[_root_.scala.Predef.String]).getOrElse(""),
         aliasSpecs = __fieldsMap.get(scalaDescriptor.findFieldByNumber(28).get).map(_.as[_root_.scala.Boolean]).getOrElse(false),
-        sourcePosition = __fieldsMap.get(scalaDescriptor.findFieldByNumber(29).get).flatMap(_.as[_root_.scala.Option[pulumirpc.source.SourcePosition]])
+        sourcePosition = __fieldsMap.get(scalaDescriptor.findFieldByNumber(29).get).flatMap(_.as[_root_.scala.Option[pulumirpc.source.SourcePosition]]),
+        transforms = __fieldsMap.get(scalaDescriptor.findFieldByNumber(31).get).map(_.as[_root_.scala.Seq[pulumirpc.callback.Callback]]).getOrElse(_root_.scala.Seq.empty),
+        supportsResultReporting = __fieldsMap.get(scalaDescriptor.findFieldByNumber(32).get).map(_.as[_root_.scala.Boolean]).getOrElse(false)
       )
     case _ => throw new RuntimeException("Expected PMessage")
   }
@@ -853,6 +904,7 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
       case 30 => __out = pulumirpc.resource.RegisterResourceRequest.PluginChecksumsEntry
       case 26 => __out = pulumirpc.alias.Alias
       case 29 => __out = pulumirpc.source.SourcePosition
+      case 31 => __out = pulumirpc.callback.Callback
     }
     __out
   }
@@ -895,7 +947,9 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     aliases = _root_.scala.Seq.empty,
     deletedWith = "",
     aliasSpecs = false,
-    sourcePosition = _root_.scala.None
+    sourcePosition = _root_.scala.None,
+    transforms = _root_.scala.Seq.empty,
+    supportsResultReporting = false
   )
   /** PropertyDependencies describes the resources that a particular property depends on.
     *
@@ -1277,7 +1331,7 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
           case 10 =>
             __key = _input__.readStringRequireUtf8()
           case 18 =>
-            __value = Option(__value.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.resource.RegisterResourceRequest.PropertyDependencies](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+            __value = _root_.scala.Option(__value.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.resource.RegisterResourceRequest.PropertyDependencies](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
           case tag =>
             if (_unknownFields__ == null) {
               _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -1317,7 +1371,7 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     )
     implicit class PropertyDependenciesEntryLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.RegisterResourceRequest.PropertyDependenciesEntry]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.resource.RegisterResourceRequest.PropertyDependenciesEntry](_l) {
       def key: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.key)((c_, f_) => c_.copy(key = f_))
-      def value: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.RegisterResourceRequest.PropertyDependencies] = field(_.getValue)((c_, f_) => c_.copy(value = Option(f_)))
+      def value: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.RegisterResourceRequest.PropertyDependencies] = field(_.getValue)((c_, f_) => c_.copy(value = _root_.scala.Option(f_)))
       def optionalValue: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[pulumirpc.resource.RegisterResourceRequest.PropertyDependencies]] = field(_.value)((c_, f_) => c_.copy(value = f_))
     }
     final val KEY_FIELD_NUMBER = 1
@@ -1628,7 +1682,7 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     def name: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.name)((c_, f_) => c_.copy(name = f_))
     def parent: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.parent)((c_, f_) => c_.copy(parent = f_))
     def custom: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.custom)((c_, f_) => c_.copy(custom = f_))
-    def `object`: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getObject)((c_, f_) => c_.copy(`object` = Option(f_)))
+    def `object`: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getObject)((c_, f_) => c_.copy(`object` = _root_.scala.Option(f_)))
     def optionalObject: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.`object`)((c_, f_) => c_.copy(`object` = f_))
     def protect: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.protect)((c_, f_) => c_.copy(protect = f_))
     def dependencies: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.dependencies)((c_, f_) => c_.copy(dependencies = f_))
@@ -1641,7 +1695,7 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     def additionalSecretOutputs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.additionalSecretOutputs)((c_, f_) => c_.copy(additionalSecretOutputs = f_))
     def aliasURNs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.aliasURNs)((c_, f_) => c_.copy(aliasURNs = f_))
     def importId: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.importId)((c_, f_) => c_.copy(importId = f_))
-    def customTimeouts: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.RegisterResourceRequest.CustomTimeouts] = field(_.getCustomTimeouts)((c_, f_) => c_.copy(customTimeouts = Option(f_)))
+    def customTimeouts: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.RegisterResourceRequest.CustomTimeouts] = field(_.getCustomTimeouts)((c_, f_) => c_.copy(customTimeouts = _root_.scala.Option(f_)))
     def optionalCustomTimeouts: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[pulumirpc.resource.RegisterResourceRequest.CustomTimeouts]] = field(_.customTimeouts)((c_, f_) => c_.copy(customTimeouts = f_))
     def deleteBeforeReplaceDefined: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.deleteBeforeReplaceDefined)((c_, f_) => c_.copy(deleteBeforeReplaceDefined = f_))
     def supportsPartialValues: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.supportsPartialValues)((c_, f_) => c_.copy(supportsPartialValues = f_))
@@ -1655,8 +1709,10 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     def aliases: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[pulumirpc.alias.Alias]] = field(_.aliases)((c_, f_) => c_.copy(aliases = f_))
     def deletedWith: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.deletedWith)((c_, f_) => c_.copy(deletedWith = f_))
     def aliasSpecs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.aliasSpecs)((c_, f_) => c_.copy(aliasSpecs = f_))
-    def sourcePosition: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.source.SourcePosition] = field(_.getSourcePosition)((c_, f_) => c_.copy(sourcePosition = Option(f_)))
+    def sourcePosition: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.source.SourcePosition] = field(_.getSourcePosition)((c_, f_) => c_.copy(sourcePosition = _root_.scala.Option(f_)))
     def optionalSourcePosition: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[pulumirpc.source.SourcePosition]] = field(_.sourcePosition)((c_, f_) => c_.copy(sourcePosition = f_))
+    def transforms: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[pulumirpc.callback.Callback]] = field(_.transforms)((c_, f_) => c_.copy(transforms = f_))
+    def supportsResultReporting: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.supportsResultReporting)((c_, f_) => c_.copy(supportsResultReporting = f_))
   }
   final val TYPE_FIELD_NUMBER = 1
   final val NAME_FIELD_NUMBER = 2
@@ -1688,6 +1744,8 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
   final val DELETEDWITH_FIELD_NUMBER = 27
   final val ALIASSPECS_FIELD_NUMBER = 28
   final val SOURCEPOSITION_FIELD_NUMBER = 29
+  final val TRANSFORMS_FIELD_NUMBER = 31
+  final val SUPPORTSRESULTREPORTING_FIELD_NUMBER = 32
   @transient
   private[resource] val _typemapper_propertyDependencies: _root_.scalapb.TypeMapper[pulumirpc.resource.RegisterResourceRequest.PropertyDependenciesEntry, (_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceRequest.PropertyDependencies)] = implicitly[_root_.scalapb.TypeMapper[pulumirpc.resource.RegisterResourceRequest.PropertyDependenciesEntry, (_root_.scala.Predef.String, pulumirpc.resource.RegisterResourceRequest.PropertyDependencies)]]
   @transient
@@ -1724,7 +1782,9 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     aliases: _root_.scala.Seq[pulumirpc.alias.Alias],
     deletedWith: _root_.scala.Predef.String,
     aliasSpecs: _root_.scala.Boolean,
-    sourcePosition: _root_.scala.Option[pulumirpc.source.SourcePosition]
+    sourcePosition: _root_.scala.Option[pulumirpc.source.SourcePosition],
+    transforms: _root_.scala.Seq[pulumirpc.callback.Callback],
+    supportsResultReporting: _root_.scala.Boolean
   ): _root_.pulumirpc.resource.RegisterResourceRequest = _root_.pulumirpc.resource.RegisterResourceRequest(
     `type`,
     name,
@@ -1755,7 +1815,9 @@ object RegisterResourceRequest extends scalapb.GeneratedMessageCompanion[pulumir
     aliases,
     deletedWith,
     aliasSpecs,
-    sourcePosition
+    sourcePosition,
+    transforms,
+    supportsResultReporting
   )
   // @@protoc_insertion_point(GeneratedMessageCompanion[pulumirpc.RegisterResourceRequest])
 }

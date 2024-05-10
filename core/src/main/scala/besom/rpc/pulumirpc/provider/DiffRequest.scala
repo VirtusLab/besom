@@ -180,13 +180,13 @@ object DiffRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
         case 18 =>
           __urn = _input__.readStringRequireUtf8()
         case 26 =>
-          __olds = Option(__olds.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __olds = _root_.scala.Option(__olds.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 34 =>
-          __news = Option(__news.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __news = _root_.scala.Option(__news.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 42 =>
           __ignoreChanges += _input__.readStringRequireUtf8()
         case 50 =>
-          __oldInputs = Option(__oldInputs.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __oldInputs = _root_.scala.Option(__oldInputs.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -241,12 +241,12 @@ object DiffRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provider.
   implicit class DiffRequestLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.DiffRequest]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.provider.DiffRequest](_l) {
     def id: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.id)((c_, f_) => c_.copy(id = f_))
     def urn: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.urn)((c_, f_) => c_.copy(urn = f_))
-    def olds: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getOlds)((c_, f_) => c_.copy(olds = Option(f_)))
+    def olds: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getOlds)((c_, f_) => c_.copy(olds = _root_.scala.Option(f_)))
     def optionalOlds: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.olds)((c_, f_) => c_.copy(olds = f_))
-    def news: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getNews)((c_, f_) => c_.copy(news = Option(f_)))
+    def news: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getNews)((c_, f_) => c_.copy(news = _root_.scala.Option(f_)))
     def optionalNews: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.news)((c_, f_) => c_.copy(news = f_))
     def ignoreChanges: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Seq[_root_.scala.Predef.String]] = field(_.ignoreChanges)((c_, f_) => c_.copy(ignoreChanges = f_))
-    def oldInputs: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getOldInputs)((c_, f_) => c_.copy(oldInputs = Option(f_)))
+    def oldInputs: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getOldInputs)((c_, f_) => c_.copy(oldInputs = _root_.scala.Option(f_)))
     def optionalOldInputs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.oldInputs)((c_, f_) => c_.copy(oldInputs = f_))
   }
   final val ID_FIELD_NUMBER = 1

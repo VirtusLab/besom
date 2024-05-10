@@ -99,7 +99,7 @@ object InvokeRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
         case 10 =>
           __tok = _input__.readStringRequireUtf8()
         case 18 =>
-          __args = Option(__args.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __args = _root_.scala.Option(__args.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -139,7 +139,7 @@ object InvokeRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.provide
   )
   implicit class InvokeRequestLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.InvokeRequest]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.provider.InvokeRequest](_l) {
     def tok: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.tok)((c_, f_) => c_.copy(tok = f_))
-    def args: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getArgs)((c_, f_) => c_.copy(args = Option(f_)))
+    def args: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getArgs)((c_, f_) => c_.copy(args = _root_.scala.Option(f_)))
     def optionalArgs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.args)((c_, f_) => c_.copy(args = f_))
   }
   final val TOK_FIELD_NUMBER = 1

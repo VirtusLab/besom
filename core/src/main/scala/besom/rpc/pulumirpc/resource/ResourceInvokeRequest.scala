@@ -230,7 +230,7 @@ object ResourceInvokeRequest extends scalapb.GeneratedMessageCompanion[pulumirpc
         case 10 =>
           __tok = _input__.readStringRequireUtf8()
         case 18 =>
-          __args = Option(__args.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __args = _root_.scala.Option(__args.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 26 =>
           __provider = _input__.readStringRequireUtf8()
         case 34 =>
@@ -242,7 +242,7 @@ object ResourceInvokeRequest extends scalapb.GeneratedMessageCompanion[pulumirpc
         case 66 =>
           __pluginChecksums += pulumirpc.resource.ResourceInvokeRequest._typemapper_pluginChecksums.toCustom(_root_.scalapb.LiteParser.readMessage[pulumirpc.resource.ResourceInvokeRequest.PluginChecksumsEntry](_input__))
         case 58 =>
-          __sourcePosition = Option(__sourcePosition.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.source.SourcePosition](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __sourcePosition = _root_.scala.Option(__sourcePosition.fold(_root_.scalapb.LiteParser.readMessage[pulumirpc.source.SourcePosition](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case tag =>
           if (_unknownFields__ == null) {
             _unknownFields__ = new _root_.scalapb.UnknownFieldSet.Builder()
@@ -449,14 +449,14 @@ object ResourceInvokeRequest extends scalapb.GeneratedMessageCompanion[pulumirpc
   
   implicit class ResourceInvokeRequestLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.resource.ResourceInvokeRequest]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.resource.ResourceInvokeRequest](_l) {
     def tok: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.tok)((c_, f_) => c_.copy(tok = f_))
-    def args: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getArgs)((c_, f_) => c_.copy(args = Option(f_)))
+    def args: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getArgs)((c_, f_) => c_.copy(args = _root_.scala.Option(f_)))
     def optionalArgs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.args)((c_, f_) => c_.copy(args = f_))
     def provider: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.provider)((c_, f_) => c_.copy(provider = f_))
     def version: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.version)((c_, f_) => c_.copy(version = f_))
     def acceptResources: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.acceptResources)((c_, f_) => c_.copy(acceptResources = f_))
     def pluginDownloadURL: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Predef.String] = field(_.pluginDownloadURL)((c_, f_) => c_.copy(pluginDownloadURL = f_))
     def pluginChecksums: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.com.google.protobuf.ByteString]] = field(_.pluginChecksums)((c_, f_) => c_.copy(pluginChecksums = f_))
-    def sourcePosition: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.source.SourcePosition] = field(_.getSourcePosition)((c_, f_) => c_.copy(sourcePosition = Option(f_)))
+    def sourcePosition: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.source.SourcePosition] = field(_.getSourcePosition)((c_, f_) => c_.copy(sourcePosition = _root_.scala.Option(f_)))
     def optionalSourcePosition: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[pulumirpc.source.SourcePosition]] = field(_.sourcePosition)((c_, f_) => c_.copy(sourcePosition = f_))
   }
   final val TOK_FIELD_NUMBER = 1

@@ -188,7 +188,7 @@ object ConfigureRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
         case 10 =>
           __variables += pulumirpc.provider.ConfigureRequest._typemapper_variables.toCustom(_root_.scalapb.LiteParser.readMessage[pulumirpc.provider.ConfigureRequest.VariablesEntry](_input__))
         case 18 =>
-          __args = Option(__args.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
+          __args = _root_.scala.Option(__args.fold(_root_.scalapb.LiteParser.readMessage[com.google.protobuf.struct.Struct](_input__))(_root_.scalapb.LiteParser.readMessage(_input__, _)))
         case 24 =>
           __acceptSecrets = _input__.readBool()
         case 32 =>
@@ -396,7 +396,7 @@ object ConfigureRequest extends scalapb.GeneratedMessageCompanion[pulumirpc.prov
   
   implicit class ConfigureRequestLens[UpperPB](_l: _root_.scalapb.lenses.Lens[UpperPB, pulumirpc.provider.ConfigureRequest]) extends _root_.scalapb.lenses.ObjectLens[UpperPB, pulumirpc.provider.ConfigureRequest](_l) {
     def variables: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.collection.immutable.Map[_root_.scala.Predef.String, _root_.scala.Predef.String]] = field(_.variables)((c_, f_) => c_.copy(variables = f_))
-    def args: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getArgs)((c_, f_) => c_.copy(args = Option(f_)))
+    def args: _root_.scalapb.lenses.Lens[UpperPB, com.google.protobuf.struct.Struct] = field(_.getArgs)((c_, f_) => c_.copy(args = _root_.scala.Option(f_)))
     def optionalArgs: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Option[com.google.protobuf.struct.Struct]] = field(_.args)((c_, f_) => c_.copy(args = f_))
     def acceptSecrets: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.acceptSecrets)((c_, f_) => c_.copy(acceptSecrets = f_))
     def acceptResources: _root_.scalapb.lenses.Lens[UpperPB, _root_.scala.Boolean] = field(_.acceptResources)((c_, f_) => c_.copy(acceptResources = f_))
