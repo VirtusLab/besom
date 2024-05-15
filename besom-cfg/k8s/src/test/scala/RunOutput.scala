@@ -10,4 +10,4 @@ object RunOutput:
     def run[A](output: Output[A]): Option[A] = RunResult.unsafeRunSync(output.getData)().getValue
 
   extension [F[+_], A](output: Output[A])(using ro: RunOutput[F]) def unsafeRunSync(): Option[A] = ro.run(output)
-  extension [F[+_], A](result: Result[A])(using rr: RunResult[F]) def unsafeRunSync(): A = rr.run(result)
+  extension [F[+_], A](result: Result[A])(using rr: RunResult[F]) def unsafeRunSync(): A         = rr.run(result)

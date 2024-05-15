@@ -9,7 +9,7 @@ import besom.NonEmptyString
 import besom.internal.logging.BesomLogger
 
 object DummyContext:
-  val dummyRunInfo = RunInfo(Some("test-organization"), "test-project", "test-stack", true, 4, false, "dummy", "dummy")
+  val dummyRunInfo        = RunInfo(Some("test-organization"), "test-project", "test-stack", true, 4, false, "dummy", "dummy")
   val dummyFeatureSupport = FeatureSupport(true, true, true, true)
   val dummyMonitor = new Monitor:
     def call(callRequest: CallRequest): Result[CallResponse] =
@@ -37,20 +37,20 @@ object DummyContext:
       Result.fail(Exception("Not implemented"))
 
   def apply(
-      runInfo: RunInfo = dummyRunInfo,
-      featureSupport: FeatureSupport = dummyFeatureSupport,
-      monitor: Monitor = dummyMonitor,
-      engine: Engine = dummyEngine,
-      configMap: Map[NonEmptyString, String] = Map.empty,
-      configSecretKeys: Set[NonEmptyString] = Set.empty
+    runInfo: RunInfo = dummyRunInfo,
+    featureSupport: FeatureSupport = dummyFeatureSupport,
+    monitor: Monitor = dummyMonitor,
+    engine: Engine = dummyEngine,
+    configMap: Map[NonEmptyString, String] = Map.empty,
+    configSecretKeys: Set[NonEmptyString] = Set.empty
   ): Result[Context] =
     for
-      taskTracker <- TaskTracker()
+      taskTracker  <- TaskTracker()
       stackPromise <- Promise[StackResource]()
-      logger <- BesomLogger.local()
-      memo <- Memo()
-      config <- Config(runInfo.project, isProjectName = true, configMap = configMap, configSecretKeys = configSecretKeys)
-      resources <- Resources()
+      logger       <- BesomLogger.local()
+      memo         <- Memo()
+      config       <- Config(runInfo.project, isProjectName = true, configMap = configMap, configSecretKeys = configSecretKeys)
+      resources    <- Resources()
       given Context = Context.create(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, memo, stackPromise)
       _ <- stackPromise.fulfill(StackResource()(using ComponentBase(Output(besom.types.URN.empty))))
     yield summon[Context]

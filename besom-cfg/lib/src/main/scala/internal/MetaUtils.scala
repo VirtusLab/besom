@@ -4,7 +4,7 @@ import scala.quoted.*
 
 object MetaUtils:
   def refineType(using
-      Quotes
+    Quotes
   )(base: quotes.reflect.TypeRepr, refinements: List[(String, quotes.reflect.TypeRepr)]): quotes.reflect.TypeRepr =
     import quotes.reflect.*
     refinements match

@@ -74,3 +74,5 @@ object SummonConfiguration:
 
       println(summon[JsonWriter[Schema]].write(instance.schema))
     }.get
+  end main
+end SummonConfiguration
