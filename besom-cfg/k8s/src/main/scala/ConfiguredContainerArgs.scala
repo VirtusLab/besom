@@ -23,31 +23,31 @@ object ConfiguredContainerArgs:
   private val NL = System.lineSeparator()
 
   inline def apply[C <: Struct](
-      name: String,
-      image: String,
-      configuration: C,
-      args: Input.Optional[List[Input[String]]] = None,
-      command: Input.Optional[List[Input[String]]] = None,
-      env: Input.Optional[List[Input[EnvVarArgs]]] = None,
-      envFrom: Input.Optional[List[Input[EnvFromSourceArgs]]] = None,
-      imagePullPolicy: Input.Optional[String] = None,
-      lifecycle: Input.Optional[LifecycleArgs] = None,
-      livenessProbe: Input.Optional[ProbeArgs] = None,
-      ports: Input.Optional[List[Input[ContainerPortArgs]]] = None,
-      readinessProbe: Input.Optional[ProbeArgs] = None,
-      resizePolicy: Input.Optional[List[Input[ContainerResizePolicyArgs]]] = None,
-      resources: Input.Optional[ResourceRequirementsArgs] = None,
-      restartPolicy: Input.Optional[String] = None,
-      securityContext: Input.Optional[SecurityContextArgs] = None,
-      startupProbe: Input.Optional[ProbeArgs] = None,
-      stdin: Input.Optional[Boolean] = None,
-      stdinOnce: Input.Optional[Boolean] = None,
-      terminationMessagePath: Input.Optional[String] = None,
-      terminationMessagePolicy: Input.Optional[String] = None,
-      tty: Input.Optional[Boolean] = None,
-      volumeDevices: Input.Optional[List[Input[VolumeDeviceArgs]]] = None,
-      volumeMounts: Input.Optional[List[Input[VolumeMountArgs]]] = None,
-      workingDir: Input.Optional[String] = None
+    name: String,
+    image: String,
+    configuration: C,
+    args: Input.Optional[List[Input[String]]] = None,
+    command: Input.Optional[List[Input[String]]] = None,
+    env: Input.Optional[List[Input[EnvVarArgs]]] = None,
+    envFrom: Input.Optional[List[Input[EnvFromSourceArgs]]] = None,
+    imagePullPolicy: Input.Optional[String] = None,
+    lifecycle: Input.Optional[LifecycleArgs] = None,
+    livenessProbe: Input.Optional[ProbeArgs] = None,
+    ports: Input.Optional[List[Input[ContainerPortArgs]]] = None,
+    readinessProbe: Input.Optional[ProbeArgs] = None,
+    resizePolicy: Input.Optional[List[Input[ContainerResizePolicyArgs]]] = None,
+    resources: Input.Optional[ResourceRequirementsArgs] = None,
+    restartPolicy: Input.Optional[String] = None,
+    securityContext: Input.Optional[SecurityContextArgs] = None,
+    startupProbe: Input.Optional[ProbeArgs] = None,
+    stdin: Input.Optional[Boolean] = None,
+    stdinOnce: Input.Optional[Boolean] = None,
+    terminationMessagePath: Input.Optional[String] = None,
+    terminationMessagePolicy: Input.Optional[String] = None,
+    tty: Input.Optional[Boolean] = None,
+    volumeDevices: Input.Optional[List[Input[VolumeDeviceArgs]]] = None,
+    volumeMounts: Input.Optional[List[Input[VolumeMountArgs]]] = None,
+    workingDir: Input.Optional[String] = None
   )(using ctx: Context) = ${
     applyImpl(
       'name,
@@ -80,32 +80,32 @@ object ConfiguredContainerArgs:
   }
 
   def applyImpl[C <: Struct: Type](
-      name: Expr[String],
-      image: Expr[String],
-      configuration: Expr[C],
-      args: Expr[Input.Optional[List[Input[String]]]],
-      command: Expr[Input.Optional[List[Input[String]]]],
-      env: Expr[Input.Optional[List[Input[EnvVarArgs]]]],
-      envFrom: Expr[Input.Optional[List[Input[EnvFromSourceArgs]]]],
-      imagePullPolicy: Expr[Input.Optional[String]],
-      lifecycle: Expr[Input.Optional[LifecycleArgs]],
-      livenessProbe: Expr[Input.Optional[ProbeArgs]],
-      ports: Expr[Input.Optional[List[Input[ContainerPortArgs]]]],
-      readinessProbe: Expr[Input.Optional[ProbeArgs]],
-      resizePolicy: Expr[Input.Optional[List[Input[ContainerResizePolicyArgs]]]],
-      resources: Expr[Input.Optional[ResourceRequirementsArgs]],
-      restartPolicy: Expr[Input.Optional[String]],
-      securityContext: Expr[Input.Optional[SecurityContextArgs]],
-      startupProbe: Expr[Input.Optional[ProbeArgs]],
-      stdin: Expr[Input.Optional[Boolean]],
-      stdinOnce: Expr[Input.Optional[Boolean]],
-      terminationMessagePath: Expr[Input.Optional[String]],
-      terminationMessagePolicy: Expr[Input.Optional[String]],
-      tty: Expr[Input.Optional[Boolean]],
-      volumeDevices: Expr[Input.Optional[List[Input[VolumeDeviceArgs]]]],
-      volumeMounts: Expr[Input.Optional[List[Input[VolumeMountArgs]]]],
-      workingDir: Expr[Input.Optional[String]],
-      context: Expr[Context]
+    name: Expr[String],
+    image: Expr[String],
+    configuration: Expr[C],
+    args: Expr[Input.Optional[List[Input[String]]]],
+    command: Expr[Input.Optional[List[Input[String]]]],
+    env: Expr[Input.Optional[List[Input[EnvVarArgs]]]],
+    envFrom: Expr[Input.Optional[List[Input[EnvFromSourceArgs]]]],
+    imagePullPolicy: Expr[Input.Optional[String]],
+    lifecycle: Expr[Input.Optional[LifecycleArgs]],
+    livenessProbe: Expr[Input.Optional[ProbeArgs]],
+    ports: Expr[Input.Optional[List[Input[ContainerPortArgs]]]],
+    readinessProbe: Expr[Input.Optional[ProbeArgs]],
+    resizePolicy: Expr[Input.Optional[List[Input[ContainerResizePolicyArgs]]]],
+    resources: Expr[Input.Optional[ResourceRequirementsArgs]],
+    restartPolicy: Expr[Input.Optional[String]],
+    securityContext: Expr[Input.Optional[SecurityContextArgs]],
+    startupProbe: Expr[Input.Optional[ProbeArgs]],
+    stdin: Expr[Input.Optional[Boolean]],
+    stdinOnce: Expr[Input.Optional[Boolean]],
+    terminationMessagePath: Expr[Input.Optional[String]],
+    terminationMessagePolicy: Expr[Input.Optional[String]],
+    tty: Expr[Input.Optional[Boolean]],
+    volumeDevices: Expr[Input.Optional[List[Input[VolumeDeviceArgs]]]],
+    volumeMounts: Expr[Input.Optional[List[Input[VolumeMountArgs]]]],
+    workingDir: Expr[Input.Optional[String]],
+    context: Expr[Context]
   )(using Quotes): Expr[ContainerArgs] =
     import quotes.reflect.*
 
@@ -130,8 +130,8 @@ object ConfiguredContainerArgs:
 
       case Right(()) =>
         val envExpr = '{
-          val envOutput = ${ env }.asOptionOutput()(using ${ context })
-          val conf = ${ configuration }
+          val envOutput                 = ${ env }.asOptionOutput()(using ${ context })
+          val conf                      = ${ configuration }
           val configurationAsEnvVarArgs = conf.foldedToEnvVarArgs(using $context)
           envOutput.zip(configurationAsEnvVarArgs).map {
             case (Some(envVarArgsList), envVarArgsListFromConf) => envVarArgsList ++ envVarArgsListFromConf
@@ -167,3 +167,6 @@ object ConfiguredContainerArgs:
             workingDir = $workingDir
           )(using $context)
         }
+    end match
+  end applyImpl
+end ConfiguredContainerArgs

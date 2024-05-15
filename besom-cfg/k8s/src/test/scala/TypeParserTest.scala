@@ -212,6 +212,7 @@ class TypeParserTest extends munit.FunSuite:
           )
         )
       case f: Parsed.Failure => fail(f.trace().longMsg)
+    end match
   }
 
   test("should strip outputs from types correctly") {
@@ -235,3 +236,4 @@ class TypeParserTest extends munit.FunSuite:
 
       case f: Parsed.Failure => fail(f.trace().longMsg)
   }
+end TypeParserTest

@@ -94,6 +94,7 @@ object Configured:
           }
       }
     }
+end Configured
 
 def resolveConfiguration[A](using c: Configured[A]): A =
   c.newInstanceFromEnv()

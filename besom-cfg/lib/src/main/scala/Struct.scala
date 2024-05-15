@@ -15,9 +15,9 @@ class Struct private (val _values: ListMap[String, Any]) extends Selectable:
   def selectDynamic(name: String) = _values(name)
 
   private[cfg] def fold[B](
-      onStruct: Map[String, Output[B]] => Output[B],
-      onList: List[B] => Output[B],
-      onValue: Any => Output[B]
+    onStruct: Map[String, Output[B]] => Output[B],
+    onList: List[B] => Output[B],
+    onValue: Any => Output[B]
   )(using Context): Output[B] =
     val onOutput: Output[_] => Output[B] = _.flatMap {
       case s: Struct => s.fold(onStruct, onList, onValue)
@@ -54,6 +54,7 @@ class Struct private (val _values: ListMap[String, Any]) extends Selectable:
       .to(ListMap)
       .pipe(onStruct)
   end fold
+end Struct
 
 object Struct extends Dynamic:
   def make(values: ListMap[String, Any]) = new Struct(values)
@@ -115,3 +116,4 @@ object Struct extends Dynamic:
         // println(s"serializing $a to List(\"\" -> $a)")
         Output(List("" -> a.toString))
     )
+end Struct

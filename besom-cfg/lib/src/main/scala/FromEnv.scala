@@ -61,7 +61,7 @@ object FromEnv:
   inline given derived[A](using m: Mirror.ProductOf[A]): FromEnv[A] = new FromEnv[A]:
     def decode(env: Map[String, String], path: String): Option[A] =
       val elemDecoders = summonAllInstances[m.MirroredElemTypes]
-      val labels = summonLabels[m.MirroredElemLabels]
+      val labels       = summonLabels[m.MirroredElemLabels]
 
       val elemValues = elemDecoders.zip(labels).map { case (decoder, label) =>
         // handle top-level gracefully (empty path)
@@ -84,3 +84,4 @@ object FromEnv:
       case (Some(acc), Some(a)) => Some(acc :+ a)
       case _                    => None
     }
+end FromEnv

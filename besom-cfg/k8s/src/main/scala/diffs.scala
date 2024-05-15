@@ -63,8 +63,8 @@ def prettifyTypeString(tpe: String): String =
     .replace("val ", "")
 
 def applyColorToTextOnly(str: fansi.Str, f: fansi.Str => fansi.Str): fansi.Str =
-  val indent = str.toString.takeWhile(_.isWhitespace)
-  val text = str.toString.dropWhile(_.isWhitespace)
+  val indent  = str.toString.takeWhile(_.isWhitespace)
+  val text    = str.toString.dropWhile(_.isWhitespace)
   val colored = f(fansi.Str(text))
   fansi.Str(s"$indent$colored")
 
@@ -87,20 +87,20 @@ def diff(obtained: ValMap, expected: ValMap): fansi.Str =
         // same key, different type (simple type)
         case (Some(Val.Str(obtained)), Some(Val.Str(expected))) =>
           val indentedKeyWithoutColor = Str(s"$indent$key: ")
-          val redObtained = Red(s"got $obtained")
-          val yelloExpected = Yellow(s", expected $expected")
+          val redObtained             = Red(s"got $obtained")
+          val yelloExpected           = Yellow(s", expected $expected")
 
           indentedKeyWithoutColor ++ redObtained ++ yelloExpected
 
         case (Some(Val.List(Val.Map(obtained))), Some(Val.List(Val.Map(expected)))) =>
-          val nestedListDiff = diffInternal(obtained, expected, indent + "  ")
+          val nestedListDiff            = diffInternal(obtained, expected, indent + "  ")
           val nestedListWrappedInBraces = nestedListDiff.mkString(s"List[{$NL", NL, s"$NL$indent}]")
 
           Str(s"$indent$key: ") ++ nestedListWrappedInBraces
 
         // same key, difference in a nested struct
         case (Some(Val.Map(obtained)), Some(Val.Map(expected))) =>
-          val nestedStructDiff = diffInternal(obtained, expected, indent + "  ")
+          val nestedStructDiff            = diffInternal(obtained, expected, indent + "  ")
           val nestedStructWrappedInBraces = nestedStructDiff.mkString(s"{$NL", NL, s"$NL$indent}")
 
           Str(s"$indent$key: $nestedStructWrappedInBraces")
@@ -122,7 +122,7 @@ def diff(obtained: ValMap, expected: ValMap): fansi.Str =
 
         // present in infra type, missing in application type, unnecessary addition (list of structs)
         case (Some(Val.List(Val.Map(obtained))), None) =>
-          val nestedListDiff = diffInternal(obtained, ValMap.empty, indent + "  ")
+          val nestedListDiff            = diffInternal(obtained, ValMap.empty, indent + "  ")
           val nestedListWrappedInBraces = nestedListDiff.mkString(s"${Green("List[{")}$NL", NL, s"$NL$indent${Green("}]")}")
 
           Green(s"$indent$key: ") ++ nestedListWrappedInBraces
@@ -156,8 +156,8 @@ def diff(obtained: ValMap, expected: ValMap): fansi.Str =
         // obtained simple type, expected struct
         case (Some(Val.Str(obtained)), Some(Val.Map(expected))) =>
           val indentedKeyWithoutColor = Str(s"$indent$key: ")
-          val redObtained = Red(s"got $obtained")
-          val nestedStructDiff = diffInternal(ValMap.empty, expected, indent + "  ")
+          val redObtained             = Red(s"got $obtained")
+          val nestedStructDiff        = diffInternal(ValMap.empty, expected, indent + "  ")
           // inject Yellow in newlines because compiler strips it :(
           val nestedStructWrappedInBraces =
             nestedStructDiff
@@ -170,7 +170,7 @@ def diff(obtained: ValMap, expected: ValMap): fansi.Str =
 
         // obtained struct, expected list of structs
         case (Some(Val.Map(obtained)), Some(Val.List(Val.Map(expected)))) =>
-          val indentedKeyWithoutColor = Str(s"$indent$key: ")
+          val indentedKeyWithoutColor  = Str(s"$indent$key: ")
           val nestedObtainedStructDiff = diffInternal(obtained, ValMap.empty, indent + "  ")
           val nestedObtainedStructWrappedInBraces =
             nestedObtainedStructDiff
@@ -188,8 +188,8 @@ def diff(obtained: ValMap, expected: ValMap): fansi.Str =
         // obtained simple type, expected list of structs
         case (Some(Val.Str(obtained)), Some(Val.List(Val.Map(expected)))) =>
           val indentedKeyWithoutColor = Str(s"$indent$key: ")
-          val redObtained = Red(s"got $obtained")
-          val nestedStructDiff = diffInternal(ValMap.empty, expected, indent + "  ")
+          val redObtained             = Red(s"got $obtained")
+          val nestedStructDiff        = diffInternal(ValMap.empty, expected, indent + "  ")
           val nestedStructWrappedInBraces =
             nestedStructDiff
               .map(applyColorToTextOnly(_, Yellow.apply))
@@ -201,7 +201,7 @@ def diff(obtained: ValMap, expected: ValMap): fansi.Str =
 
         // obtained list of structs, expected simple type
         case (Some(Val.List(Val.Map(obtained))), Some(Val.Str(expected))) =>
-          val nestedListDiff = diffInternal(ValMap.empty, obtained, indent + "  ")
+          val nestedListDiff            = diffInternal(ValMap.empty, obtained, indent + "  ")
           val nestedListWrappedInBraces = nestedListDiff.mkString(s"${Red("got List[{")}$NL", NL, s"$NL$indent${Red("}]")}")
 
           val yelloExpected = Yellow(s", expected $expected")
@@ -210,7 +210,7 @@ def diff(obtained: ValMap, expected: ValMap): fansi.Str =
 
         // obtained list of structs, expected struct
         case (Some(Val.List(Val.Map(obtained))), Some(Val.Map(expected))) =>
-          val indentedKeyWithoutColor = Str(s"$indent$key: ")
+          val indentedKeyWithoutColor  = Str(s"$indent$key: ")
           val nestedObtainedStructDiff = diffInternal(obtained, ValMap.empty, indent + "  ")
           val nestedObtainedStructWrappedInBraces =
             nestedObtainedStructDiff
@@ -228,7 +228,7 @@ def diff(obtained: ValMap, expected: ValMap): fansi.Str =
         // obtained struct, expected simple type
         case (Some(Val.Map(obtained)), Some(Val.Str(expected))) =>
           val indentedKeyWithoutColor = Str(s"$indent$key: ")
-          val nestedStructDiff = diffInternal(obtained, ValMap.empty, indent + "  ")
+          val nestedStructDiff        = diffInternal(obtained, ValMap.empty, indent + "  ")
           val nestedStructWrappedInBraces =
             nestedStructDiff
               .map(applyColorToTextOnly(_, Red.apply))
@@ -239,9 +239,12 @@ def diff(obtained: ValMap, expected: ValMap): fansi.Str =
           indentedKeyWithoutColor ++ nestedStructWrappedInBraces ++ yelloExpected
         // impossible state
         case (None, None) => throw Exception(s"Invalid state: $key is missing on both sides")
+      end match
     }
+  end diffInternal
 
   s"{$NL" + diffInternal(obtained, expected).mkString(NL) + s"$NL}"
+end diff
 
 object Diff:
   def performDiff[C <: Struct: Type](schema: Schema, configuration: Expr[C])(using Quotes): Either[fansi.Str, Unit] =
@@ -298,10 +301,10 @@ object Diff:
       MetaUtils.refineType(TypeRepr.of[Struct], refinements)
 
     val expectedConfigTypeRepr = schemaToTypeRepr(schema)
-    val obtainedTypeRepr = TypeRepr.of[C]
+    val obtainedTypeRepr       = TypeRepr.of[C]
 
     val dealiasedExpectedConfigTypeRepr = dealiasAll(expectedConfigTypeRepr)
-    val dealiasedObtainedTypeRepr = dealiasAll(obtainedTypeRepr)
+    val dealiasedObtainedTypeRepr       = dealiasAll(obtainedTypeRepr)
 
     val expectedTypeString = dealiasedExpectedConfigTypeRepr.show
     val obtainedTypeString = dealiasedObtainedTypeRepr.show
@@ -334,3 +337,5 @@ object Diff:
             )
 
             Left(prettyDiff)
+  end performDiff
+end Diff

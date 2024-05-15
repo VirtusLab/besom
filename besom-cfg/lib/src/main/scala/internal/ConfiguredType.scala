@@ -49,7 +49,7 @@ object ConfiguredType:
 
   inline given derived[A <: Product](using m: Mirror.ProductOf[A]): ConfiguredType[A] =
     lazy val elemInstances = summonAllInstances[m.MirroredElemTypes]
-    lazy val elemLabels = summonLabels[m.MirroredElemLabels]
+    lazy val elemLabels    = summonLabels[m.MirroredElemLabels]
     buildConfiguredTypeFor[A](elemInstances, elemLabels)
 
 end ConfiguredType

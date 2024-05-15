@@ -83,6 +83,8 @@ object FieldType:
             throw new Exception(s"Invalid JSON: unknown type $what")
           case None => throw new Exception("Invalid JSON: type must present")
       case _ => throw new Exception("Invalid JSON: expected object")
+  end given
+end FieldType
 
 case class Field(name: String, `type`: FieldType)
 object Field:

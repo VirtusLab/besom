@@ -6,14 +6,14 @@ case class Test2(name: String, int: Int, struct: First, list: List[Double]) deri
 case class First(d: Int, e: String)
 
 case class Test3(
-    name: String,
-    int: Int,
-    s: First,
-    l: List[Double],
-    ls: List[Second],
-    lo: List[String],
-    ol: List[String],
-    os: Third
+  name: String,
+  int: Int,
+  s: First,
+  l: List[Double],
+  ls: List[Second],
+  lo: List[String],
+  ol: List[String],
+  os: Third
 ) derives Configured
 case class Second(f1: List[Fourth], f2: String)
 case class Third(oh: String, it: String)
@@ -80,3 +80,4 @@ class ConfiguredTest extends munit.FunSuite:
         assertEquals(ol, List("x", "y", "z"))
         assertEquals(os, Third("yeah", "works!"))
   }
+end ConfiguredTest
