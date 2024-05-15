@@ -55,10 +55,12 @@ private def copyProto(sourcePath: os.Path, targetPath: os.Path): Unit =
     os.rel / "pulumi" / "alias.proto",
     os.rel / "pulumi" / "callback.proto",
     os.rel / "pulumi" / "engine.proto",
+    os.rel / "pulumi" / "language.proto",
     os.rel / "pulumi" / "plugin.proto",
     os.rel / "pulumi" / "provider.proto",
     os.rel / "pulumi" / "resource.proto",
     os.rel / "pulumi" / "source.proto",
+    os.rel / "pulumi" / "codegen" / "hcl.proto",
     os.rel / "google" / "protobuf" / "status.proto"
   )
 
