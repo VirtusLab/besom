@@ -302,7 +302,7 @@ publish-local-cfg-lib:
 	scala-cli --power publish local besom-cfg/lib --project-version {{besom-cfg-version}} --suppress-experimental-feature-warning
 
 # Publishes locally besom-cfg k8s module
-publish-local-cfg-k8s:
+publish-local-cfg-k8s: compile-cfg-k8s
 	scala-cli --power publish local besom-cfg/k8s --project-version {{besom-cfg-version}} --suppress-experimental-feature-warning
 
 # Publishes locally all besom-cfg modules
