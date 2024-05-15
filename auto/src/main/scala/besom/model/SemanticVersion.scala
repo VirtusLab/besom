@@ -1,7 +1,7 @@
 package besom.model
 
 // TODO: move to separate module
-// NOTICE: keep in sync with auto/src/main/scala/besom/model/SemanticVersion.scala
+// NOTICE: keep in sync with codegen/src/model/SemanticVersion.scala
 
 /** A semantic version as defined by https://semver.org/
   *
