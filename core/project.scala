@@ -1,6 +1,6 @@
 //> using scala "3.3.1"
 //> using options "-java-output-version:11", "-Ysafe-init", "-Xmax-inlines:64"
-//> using options "-Werror", "-Wunused:all", "-deprecation", "-feature"
+//> using options "-Werror", "-Wunused:all", "-deprecation", "-feature", "-Wconf:cat=deprecation:i"
 // -language:noAutoTupling // after https://github.com/VirtusLab/scala-cli/issues/2708
 
 //> using dep "org.virtuslab::besom-json:0.4.0-SNAPSHOT"
