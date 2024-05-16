@@ -1,8 +1,7 @@
-package besom.auto
+package besom.auto.internal
 
 import besom.internal.{LanguageRuntimeServer, LanguageRuntimeService}
 import besom.json.*
-import besom.json.DefaultJsonProtocol.*
 import besom.util.*
 
 import scala.util.Try
@@ -17,7 +16,7 @@ import scala.util.Try
   *   the underlying [[Workspace]] backing the [[Stack]]
   */
 case class Stack(name: String, workspace: Workspace):
-  import besom.auto.Stack.*
+  import besom.auto.internal.Stack.*
 
   protected[auto] def pulumi(additional: os.Shellable*)(opts: shell.ShellOption*): Either[ShellAutoError | AutoError, shell.Result] =
     for
@@ -686,10 +685,10 @@ object PreviewOption:
     */
   case class UserAgent(agent: String) extends PreviewOption
 
-  /** Colorize output. Choices are: [[besom.auto.Color.Always]], [[besom.auto.Color.Never]], [[besom.auto.Color.Raw]],
-    * [[besom.auto.Color.Auto]] (default "Auto")
+  /** Colorize output. Choices are: [[besom.auto.internal.Color.Always]], [[besom.auto.internal.Color.Never]],
+    * [[besom.auto.internal.Color.Raw]], [[besom.auto.internal.Color.Auto]] (default "Auto")
     */
-  case class Color(color: besom.auto.Color) extends PreviewOption
+  case class Color(color: besom.auto.internal.Color) extends PreviewOption
 
   /** Saves an update plan to the given path.
     */
@@ -844,9 +843,10 @@ object UpOption:
     */
   case class UserAgent(agent: String) extends UpOption
 
-  /** Colorize output. Choices are: [[besom.auto.Color.Always]], [[besom.auto.Color.Never]], [[besom.auto.Color.Raw]],
+  /** Colorize output. Choices are: [[besom.auto.internal.Color.Always]], [[besom.auto.internal.Color.Never]],
+    * [[besom.auto.internal.Color.Raw]],
     */
-  case class Color(color: besom.auto.Color) extends UpOption
+  case class Color(color: besom.auto.internal.Color) extends UpOption
 
   /** Use the update plan at the given path.
     */
@@ -992,9 +992,10 @@ object RefreshOption:
     */
   case class UserAgent(agent: String) extends RefreshOption
 
-  /** Colorize output. Choices are: [[besom.auto.Color.Always]], [[besom.auto.Color.Never]], [[besom.auto.Color.Raw]],
+  /** Colorize output. Choices are: [[besom.auto.internal.Color.Always]], [[besom.auto.internal.Color.Never]],
+    * [[besom.auto.internal.Color.Raw]],
     */
-  case class Color(color: besom.auto.Color) extends RefreshOption
+  case class Color(color: besom.auto.internal.Color) extends RefreshOption
 
   /** Show config secrets when they appear.
     */
@@ -1105,9 +1106,10 @@ object DestroyOption:
     */
   case class UserAgent(agent: String) extends DestroyOption
 
-  /** Colorize output. Choices are: [[besom.auto.Color.Always]], [[besom.auto.Color.Never]], [[besom.auto.Color.Raw]],
+  /** Colorize output. Choices are: [[besom.auto.internal.Color.Always]], [[besom.auto.internal.Color.Never]],
+    * [[besom.auto.internal.Color.Raw]],
     */
-  case class Color(color: besom.auto.Color) extends DestroyOption
+  case class Color(color: besom.auto.internal.Color) extends DestroyOption
 
   /** Show config secrets when they appear.
     */
@@ -1243,8 +1245,8 @@ case class LoggingOptions(
       Option.when(debug)("--debug")
     ).flatten
 
-/** Colorize output. Choices are: [[besom.auto.Color.Always]], [[besom.auto.Color.Never]], [[besom.auto.Color.Raw]],
-  * [[besom.auto.Color.Auto]] (default "Auto")
+/** Colorize output. Choices are: [[besom.auto.internal.Color.Always]], [[besom.auto.internal.Color.Never]],
+  * [[besom.auto.internal.Color.Raw]], [[besom.auto.internal.Color.Auto]] (default "Auto")
   */
 enum Color(val value: String):
   override def toString: String = value

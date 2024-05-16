@@ -1,6 +1,6 @@
-package besom.auto
+package besom.auto.internal
 
-import besom.FullyQualifiedStackName
+import besom.model.FullyQualifiedStackName
 import besom.test.*
 import besom.util.eitherOps
 
@@ -49,8 +49,20 @@ class LocalWorkspaceTest extends munit.FunSuite:
     res.fold(
       e => fail(e.getMessage, e),
       (prevRes, upRes) => {
-        println(prevRes)
-        println(upRes)
+        assertEquals(prevRes.summary, Map(OpType.Create -> 1))
+        assertEquals(
+          upRes.outputs,
+          Map(
+            "exp_cfg" -> OutputValue(""),
+            "exp_secret" -> OutputValue("", secret = true),
+            "exp_static" -> OutputValue("foo")
+          )
+        )
+        assertEquals(upRes.summary.kind, "update")
+        assertEquals(upRes.summary.resourceChanges, Some(Map(
+          OpType.Create.toString -> 1
+        )))
+        assertEquals(upRes.summary.result, Some("succeeded"))
       }
     )
   }

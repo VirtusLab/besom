@@ -1,4 +1,4 @@
-package besom.auto
+package besom.auto.internal
 
 import LocalWorkspaceOption.*
 import LocalWorkspace.*

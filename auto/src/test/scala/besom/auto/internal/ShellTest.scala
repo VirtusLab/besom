@@ -1,6 +1,6 @@
-package besom.auto
+package besom.auto.internal
 
-import besom.auto.shell.*
+import besom.auto.internal.shell.*
 
 class ShellTest extends munit.FunSuite:
   test("ShellOptions.from") {

@@ -1,7 +1,6 @@
-package besom.auto
+package besom.auto.internal
 
 import besom.json.*
-import besom.json.DefaultJsonProtocol.*
 import besom.model.{PackageName, SemanticVersion, FullyQualifiedStackName, StackName}
 import besom.util.*
 import besom.model
@@ -949,11 +948,11 @@ object LocalWorkspaceOption:
 
   /** The project settings for the workspace.
     */
-  case class Project(project: besom.auto.Project) extends LocalWorkspaceOption
+  case class Project(project: besom.auto.internal.Project) extends LocalWorkspaceOption
 
   /** A map of `[stackName -> stack settings objects]` to seed the workspace.
     */
-  case class Stacks(stacks: Map[String, besom.auto.ProjectStack]) extends LocalWorkspaceOption
+  case class Stacks(stacks: Map[String, besom.auto.internal.ProjectStack]) extends LocalWorkspaceOption
 
   /** A git repo with a Pulumi Project to clone into the `workDir`.
     */

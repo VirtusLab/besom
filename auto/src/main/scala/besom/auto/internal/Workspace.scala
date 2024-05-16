@@ -1,7 +1,6 @@
-package besom.auto
+package besom.auto.internal
 
 import besom.json.*
-import besom.json.DefaultJsonProtocol.*
 import besom.model
 import besom.util.*
 import org.virtuslab.yaml.*
@@ -14,14 +13,11 @@ import scala.util.Try
 
 object yamlHack:
   import org.virtuslab.yaml.internal.dump.present.PresenterImpl
-  import besom.auto.internal.HackedSerializerImpl
 
   def asYaml(node: Node): String =
     val events = HackedSerializerImpl.toEvents(node)
     PresenterImpl.asString(events)
 end yamlHack
-
-given JsonProtocol = DefaultJsonProtocol
 
 given JsonFormat[Any] = new JsonFormat[Any]:
   override def write(obj: Any): JsValue =

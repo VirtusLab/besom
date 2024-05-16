@@ -1,4 +1,4 @@
-package besom.auto
+package besom.auto.internal
 
 import besom.util.eitherOps
 
