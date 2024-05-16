@@ -51,7 +51,7 @@ object Git:
           val sshSessionFactory = new JschConfigSessionFactory():
             override protected def configureJSch(jsch: JSch): Unit =
               jsch.removeAllIdentity()
-              jsch.addIdentity("key", key.getBytes(), null /* no pub key */, passphrase.asOption.orNull.getBytes())
+              jsch.addIdentity("key", key.getBytes(), null /* no pub key */, passphrase.asOption.map(_.getBytes()).orNull)
           cloneCommand.setTransportConfigCallback { transport =>
             transport.asInstanceOf[SshTransport].setSshSessionFactory(sshSessionFactory)
           }
@@ -59,7 +59,7 @@ object Git:
           val sshSessionFactory = new JschConfigSessionFactory():
             override protected def configureJSch(jsch: JSch): Unit =
               jsch.removeAllIdentity()
-              jsch.addIdentity(keyPath, passphrase.asOption.orNull.getBytes())
+              jsch.addIdentity(keyPath, passphrase.asOption.map(_.getBytes()).orNull)
           cloneCommand.setTransportConfigCallback { transport =>
             transport.asInstanceOf[SshTransport].setSshSessionFactory(sshSessionFactory)
           }

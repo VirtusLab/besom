@@ -2,9 +2,9 @@ package besom.auto
 
 import besom.json.*
 import besom.json.DefaultJsonProtocol.*
-import besom.model.{PackageName, SemanticVersion}
+import besom.model.{PackageName, SemanticVersion, FullyQualifiedStackName, StackName}
 import besom.util.*
-import besom.{FullyQualifiedStackName, StackName, model}
+import besom.model
 import os.Path
 
 import java.util.concurrent.atomic.AtomicReference
