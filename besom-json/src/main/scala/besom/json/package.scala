@@ -16,6 +16,8 @@
 
 package besom.json
 
+import scala.util.Try
+
 import scala.language.implicitConversions
 
 def deserializationError(msg: String, cause: Throwable = null, fieldNames: List[String] = Nil) =
@@ -28,10 +30,17 @@ case class DeserializationException(msg: String, cause: Throwable = null, fieldN
 class SerializationException(msg: String) extends RuntimeException(msg)
 
 private[json] class RichAny[T](any: T) {
-  def toJson(implicit writer: JsonWriter[T]): JsValue = writer.write(any)
+  def toJson(implicit writer: JsonWriter[T]): JsValue                    = writer.write(any)
+  def asJson(implicit writer: JsonWriter[T]): Either[Exception, JsValue] = writer.either(any)
 }
 
 private[json] class RichString(string: String) {
+  def parseJson[T: JsonReader]: Either[Exception, T] = Try {
+    JsonParser(string).convertTo[T]
+  }.toEither.left.map {
+    case e: DeserializationException => e
+    case e                           => DeserializationException(e.getMessage, e)
+  }
   def parseJson: JsValue                               = JsonParser(string)
   def parseJson(settings: JsonParserSettings): JsValue = JsonParser(string, settings)
 }
