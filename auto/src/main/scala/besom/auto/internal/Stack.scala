@@ -87,48 +87,14 @@ case class Stack(name: String, workspace: Workspace):
         Seq(s"--exec-kind=${ExecKind.AutoInline}", s"--client=$address")
       else Seq(s"--exec-kind=${ExecKind.AutoLocal}")
 
-    /*    case class EventLogListener(path: os.Path, private val acc: scala.collection.mutable.ArrayBuffer[EngineEvent])
-        extends shell.Tailer.Listener:
-      import shell.Tailer.Listener
-      override def handle(event: Listener.Event): Unit = event match
-        case Listener.Event.FileNotFound(path) => println(s"Event log listener file not found: $path") // TODO: log
-        case Listener.Event.FileRotated(path)  => println(s"Event log listener file rotated: $path") // TODO: log
-        case Listener.Event.Error(ex)          => throw AutoError("Event log listener error", ex)
-        case Listener.Event.Line(line) =>
-          EngineEvent
-            .fromJson(line)
-            .fold(
-              ex => throw AutoError(s"Failed to parse engine event: $line", ex),
-              ee => acc += ee
-            )
-      end handle
-      def events: Seq[EngineEvent] = acc.toSeq
-      def summary: Either[AutoError, SummaryEvent] =
-        val l = events.filter(_.summaryEvent.isDefined)
-        if l.isEmpty then Left(AutoError("Failed to get preview summary, got no engine events"))
-        else if l.size > 1 then Left(AutoError("Failed to get preview summary, got multiple engine events, expected a singleton"))
-        else l.head.summaryEvent.toRight(AutoError("Failed to get preview summary, got no summary event"))
-      end summary
-    end EventLogListener
-    object EventLogListener:
-      def apply(path: os.Path): EventLogListener = EventLogListener(path, scala.collection.mutable.ArrayBuffer.empty)
-     */
     for
       tailerPath <- tailLogsPath("preview")
-      /*resultAndListener <- shell.Tailer(path = tailerPath, listener = EventLogListener.apply) { listener =>
-        val watchArgs: Seq[String] = Seq("--event-log=" + tailerPath)
-        val args: Seq[String]      = Seq("preview") ++ sharedArgs ++ kindArgs ++ watchArgs
-        val result = pulumi(args)(
-          // FIXME: implement progressStreams and errorProgressStreams
-          //      shell.Option.Stdout(opts.progressStreams),
-          //      shell.Option.Stderr(opts.errorProgressStreams)
-        ).left.map(AutoError("Preview failed", _))
-        println(os.proc("cat", tailerPath).call().out.text())
-        println(s"Preview result: $result")
-        (result, listener)
-      }
-      r       <- resultAndListener._1
-      summary <- resultAndListener._2.summary.left.map(e => AutoError("Failed to get preview summary", e))*/
+      // FIXME: tailer is borked
+      /*tailer <- shell
+        .Tailer(tailerPath) { line =>
+          println(s"> $line")
+        }
+        .tail*/
       r <- {
         val watchArgs: Seq[String] = Seq("--event-log=" + tailerPath)
         val args: Seq[String]      = Seq("preview") ++ sharedArgs ++ kindArgs ++ watchArgs
@@ -142,11 +108,6 @@ case class Stack(name: String, workspace: Workspace):
             case Right(ee) if ee.summaryEvent.isDefined => ee.summaryEvent.get
           }
           .toRight(AutoError("Failed to get preview summary, got no summary event"))
-    /*r <- shell.Tailer2() {
-        val watchArgs: Seq[String] = Seq("--event-log=" + tailerPath)
-        val args: Seq[String]      = Seq("preview") ++ sharedArgs ++ kindArgs ++ watchArgs
-        pulumi(args)().left.map(AutoError("Preview failed", _))
-      }*/
     yield PreviewResult(stdout = r.out, stderr = r.err, summary = summary.resourceChanges)
     end for
   end preview
@@ -184,12 +145,12 @@ case class Stack(name: String, workspace: Workspace):
         Seq(s"--exec-kind=${ExecKind.AutoInline}", s"--client=$address")
       else Seq(s"--exec-kind=${ExecKind.AutoLocal}")
 
-    val watchArgs: Seq[String] = Seq.empty // TODO: implement watchArgs
+    val watchArgs: Seq[String] = Seq.empty // TODO: missing event stream, implement watchArgs
 
     val args: Seq[String] = Seq("up", "--yes", "--skip-preview") ++ sharedArgs ++ kindArgs ++ watchArgs
 
     pulumi(args)(
-// FIXME: implement progressStreams and errorProgressStreams
+// FIXME: missing streams, implement progressStreams and errorProgressStreams
 //      shell.Option.Stdout(opts.progressStreams),
 //      shell.Option.Stderr(opts.errorProgressStreams)
     ) match
@@ -552,7 +513,7 @@ case class Stack(name: String, workspace: Workspace):
       val path    = logsDir / "eventlog.txt"
       os.write(path, "")
       os.exists(path) match
-        case true  => println(os.proc("ls", "-la", path).call().out.text())
+        case true  => println(os.proc("ls", "-la", path).call().out.text()) // FIXME: remove the println, use logger
         case false => throw AutoError(s"Failed to create event log file: $path")
       path
     }.toEither.left.map(e => AutoError("Failed to create temporary directory for event logs", e))
@@ -669,6 +630,8 @@ object PreviewOption:
     */
   case class DebugLogging(debugOpts: LoggingOptions) extends PreviewOption
 
+  // TODO: missing streams
+
   /** Allows specifying one or more Writers to redirect incremental preview stdout
     */
 //  case class ProgressStreams(writers: os.ProcessOutput*) extends PreviewOption
@@ -776,6 +739,7 @@ object PreviewOptions:
       case PreviewOption.Target(urns*) :: tail           => from(tail*).copy(target = urns.toList)
       case PreviewOption.TargetDependents :: tail        => from(tail*).copy(targetDependents = true)
       case PreviewOption.DebugLogging(debugOpts) :: tail => from(tail*).copy(debugLogOpts = debugOpts)
+// TODO: missing streams
 //      case PreviewOption.ProgressStreams(writers) :: tail      => from(tail*).copy(progressStreams = writers)
 //      case PreviewOption.ErrorProgressStreams(writers) :: tail => from(tail*).copy(errorProgressStreams = writers)
 //      case PreviewOption.EventStreams(channels) :: tail        => from(tail*).copy(eventStreams = channels)
@@ -828,6 +792,8 @@ object UpOption:
   /** Specifies additional settings for debug logging
     */
   case class DebugLogging(debugOpts: LoggingOptions) extends UpOption
+
+  // TODO: missing streams
 
   /** Allows specifying one or more io.Writers to redirect incremental update stdout
     */
@@ -936,6 +902,7 @@ object UpOptions:
       case UpOption.Target(urns*) :: tail           => from(tail*).copy(target = urns.toList)
       case UpOption.TargetDependents :: tail        => from(tail*).copy(targetDependents = true)
       case UpOption.DebugLogging(debugOpts) :: tail => from(tail*).copy(debugLogOpts = debugOpts)
+// TODO: missing streams
 //      case UpOption.ProgressStreams(writers) :: tail      => from(tail*).copy(progressStreams = writers)
 //      case UpOption.ErrorProgressStreams(writers) :: tail => from(tail*).copy(errorProgressStreams = writers)
 //      case UpOption.EventStreams(channels) :: tail        => from(tail*).copy(eventStreams = channels)
@@ -973,6 +940,8 @@ object RefreshOption:
   /** Specifies an array of resource URNs to explicitly refresh
     */
   case class Target(urns: String*) extends RefreshOption
+
+  // TODO: missing streams
 
   /** Allows specifying one or more io.Writers to redirect incremental refresh stdout
     */
@@ -1053,6 +1022,7 @@ object RefreshOptions:
       case RefreshOption.ExpectNoChanges :: tail         => from(tail*).copy(expectNoChanges = true)
       case RefreshOption.Target(urns*) :: tail           => from(tail*).copy(target = urns.toList)
       case RefreshOption.DebugLogging(debugOpts) :: tail => from(tail*).copy(debugLogOpts = debugOpts)
+// TODO: missing streams
 //      case RefreshOption.ProgressStreams(writers) :: tail      => from(tail*).copy(progressStreams = writers)
 //      case RefreshOption.ErrorProgressStreams(writers) :: tail => from(tail*).copy(errorProgressStreams = writers)
 //      case RefreshOption.EventStreams(channels) :: tail        => from(tail*).copy(eventStreams = channels)

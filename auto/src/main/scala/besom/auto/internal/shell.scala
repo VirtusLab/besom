@@ -176,65 +176,21 @@ object shell:
 
   end pulumi
 
-  object Tailer:
-    import org.apache.commons.io as cio
+  private def dummyLogger(key: String, value: Any): Unit = println(s"[$key]: $value")
 
-    import java.nio.charset.StandardCharsets
-
-    private val DefaultBufSize = 4096
-    private val DefaultDelay   = 100
-
-    trait Listener extends cio.input.TailerListenerAdapter:
-      def path: os.Path
-      def handle(event: Listener.Event): Unit
-      override def fileNotFound(): Unit        = handle(Listener.Event.FileNotFound(path))
-      override def fileRotated(): Unit         = handle(Listener.Event.FileRotated(path))
-      override def handle(ex: Exception): Unit = handle(Listener.Event.Error(AutoError(s"Failed to tail a file", ex)))
-      override def handle(line: String): Unit  = handle(Listener.Event.Line(line))
-    object Listener:
-      sealed trait Event
-      object Event:
-        case class FileNotFound(path: os.Path) extends Event
-        case class FileRotated(path: os.Path) extends Event
-        case class Error(ex: Exception) extends Event
-        case class Line(line: String) extends Event
-
-    def apply[A, L <: Listener](
-      path: os.Path,
-      listener: os.Path => L,
-      delayMillis: Long = DefaultDelay,
-      end: Boolean = false,
-      reOpen: Boolean = false,
-      bufSize: Int = DefaultBufSize
-    )(block: L => A): Either[Exception, A] =
-      val ls = listener(path)
-      val tailer = cio.input.Tailer
-        .builder()
-        .setStartThread(true)
-        .setPath(path.toNIO)
-        .setTailerListener(ls)
-        .setCharset(StandardCharsets.UTF_8)
-        .setDelayDuration(java.time.Duration.ofMillis(delayMillis))
-        .setTailFromEnd(end)
-        .setReOpen(reOpen)
-        .setBufferSize(bufSize)
-        .get()
-      Using(tailer)(_ => block(ls)).toEither.left.map(AutoError("Failed to tail a file", _))
-  end Tailer
-
-  def watch(path: os.Path, onEvent: os.Path => Unit)(block: => Unit): Either[Exception, Unit] =
+  def watch(path: os.Path, onEvent: os.Path => Unit): Either[Exception, Unit] =
     Using(
       os.watch.watch(
         roots = Seq(path),
         onEvent = (ps: Set[os.Path]) => ps.filter(_ == path).foreach(onEvent),
-        logger = (_, _) => () /* TODO: pass a logger adapter here */
-      )
-    )(_ => block).toEither.left.map(AutoError("Failed to watch a path", _))
+        logger = dummyLogger /* TODO: pass a logger adapter here */
+      ) // FIXME: throws SIGSEGV
+    )(_ => ()).toEither.left.map(AutoError("Failed to watch a path", _))
 
-  case class Tailer2(path: os.Path, onLine: String => Unit):
+  case class Tailer(path: os.Path)(onLine: String => Unit):
     private val lastPosition: AtomicLong = AtomicLong(0L)
 
-    def tail(block: => Unit): Either[Exception, Unit] =
+    def tail: Either[Exception, Unit] =
       watch(
         path,
         onEvent = p => {
@@ -247,8 +203,7 @@ object shell:
             channel.position()
           })
         }
-      )(block)
-
-  end Tailer2
+      )
+  end Tailer
 
 end shell

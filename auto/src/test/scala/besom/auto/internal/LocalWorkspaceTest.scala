@@ -59,9 +59,14 @@ class LocalWorkspaceTest extends munit.FunSuite:
           )
         )
         assertEquals(upRes.summary.kind, "update")
-        assertEquals(upRes.summary.resourceChanges, Some(Map(
-          OpType.Create.toString -> 1
-        )))
+        assertEquals(
+          upRes.summary.resourceChanges,
+          Some(
+            Map(
+              OpType.Create.toString -> 1
+            )
+          )
+        )
         assertEquals(upRes.summary.result, Some("succeeded"))
       }
     )
