@@ -28,9 +28,9 @@ case class CustomTimeouts(create: Option[Duration], update: Option[Duration], de
 /** Companion object for [[CustomTimeouts]] */
 object CustomTimeouts:
   def apply(
-    create: Duration | NotProvided = NotProvided,
-    update: Duration | NotProvided = NotProvided,
-    delete: Duration | NotProvided = NotProvided
+    create: NotProvidedOr[Duration] = NotProvided,
+    update: NotProvidedOr[Duration] = NotProvided,
+    delete: NotProvidedOr[Duration] = NotProvided
   ): CustomTimeouts = new CustomTimeouts(create.asOption, update.asOption, delete.asOption)
 
   // noinspection ScalaUnusedSymbol

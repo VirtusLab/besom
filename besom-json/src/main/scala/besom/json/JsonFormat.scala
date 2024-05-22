@@ -19,6 +19,7 @@ package besom.json
 
 import scala.annotation.implicitNotFound
 import scala.language.implicitConversions
+import scala.util.Try
 
 /** Provides the JSON deserialization for type T.
   */
@@ -40,6 +41,13 @@ object JsonReader {
 @implicitNotFound(msg = "Cannot find JsonWriter or JsonFormat type class for ${T}")
 trait JsonWriter[T] {
   def write(obj: T): JsValue
+  def either(obj: T): Either[Exception, JsValue] =
+    Try {
+      write(obj)
+    }.toEither.left.map {
+      case e: SerializationException => e
+      case t: Throwable              => DeserializationException(t.getMessage, t)
+    }
 }
 
 object JsonWriter {
