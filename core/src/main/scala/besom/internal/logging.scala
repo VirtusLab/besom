@@ -274,8 +274,9 @@ object logging:
       for
         _ <- log(record) // direct logging
         // logging via RPC (async via queue)
-        _ <- if !areWeOnTraceLevel then queue.offer(makeLogRequest(record, urn, streamId, ephemeral)) 
-             else Result.unit
+        _ <-
+          if !areWeOnTraceLevel then queue.offer(makeLogRequest(record, urn, streamId, ephemeral))
+          else Result.unit
       yield ()
 
   object BesomLogger:
