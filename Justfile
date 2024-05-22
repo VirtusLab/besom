@@ -46,7 +46,7 @@ compile-all: compile-json compile-sdk compile-auto compile-codegen compile-scrip
 test-all: test-json test-sdk test-auto test-codegen test-scripts test-integration test-cfg test-templates test-examples test-markdown
 
 # Publishes everything locally
-publish-local-all: publish-local-json publish-local-sdk publish-local-auto publish-local-codegen publish-local-cfg publish-local-scripts install-language-plugin
+publish-local-all: publish-local-json publish-local-sdk publish-local-auto publish-local-cfg publish-local-codegen publish-local-scripts install-language-plugin
 
 # Publishes everything to Maven
 publish-maven-all: publish-maven-json publish-maven-sdk publish-maven-auto publish-maven-codegen publish-maven-scripts
