@@ -88,29 +88,35 @@ case class Stack(name: String, workspace: Workspace):
       else Seq(s"--exec-kind=${ExecKind.AutoLocal}")
 
     for
-      tailerPath <- tailLogsPath("preview")
-      // FIXME: tailer is borked
-      /*tailer <- shell
-        .Tailer(tailerPath) { line =>
-          println(s"> $line")
-        }
-        .tail*/
+      eventsPath <- eventLogsPath("preview")
       r <- {
-        val watchArgs: Seq[String] = Seq("--event-log=" + tailerPath)
+        val watchArgs: Seq[String] = Seq("--event-log=" + eventsPath)
         val args: Seq[String]      = Seq("preview") ++ sharedArgs ++ kindArgs ++ watchArgs
-        pulumi(args)().left.map(AutoError("Preview failed", _))
+        pulumi(args)().left.map(AutoError("Preview failed", _)) // after this line pulumi cli is no longer running
       }
-      summary <-
-        os.read
-          .lines(tailerPath)
-          .map(EngineEvent.fromJson(_))
-          .collectFirst {
-            case Right(ee) if ee.summaryEvent.isDefined => ee.summaryEvent.get
-          }
-          .toRight(AutoError("Failed to get preview summary, got no summary event"))
+      summary <- extractSummaryEventFromEventLog(eventsPath)
     yield PreviewResult(stdout = r.out, stderr = r.err, summary = summary.resourceChanges)
-    end for
   end preview
+
+  def extractSummaryEventFromEventLog(path: os.Path): Either[Exception, SummaryEvent] =
+    val maybeEvents = os.read.lines(path).map(EngineEvent.fromJson(_))
+
+    if maybeEvents.forall(_.isRight) then
+      maybeEvents
+        .collectFirst { case Right(ee) if ee.summaryEvent.isDefined => ee.summaryEvent.get }
+        .toRight(AutoError("Failed to get preview summary, got no summary event"))
+    else
+      val err =
+        maybeEvents
+          .collect { case Left(e) => e }
+          .foldLeft(AutoError("Failed to get event log, got invalid events")) { case (acc, e) =>
+            acc.addSuppressed(e)
+            acc
+          }
+
+      Left(err)
+
+  end extractSummaryEventFromEventLog
 
   /** Create or update the resources in a stack by executing the program in the Workspace. Update updates the resources in a stack by
     * executing the program in the Workspace associated with this stack, if one is provided.
@@ -145,7 +151,7 @@ case class Stack(name: String, workspace: Workspace):
         Seq(s"--exec-kind=${ExecKind.AutoInline}", s"--client=$address")
       else Seq(s"--exec-kind=${ExecKind.AutoLocal}")
 
-    val watchArgs: Seq[String] = Seq.empty // TODO: missing event stream, implement watchArgs
+    val watchArgs = Seq.empty[String] // TODO: missing event stream, implement watchArgs
 
     val args: Seq[String] = Seq("up", "--yes", "--skip-preview") ++ sharedArgs ++ kindArgs ++ watchArgs
 
@@ -195,7 +201,9 @@ case class Stack(name: String, workspace: Workspace):
       ++ (if workspace.program.isDefined then Seq(s"--exec-kind=${ExecKind.AutoInline}") else Seq(s"--exec-kind=${ExecKind.AutoLocal}"))
       ++ remoteArgs // Apply the remote args, if needed
 
-    val args: Seq[String] = Seq("refresh", "--yes", "--skip-preview") ++ sharedArgs
+    val watchArgs = Seq.empty[String] // TODO: missing event stream, implement watchArgs
+
+    val args: Seq[String] = Seq("refresh", "--yes", "--skip-preview") ++ sharedArgs ++ watchArgs
     pulumi(args)() match
       case Left(e) => Left(AutoError("Refresh failed", e))
       case Right(r) =>
@@ -234,7 +242,9 @@ case class Stack(name: String, workspace: Workspace):
       ++ (if workspace.program.isDefined then Seq(s"--exec-kind=${ExecKind.AutoInline}") else Seq(s"--exec-kind=${ExecKind.AutoLocal}"))
       ++ remoteArgs // Apply the remote args, if needed
 
-    val args: Seq[String] = Seq("destroy", "--yes", "--skip-preview") ++ sharedArgs
+    val watchArgs = Seq.empty[String] // TODO: missing event stream, implement watchArgs
+
+    val args: Seq[String] = Seq("destroy", "--yes", "--skip-preview") ++ sharedArgs ++ watchArgs
     pulumi(args)() match
       case Left(e) => Left(AutoError("Destroy failed", e))
       case Right(r) =>
@@ -507,7 +517,7 @@ case class Stack(name: String, workspace: Workspace):
       case _    => throw AutoError(s"Unknown workspace type: ${workspace.getClass.getTypeName}")
   end remoteArgs
 
-  private def tailLogsPath(command: String): Either[Exception, os.Path] =
+  private def eventLogsPath(command: String): Either[Exception, os.Path] =
     Try {
       val logsDir = os.temp.dir(prefix = s"automation-logs-$command-")
       val path    = logsDir / "eventlog.txt"
@@ -517,7 +527,7 @@ case class Stack(name: String, workspace: Workspace):
         case false => throw AutoError(s"Failed to create event log file: $path")
       path
     }.toEither.left.map(e => AutoError("Failed to create temporary directory for event logs", e))
-  end tailLogsPath
+  end eventLogsPath
 
   private def startLanguageRuntimeServer(): String =
     import concurrent.ExecutionContext.Implicits.global // FIXME: use a custom execution context

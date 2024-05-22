@@ -10,6 +10,7 @@
 //> using dep org.eclipse.jgit:org.eclipse.jgit:6.8.0.202311291450-r
 //> using dep org.eclipse.jgit:org.eclipse.jgit.ssh.jsch:6.8.0.202311291450-r
 //> using dep org.slf4j:slf4j-nop:2.0.13
+//> using dep ma.chinespirit::tailf:0.1.0
 
 //> using test.dep org.scalameta::munit:1.0.0-M10
 

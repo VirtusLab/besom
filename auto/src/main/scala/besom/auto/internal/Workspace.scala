@@ -703,7 +703,7 @@ case class ProjectStack(
   secretsProvider: Option[String] = None,
   encryptedKey: Option[String] = None,
   encryptionSalt: Option[String] = None,
-  config: Map[String, Any] = Map.empty,
+  config: Map[String, Any] = Map.empty, // TODO FIXME UNBORK Map[String, Any] to ConfigMap
   environment: Option[Environment] = None
 ) derives JsonFormat,
       YamlCodec:

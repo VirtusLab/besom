@@ -3,10 +3,7 @@ package besom.auto.internal
 import besom.util.*
 import os.CommandResult
 
-import java.nio.channels.Channels
-import java.util.concurrent.atomic.AtomicLong
 import scala.io.Source
-import scala.util.Using
 
 object shell:
   case class Result private (
@@ -176,34 +173,22 @@ object shell:
 
   end pulumi
 
-  private def dummyLogger(key: String, value: Any): Unit = println(s"[$key]: $value")
+  import ma.chinespirit.tailf.Tail
 
-  def watch(path: os.Path, onEvent: os.Path => Unit): Either[Exception, Unit] =
-    Using(
-      os.watch.watch(
-        roots = Seq(path),
-        onEvent = (ps: Set[os.Path]) => ps.filter(_ == path).foreach(onEvent),
-        logger = dummyLogger /* TODO: pass a logger adapter here */
-      ) // FIXME: throws SIGSEGV
-    )(_ => ()).toEither.left.map(AutoError("Failed to watch a path", _))
+  // FIXME probably requires a redesign?
+  def tail(path: os.Path): Either[Exception, Iterator[String] & AutoCloseable] =
+    Tail
+      .follow(path.toIO)
+      .left
+      .map(e => Exception(s"Failed to open $path for tailing", e))
+      .map { is =>
+        new Iterator[String] with AutoCloseable:
+          val src = scala.io.Source.fromInputStream(is)
+          val it  = src.getLines()
 
-  case class Tailer(path: os.Path)(onLine: String => Unit):
-    private val lastPosition: AtomicLong = AtomicLong(0L)
-
-    def tail: Either[Exception, Unit] =
-      watch(
-        path,
-        onEvent = p => {
-          val _ = lastPosition.getAndUpdate(pos => {
-            val channel     = os.read.channel(p).position(pos)
-            val inputStream = Channels.newInputStream(channel)
-            Using(Source.fromInputStream(inputStream)) {
-              _.getLines().foreach(onLine)
-            }
-            channel.position()
-          })
-        }
-      )
-  end Tailer
+          def hasNext: Boolean = it.hasNext
+          def next(): String   = it.next()
+          def close(): Unit    = src.close()
+      }
 
 end shell
