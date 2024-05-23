@@ -22,7 +22,7 @@ object printer
       defaultIndent = 2,
       additionalHandlers = {
         case o: Output[?]            => Tree.Literal("Output(?)")
-        case s: String if s.nonEmpty => Tree.Literal(escapeSpecialCharacters(s))
+        case s: String if s.nonEmpty => Tree.Literal(s"\"${escapeSpecialCharacters(s)}\"")
       }
     ):
 

@@ -500,7 +500,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         .flatMap { response =>
           for
             _                 <- log.debug(s"Received RegisterResourceResponse for ${state.asLabel}")
-            _                 <- log.trace(s"RegisterResourceResponse for ${state.asLabel}:\n${/*printer.render(response)*/}")
+            _                 <- log.trace(s"RegisterResourceResponse for ${state.asLabel}:\n${printer.render(response)}")
             rawResourceResult <- RawResourceResult.fromResponse(response)
           yield rawResourceResult
         }
