@@ -36,8 +36,8 @@ object Packages:
       case "local" :: tail            => publishLocalSelected(generateSelected(packagesDir, tail), tail)
       case "maven-all" :: Nil         => publishMavenAll(generateAll(packagesDir))
       case "maven" :: tail            => publishMavenSelected(generateSelected(packagesDir, tail), tail)
-      case "metadata-all" :: Nil      => downloadPackagesMetadataAndSchema(packagesDir, selected = Nil)
-      case "metadata" :: tail         => downloadPackagesMetadataAndSchema(packagesDir, selected = tail)
+      case "metadata-all" :: Nil      => readOrDownloadPackagesMetadataAndSchema(packagesDir, selected = Nil)
+      case "metadata" :: tail         => readOrDownloadPackagesMetadataAndSchema(packagesDir, selected = tail)
       case "generate-all" :: Nil      => generateAll(packagesDir)
       case "generate" :: tail         => generateSelected(packagesDir, tail)
       case "publish-local-all" :: Nil => publishLocalAll(generatedFile)
@@ -156,15 +156,18 @@ object Packages:
     "fortios" // method collision - https://github.com/VirtusLab/besom/issues/458
   )
 
-  def generateAll(targetPath: os.Path)(using Config, Flags): os.Path = {
+  def generateAll(targetPath: os.Path)(using config: Config, flags: Flags): os.Path = {
     val metadata = readOrFetchPackagesMetadata(targetPath, Nil)
       .filter {
-        case m if (codegenProblemPackages ++ compileProblemPackages).contains(m.name) =>
+        case (m, false) if !flags.force =>
+          println(s"Skipping unchanged package generation: ${m.name}")
+          false
+        case (m, _) if (codegenProblemPackages ++ compileProblemPackages).contains(m.name) =>
           println(s"Skipping problematic package generation: ${m.name}")
           false
         case _ => true
       }
-    upsertGeneratedFile(generate(metadata))
+    upsertGeneratedFile(generate(metadata.map(_._1)))
   }
 
   def publishLocalAll(sourceFile: os.Path)(using Config, Flags): os.Path = {
@@ -193,6 +196,13 @@ object Packages:
 
   def generateSelected(targetPath: os.Path, selected: List[String])(using config: Config, flags: Flags): os.Path = {
     val readPackages = readOrFetchPackagesMetadata(targetPath, selected)
+      .filter {
+        case (m, false) if !flags.force =>
+          println(s"Skipping unchanged package generation: ${m.name}")
+          false
+        case _ => true
+      }
+      .map(_._1)
     val packages = selected.map { p =>
       PackageId.parse(p) match {
         case Right(name, Some(version)) =>
@@ -202,7 +212,7 @@ object Packages:
         case Right(name, None) =>
           readPackages
             .find(_.name == name)
-            .getOrElse(throw Exception(s"Package '$name' not found in the generated packages (${readPackages.size})"))
+            .getOrElse(throw Exception(s"Package '$name' not found in the packages (${readPackages.size})"))
         case Left(e) => throw e
       }
     }.toVector
@@ -272,19 +282,17 @@ object Packages:
     }.toVector
 
   def resolveMavenAll(targetDir: Path)(using config: Config): Unit =
-    val _        = downloadPackagesMetadata(targetDir, Nil)
-    val latest   = readPackagesMetadata(targetDir).map(_.copy(version = None))
-    val resolved = resolveMavenVersions(targetDir, latest)
-    compareWithLatest(targetDir, resolved, latest)
+    val latest   = readOrDownloadPackagesMetadata(targetDir, Nil)
+    val resolved = resolveMavenVersions(targetDir, latest.map(_._1))
+    compareWithLatest(targetDir, resolved, latest.map(_._1))
   end resolveMavenAll
 
   def resolveMavenSelected(targetDir: Path, selected: List[String])(using config: Config): Unit =
     val selectedPackages = parsePackages(selected)
     val resolved         = resolveMavenVersions(targetDir, selectedPackages)
 
-    val _              = downloadPackagesMetadata(targetDir, selected)
-    val latestPackages = readPackagesMetadata(targetDir)
-    compareWithLatest(targetDir, resolved, latestPackages)
+    val latestPackages = readOrDownloadPackagesMetadata(targetDir, selected)
+    compareWithLatest(targetDir, resolved, latestPackages.map(_._1))
   end resolveMavenSelected
 
   def resolveMavenVersions(targetDir: os.Path, packages: Vector[PackageMetadata])(using config: Config): Map[String, SemanticVersion] =
@@ -564,63 +572,17 @@ object Packages:
     end if
   }
 
-  private def readPackageMetadataFiles(path: os.Path): Map[String, Path] = ListMap.from(
-    os
-      .list(path)
-      .filter(_.last.endsWith("metadata.json"))
-      .map(p => p.last.stripSuffix(".metadata.json") -> p)
-  )
-
-  def readPackagesMetadata(targetPath: os.Path): Vector[PackageMetadata] =
-    readPackageMetadataFiles(targetPath)
-      .map((_, p) => PackageMetadata.fromJsonFile(p))
-      .toVector
-
+  // TODO: should be split into two functions, with one that does not touch schemas, to be used in Version.scala
   def readOrFetchPackagesMetadata(
     targetPath: os.Path,
     selected: List[String]
-  )(using config: Config, flags: Flags): Vector[PackageMetadata] = {
-    // download metadata if none found
-    if flags.force || !os.exists(targetPath) then
-      println(s"No packages metadata found in: '$targetPath', downloading...")
-      downloadPackagesMetadataAndSchema(targetPath, selected)
-    else println(s"Reading packages metadata from: '$targetPath'")
-
-    // read cached metadata
-    val cached = readPackageMetadataFiles(targetPath)
-
-    // download all metadata if selected packages are not found
-    val selectedNames             = selected.map(_.takeWhile(_ != ':')).toSet
-    val selectedAreSubsetOfCached = selectedNames.subsetOf(cached.keys.toSet)
-    if selected.nonEmpty then
-      println(s"Selected: ${selected.mkString(", ")}, cached: ${cached.keys.mkString(", ")}, subset: $selectedAreSubsetOfCached")
-    val downloaded =
-      if !selectedAreSubsetOfCached
-      then
-        downloadPackagesMetadataAndSchema(targetPath, selected)
-        readPackageMetadataFiles(targetPath)
-      else cached
-
-    // double check if selected packages are found
-    selectedNames.map { p =>
-      downloaded.keys
-        .find(_ == p)
-        .getOrElse(throw Exception(s"Package '$p' not found in downloaded packages metadata (${downloaded.size})"))
-    }.toVector
-
-    val metadata = downloaded
-      .filter { (name, _) =>
-        selectedNames match
-          case _ if selectedNames.isEmpty => true
-          case s                          => s.contains(name) // filter out selected packages only if selected is not empty
-      }
-      .map((_, p) => PackageMetadata.fromJsonFile(p))
+  )(using config: Config, flags: Flags): Vector[(PackageMetadata, Boolean)] = {
+    val metadata = readOrDownloadPackagesMetadataAndSchema(targetPath, selected)
       .collect {
-        case metadata if selected.nonEmpty => metadata
-        case metadata if !pluginDownloadProblemPackages.contains(metadata.name) =>
-          metadata // filter out packages with known problems only if selected is not empty
+        case (metadata, changed) if selected.nonEmpty => (metadata, changed)
+        case (metadata, changed) if !pluginDownloadProblemPackages.contains(metadata.name) =>
+          (metadata, changed) // filter out packages with known problems only if selected is not empty
       }
-      .toVector
 
     if metadata.isEmpty then throw Exception(s"No packages metadata found in: '$targetPath'")
     metadata
@@ -629,12 +591,24 @@ object Packages:
   private case class PackageYAML(name: String, repo_url: String, schema_file_path: String, version: String) derives YamlCodec
 
   // downloads latest package metadata and schemas using Pulumi packages repository
-  def downloadPackagesMetadataAndSchema(targetPath: os.Path, selected: List[String])(using config: Config): Unit =
-    downloadPackagesSchema(downloadPackagesMetadata(targetPath, selected))
-  end downloadPackagesMetadataAndSchema
+  private def readOrDownloadPackagesMetadataAndSchema(
+    targetPath: os.Path,
+    selected: List[String]
+  )(using config: Config): Vector[(PackageMetadata, Boolean)] =
+    val metadata = readOrDownloadPackagesMetadata(targetPath, selected)
+    readOrDownloadPackagesSchema(metadata.map(t => (t._2, t._3)))
+    metadata.map(t => (t._1, t._3))
+  end readOrDownloadPackagesMetadataAndSchema
 
-  private def downloadPackagesMetadata(targetPath: os.Path, selected: List[String])(using config: Config): Vector[PackageYAML] =
-    println("Downloading packages metadata...")
+  case class PackageSource(name: String, download_url: String, sha: String) derives UpickleApi.ReadWriter
+  object PackageSource {
+    def fromJsonArray(json: ujson.Readable): List[PackageSource] = UpickleApi.read(json, trace = true)
+  }
+
+  private def readOrDownloadPackagesMetadata(targetPath: os.Path, selected: List[String])(using
+    config: Config
+  ): Vector[(PackageMetadata, PackageYAML, Boolean)] =
+    println("Downloading or reading packages metadata...")
 
     val packagesRepoApi = "https://api.github.com/repos/pulumi/registry/contents/themes/default/data/registry/packages"
 
@@ -645,14 +619,11 @@ object Packages:
     if packagesResponse.statusCode != 200
     then throw Exception(s"Failed to fetch packages list from: '$packagesRepoApi'")
 
-    case class PackageSource(name: String, download_url: String, sha: String) derives UpickleApi.ReadWriter
-    object PackageSource {
-      def fromJsonArray(json: ujson.Readable): List[PackageSource] = UpickleApi.read(json, trace = true)
-    }
-
+    val packagesContent = packagesResponse.text()
+    // use ListMap to preserve the order
     val packages: ListMap[String, PackageSource] = ListMap.from(
       PackageSource
-        .fromJsonArray(packagesResponse.text())
+        .fromJsonArray(packagesContent)
         .map { p =>
           val packageName = p.name.stripSuffix(".yaml")
           packageName -> p
@@ -670,7 +641,7 @@ object Packages:
     if selectedNames.nonEmpty then println(s"Selected for download: ${selectedNames.mkString(", ")}")
 
     // fetch all production schema metadata
-    val downloaded = withProgress(s"Downloading $size packages metadata", size) {
+    val downloaded = withProgress(s"Downloading or reading $size packages metadata", size) {
       packages
         .filter { (name, _) =>
           selectedNames match
@@ -695,8 +666,8 @@ object Packages:
                 sha != p.sha
               else true // no sha file, assume it has changed
 
-            val metadataRaw: Either[Error, PackageYAML] = {
-              if hasChanged || !os.exists(metadataPath) then
+            val content: Either[Error, String] =
+              if hasChanged then
                 val schemaResponse = requests.get(p.download_url, headers = authHeader)
                 schemaResponse.statusCode match
                   case 200 =>
@@ -707,22 +678,29 @@ object Packages:
                   case _ =>
                     Left(s"failed to download metadata for package: '${p.name}'")
               else Right(os.read(metadataPath))
-            }.flatMap {
-              _.as[PackageYAML].fold(
-                error => Left(s"failed to deserialize metadata for package: '${p.name}', error: ${error}"),
-                p => Right(p)
-              )
-            }
 
-            val metadata: Either[Error, PackageMetadata] =
-              metadataRaw.map(m => PackageMetadata(m.name, m.version).withUrl(m.repo_url))
+            val metadataRaw: Either[Error, (PackageYAML, Boolean)] =
+              content
+                .flatMap(
+                  _.as[PackageYAML].fold(
+                    error => Left(s"failed to deserialize metadata for package: '${p.name}', error: ${error}"),
+                    p => Right(p)
+                  )
+                )
+                .map((_, hasChanged))
+
+            val metadata: Either[Error, (PackageMetadata, PackageYAML, Boolean)] =
+              metadataRaw.map { case (m, changed) =>
+                (PackageMetadata(m.name, m.version).withUrl(m.repo_url), m, changed)
+              }
 
             metadata match
-              case Left(error) => Progress.fail(error)
-              case Right(value) =>
+              case left @ Left(error) =>
+                Progress.fail(error)
+                left
+              case Right(t @ (value, _, _)) =>
                 os.write.over(targetPath / s"${packageName}.metadata.json", value.toJson, createFolders = true)
-
-            metadataRaw
+                Right(t)
           catch
             case NonFatal(e) =>
               val msg = s"Failed to download metadata for package: '${p.name}', error: ${e.getMessage}"
@@ -731,23 +709,22 @@ object Packages:
           finally Progress.end
           end try
         }
-        .map(_.toOption)
-        .collect { case Some(p) => p }
+        .collect { case Right(p) => p } // ignore the failures and try to go forward
         .toVector
     }
     println(s"Packages directory: '$targetPath'")
     downloaded
-  end downloadPackagesMetadata
+  end readOrDownloadPackagesMetadata
 
-  private def downloadPackagesSchema(downloaded: Vector[PackageYAML])(using config: Config): Unit = {
+  private def readOrDownloadPackagesSchema(downloaded: Vector[(PackageYAML, Boolean)])(using config: Config): Unit = {
     // pre-fetch all available production schemas, if any are missing here code generation will use a fallback mechanism
     withProgress(s"Downloading ${downloaded.size} packages schemas", downloaded.size) {
-      downloaded.foreach(p => {
+      downloaded.foreach((p, changed) => {
         Progress.report(label = p.name)
         try
           val ext        = if p.schema_file_path.endsWith(".yaml") || p.schema_file_path.endsWith(".yml") then "yaml" else "json"
           val schemaPath = config.schemasDir / p.name / PackageVersion(p.version).get / s"schema.$ext"
-          if !os.exists(schemaPath) then
+          if changed || !os.exists(schemaPath) then
             val rawUrlPrefix   = p.repo_url.replace("https://github.com/", "https://raw.githubusercontent.com/")
             val url            = s"$rawUrlPrefix/${p.version}/${p.schema_file_path}"
             val schemaResponse = requests.get(url)
@@ -769,7 +746,7 @@ object Packages:
   }
 
   def listLatestPackages(targetPath: os.Path)(using config: Config, flags: Flags): Unit = {
-    val metadata = readOrFetchPackagesMetadata(targetPath, Nil)
+    val metadata = readOrFetchPackagesMetadata(targetPath, Nil).map(_._1)
     val active = metadata
       .filterNot(m => blockedPackages.contains(m.name))
       .filterNot(m => codegenProblemPackages.contains(m.name))

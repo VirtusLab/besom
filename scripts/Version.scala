@@ -156,7 +156,7 @@ object Version:
   def latestPackageVersion(name: String)(using Config): String =
     val latestPackageVersions = fetchLatestPackageVersions
     Try(latestPackageVersions(name)).recover { case e: NoSuchElementException =>
-      throw Exception(s"package $name not found", e)
+      throw Exception(s"package $name not found, total packages: ${latestPackageVersions.size}", e)
     }.get
 
   private def fetchLatestPackageVersions(using Config): Map[String, String] =
@@ -164,7 +164,7 @@ object Version:
     given Flags = Flags()
     Packages
       .readOrFetchPackagesMetadata(Packages.packagesDir, Nil)
-      .map { metadata =>
+      .map { (metadata, _) =>
         metadata.name -> metadata.version.getOrElse(throw Exception("Package version must be present at this point")).asString
       }
       .toMap
