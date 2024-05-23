@@ -36,6 +36,8 @@ default:
 # Aggregate tasks
 ####################
 
+# TODO aggregate tasks do not incorporate besom-cfg module (with the exception of clean-all)
+
 # Cleans everything
 clean-all: clean-json clean-sdk clean-auto clean-out clean-compiler-plugin clean-codegen clean-scripts clean-test-integration clean-cfg clean-test-templates clean-test-examples clean-test-markdown
 
@@ -43,10 +45,10 @@ clean-all: clean-json clean-sdk clean-auto clean-out clean-compiler-plugin clean
 compile-all: compile-json compile-sdk compile-auto compile-codegen compile-scripts compile-compiler-plugin build-language-plugin
 
 # Tests everything
-test-all: test-json test-sdk test-auto test-codegen test-scripts test-integration test-cfg test-templates test-examples test-markdown
+test-all: test-json test-sdk test-auto test-codegen test-scripts test-integration test-templates test-examples test-markdown
 
 # Publishes everything locally
-publish-local-all: publish-local-json publish-local-sdk publish-local-auto publish-local-cfg publish-local-codegen publish-local-scripts install-language-plugin
+publish-local-all: publish-local-json publish-local-sdk publish-local-auto publish-local-codegen publish-local-scripts install-language-plugin
 
 # Publishes everything to Maven
 publish-maven-all: publish-maven-json publish-maven-sdk publish-maven-auto publish-maven-codegen publish-maven-scripts
