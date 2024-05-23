@@ -14,10 +14,6 @@ import besom.util.printer
 
 object logging:
 
-  private lazy val globalLogger = Logger()
-
-  private def areWeOnTraceLevel: Boolean = globalLogger.includes(Level.Trace)
-
   class Key[A](val value: String)
   object Key:
     val LabelKey: Key[Label] = Key[Label]("resource")
@@ -274,10 +270,12 @@ object logging:
       for
         _ <- log(record) // direct logging
         // logging via RPC (async via queue)
-        _ <-
-          if !areWeOnTraceLevel then queue.offer(makeLogRequest(record, urn, streamId, ephemeral))
-          else Result.unit
+        _ <- publishToPulumiEngineIfNotTrace(record, urn, streamId, ephemeral) // TODO this is a temporary fix for #489
       yield ()
+
+    private def publishToPulumiEngineIfNotTrace(record: LogRecord, urn: URN, streamId: Int, ephemeral: Boolean): Result[Unit] =
+      if record.level != Level.Trace then queue.offer(makeLogRequest(record, urn, streamId, ephemeral))
+      else Result.unit
 
   object BesomLogger:
     def apply(engine: Engine, taskTracker: TaskTracker): Result[BesomLogger] =
