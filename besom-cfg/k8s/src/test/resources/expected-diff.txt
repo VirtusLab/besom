@@ -1,0 +1,55 @@
+{
+  shouldBeIntAndItsOK: Int
+  shouldBeStringButItsNot: [31mgot Double[33m, expected String[39m
+  shouldBeBoolButItsStruct: [31mgot {[39m
+[31m    x: String[39m
+  [31m}[33m, expected Boolean[39m
+  shouldBeStructButItsNot: [31mgot String[33m, expected {[39m
+[33m    a: Int[39m
+[33m    b: String[39m
+  [33m}[39m
+  oneFieldInsideIsWrongAndOneIsUnnecessary: {
+    x: Int
+    y: [31mgot Int[33m, expected Double[39m
+[32m    z: Int[39m
+  }
+[31m  wholeStructMissing: {[39m
+[31m    q: Int[39m
+[31m    w: String[39m
+  [31m}[39m
+  shouldBeListOfInts: [31mgot List[Double][33m, expected List[Int][39m
+  shouldBeListOfStructs: [31mgot String[33m, expected List[{[39m
+[33m    a: Int[39m
+[33m    b: String[39m
+  [33m}][39m
+  shouldBeListOfStructsButItsAStruct: [31mgot {[39m
+[31m    a: Int[39m
+[31m    b: Int[39m
+  [31m}[33m, expected List[{[39m
+[33m    x: Int[39m
+[33m    y: Double[39m
+  [33m}][39m
+  shouldBeAStructButItsAListOfStructs: [31mgot List[{[39m
+[31m    one: String[39m
+  [31m}][33m, expected {[39m
+[33m    x: Int[39m
+[33m    y: Double[39m
+  [33m}[39m
+  shouldBeAStringButItsAListOfStructs: [31mgot List[{[39m
+[31m    one: Int[39m
+  [31m}][33m, expected String[39m
+  shouldBeAListOfStructsButItsAString: [31mgot String[33m, expected List[{[39m
+[33m    a: Int[39m
+[33m    b: String[39m
+  [33m}][39m
+[32m  thisOneIsUnnecessary: String[39m
+[32m  unnecessaryListOfStructs: List[{[39m
+[32m    a: Int[39m
+[32m    b: Int[39m
+  [32m}][39m
+[32m  unnecessaryStruct: {[39m
+[32m    one: String[39m
+[32m    two: String[39m
+[32m    three: String[39m
+  [32m}[39m
+}
