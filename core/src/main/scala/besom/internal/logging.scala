@@ -262,7 +262,6 @@ object logging:
     private val queue: Queue[LogRequest | Queue.Stop],
     private val fib: Fiber[Unit]
   ) extends BesomLogger:
-
     def close(): Result[Unit] = queue.offer(Queue.Stop) *> fib.join
 
     override def log(record: LogRecord): Result[Unit] = Result(Logger(record.className).log(record))
@@ -270,7 +269,8 @@ object logging:
     override def log(record: LogRecord, urn: URN, streamId: Int, ephemeral: Boolean): Result[Unit] =
       for
         _ <- log(record) // direct logging
-        _ <- queue.offer(makeLogRequest(record, urn, streamId, ephemeral)) // logging via RPC (async via queue)
+        // logging via RPC (async via queue)
+        _ <- queue.offer(makeLogRequest(record, urn, streamId, ephemeral)) // this unfortunately evaluates all lazy log messages
       yield ()
 
   object BesomLogger:
