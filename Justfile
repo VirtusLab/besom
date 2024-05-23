@@ -210,30 +210,6 @@ publish-maven-auto: test-auto
 
 
 ####################
-# Auto
-####################
-
-# Compiles auto module
-compile-auto: publish-local-core
-    scala-cli --power compile auto --suppress-experimental-feature-warning
-
-# Runs tests for auto module
-test-auto: compile-auto
-    scala-cli --power test auto --suppress-experimental-feature-warning
-
-# Cleans auto module
-clean-auto:
-    scala-cli --power clean auto
-
-# Publishes locally auto module
-publish-local-auto: test-auto
-    scala-cli --power publish local auto --project-version {{besom-version}} --suppress-experimental-feature-warning
-
-# Publishes auto module
-publish-maven-auto: test-auto
-    scala-cli --power publish auto --project-version {{besom-version}} {{publish-maven-auth-options}}
-
-####################
 # Language plugin
 ####################
 
