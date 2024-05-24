@@ -24,6 +24,8 @@ sealed trait Resource:
     case _: CustomResource => true
     case _                 => false
 
+  // this method can lead to deadlocks as it waits for URN to be resolved, use carefully
+  // resources can be visually compared by references using toString() if URN is not strictly required
   private[internal] def asString: Result[Option[String]] = urn.getValue.map(_.map(v => s"${this.getClass.getSimpleName}($v)"))
 
 trait CustomResource extends Resource:
@@ -44,6 +46,8 @@ trait ComponentResource(using
     *   the URN of the resource
     */
   override def urn: Output[URN] = base.urn
+
+  private[besom] def componentBase: ComponentBase = base
 
 trait ProviderResource extends CustomResource:
   private[internal] def registrationId: Result[String] =

@@ -36,21 +36,25 @@ case class CommonResourceState(
   typ: ResourceType,
   // transformations: List[ResourceTransformation],
   keepDependency: Boolean
-)
+):
+  override def toString(): String = "CommonResourceState"
 
 case class CustomResourceState(
   common: CommonResourceState,
   id: Output[ResourceId]
 ) extends ResourceState:
   export common.*
+  override def toString(): String = "CustomResourceState"
 
 case class ProviderResourceState(
   custom: CustomResourceState,
   pkg: String
 ) extends ResourceState:
   export custom.*
+  override def toString(): String = "ProviderResourceState"
 
 case class ComponentResourceState(
   common: CommonResourceState
 ) extends ResourceState:
   export common.*
+  override def toString(): String = "ComponentResourceState"
