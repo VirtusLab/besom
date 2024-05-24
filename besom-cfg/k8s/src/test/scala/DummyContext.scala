@@ -1,17 +1,22 @@
 package besom.internal
 
-import pulumirpc.resource.*
+import pulumirpc.resource.{Result => _, *}
 import pulumirpc.provider.CallRequest
 import pulumirpc.provider.CallResponse
 import pulumirpc.provider.InvokeResponse
 import pulumirpc.engine.*
 import besom.NonEmptyString
 import besom.internal.logging.BesomLogger
+import pulumirpc.callback.Callback
 
 object DummyContext:
   val dummyRunInfo        = RunInfo(Some("test-organization"), "test-project", "test-stack", true, 4, false, "dummy", "dummy")
-  val dummyFeatureSupport = FeatureSupport(true, true, true, true)
+  val dummyFeatureSupport = FeatureSupport(true, true, true, true, true)
   val dummyMonitor = new Monitor:
+    def registerStackTransform(callback: Callback): Result[Unit] =
+      Result.fail(Exception("Not implemented"))
+    def call(callRequest: ResourceCallRequest): Result[CallResponse] =
+      Result.fail(Exception("Not implemented"))
     def call(callRequest: CallRequest): Result[CallResponse] =
       Result.fail(Exception("Not implemented"))
     def invoke(invokeRequest: ResourceInvokeRequest): Result[InvokeResponse] =
