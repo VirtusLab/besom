@@ -3,6 +3,8 @@
 package executors
 
 import (
+	"os"
+
 	"github.com/virtuslab/besom/language-host/fsys"
 )
 
@@ -23,12 +25,13 @@ func (s scalacli) NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, e
 }
 
 func (scalacli) newScalaCliExecutor(cmd string, bootstrapLibJarPath string) (*ScalaExecutor, error) {
+	scalaCliOpts := os.Getenv("BESOM_LANGHOST_SCALA_CLI_OPTS")
 	return &ScalaExecutor{
 		Name:        "scala-cli",
 		Cmd:         cmd,
-		BuildArgs:   []string{"compile", "."},
-		RunArgs:     []string{"run", "."},
-		PluginArgs:  []string{"run", ".", "--jar", bootstrapLibJarPath, "--main-class", "besom.bootstrap.PulumiPluginsDiscoverer"},
+		BuildArgs:   []string{"compile", ".", scalaCliOpts},
+		RunArgs:     []string{"run", ".", scalaCliOpts},
+		PluginArgs:  []string{"run", ".", scalaCliOpts, "--jar", bootstrapLibJarPath, "--main-class", "besom.bootstrap.PulumiPluginsDiscoverer"},
 		VersionArgs: []string{"version", "--cli", "--offline"},
 	}, nil
 }
