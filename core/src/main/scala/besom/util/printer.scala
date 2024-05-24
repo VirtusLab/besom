@@ -26,8 +26,8 @@ object printer
       }
     ):
 
-  override def treeify(x: Any): Tree =
-    val result = super.treeify(x)
+  override def treeify(x: Any, escapeUnicode: Boolean, showFieldNames: Boolean): Tree =
+    val result = super.treeify(x, escapeUnicode, showFieldNames)
     result match
       case Tree.Apply(p, body: Iterator[Tree]) =>
         Tree.Apply(
