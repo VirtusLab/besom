@@ -119,6 +119,26 @@ trait BesomSyntax:
     }
   end component
 
+  extension [A <: ProviderResource](pr: A)
+    def provider(using Context): Output[Option[ProviderResource]] = Output {
+      Context().resources.getStateFor(pr).map(_.custom.provider)
+    }
+
+  extension [A <: CustomResource](cr: A)
+    def provider(using Context): Output[Option[ProviderResource]] = Output {
+      Context().resources.getStateFor(cr).map(_.provider)
+    }
+
+  extension [A <: ComponentResource](cmpr: A)
+    def providers(using Context): Output[Map[String, ProviderResource]] = Output {
+      Context().resources.getStateFor(cmpr).map(_.providers)
+    }
+
+  extension [A <: RemoteComponentResource](cb: A)
+    def providers(using Context): Output[Map[String, ProviderResource]] = Output {
+      Context().resources.getStateFor(cb).map(_.providers)
+    }
+
   extension [A <: Resource: ResourceDecoder](companion: ResourceCompanion[A])
     def get(name: Input[NonEmptyString], id: Input[ResourceId])(using ctx: Context): Output[A] =
       for
