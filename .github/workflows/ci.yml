@@ -85,3 +85,6 @@ jobs:
 
     - name: Integration test
       run: scala-cli --power test integration-tests
+
+    - name: Test besom-cfg
+      run: just test-cfg
