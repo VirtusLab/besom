@@ -6,6 +6,7 @@ import besom.internal.RunResult.given
 import besom.internal.RunOutput.*
 import besom.internal.logging.BesomMDC
 import besom.internal.logging.Key.LabelKey
+import besom.aliases.Output
 
 class ResourceOpsTest extends munit.FunSuite:
   import ResourceOpsTest.fixtures.*
@@ -300,6 +301,154 @@ class ResourceOpsTest extends munit.FunSuite:
 
     assertEquals(transitiveDeps, Set(cust1Urn, cust2Urn, dep1Urn, dep2Urn, remote1Urn))
   }
+
+  test("resource provider getters") {
+    object syntax extends BesomSyntax
+    val resources = Resources().unsafeRunSync()
+    given Context = DummyContext(resources = resources).unsafeRunSync()
+    // given BesomMDC[Label] = BesomMDC[Label](LabelKey, Label.fromNameAndType("test", "pkg:test:test"))
+
+    val providerRes = TestProviderResource(
+      Output(
+        URN(
+          "urn:pulumi:stack::project::provider:resources:TestProviderResource::provider"
+        )
+      ),
+      Output(ResourceId("provider")),
+      Output("provider")
+    )
+
+    resources
+      .add(
+        providerRes,
+        ProviderResourceState(
+          CustomResourceState(
+            CommonResourceState(
+              children = Set.empty,
+              provider = None,
+              providers = Map.empty,
+              version = "0.0.1",
+              pluginDownloadUrl = "",
+              name = "provider",
+              typ = "pulumi:providers:TestProviderResource",
+              keepDependency = false // providers never have keepDependency set to true
+            ),
+            Output(ResourceId("provider"))
+          ),
+          ProviderType.from("pulumi:providers:TestProviderResource").getPackage
+        )
+      )
+      .unsafeRunSync()
+
+    val cust1Urn = URN(
+      "urn:pulumi:stack::project::custom:resources:TestCustomResource::cust1"
+    )
+    val cust1 = TestCustomResource(Output(cust1Urn), Output(ResourceId("cust1")), Output(1))
+
+    resources
+      .add(
+        cust1,
+        CustomResourceState(
+          CommonResourceState(
+            children = Set.empty,
+            provider = Some(providerRes),
+            providers = Map.empty,
+            version = "0.0.1",
+            pluginDownloadUrl = "",
+            name = "cust1",
+            typ = "custom:resources:TestCustomResource",
+            keepDependency = false // custom resources never have keepDependency set to true
+          ),
+          Output(ResourceId("cust1"))
+        )
+      )
+      .unsafeRunSync()
+
+    val comp1Urn = URN(
+      "urn:pulumi:stack::project::component:resources:TestComponentResource::comp1"
+    )
+    val compBase1 = ComponentBase(
+      Output(comp1Urn)
+    )
+
+    val comp1 = TestComponentResource(
+      Output("comp1")
+    )(using compBase1)
+
+    resources
+      .add(
+        compBase1,
+        ComponentResourceState(
+          CommonResourceState(
+            children = Set.empty,
+            provider = None,
+            providers = Map(
+              "provider" -> providerRes
+            ),
+            version = "0.0.1",
+            pluginDownloadUrl = "",
+            name = "comp1",
+            typ = "component:resources:TestComponentResource",
+            keepDependency = false
+          )
+        )
+      )
+      .unsafeRunSync()
+
+    val remote1Urn = URN(
+      "urn:pulumi:stack::project::component:resources:TestRemoteComponentResource::remote1"
+    )
+
+    val remote1 = TestRemoteComponentResource(
+      Output(remote1Urn),
+      Output("remote1")
+    )
+
+    resources
+      .add(
+        remote1,
+        ComponentResourceState(
+          CommonResourceState(
+            children = Set.empty,
+            provider = None,
+            providers = Map(
+              "provider" -> providerRes
+            ),
+            version = "0.0.1",
+            pluginDownloadUrl = "",
+            name = "remote1",
+            typ = "component:resources:TestRemoteComponentResource",
+            keepDependency = true
+          )
+        )
+      )
+      .unsafeRunSync()
+
+    import syntax.{provider, providers}
+
+    providerRes.provider.unsafeRunSync().get match
+      case Some(_) => fail("providerRes.provider should be None")
+      case None    =>
+
+    cust1.provider.unsafeRunSync().get match
+      case Some(p) =>
+        assert(p == providerRes)
+      case None =>
+        fail("cust1.provider should be Some(providerRes)")
+
+    comp1.providers.unsafeRunSync().get match
+      case m if m.isEmpty =>
+        fail("comp1.providers should not be empty")
+      case m =>
+        assertEquals(m, Map("provider" -> providerRes))
+
+    remote1.providers.unsafeRunSync().get match
+      case m if m.isEmpty =>
+        fail("remote1.providers should not be empty")
+      case m =>
+        assertEquals(m, Map("provider" -> providerRes))
+  }
+
 end ResourceOpsTest
 
 object ResourceOpsTest:
@@ -309,5 +458,7 @@ object ResourceOpsTest:
     case class TestCustomResource(urn: Output[URN], id: Output[ResourceId], bump: Output[Int]) extends CustomResource
 
     case class TestComponentResource(str: Output[String])(using ComponentBase) extends ComponentResource
+
+    case class TestProviderResource(urn: Output[URN], id: Output[ResourceId], str: Output[String]) extends ProviderResource
 
     def prepareTransitiveDependencyResolutionTree(resources: Resources): Result[Unit] = ???

@@ -56,15 +56,18 @@ object DummyContext:
     monitor: Monitor = dummyMonitor,
     engine: Engine = dummyEngine,
     configMap: Map[NonEmptyString, String] = Map.empty,
-    configSecretKeys: Set[NonEmptyString] = Set.empty
+    configSecretKeys: Set[NonEmptyString] = Set.empty,
+    resources: Resources | Result[Resources] = Resources()
   ): Result[Context] =
     for
       taskTracker  <- TaskTracker()
       stackPromise <- Promise[StackResource]()
       logger       <- BesomLogger.local()
       config       <- Config(runInfo.project, isProjectName = true, configMap = configMap, configSecretKeys = configSecretKeys)
-      resources    <- Resources()
-      memo         <- Memo()
+      resources <- resources match
+        case r: Resources         => Result.pure(r)
+        case r: Result[Resources] => r
+      memo <- Memo()
       given Context = Context.create(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, memo, stackPromise)
       _ <- stackPromise.fulfill(StackResource()(using ComponentBase(Output(besom.types.URN.empty))))
     yield summon[Context]
