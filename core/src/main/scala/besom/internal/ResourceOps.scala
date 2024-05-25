@@ -2,8 +2,8 @@ package besom.internal
 
 import com.google.protobuf.struct.*
 import pulumirpc.resource.RegisterResourceRequest.PropertyDependencies
-import besom.util.*
-import besom.types.*
+import besom.util.{printer, Validated, NonEmptyString}
+import besom.types.{URN, ResourceId, ResourceType, Label, FunctionToken}
 import besom.internal.logging.*
 import pulumirpc.provider.InvokeResponse
 import pulumirpc.resource.{ReadResourceRequest, RegisterResourceOutputsRequest, RegisterResourceRequest, ResourceInvokeRequest}

@@ -25,13 +25,20 @@ import besom.util.*
   */
 case class CustomTimeouts(create: Option[Duration], update: Option[Duration], delete: Option[Duration])
 
-/** Companion object for [[CustomTimeouts]] */
 object CustomTimeouts:
+  // noinspection ScalaUnusedSymbol
+  private[besom] def toGoDurationString(duration: Duration): String = s"${duration.toNanos}ns"
+
   def apply(
     create: NotProvidedOr[Duration] = NotProvided,
     update: NotProvidedOr[Duration] = NotProvided,
     delete: NotProvidedOr[Duration] = NotProvided
   ): CustomTimeouts = new CustomTimeouts(create.asOption, update.asOption, delete.asOption)
 
-  // noinspection ScalaUnusedSymbol
-  private[besom] def toGoDurationString(duration: Duration): String = s"${duration.toNanos}ns"
+/** Companion object for [[CustomTimeouts]] */
+trait CustomTimeoutsFactory:
+  def apply(
+    create: NotProvidedOr[Duration] = NotProvided,
+    update: NotProvidedOr[Duration] = NotProvided,
+    delete: NotProvidedOr[Duration] = NotProvided
+  ): CustomTimeouts = new CustomTimeouts(create.asOption, update.asOption, delete.asOption)
