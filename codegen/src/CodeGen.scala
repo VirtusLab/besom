@@ -48,6 +48,14 @@ class CodeGen(using
     val scalaVersion     = config.scalaVersion
     val javaVersion      = config.javaVersion
     val coreShortVersion = config.coreShortVersion
+    val organization     = config.organization
+    val url              = config.url
+    val vcs              = config.vcs
+    val license          = config.license
+    val repository       = config.repository
+    val developers       = config.developers
+
+    val developersBlock = developers.map(developer => s"//> using publish.developer \"$developer\"").mkString("\n")
 
     val dependencies = packageDependencies(schemaProvider.dependencies(schemaName, packageVersion))
 
@@ -61,16 +69,13 @@ class CodeGen(using
           |//> using resourceDir "resources"
           |
           |//> using publish.name "besom-${schemaName}"
-          |//> using publish.organization "org.virtuslab"
+          |//> using publish.organization "$organization"
           |//> using publish.version "${packageVersion}-core.${coreShortVersion}"
-          |//> using publish.url "https://github.com/VirtusLab/besom"
-          |//> using publish.vcs "github:VirtusLab/besom"
-          |//> using publish.license "Apache-2.0"
-          |//> using publish.repository "central"
-          |//> using publish.developer "lbialy|Łukasz Biały|https://github.com/lbialy"
-          |//> using publish.developer "prolativ|Michał Pałka|https://github.com/prolativ"
-          |//> using publish.developer "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban"
-          |//> using publish.developer "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
+          |//> using publish.url "$url"
+          |//> using publish.vcs "$vcs"
+          |//> using publish.license "$license"
+          |//> using publish.repository "$repository"
+          |${developersBlock}
           |""".stripMargin
 
     val filePath = FilePath(Seq("project.scala"))

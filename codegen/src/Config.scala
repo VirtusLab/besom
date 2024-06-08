@@ -11,7 +11,13 @@ case class Config(
   codegenDir: os.Path = Config.DefaultCodegenDir,
   overlaysDir: os.Path = Config.DefaultOverlaysDir,
   outputDir: Option[os.RelPath] = None,
-  providers: String => Config.Provider = Config.DefaultProvidersConfigs
+  providers: String => Config.Provider = Config.DefaultProvidersConfigs,
+  organization: String = Config.DefaultOrganization,
+  url: String = Config.DefaultUrl,
+  vcs: String = Config.DefaultVcs,
+  license: String = Config.DefaultLicense,
+  repository: String = Config.DefaultRepository,
+  developers: List[String] = Config.DefaultDevelopersList
 ):
   val coreShortVersion: String = SemanticVersion
     .parseTolerant(besomVersion)
@@ -54,4 +60,21 @@ object Config {
   )
 
   val DefaultProvidersConfigs: Map[String, Provider] = Map().withDefault(_ => Config.Provider())
+
+  val DefaultOrganization: String = "org.virtuslab"
+
+  val DefaultUrl: String = "https://github.com/VirtusLab/besom"
+
+  val DefaultVcs: String = "github:VirtusLab/besom"
+
+  val DefaultLicense = "Apache-2.0"
+
+  val DefaultRepository = "central"
+
+  val DefaultDevelopersList: List[String] = List(
+    "lbialy|Łukasz Biały|https://github.com/lbialy",
+    "prolativ|Michał Pałka|https://github.com/prolativ",
+    "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban",
+    "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
+  )
 }
