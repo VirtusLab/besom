@@ -3,5 +3,5 @@
 //> using plugin org.virtuslab::besom-compiler-plugin:0.3.2-SNAPSHOT
 //> using dep org.virtuslab::besom-core:0.3.2-SNAPSHOT
 
-//> using dep "org.virtuslab::besom-kubernetes:4.11.0-core.0.4-SNAPSHOT"
+//> using dep "org.virtuslab::besom-kubernetes:4.11.0-core.0.3-SNAPSHOT"
 //> using repository sonatype:snapshots

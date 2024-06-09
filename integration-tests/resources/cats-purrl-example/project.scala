@@ -4,5 +4,5 @@
 //> using dep org.virtuslab::besom-core:0.3.2-SNAPSHOT
 
 //> using dep org.virtuslab::besom-cats:0.3.2-SNAPSHOT
-//> using dep "org.virtuslab::besom-purrl:0.5.0-core.0.4-SNAPSHOT"
+//> using dep "org.virtuslab::besom-purrl:0.5.0-core.0.3-SNAPSHOT"
 //> using repository sonatype:snapshots
