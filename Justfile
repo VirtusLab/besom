@@ -518,6 +518,7 @@ power-wash: clean-all
 	rm -rf ~/.m2/repository/org/virtuslab/
 	rm -rf ~/.cache/coursier/v1/https/repo1.maven.org/maven2/org/virtuslab/ # Linux
 	rm -rf ~/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/virtuslab/ # Mac
+	rm -rf ~/Library/Caches/Coursier/v1/https/oss.sonatype.org/content/repositories/snapshots/org/virtuslab/ # Mac snapshots
 	git clean -i -d -x -e ".idea"
 	killall -9 java
 
