@@ -3,5 +3,5 @@
 //> using plugin org.virtuslab::besom-compiler-plugin:0.3.2-SNAPSHOT
 //> using dep org.virtuslab::besom-core:0.3.2-SNAPSHOT
 
-//> using dep "org.virtuslab::besom-random:4.16.1-core.0.3-SNAPSHOT"
+//> using dep "org.virtuslab::besom-random:4.16.2-core.0.3-SNAPSHOT"
 //> using repository sonatype:snapshots

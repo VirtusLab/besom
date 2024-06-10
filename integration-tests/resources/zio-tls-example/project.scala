@@ -4,5 +4,5 @@
 //> using dep org.virtuslab::besom-core:0.3.2-SNAPSHOT
 
 //> using dep org.virtuslab::besom-zio:0.3.2-SNAPSHOT
-//> using dep "org.virtuslab::besom-tls:5.0.2-core.0.3-SNAPSHOT"
+//> using dep "org.virtuslab::besom-tls:5.0.3-core.0.3-SNAPSHOT"
 //> using repository sonatype:snapshots
