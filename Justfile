@@ -442,7 +442,7 @@ clean-test-templates:
 test-example example-name:
 	@echo "----------------------------------------"
 	@echo "Testing example {{example-name}}"
-	scala-cli compile {{no-bloop-ci}} examples/{{example-name}} {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+	scala-cli compile -v -v -v {{no-bloop-ci}} examples/{{example-name}} {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 
 # Cleans after an example test
 clean-test-example example-name:
