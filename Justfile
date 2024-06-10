@@ -38,6 +38,10 @@ default:
 
 # TODO aggregate tasks do not incorporate besom-cfg module (with the exception of clean-all)
 
+# TODO make this version-independent and SNAPSHOT-independent by computing short-version from version.txt
+build-packages-for-templates-and-examples:
+  grep -hr "0.3-SNAPSHOT" examples/**/*.scala templates/**/*.scala | sed -n 's/.*besom-\([^:]*:[^"]*\).*-core.0.3-SNAPSHOT.*/\1/p' | sort -u | tr '\n' ' ' | xargs -I {} just cli packages local {}
+
 # Cleans everything
 clean-all: clean-json clean-sdk clean-auto clean-out clean-compiler-plugin clean-codegen clean-scripts clean-test-integration clean-cfg clean-test-templates clean-test-examples clean-test-markdown
 
@@ -45,7 +49,7 @@ clean-all: clean-json clean-sdk clean-auto clean-out clean-compiler-plugin clean
 compile-all: compile-json compile-sdk compile-auto compile-codegen compile-scripts compile-compiler-plugin build-language-plugin
 
 # Tests everything
-test-all: test-json test-sdk test-auto test-codegen test-scripts test-integration test-templates test-examples test-markdown
+test-all: test-json test-sdk test-auto test-codegen test-scripts test-integration build-packages-for-templates-and-examples test-templates test-examples test-markdown
 
 # Publishes everything locally
 publish-local-all: publish-local-json publish-local-sdk publish-local-auto publish-local-codegen publish-local-scripts install-language-plugin
@@ -439,7 +443,7 @@ clean-test-templates:
 test-example example-name:
 	@echo "----------------------------------------"
 	@echo "Testing example {{example-name}}"
-	scala-cli compile {{no-bloop-ci}} examples/{{example-name}} {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+	scala-cli compile -v -v -v {{no-bloop-ci}} examples/{{example-name}} {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 
 # Cleans after an example test
 clean-test-example example-name:
@@ -518,6 +522,7 @@ power-wash: clean-all
 	rm -rf ~/.m2/repository/org/virtuslab/
 	rm -rf ~/.cache/coursier/v1/https/repo1.maven.org/maven2/org/virtuslab/ # Linux
 	rm -rf ~/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/virtuslab/ # Mac
+	rm -rf ~/Library/Caches/Coursier/v1/https/oss.sonatype.org/content/repositories/snapshots/org/virtuslab/ # Mac snapshots
 	git clean -i -d -x -e ".idea"
 	killall -9 java
 

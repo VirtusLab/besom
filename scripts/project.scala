@@ -9,7 +9,7 @@
 //> using dep org.scoverage::scalac-scoverage-serializer:2.0.11
 //> using dep org.virtuslab::scala-yaml:0.0.8
 //> using dep io.get-coursier:coursier_2.13:2.1.9
-//> using dep org.virtuslab::besom-codegen:0.4.0-SNAPSHOT
+//> using dep org.virtuslab::besom-codegen:0.3.2-SNAPSHOT
 //> using test.dep org.scalameta::munit::1.0.0-M10
 
 
