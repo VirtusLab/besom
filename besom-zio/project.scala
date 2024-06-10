@@ -2,7 +2,7 @@
 //> using options "-java-output-version:11", "-Ykind-projector:underscores"
 //> using options "-deprecation", "-feature"
 
-//> using dep "org.virtuslab::besom-core:0.4.0-SNAPSHOT"
+//> using dep "org.virtuslab::besom-core:0.3.2-SNAPSHOT"
 //> using dep "dev.zio::zio:2.0.17"
 //> using test.dep "org.scalameta::munit:1.0.0-M10"
 
