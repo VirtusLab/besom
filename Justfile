@@ -54,7 +54,8 @@ test-all: test-json test-sdk test-auto test-codegen test-scripts test-integratio
 publish-local-all: publish-local-json publish-local-sdk publish-local-auto publish-local-codegen publish-local-scripts install-language-plugin
 
 # Publishes everything to Maven
-publish-maven-all: publish-maven-json publish-maven-sdk publish-maven-auto publish-maven-codegen publish-maven-scripts
+# TODO add publish-maven-auto once stable
+publish-maven-all: publish-maven-json publish-maven-sdk publish-maven-codegen publish-maven-scripts
 
 # Runs all necessary checks before committing
 before-commit: compile-all test-all
