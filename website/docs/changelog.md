@@ -2,6 +2,24 @@
 title: Changelog
 ---
 
+0.3.2 (11-06-2024)
+---
+
+* Added missing `provider` / `providers` field on resources to fix #397 (@lbialy in [505](https://github.com/VirtusLab/besom/pull/505))
+* Exposed `CustomTimeouts` resource option configuration value (@lbialy in [502](https://github.com/VirtusLab/besom/pull/502))
+* Fixed issue 489 where ANSI control chars crashed internal logging (@lbialy in [492](https://github.com/VirtusLab/besom/pull/492))
+* First working draft of Automation API (sync, Either-monad based) (@pawelprazak in [336](https://github.com/VirtusLab/besom/pull/336))
+* Fixed issues with eviction of dependencies of core besom library (@lbialy in [500](https://github.com/VirtusLab/besom/pull/500))
+* Fixed bug that crashed besom when resource options were provided for component resource (@lbialy in [502](https://github.com/VirtusLab/besom/pull/502))
+* First working draft of Besom Configure (besom-cfg) (Kubernetes only) (@lbialy in [494](https://github.com/VirtusLab/besom/pull/494))
+* Allow passing options to scala-cli via language plugin executor (@lbialy in [503](https://github.com/VirtusLab/besom/pull/503))
+
+New examples:
+
+* Add AWS API Gateway V2 with EventBridge example by @polkx in https://github.com/VirtusLab/besom/pull/479
+
+**Full Changelog**: https://github.com/VirtusLab/besom/compare/v0.3.1...v0.3.2
+
 0.3.1 (19-04-2024)
 ---
 

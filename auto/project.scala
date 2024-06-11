@@ -2,8 +2,8 @@
 //> using options -java-output-version:11
 //> using options -deprecation -feature -Werror -Wunused:all
 
-//> using dep org.virtuslab::besom-json:0.3.2-SNAPSHOT
-//> using dep org.virtuslab::besom-core:0.3.2-SNAPSHOT
+//> using dep org.virtuslab::besom-json:0.3.2
+//> using dep org.virtuslab::besom-core:0.3.2
 //> using dep org.virtuslab::scala-yaml:0.0.8
 //> using dep com.lihaoyi::os-lib:0.10.0
 //> using dep com.lihaoyi::os-lib-watch:0.10.0
