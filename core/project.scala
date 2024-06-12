@@ -3,7 +3,7 @@
 //> using options "-Werror", "-Wunused:all", "-deprecation", "-feature", "-Wconf:cat=deprecation:i"
 // -language:noAutoTupling // after https://github.com/VirtusLab/scala-cli/issues/2708
 
-//> using dep "org.virtuslab::besom-json:0.3.2"
+//> using dep "org.virtuslab::besom-json:0.4.0-SNAPSHOT"
 //> using dep "com.google.protobuf:protobuf-java-util:3.25.1"
 //> using dep "io.grpc:grpc-netty:1.64.0"
 //> using dep "io.netty:netty-transport-native-kqueue:4.1.100.Final"
@@ -27,3 +27,4 @@
 //> using publish.developer "prolativ|Michał Pałka|https://github.com/prolativ"
 //> using publish.developer "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban"
 //> using publish.developer "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
+//> using repository sonatype:snapshots
