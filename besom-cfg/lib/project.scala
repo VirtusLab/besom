@@ -1,7 +1,7 @@
 //> using scala 3.3.3
 
-//> using dep org.virtuslab::besom-core:0.3.2
-//> using dep org.virtuslab::besom-json:0.3.2
+//> using dep org.virtuslab::besom-core:0.4.0-SNAPSHOT
+//> using dep org.virtuslab::besom-json:0.4.0-SNAPSHOT
 //> using dep io.github.classgraph:classgraph:4.8.172
 
 //> using test.dep org.scalameta::munit::1.0.0-M11
