@@ -964,6 +964,9 @@ class CodeGen(using
         s"Class name for ${classCoordinates.typeRef} could not be found"
       )
     )
+
+    val argsClassInstanceName = s"${argsClassName.value.head.toLower}${argsClassName.value.tail}"
+
     val argsCompanionApplyParams = inputProperties.filter(_.constValue.isEmpty).map { propertyInfo =>
       val paramType =
         if (propertyInfo.isOptional) scalameta.types.besom.types.InputOptional(propertyInfo.inputArgType)
@@ -988,6 +991,10 @@ class CodeGen(using
             m"${propertyInfo.name}.asOutput(isSecret = ${isSecret})".parse[Term].get
       }
       Term.Assign(Term.Name(propertyInfo.name.value), argValue)
+    }
+
+    val argsCompanionWithArgsParams = argsCompanionApplyParams.map { param =>
+      param.copy(default = Some(m"${argsClassInstanceName}.${param.name.syntax}".parse[Term].get))
     }
 
     val derivedTypeclasses = {
@@ -1018,6 +1025,13 @@ class CodeGen(using
     m"""|object $argsClassName:
         |  def apply(
         |${argsCompanionApplyParams.map(arg => s"    ${arg.syntax}").mkString(",\n")}
+        |  )(using besom.types.Context): $argsClassName =
+        |    new $argsClassName(
+        |${argsCompanionApplyBodyArgs.map(arg => s"      ${arg.syntax}").mkString(",\n")}
+        |    )
+        |
+        |  extension (${argsClassInstanceName}: ${argsClassName}) def withArgs(
+        |${argsCompanionWithArgsParams.map(arg => s"    ${arg.syntax}").mkString(",\n")}
         |  )(using besom.types.Context): $argsClassName =
         |    new $argsClassName(
         |${argsCompanionApplyBodyArgs.map(arg => s"      ${arg.syntax}").mkString(",\n")}
