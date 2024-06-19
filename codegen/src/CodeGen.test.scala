@@ -131,6 +131,13 @@ class CodeGenTest extends munit.FunSuite {
               |      helmReleaseSettings = helmReleaseSettings.asOptionOutput(isSecret = false)
               |    )
               |
+              |  extension (providerArgs: ProviderArgs) def withArgs(
+              |    helmReleaseSettings: besom.types.Input.Optional[besom.api.example.inputs.HelmReleaseSettingsArgs] = providerArgs.helmReleaseSettings
+              |  )(using besom.types.Context): ProviderArgs =
+              |    new ProviderArgs(
+              |      helmReleaseSettings = helmReleaseSettings.asOptionOutput(isSecret = false)
+              |    )
+              |
               |  given encoder(using besom.types.Context): besom.types.Encoder[ProviderArgs] =
               |    besom.internal.Encoder.derived[ProviderArgs]
               |  given providerArgsEncoder(using besom.types.Context): besom.types.ProviderArgsEncoder[ProviderArgs] =
@@ -281,6 +288,13 @@ class CodeGenTest extends munit.FunSuite {
              |
              |    )
              |
+             |  extension (clusterArgs: ClusterArgs) def withArgs(
+             |
+             |  )(using besom.types.Context): ClusterArgs =
+             |    new ClusterArgs(
+             |
+             |    )
+             |
              |  given encoder(using besom.types.Context): besom.types.Encoder[ClusterArgs] =
              |    besom.internal.Encoder.derived[ClusterArgs]
              |  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[ClusterArgs] =
@@ -295,6 +309,13 @@ class CodeGenTest extends munit.FunSuite {
              |
              |object ClusterGetKubeconfigArgs:
              |  def apply(
+             |
+             |  )(using besom.types.Context): ClusterGetKubeconfigArgs =
+             |    new ClusterGetKubeconfigArgs(
+             |
+             |    )
+             |
+             |  extension (clusterGetKubeconfigArgs: ClusterGetKubeconfigArgs) def withArgs(
              |
              |  )(using besom.types.Context): ClusterGetKubeconfigArgs =
              |    new ClusterGetKubeconfigArgs(
@@ -349,6 +370,15 @@ class CodeGenTest extends munit.FunSuite {
              |  def apply(
              |    clusterId: besom.types.Input[String],
              |    location: besom.types.Input.Optional[String] = scala.None
+             |  )(using besom.types.Context): GetClusterArgs =
+             |    new GetClusterArgs(
+             |      clusterId = clusterId.asOutput(isSecret = false),
+             |      location = location.asOptionOutput(isSecret = false)
+             |    )
+             |
+             |  extension (getClusterArgs: GetClusterArgs) def withArgs(
+             |    clusterId: besom.types.Input[String] = getClusterArgs.clusterId,
+             |    location: besom.types.Input.Optional[String] = getClusterArgs.location
              |  )(using besom.types.Context): GetClusterArgs =
              |    new GetClusterArgs(
              |      clusterId = clusterId.asOutput(isSecret = false),
@@ -446,6 +476,13 @@ class CodeGenTest extends munit.FunSuite {
              |      supportType = supportType.asOutput(isSecret = false)
              |    )
              |
+             |  extension (multipleActivationKeyArgs: MultipleActivationKeyArgs) def withArgs(
+             |    supportType: besom.types.Input[String | besom.api.azurenative.windowsesu.enums.SupportType] = multipleActivationKeyArgs.supportType
+             |  )(using besom.types.Context): MultipleActivationKeyArgs =
+             |    new MultipleActivationKeyArgs(
+             |      supportType = supportType.asOutput(isSecret = false)
+             |    )
+             |
              |  given encoder(using besom.types.Context): besom.types.Encoder[MultipleActivationKeyArgs] =
              |    besom.internal.Encoder.derived[MultipleActivationKeyArgs]
              |  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[MultipleActivationKeyArgs] =
@@ -522,6 +559,13 @@ class CodeGenTest extends munit.FunSuite {
              |object JobDefinitionArgs:
              |  def apply(
              |    userConfirmation: besom.types.Input[besom.api.azurenative.hybriddata.enums.UserConfirmation] = besom.api.azurenative.hybriddata.enums.UserConfirmation.NotRequired
+             |  )(using besom.types.Context): JobDefinitionArgs =
+             |    new JobDefinitionArgs(
+             |      userConfirmation = userConfirmation.asOutput(isSecret = false)
+             |    )
+             |
+             |  extension (jobDefinitionArgs: JobDefinitionArgs) def withArgs(
+             |    userConfirmation: besom.types.Input[besom.api.azurenative.hybriddata.enums.UserConfirmation] = jobDefinitionArgs.userConfirmation
              |  )(using besom.types.Context): JobDefinitionArgs =
              |    new JobDefinitionArgs(
              |      userConfirmation = userConfirmation.asOutput(isSecret = false)
@@ -628,6 +672,15 @@ class CodeGenTest extends munit.FunSuite {
              |      size = size.asOutput(isSecret = false)
              |    )
              |
+             |  extension (containerArgs: ContainerArgs) def withArgs(
+             |    brightness: besom.types.Input[besom.api.plant.enums.ContainerBrightness] = containerArgs.brightness,
+             |    size: besom.types.Input[besom.api.plant.enums.ContainerSize] = containerArgs.size
+             |  )(using besom.types.Context): ContainerArgs =
+             |    new ContainerArgs(
+             |      brightness = brightness.asOutput(isSecret = false),
+             |      size = size.asOutput(isSecret = false)
+             |    )
+             |
              |  given encoder(using besom.types.Context): besom.types.Encoder[ContainerArgs] =
              |    besom.internal.Encoder.derived[ContainerArgs]
              |  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[ContainerArgs] =
@@ -728,6 +781,15 @@ class CodeGenTest extends munit.FunSuite {
              |      spec = spec.asOptionOutput(isSecret = false)
              |    )
              |
+             |  extension (eniConfigArgs: EniConfigArgs) def withArgs(
+             |    spec: besom.types.Input.Optional[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.inputs.EniConfigSpecArgs] = eniConfigArgs.spec
+             |  )(using besom.types.Context): EniConfigArgs =
+             |    new EniConfigArgs(
+             |      apiVersion = besom.types.Output("crd.k8s.amazonaws.com/v1alpha1"),
+             |      kind = besom.types.Output("ENIConfig"),
+             |      spec = spec.asOptionOutput(isSecret = false)
+             |    )
+             |
              |  given encoder(using besom.types.Context): besom.types.Encoder[EniConfigArgs] =
              |    besom.internal.Encoder.derived[EniConfigArgs]
              |  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[EniConfigArgs] =
@@ -775,6 +837,15 @@ class CodeGenTest extends munit.FunSuite {
              |  def apply(
              |    securityGroups: besom.types.Input.Optional[scala.collection.immutable.List[besom.types.Input[String]]] = scala.None,
              |    subnet: besom.types.Input.Optional[String] = scala.None
+             |  )(using besom.types.Context): EniConfigSpecArgs =
+             |    new EniConfigSpecArgs(
+             |      securityGroups = securityGroups.asOptionOutput(isSecret = false),
+             |      subnet = subnet.asOptionOutput(isSecret = false)
+             |    )
+             |
+             |  extension (eniConfigSpecArgs: EniConfigSpecArgs) def withArgs(
+             |    securityGroups: besom.types.Input.Optional[scala.collection.immutable.List[besom.types.Input[String]]] = eniConfigSpecArgs.securityGroups,
+             |    subnet: besom.types.Input.Optional[String] = eniConfigSpecArgs.subnet
              |  )(using besom.types.Context): EniConfigSpecArgs =
              |    new EniConfigSpecArgs(
              |      securityGroups = securityGroups.asOptionOutput(isSecret = false),

@@ -17,8 +17,10 @@ object Utils {
   // Name of the self parameter of resource methods
   val selfParameterName = "__self__"
 
+  // We have to limit number of arguments to 252 instead of 253
+  // because class instance is counted as argument in withArgs extension method.
   // TODO: Find some workaround to enable passing the remaining arguments
-  val jvmMaxParamsCount = 253 // https://github.com/scala/bug/issues/7324
+  val jvmMaxParamsCount = 252 // https://github.com/scala/bug/issues/7324
 
   type FunctionName  = String
   type FunctionToken = String
