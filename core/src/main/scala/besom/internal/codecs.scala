@@ -720,11 +720,11 @@ trait DecoderHelpers:
   def decodeAsPossibleSecretOrOutput(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Value]] =
     value
       .withSpecialSignature {
-        case (struct, SpecialSig.SecretSig) =>
+        case (struct, Constants.SpecialSig.SecretSig) =>
           val innerValue = struct.fields
-            .get(ValueName)
+            .get(Constants.ValueName)
             .map(ValidatedResult.valid)
-            .getOrElse(error(s"$label: Secrets must have a field called $ValueName", label).invalidResult)
+            .getOrElse(error(s"$label: Secrets must have a field called ${Constants.ValueName}", label).invalidResult)
 
           innerValue.map { (v: Value) =>
             // handle secret unknown values
@@ -732,25 +732,25 @@ trait DecoderHelpers:
             then OutputData.unknown(isSecret = true)
             else OutputData(v, isSecret = true)
           }
-        case (struct, SpecialSig.OutputSig) =>
+        case (struct, Constants.SpecialSig.OutputSig) =>
           val innerValue: ValidatedResult[DecodingError, Option[Value]] =
             struct.fields
-              .get(ValueName)
+              .get(Constants.ValueName)
               .validResult
           val isSecret: ValidatedResult[DecodingError, Boolean] =
             struct.fields
-              .get(SecretName)
+              .get(Constants.SecretName)
               .collectFirst({ case Value(Kind.BoolValue(b), _) => b })
               .getOrElse(false)
               .validResult
 
           val deps: ValidatedResult[DecodingError, Vector[Resource]] =
             struct.fields
-              .get(DependenciesName)
+              .get(Constants.DependenciesName)
               .map { v =>
                 if !v.kind.isListValue then error(s"$label: Expected a dependencies list in output, got ${v.kind}", label).invalidResult
                 else
-                  val depsLabel = label.withKey(DependenciesName)
+                  val depsLabel = label.withKey(Constants.DependenciesName)
                   v.getListValue.values.zipWithIndex
                     .map { case (v, i) =>
                       val l = depsLabel.atIndex(i)
@@ -994,12 +994,12 @@ object Encoder:
   end outputEncoder
 
   private def assetWrapper(key: String, value: Value): Value = Map(
-    SpecialSig.Key -> SpecialSig.AssetSig.asValue,
+    Constants.SpecialSig.Key -> Constants.SpecialSig.AssetSig.asValue,
     key -> value
   ).asValue
 
   private def archiveWrapper(key: String, value: Value): Value = Map(
-    SpecialSig.Key -> SpecialSig.ArchiveSig.asValue,
+    Constants.SpecialSig.Key -> Constants.SpecialSig.ArchiveSig.asValue,
     key -> value
   ).asValue
 
