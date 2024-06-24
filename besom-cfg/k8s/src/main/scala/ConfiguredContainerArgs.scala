@@ -13,7 +13,7 @@ import besom.cfg.k8s.syntax.*
 
 object syntax:
   import besom.cfg.from.env.*
-
+  // this should be somehow bound to implementation of medium backend
   extension (s: Struct)
     def foldedToEnvVarArgs: Output[List[EnvVarArgs]] =
       s.foldToEnv.map(_.map { case (k, v) => EnvVarArgs(name = k, value = v) })
