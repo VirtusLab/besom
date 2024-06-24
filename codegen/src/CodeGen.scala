@@ -839,7 +839,7 @@ class CodeGen(using
           m"""def ${propertyInfo.name} : besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.map(_.$innerMethodNameWhenRequiresJsonFormat(_.${propertyInfo.name}))"""
         else
           m"""def ${propertyInfo.name} : besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.flatMap(_.map(_.${propertyInfo.name}$innerMethodName).getOrElse(output.map(_ => scala.None)))"""
-        ).parse[Stat].get
+      ).parse[Stat].get
     }
 
     val hasOutputExtensions = outputExtensionMethods.nonEmpty
