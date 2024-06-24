@@ -229,6 +229,12 @@ object Decoder extends DecoderInstancesLowPrio1:
       if v.kind.isBoolValue then v.getBoolValue.valid
       else error(s"$label: Expected a boolean, got: '${v.kind}'", label).invalid
 
+  given outputDecoder[A](using inner: Decoder[A]): Decoder[Output[A]] = new Decoder[Output[A]]:
+    override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Output[A]]] =
+      inner.decode(value, label).map(_.map(Output(_)))
+
+    override def mapping(value: Value, label: Label): Validated[DecodingError, Output[A]] = ???
+
   given jsonDecoder: Decoder[JsValue] with
     private def convertToJsValue(value: Value): JsValue =
       value.kind match
@@ -586,7 +592,6 @@ trait DecoderInstancesLowPrio2 extends DecoderHelpers:
   given singleOrListDecoder[A: Decoder, L <: List[?]: Decoder]: Decoder[A | L] = unionDecoder2[A, L]
 
 trait DecoderHelpers:
-  import Constants.*
 
   def unionDecoder2[A, B](using aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[A | B] = new Decoder[A | B]:
     override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A | B]] =
@@ -823,7 +828,6 @@ trait Encoder[A]:
     def encode(b: B)(using Context): Result[(Metadata, Value)] = self.encode(f(b))
 
 object Encoder:
-  import Constants.*
   import besom.json.*
 
   // noinspection ScalaWeakerAccess
@@ -1151,7 +1155,6 @@ object ArgsEncoder:
     elems: List[(String, Encoder[?])]
   ): ArgsEncoder[A] =
     new ArgsEncoder[A]:
-      import Constants.*
       override def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Metadata], Struct)] =
         Result
           .sequence {
@@ -1202,7 +1205,6 @@ object ProviderArgsEncoder:
     elems: List[(String, Encoder[?])]
   ): ProviderArgsEncoder[A] =
     new ProviderArgsEncoder[A]:
-      import Constants.*
       override def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Metadata], Struct)] =
         Result
           .sequence {
