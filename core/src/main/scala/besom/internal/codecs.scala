@@ -593,6 +593,8 @@ trait DecoderInstancesLowPrio2 extends DecoderHelpers:
 
 trait DecoderHelpers:
 
+  import Constants.*
+
   def unionDecoder2[A, B](using aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[A | B] = new Decoder[A | B]:
     override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[A | B]] =
       decodeAsPossibleSecretOrOutput(value, label).flatMap { odv =>
@@ -828,6 +830,8 @@ trait Encoder[A]:
     def encode(b: B)(using Context): Result[(Metadata, Value)] = self.encode(f(b))
 
 object Encoder:
+
+  import Constants.*
   import besom.json.*
 
   // noinspection ScalaWeakerAccess
@@ -1155,6 +1159,8 @@ object ArgsEncoder:
     elems: List[(String, Encoder[?])]
   ): ArgsEncoder[A] =
     new ArgsEncoder[A]:
+
+      import Constants.*
       override def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Metadata], Struct)] =
         Result
           .sequence {
@@ -1205,6 +1211,8 @@ object ProviderArgsEncoder:
     elems: List[(String, Encoder[?])]
   ): ProviderArgsEncoder[A] =
     new ProviderArgsEncoder[A]:
+
+      import Constants.*
       override def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Metadata], Struct)] =
         Result
           .sequence {
