@@ -57,8 +57,8 @@ def getDockerImageMetadata(image: String, dontUseCache: Boolean, overrideClasspa
         json
     }
 
-    val schema = summon[JsonFormat[Schema]].read(json.parseJson)
-    val obtainedSchemaVersion = SemanticVersion.parse(schema.version).toTry.get
+    val schema                       = summon[JsonFormat[Schema]].read(json.parseJson)
+    val obtainedSchemaVersion        = SemanticVersion.parse(schema.version).toTry.get
     val besomCfgVersionFromClasspath = SemanticVersion.parse(besom.cfg.Version).toTry.get
 
     if obtainedSchemaVersion > besomCfgVersionFromClasspath then
