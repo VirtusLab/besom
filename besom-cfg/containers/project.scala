@@ -1,18 +1,12 @@
 //> using scala 3.3.3
 
 //> using dep com.lihaoyi::os-lib::0.9.3
-//> using dep org.virtuslab::besom-cfg:0.2.0-SNAPSHOT
-//> using dep org.virtuslab::besom-cfg-containers:0.4.0-SNAPSHOT
-//> using dep org.virtuslab::besom-kubernetes:4.13.1-core.0.3
-//> using dep com.lihaoyi::fansi::0.5.0
-//> using dep com.lihaoyi::fastparse:3.1.0
+//> using dep org.virtuslab::besom-cfg:0.4.0-SNAPSHOT
+//> using dep org.virtuslab::besom-model:0.4.0-SNAPSHOT
 
-//> using test.resourceDir ./src/test/resources
+//> using test.dep org.scalameta::munit:1.0.0
 
-//> using test.dep com.lihaoyi::pprint:0.6.6
-//> using test.dep org.scalameta::munit:1.0.0-M11
-
-//> using publish.name "besom-cfg-k8s"
+//> using publish.name "besom-cfg-containers"
 //> using publish.organization "org.virtuslab"
 //> using publish.url "https://github.com/VirtusLab/besom"
 //> using publish.vcs "github:VirtusLab/besom"

@@ -198,7 +198,8 @@ class ErrorsTest extends munit.FunSuite:
       "name": "shouldBeAListOfStructsButItsAString"
     }
   ],
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "medium": "env"
 }""",
       struct
     ) match
