@@ -835,8 +835,10 @@ class CodeGen(using
 
       (
         if requiresJsonFormat
-        then m"""def ${propertyInfo.name} : besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.map(_.$innerMethodNameWhenRequiresJsonFormat(_.${propertyInfo.name}))"""
-        else m"""def ${propertyInfo.name} : besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.flatMap(_.map(_.${propertyInfo.name}$innerMethodName).getOrElse(output.map(_ => scala.None)))"""
+        then
+          m"""def ${propertyInfo.name} : besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.map(_.$innerMethodNameWhenRequiresJsonFormat(_.${propertyInfo.name}))"""
+        else
+          m"""def ${propertyInfo.name} : besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.flatMap(_.map(_.${propertyInfo.name}$innerMethodName).getOrElse(output.map(_ => scala.None)))"""
         ).parse[Stat].get
     }
 
