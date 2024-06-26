@@ -597,7 +597,6 @@ trait DecoderInstancesLowPrio2 extends DecoderHelpers:
   given singleOrListDecoder[A: Decoder, L <: List[?]: Decoder]: Decoder[A | L] = unionDecoder2[A, L]
 
 trait DecoderHelpers:
-
   import Constants.*
 
   def unionDecoder2[A, B](using aDecoder: Decoder[A], bDecoder: Decoder[B]): Decoder[A | B] = new Decoder[A | B]:
@@ -835,7 +834,6 @@ trait Encoder[A]:
     def encode(b: B)(using Context): Result[(Metadata, Value)] = self.encode(f(b))
 
 object Encoder:
-
   import Constants.*
   import besom.json.*
 
@@ -1164,7 +1162,6 @@ object ArgsEncoder:
     elems: List[(String, Encoder[?])]
   ): ArgsEncoder[A] =
     new ArgsEncoder[A]:
-
       import Constants.*
       override def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Metadata], Struct)] =
         Result
@@ -1216,7 +1213,6 @@ object ProviderArgsEncoder:
     elems: List[(String, Encoder[?])]
   ): ProviderArgsEncoder[A] =
     new ProviderArgsEncoder[A]:
-
       import Constants.*
       override def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Metadata], Struct)] =
         Result
