@@ -231,7 +231,12 @@ object Decoder extends DecoderInstancesLowPrio1:
 
   given outputDecoder[A](using inner: Decoder[A]): Decoder[Output[A]] = new Decoder[Output[A]]:
     override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Output[A]]] =
-      inner.decode(value, label).map(_.map(Output(_)))
+      inner
+        .decode(value, label)
+        .redeem(
+          errs => OutputData(Output.fail(AggregatedDecodingError(errs))),
+          _.map(Output(_))
+        )
 
     override def mapping(value: Value, label: Label): Validated[DecodingError, Output[A]] = ???
 
@@ -722,11 +727,11 @@ trait DecoderHelpers:
   def decodeAsPossibleSecretOrOutput(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Value]] =
     value
       .withSpecialSignature {
-        case (struct, Constants.SpecialSig.SecretSig) =>
+        case (struct, SpecialSig.SecretSig) =>
           val innerValue = struct.fields
-            .get(Constants.ValueName)
+            .get(ValueName)
             .map(ValidatedResult.valid)
-            .getOrElse(error(s"$label: Secrets must have a field called ${Constants.ValueName}", label).invalidResult)
+            .getOrElse(error(s"$label: Secrets must have a field called $ValueName", label).invalidResult)
 
           innerValue.map { (v: Value) =>
             // handle secret unknown values
@@ -734,25 +739,25 @@ trait DecoderHelpers:
             then OutputData.unknown(isSecret = true)
             else OutputData(v, isSecret = true)
           }
-        case (struct, Constants.SpecialSig.OutputSig) =>
+        case (struct, SpecialSig.OutputSig) =>
           val innerValue: ValidatedResult[DecodingError, Option[Value]] =
             struct.fields
-              .get(Constants.ValueName)
+              .get(ValueName)
               .validResult
           val isSecret: ValidatedResult[DecodingError, Boolean] =
             struct.fields
-              .get(Constants.SecretName)
+              .get(SecretName)
               .collectFirst({ case Value(Kind.BoolValue(b), _) => b })
               .getOrElse(false)
               .validResult
 
           val deps: ValidatedResult[DecodingError, Vector[Resource]] =
             struct.fields
-              .get(Constants.DependenciesName)
+              .get(DependenciesName)
               .map { v =>
                 if !v.kind.isListValue then error(s"$label: Expected a dependencies list in output, got ${v.kind}", label).invalidResult
                 else
-                  val depsLabel = label.withKey(Constants.DependenciesName)
+                  val depsLabel = label.withKey(DependenciesName)
                   v.getListValue.values.zipWithIndex
                     .map { case (v, i) =>
                       val l = depsLabel.atIndex(i)
@@ -998,12 +1003,12 @@ object Encoder:
   end outputEncoder
 
   private def assetWrapper(key: String, value: Value): Value = Map(
-    Constants.SpecialSig.Key -> Constants.SpecialSig.AssetSig.asValue,
+    SpecialSig.Key -> SpecialSig.AssetSig.asValue,
     key -> value
   ).asValue
 
   private def archiveWrapper(key: String, value: Value): Value = Map(
-    Constants.SpecialSig.Key -> Constants.SpecialSig.ArchiveSig.asValue,
+    SpecialSig.Key -> SpecialSig.ArchiveSig.asValue,
     key -> value
   ).asValue
 
