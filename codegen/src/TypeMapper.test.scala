@@ -23,7 +23,7 @@ class TypeMapperTest extends munit.FunSuite {
   val tests = List(
     Data(UrnType)(Expectations("besom.types.URN")),
     Data(ResourceIdType)(Expectations("besom.types.ResourceId")),
-    Data(MapType(IntegerType))(Expectations("scala.Predef.Map[String, Int]")),
+    Data(MapType(IntegerType, plainProperties = false))(Expectations("scala.Predef.Map[String, Int]")),
     Data(UnionType(List(StringType, IntegerType), None))(Expectations("String | Int")),
     Data(
       UnionType(List(StringType, NamedType("aws:iam/documents:PolicyDocument")), Some(StringType)),
@@ -40,7 +40,7 @@ class TypeMapperTest extends munit.FunSuite {
       Expectations("String | besom.api.aws.iam.Role")
     ),
     Data(
-      UnionType(List(StringType, ArrayType(NamedType("#/types/abc:xyz/not:There", Some(StringType)))), None),
+      UnionType(List(StringType, ArrayType(NamedType("#/types/abc:xyz/not:There", Some(StringType)), plainItems = false)), None),
       tags = Set(munit.Slow)
     )(
       Expectations("String | scala.collection.immutable.List[String]")
@@ -83,7 +83,7 @@ class TypeMapperTest extends munit.FunSuite {
       Expectations("besom.api.kubernetes.rbac.v1beta1.outputs.RoleRef")
     ),
     Data(
-      ArrayType(NamedType("#/types/kubernetes:rbac.authorization.k8s.io%2Fv1beta1:Subject")),
+      ArrayType(NamedType("#/types/kubernetes:rbac.authorization.k8s.io%2Fv1beta1:Subject"), plainItems = false),
       metadata = PackageMetadata("kubernetes", "3.7.0"),
       tags = Set(munit.Slow)
     )(
@@ -98,8 +98,8 @@ class TypeMapperTest extends munit.FunSuite {
       Expectations("besom.api.googlenative.accesscontextmanager.v1.enums.DevicePolicyAllowedDeviceManagementLevelsItem")
     ),
     // Test data from https://github.com/pulumi/pulumi/blob/42784f6204a021575f0fdb9b50c4f93d4d062b72/pkg/codegen/testing/test/testdata/types.json
-    Data(ArrayType(StringType))(Expectations("scala.collection.immutable.List[String]")),
-    Data(MapType(StringType))(Expectations("scala.Predef.Map[String, String]")),
+    Data(ArrayType(StringType, plainItems = false))(Expectations("scala.collection.immutable.List[String]")),
+    Data(MapType(StringType, plainProperties = false))(Expectations("scala.Predef.Map[String, String]")),
     Data(NamedType("pulumi.json#/Any"))(Expectations("besom.types.PulumiAny")),
     Data(NamedType("pulumi.json#/Archive"))(Expectations("besom.types.Archive")),
     Data(NamedType("pulumi.json#/Asset"))(
