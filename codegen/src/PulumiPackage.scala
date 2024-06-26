@@ -308,18 +308,19 @@ trait TypeReferenceProtoLike extends AnonymousTypeProtoLike {
   def discriminator: Option[Discriminator]
   @fieldKey("$ref")
   def ref: Option[String]
+  def plain: Boolean
 
   def maybeAsTypeReference: Option[TypeReference] = {
     if (oneOf.nonEmpty) {
-      val underlyingType = this.maybeAsAnonymousType
+      val underlyingType = this.maybeAsAnonymousType(plain)
       Some(UnionType(oneOf = oneOf, `type` = underlyingType, discriminator))
     } else {
       ref match {
         case Some(typeRefUri) =>
-          val underlyingType = this.maybeAsAnonymousType
+          val underlyingType = this.maybeAsAnonymousType(plain)
           Some(NamedType(typeUri = typeRefUri, `type` = underlyingType))
         case None =>
-          this.maybeAsAnonymousType
+          this.maybeAsAnonymousType(plain)
       }
     }
   }
@@ -334,7 +335,8 @@ case class TypeReferenceProto(
   items: Option[TypeReference] = None,
   oneOf: List[TypeReference] = Nil,
   discriminator: Option[Discriminator] = None,
-  @fieldKey("$ref") ref: Option[String] = None
+  @fieldKey("$ref") ref: Option[String] = None,
+  plain: Boolean = false
 ) extends TypeReferenceProtoLike
 object TypeReferenceProto {
   implicit val reader: Reader[TypeReferenceProto] = macroR
@@ -345,13 +347,7 @@ object TypeReferenceProto {
   * @see
   *   [[TypeReferenceProto]], [[TypeReferenceProtoLike]] and [[besom.codegen.Utils.TypeReferenceOps]]
   */
-sealed trait TypeReference {
-
-  /** @return
-    *   Indicates that when used as an input, this type does not accept eventual values.
-    */
-  def plain: Boolean = false // TODO: Handle this
-}
+sealed trait TypeReference
 
 object TypeReference {
   implicit val reader: Reader[TypeReference] = TypeReferenceProto.reader.map { proto =>
@@ -366,7 +362,7 @@ trait AnonymousTypeProtoLike {
   def additionalProperties: Option[TypeReference]
   def items: Option[TypeReference]
 
-  def maybeAsAnonymousType: Option[AnonymousType] = {
+  def maybeAsAnonymousType(plain: Boolean): Option[AnonymousType] = {
     `type`.map {
       case "string"  => StringType
       case "integer" => IntegerType
@@ -374,13 +370,13 @@ trait AnonymousTypeProtoLike {
       case "boolean" => BooleanType
       case "array" =>
         items match {
-          case Some(itemType) => ArrayType(itemType)
+          case Some(itemType) => ArrayType(itemType, plain)
           case None           => throw new Exception(s"The array type $this lacks `items`")
         }
       case "object" =>
         additionalProperties match {
-          case Some(propertyType) => MapType(propertyType)
-          case None               => MapType(StringType)
+          case Some(propertyType) => MapType(propertyType, plain)
+          case None               => MapType(StringType, plain)
         }
     }
   }
@@ -417,14 +413,14 @@ object BooleanType extends PrimitiveType
   * @param items
   *   "The element type of the array"
   */
-case class ArrayType(items: TypeReference) extends AnonymousType
+case class ArrayType(items: TypeReference, plainItems: Boolean) extends AnonymousType
 
 /** A reference to a map type. The "type" property must be set to "object" and the "additionalProperties" property may be present. No other
   * properties may be present.
   * @param additionalProperties
   *   The element type of the map. Defaults to "string" when omitted.
   */
-case class MapType(additionalProperties: TypeReference) extends AnonymousType
+case class MapType(additionalProperties: TypeReference, plainProperties: Boolean) extends AnonymousType
 
 object UrnType extends AnonymousType
 object ResourceIdType extends AnonymousType
@@ -473,7 +469,8 @@ case class PropertyDefinitionProto(
   description: Option[String] = None,
   replaceOnChanges: Boolean = false,
   willReplaceOnChanges: Boolean = false,
-  secret: Boolean = false
+  secret: Boolean = false,
+  plain: Boolean = false
 ) extends TypeReferenceProtoLike
 object PropertyDefinitionProto {
   implicit val reader: Reader[PropertyDefinitionProto] = macroR
@@ -511,7 +508,8 @@ case class PropertyDefinition(
   description: Option[String] = None,
   replaceOnChanges: Boolean = false,
   willReplaceOnChanges: Boolean = false,
-  secret: Boolean = false
+  secret: Boolean = false,
+  plain: Boolean = false
 )
 object PropertyDefinition {
   implicit val reader: Reader[PropertyDefinition] = PropertyDefinitionProto.reader.map { proto =>
@@ -526,7 +524,8 @@ object PropertyDefinition {
       description = proto.description,
       replaceOnChanges = proto.replaceOnChanges,
       willReplaceOnChanges = proto.willReplaceOnChanges,
-      secret = proto.secret
+      secret = proto.secret,
+      plain = proto.plain
     )
   }
 }
@@ -678,7 +677,8 @@ case class ObjectTypeDefinitionOrTypeReferenceProto(
   oneOf: List[besom.codegen.metaschema.TypeReference] = List.empty,
   @fieldKey("$ref")
   ref: Option[String] = None,
-  `type`: Option[String] = None
+  `type`: Option[String] = None,
+  plain: Boolean = false
 ) extends ObjectTypeDefinitionProtoLike
     with TypeReferenceProtoLike
 
