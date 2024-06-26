@@ -2,6 +2,7 @@ package besom.cfg
 
 import besom.cfg.k8s.*
 import besom.cfg.*
+import besom.cfg.from.env.*
 import besom.internal.DummyContext
 import besom.internal.RunOutput.*
 
