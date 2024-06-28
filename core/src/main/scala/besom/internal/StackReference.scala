@@ -4,6 +4,8 @@ import besom.json.*
 import besom.types.*
 import besom.util.NonEmptyString
 
+import scala.util.Try
+
 case class StackReference(
   urn: Output[URN],
   id: Output[ResourceId],
@@ -34,6 +36,24 @@ case class StackReference(
     }
 
     output.withIsSecret(isSecretOutputName(name))
+
+  def getObject[A: JsonReader]: Output[Option[A]] =
+    outputs
+      .map(out => Try(JsObject(out).convertTo[A]).toOption)
+      .withIsSecret(
+        secretOutputNames
+          .map(_.nonEmpty)
+          .getValueOrElse(false)
+      )
+
+  def requireObject[A: JsonReader]: Output[A] =
+    outputs
+      .map(JsObject(_).convertTo[A])
+      .withIsSecret(
+        secretOutputNames
+          .map(_.nonEmpty)
+          .getValueOrElse(false)
+      )
 
   private def isSecretOutputName(name: Output[String]): Result[Boolean] =
     for
