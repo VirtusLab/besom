@@ -860,6 +860,131 @@ class CodeGenTest extends munit.FunSuite {
       )
     ),
     Data(
+      name = "Provider with objects with plain input properties",
+      json = s"""|{
+                 |  "name": "example",
+                 |  "provider": {
+                 |    "description": "The provider type for the kubernetes package.",
+                 |    "type": "object",
+                 |    "inputProperties": {
+                 |      "plainConst": {
+                 |        "type": "string",
+                 |        "const": "val",
+                 |        "default": "another",
+                 |        "plain": true
+                 |      },
+                 |      "plainOptionalString": {
+                 |        "type": "string",
+                 |        "plain": true
+                 |      },
+                 |      "plainOptionalStringWithDefault": {
+                 |        "type": "string",
+                 |        "default": "another",
+                 |        "plain": true
+                 |      },
+                 |      "plainRequiredString": {
+                 |        "type": "string",
+                 |        "plain": true
+                 |      }
+                 |    },
+                 |    "requiredInputs": ["plainRequiredString"]
+                 |  }
+                 |}
+                 |""".stripMargin,
+      expected = Map(
+        "src/index/Provider.scala" ->
+          s"""|package besom.api.example
+              |
+              |final case class Provider private(
+              |  urn: besom.types.Output[besom.types.URN],
+              |  id: besom.types.Output[besom.types.ResourceId]
+              |) extends besom.ProviderResource
+              |
+              |object Provider extends besom.ResourceCompanion[Provider]:
+              |  /** Resource constructor for Provider. 
+              |    * 
+              |    * @param name [[besom.util.NonEmptyString]] The unique (stack-wise) name of the resource in Pulumi state (not on provider's side).
+              |    *        NonEmptyString is inferred automatically from non-empty string literals, even when interpolated. If you encounter any
+              |    *        issues with this, please try using `: NonEmptyString` type annotation. If you need to convert a dynamically generated
+              |    *        string to NonEmptyString, use `NonEmptyString.apply` method - `NonEmptyString(str): Option[NonEmptyString]`.
+              |    *
+              |    * @param args [[ProviderArgs]] The configuration to use to create this resource. 
+              |    *
+              |    * @param opts [[besom.CustomResourceOptions]] Resource options to use for this resource. 
+              |    *        Defaults to empty options. If you need to set some options, use [[besom.opts]] function to create them, for example:
+              |    *  
+              |    *        {{{
+              |    *        val res = Provider(
+              |    *          "my-resource",
+              |    *          ProviderArgs(...), // your args
+              |    *          opts(provider = myProvider)
+              |    *        )
+              |    *        }}}
+              |    */
+              |  def apply(using ctx: besom.types.Context)(
+              |    name: besom.util.NonEmptyString,
+              |    args: ProviderArgs,
+              |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
+              |  ): besom.types.Output[Provider] =
+              |    ctx.readOrRegisterResource[Provider, ProviderArgs]("pulumi:providers:example", name, args, opts(using besom.ResourceOptsVariant.Custom))
+              |
+              |  private[besom] def typeToken: besom.types.ResourceType = "pulumi:providers:example"
+              |
+              |  given resourceDecoder(using besom.types.Context): besom.types.ResourceDecoder[Provider] =
+              |    besom.internal.ResourceDecoder.derived[Provider]
+              |
+              |  given decoder(using besom.types.Context): besom.types.Decoder[Provider] =
+              |    besom.internal.Decoder.customResourceDecoder[Provider]
+              |
+              |
+              |  given outputOps: {} with
+              |    extension(output: besom.types.Output[Provider])
+              |      def urn : besom.types.Output[besom.types.URN] = output.flatMap(_.urn)
+              |      def id : besom.types.Output[besom.types.ResourceId] = output.flatMap(_.id)
+              |""".stripMargin,
+        "src/index/ProviderArgs.scala" ->
+          s"""|package besom.api.example
+              |
+              |final case class ProviderArgs private(
+              |  plainConst: String,
+              |  plainOptionalString: scala.Option[String],
+              |  plainOptionalStringWithDefault: String,
+              |  plainRequiredString: String
+              |)
+              |
+              |object ProviderArgs:
+              |  def apply(
+              |    plainOptionalString: scala.Option[String] = scala.None,
+              |    plainOptionalStringWithDefault: String = "another",
+              |    plainRequiredString: String
+              |  )(using besom.types.Context): ProviderArgs =
+              |    new ProviderArgs(
+              |      plainConst = "val",
+              |      plainOptionalString = plainOptionalString,
+              |      plainOptionalStringWithDefault = plainOptionalStringWithDefault,
+              |      plainRequiredString = plainRequiredString
+              |    )
+              |
+              |  extension (providerArgs: ProviderArgs) def withArgs(
+              |    plainOptionalString: scala.Option[String] = providerArgs.plainOptionalString,
+              |    plainOptionalStringWithDefault: String = providerArgs.plainOptionalStringWithDefault,
+              |    plainRequiredString: String = providerArgs.plainRequiredString
+              |  )(using besom.types.Context): ProviderArgs =
+              |    new ProviderArgs(
+              |      plainConst = "val",
+              |      plainOptionalString = plainOptionalString,
+              |      plainOptionalStringWithDefault = plainOptionalStringWithDefault,
+              |      plainRequiredString = plainRequiredString
+              |    )
+              |
+              |  given encoder(using besom.types.Context): besom.types.Encoder[ProviderArgs] =
+              |    besom.internal.Encoder.derived[ProviderArgs]
+              |  given providerArgsEncoder(using besom.types.Context): besom.types.ProviderArgsEncoder[ProviderArgs] =
+              |    besom.internal.ProviderArgsEncoder.derived[ProviderArgs]
+              |""".stripMargin
+      )
+    ),
+    Data(
       name = "Error on id property",
       json = """|{
                 |  "name": "fake-provider",

@@ -14,7 +14,8 @@ case class PropertyInfo private (
   defaultValue: Option[Term],
   constValue: Option[Term],
   isSecret: Boolean,
-  unionMappings: List[TypeMapper.UnionMapping]
+  unionMappings: List[TypeMapper.UnionMapping],
+  plain: Boolean
 )
 
 object PropertyInfo:
@@ -31,10 +32,17 @@ object PropertyInfo:
     val baseType = propertyDefinition.typeReference.asScalaType()
     val argType  = propertyDefinition.typeReference.asScalaType(asArgsType = true)
     val inputArgType = propertyDefinition.typeReference match {
-      case ArrayType(innerType) =>
-        scalameta.types.List(scalameta.types.besom.types.Input(innerType.asScalaType(asArgsType = true)))
-      case MapType(innerType) =>
-        scalameta.types.Map(scalameta.types.String, scalameta.types.besom.types.Input(innerType.asScalaType(asArgsType = true)))
+      case ArrayType(innerType, plainItems) =>
+        scalameta.types.List(
+          if (plainItems) innerType.asScalaType(asArgsType = true)
+          else scalameta.types.besom.types.Input(innerType.asScalaType(asArgsType = true))
+        )
+      case MapType(innerType, plainProperties) =>
+        scalameta.types.Map(
+          scalameta.types.String,
+          if (plainProperties) innerType.asScalaType(asArgsType = true)
+          else scalameta.types.besom.types.Input(innerType.asScalaType(asArgsType = true))
+        )
       case tp =>
         tp.asScalaType(asArgsType = true)
     }
@@ -70,7 +78,8 @@ object PropertyInfo:
       defaultValue = defaultValue,
       constValue = constValue,
       isSecret = propertyDefinition.secret,
-      unionMappings = unionMap
+      unionMappings = unionMap,
+      plain = propertyDefinition.plain
     )
   }
 

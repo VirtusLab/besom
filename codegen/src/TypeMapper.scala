@@ -126,14 +126,14 @@ class TypeMapper(
 
   def asScalaType(typeRef: TypeReference, asArgsType: Boolean, fallbackType: Option[AnonymousType] = None): Type =
     typeRef match
-      case BooleanType         => scalameta.types.Boolean
-      case StringType          => scalameta.types.String
-      case IntegerType         => scalameta.types.Int
-      case NumberType          => scalameta.types.Double
-      case UrnType             => scalameta.types.besom.types.URN
-      case ResourceIdType      => scalameta.types.besom.types.ResourceId
-      case ArrayType(elemType) => scalameta.types.List(asScalaType(elemType, asArgsType))
-      case MapType(elemType)   => scalameta.types.Map(scalameta.types.String, asScalaType(elemType, asArgsType))
+      case BooleanType            => scalameta.types.Boolean
+      case StringType             => scalameta.types.String
+      case IntegerType            => scalameta.types.Int
+      case NumberType             => scalameta.types.Double
+      case UrnType                => scalameta.types.besom.types.URN
+      case ResourceIdType         => scalameta.types.besom.types.ResourceId
+      case ArrayType(elemType, _) => scalameta.types.List(asScalaType(elemType, asArgsType))
+      case MapType(elemType, _)   => scalameta.types.Map(scalameta.types.String, asScalaType(elemType, asArgsType))
       case unionType: UnionType =>
         unionType.oneOf.map(asScalaType(_, asArgsType, unionType.`type`)).reduce { (t1, t2) =>
           if t1.syntax == t2.syntax then t1 else Type.ApplyInfix(t1, Type.Name("|"), t2)
@@ -189,8 +189,8 @@ class TypeMapper(
   // TODO: This is a temporary solution, we should use a proper type mapping using ADTs
   def findTokenAndDependencies(typeRef: TypeReference): Vector[(Option[PulumiToken], Option[PackageMetadata])] =
     typeRef match {
-      case ArrayType(elemType) => findTokenAndDependencies(elemType)
-      case MapType(elemType)   => findTokenAndDependencies(elemType)
+      case ArrayType(elemType, _) => findTokenAndDependencies(elemType)
+      case MapType(elemType, _)   => findTokenAndDependencies(elemType)
       case unionType: UnionType =>
         unionType.oneOf.map(findTokenAndDependencies(_)).reduce(_ ++ _)
       case namedType: NamedType =>
@@ -208,8 +208,8 @@ class TypeMapper(
   def unionMapping(typeRef: TypeReference): List[UnionMapping] =
     import scala.meta.*
     typeRef match {
-      case ArrayType(elemType)          => unionMapping(elemType)
-      case MapType(elemType)            => unionMapping(elemType)
+      case ArrayType(elemType, _)       => unionMapping(elemType)
+      case MapType(elemType, _)         => unionMapping(elemType)
       case UnionType(types, _, Some(d)) =>
         // we need to enforce the the order of types for the de-duplication in CodeGen.unionDecoderGivens to work properly
         val unionType = scalameta.types.Union(types.map(t => asScalaType(t, asArgsType = false)).sortWith(_.syntax < _.syntax))

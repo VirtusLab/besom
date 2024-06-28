@@ -937,13 +937,17 @@ class CodeGen(using
     )
     val argsClassParams = inputProperties.map { propertyInfo =>
       val fieldType =
-        if propertyInfo.isOptional
-        then scalameta.types.Option(propertyInfo.argType)
-        else propertyInfo.argType
+        if (propertyInfo.plain) {
+          if (propertyInfo.isOptional) scalameta.types.Option(propertyInfo.argType)
+          else propertyInfo.argType
+        } else {
+          if (propertyInfo.isOptional) scalameta.types.besom.types.Output(scalameta.types.Option(propertyInfo.argType))
+          else scalameta.types.besom.types.Output(propertyInfo.argType)
+        }
       Term.Param(
         mods = List.empty,
         name = propertyInfo.name,
-        decltpe = Some(scalameta.types.besom.types.Output(fieldType)),
+        decltpe = Some(fieldType),
         default = None
       )
     }
@@ -969,8 +973,13 @@ class CodeGen(using
 
     val argsCompanionApplyParams = inputProperties.filter(_.constValue.isEmpty).map { propertyInfo =>
       val paramType =
-        if (propertyInfo.isOptional) scalameta.types.besom.types.InputOptional(propertyInfo.inputArgType)
-        else scalameta.types.besom.types.Input(propertyInfo.inputArgType)
+        if (propertyInfo.plain) {
+          if (propertyInfo.isOptional) scalameta.types.Option(propertyInfo.inputArgType)
+          else propertyInfo.inputArgType
+        } else {
+          if (propertyInfo.isOptional) scalameta.types.besom.types.InputOptional(propertyInfo.inputArgType)
+          else scalameta.types.besom.types.Input(propertyInfo.inputArgType)
+        }
       Term.Param(
         mods = List.empty,
         name = propertyInfo.name,
@@ -983,9 +992,12 @@ class CodeGen(using
       val isSecret = Lit.Boolean(propertyInfo.isSecret)
       val argValue = propertyInfo.constValue match {
         case Some(constValue) =>
-          scalameta.besom.types.Output(constValue)
+          if (propertyInfo.plain) constValue
+          else scalameta.besom.types.Output(constValue)
         case None =>
-          if (propertyInfo.isOptional)
+          if (propertyInfo.plain)
+            m"${propertyInfo.name}".parse[Term].get
+          else if (propertyInfo.isOptional)
             m"${propertyInfo.name}.asOptionOutput(isSecret = ${isSecret})".parse[Term].get
           else
             m"${propertyInfo.name}.asOutput(isSecret = ${isSecret})".parse[Term].get
