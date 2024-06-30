@@ -346,7 +346,7 @@ class CodeGenTest extends munit.FunSuite {
              |
              |  given optionOutputOps: {} with
              |    extension(output: besom.types.Output[scala.Option[ClusterGetKubeconfigResult]])
-             |      def kubeconfig : besom.types.Output[scala.Option[String]] = output.flatMap(_.map(_.kubeconfig.map(Some(_))).getOrElse(output.map(_ => scala.None)))
+             |      def kubeconfig : besom.types.Output[scala.Option[String]] = output.flatMapOption(_.kubeconfig)
              |""".stripMargin,
         "src/container/v1/getCluster.scala" ->
           """|package besom.api.googlenative.container.v1
@@ -754,9 +754,9 @@ class CodeGenTest extends munit.FunSuite {
              |
              |  given optionOutputOps: {} with
              |    extension(output: besom.types.Output[scala.Option[EniConfig]])
-             |      def apiVersion : besom.types.Output[scala.Option[String]] = output.flatMap(_.map(_.apiVersion.map(Some(_))).getOrElse(output.map(_ => scala.None)))
-             |      def kind : besom.types.Output[scala.Option[String]] = output.flatMap(_.map(_.kind.map(Some(_))).getOrElse(output.map(_ => scala.None)))
-             |      def spec : besom.types.Output[scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]] = output.flatMap(_.map(_.spec).getOrElse(output.map(_ => scala.None)))
+             |      def apiVersion : besom.types.Output[scala.Option[String]] = output.flatMapOption(_.apiVersion)
+             |      def kind : besom.types.Output[scala.Option[String]] = output.flatMapOption(_.kind)
+             |      def spec : besom.types.Output[scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]] = output.flatMapOption(_.spec)
              |
              |
              |
@@ -818,8 +818,8 @@ class CodeGenTest extends munit.FunSuite {
              |
              |  given optionOutputOps: {} with
              |    extension(output: besom.types.Output[scala.Option[EniConfigSpec]])
-             |      def securityGroups : besom.types.Output[scala.Option[scala.collection.immutable.List[String]]] = output.flatMap(_.map(_.securityGroups).getOrElse(output.map(_ => scala.None)))
-             |      def subnet : besom.types.Output[scala.Option[String]] = output.flatMap(_.map(_.subnet).getOrElse(output.map(_ => scala.None)))
+             |      def securityGroups : besom.types.Output[scala.Option[scala.collection.immutable.List[String]]] = output.flatMapOption(_.securityGroups)
+             |      def subnet : besom.types.Output[scala.Option[String]] = output.flatMapOption(_.subnet)
              |
              |
              |

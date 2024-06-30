@@ -828,8 +828,6 @@ class CodeGen(using
         .get
     }
     val optionOutputExtensionMethods = properties.map { propertyInfo =>
-      val innerMethodName =
-        if propertyInfo.isOptional then m"" else m".map(Some(_))"
       val innerMethodNameWhenRequiresJsonFormat =
         if propertyInfo.isOptional then m"flatMap" else m"map"
 
@@ -838,7 +836,7 @@ class CodeGen(using
         then
           m"""def ${propertyInfo.name} : besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.map(_.$innerMethodNameWhenRequiresJsonFormat(_.${propertyInfo.name}))"""
         else
-          m"""def ${propertyInfo.name} : besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.flatMap(_.map(_.${propertyInfo.name}$innerMethodName).getOrElse(output.map(_ => scala.None)))"""
+          m"""def ${propertyInfo.name} : besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.flatMapOption(_.${propertyInfo.name})"""
       ).parse[Stat].get
     }
 
