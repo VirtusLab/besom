@@ -1,0 +1,3 @@
+name: azure-synapse
+description: Azure Synapse example
+runtime: scala
