@@ -797,10 +797,14 @@ class CodeGen(using
         if propertyInfo.isOptional
         then scalameta.types.Option(propertyInfo.baseType)
         else propertyInfo.baseType
+      val outputFieldType =
+        if requiresJsonFormat
+        then fieldType
+        else scalameta.types.besom.types.Output(fieldType)
       Term.Param(
         mods = List.empty,
         name = propertyInfo.name,
-        decltpe = Some(fieldType),
+        decltpe = Some(outputFieldType),
         default = None
       )
     }
@@ -816,22 +820,24 @@ class CodeGen(using
         if propertyInfo.isOptional
         then scalameta.types.Option(propertyInfo.baseType)
         else propertyInfo.baseType
+      val innerMethodName = if requiresJsonFormat then m"map" else m"flatMap"
 
       // colon after underscore would be treated as a part of the name so we add a space
-      m"""def ${propertyInfo.name} : besom.types.Output[$innerType] = output.map(_.${propertyInfo.name})"""
+      m"""def ${propertyInfo.name} : besom.types.Output[$innerType] = output.$innerMethodName(_.${propertyInfo.name})"""
         .parse[Stat]
         .get
     }
     val optionOutputExtensionMethods = properties.map { propertyInfo =>
-      val innerMethodName =
-        if propertyInfo.isOptional
-        then Term.Name("flatMap")
-        else Term.Name("map")
+      val innerMethodNameWhenRequiresJsonFormat =
+        if propertyInfo.isOptional then m"flatMap" else m"map"
 
-      // colon after underscore would be treated as a part of the name so we add a space
-      m"""def ${propertyInfo.name} : besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.map(_.${innerMethodName}(_.${propertyInfo.name}))"""
-        .parse[Stat]
-        .get
+      (
+        if requiresJsonFormat
+        then
+          m"""def ${propertyInfo.name} : besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.map(_.$innerMethodNameWhenRequiresJsonFormat(_.${propertyInfo.name}))"""
+        else
+          m"""def ${propertyInfo.name} : besom.types.Output[scala.Option[${propertyInfo.baseType}]] = output.flatMapOption(_.${propertyInfo.name})"""
+      ).parse[Stat].get
     }
 
     val hasOutputExtensions = outputExtensionMethods.nonEmpty

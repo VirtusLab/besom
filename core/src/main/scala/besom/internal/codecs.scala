@@ -229,6 +229,17 @@ object Decoder extends DecoderInstancesLowPrio1:
       if v.kind.isBoolValue then v.getBoolValue.valid
       else error(s"$label: Expected a boolean, got: '${v.kind}'", label).invalid
 
+  given outputDecoder[A](using inner: Decoder[A]): Decoder[Output[A]] = new Decoder[Output[A]]:
+    override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Output[A]]] =
+      inner
+        .decode(value, label)
+        .redeem(
+          errs => OutputData(Output.fail(AggregatedDecodingError(errs))),
+          _.map(Output(_))
+        )
+
+    override def mapping(value: Value, label: Label): Validated[DecodingError, Output[A]] = ???
+
   given jsonDecoder: Decoder[JsValue] with
     private def convertToJsValue(value: Value): JsValue =
       value.kind match

@@ -138,6 +138,12 @@ object Validated:
 
     def asResult: Result[Validated[E, A]] = result
 
+    def redeem[B](fe: NonEmptyVector[E] => B, fa: A => B): ValidatedResult[E, B] =
+      result.map {
+        case Valid(a)   => Valid(fa(a))
+        case Invalid(e) => Valid(fe(e))
+      }
+
   end extension
 
   object ValidatedResult:

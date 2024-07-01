@@ -1,6 +1,7 @@
 package besom.internal
 
 import scala.collection.BuildFrom
+import scala.reflect.Typeable
 
 /** Output is a wrapper for a monadic effect used to model async execution that allows Pulumi to track information about dependencies
   * between resources and properties of data (whether it's known or a secret for instance).
@@ -205,6 +206,18 @@ If you want to map over the value of an Output, use the map method instead."""
     *   an Output with the value of Unit
     */
   def void: Output[Unit] = map(_ => ())
+
+  private[besom] def flatMapOption[B, C: Typeable](using ev: A <:< Option[B])(f: B => Output[C] | Output[Option[C]]): Output[Option[C]] =
+    flatMap { a =>
+      ev(a) match
+        case Some(b) =>
+          f(b).map {
+            case Some(c: C) => Some(c)
+            case None       => None
+            case x: C       => Some(x)
+          }
+        case None => Output(None)
+    }
 
   private[internal] def getData: Result[OutputData[A]] = dataResult
 
