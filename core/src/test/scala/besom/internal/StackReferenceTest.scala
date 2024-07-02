@@ -2,8 +2,7 @@ package besom.internal
 
 import besom.*
 import besom.json.*
-
-import RunResult.{given, *}
+import RunResult.{*, given}
 
 class StackReferenceTest extends munit.FunSuite:
 
@@ -17,7 +16,7 @@ class StackReferenceTest extends munit.FunSuite:
     assertEquals(requireObject.getData.unsafeRunSync(), OutputData(expected))
   }
 
-  test("fail when convert stack reference to case class") {
+  test("fail when convert stack reference to case class with missing data") {
     given Context = DummyContext().unsafeRunSync()
     case class Test(s: String, i: Int) derives JsonReader
     val outputs = Map("s" -> JsString("value1"))
@@ -37,4 +36,26 @@ class StackReferenceTest extends munit.FunSuite:
     assertEquals(requireObject.getData.unsafeRunSync(), OutputData(expected).withIsSecret(true))
   }
 
+  test("propagate secret field to whole typed stack reference") {
+    given Context = DummyContext().unsafeRunSync()
+
+    case class Test(s: String, i: Int) derives JsonReader
+    val outputs           = Map("s" -> JsString("value1"), "i" -> JsNumber(2))
+    val secretOutputNames = Set("i")
+
+    val typedStackReference =
+      StackReference
+        .requireObject[Test](Output(outputs), Output(secretOutputNames))
+        .map(test =>
+          TypedStackReference(
+            urn = Output(URN.empty),
+            id = Output(ResourceId.empty),
+            name = Output(""),
+            outputs = test,
+            secretOutputNames = Output(secretOutputNames)
+          )
+        )
+
+    assertEquals(typedStackReference.getData.unsafeRunSync().secret, true)
+  }
 end StackReferenceTest
