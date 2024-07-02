@@ -33,6 +33,7 @@ object aliases:
   type ComponentResource                                  = besom.internal.ComponentResource
   type RegistersOutputs[A <: ComponentResource & Product] = besom.internal.RegistersOutputs[A]
   type StackReference                                     = besom.internal.StackReference
+  type TypedStackReference[A]                             = besom.internal.TypedStackReference[A]
   object StackReference extends besom.internal.StackReferenceFactory
   type StackReferenceArgs = besom.internal.StackReferenceArgs
   object StackReferenceArgs extends besom.internal.StackReferenceArgsFactory
