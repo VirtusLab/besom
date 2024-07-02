@@ -4,8 +4,6 @@ import besom.json.*
 import besom.types.*
 import besom.util.NonEmptyString
 
-import scala.util.Try
-
 case class StackReference(
   urn: Output[URN],
   id: Output[ResourceId],
@@ -36,24 +34,6 @@ case class StackReference(
     }
 
     output.withIsSecret(isSecretOutputName(name))
-
-  def getObject[A: JsonReader]: Output[Option[A]] =
-    outputs
-      .map(out => Try(JsObject(out).convertTo[A]).toOption)
-      .withIsSecret(
-        secretOutputNames
-          .map(_.nonEmpty)
-          .getValueOrElse(false)
-      )
-
-  def requireObject[A: JsonReader]: Output[A] =
-    outputs
-      .map(JsObject(_).convertTo[A])
-      .withIsSecret(
-        secretOutputNames
-          .map(_.nonEmpty)
-          .getValueOrElse(false)
-      )
 
   private def isSecretOutputName(name: Output[String]): Result[Boolean] =
     for
@@ -96,3 +76,35 @@ trait StackReferenceFactory:
 
         Context().readOrRegisterResource[StackReference, StackReferenceArgs]("pulumi:pulumi:StackReference", name, stackRefArgs, mergedOpts)
       }
+
+  def apply[T](using
+    ctx: Context,
+    jr: JsonReader[T]
+  )(name: NonEmptyString, args: Input.Optional[StackReferenceArgs], opts: StackReferenceResourceOptions): Output[TypedStackReference[T]] =
+    apply(using ctx)(name, args, opts).flatMap { stackReference =>
+      val objectOutput: Output[T] =
+        requireObject(stackReference.outputs, stackReference.secretOutputNames)
+
+      objectOutput.map(t =>
+        TypedStackReference(
+          urn = stackReference.urn,
+          id = stackReference.id,
+          name = stackReference.name,
+          outputs = t,
+          secretOutputNames = stackReference.secretOutputNames
+        )
+      )
+    }
+
+  private[internal] def requireObject[T: JsonReader](
+    outputs: Output[Map[String, JsValue]],
+    secretOutputNames: Output[Set[String]]
+  ): Output[T] =
+    outputs
+      .map(JsObject(_).convertTo[T])
+      .withIsSecret(
+        secretOutputNames
+          .map(_.nonEmpty)
+          .getValueOrElse(false)
+      )
+end StackReferenceFactory
