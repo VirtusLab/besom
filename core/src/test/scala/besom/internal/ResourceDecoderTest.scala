@@ -6,6 +6,7 @@ import besom.internal.logging.*
 import besom.types.*
 import besom.util.*
 import com.google.protobuf.struct.*
+import scala.collection.immutable.Iterable
 
 class ResourceDecoderTest extends munit.FunSuite:
   case class CustomStruct(a: String, b: Double) derives Decoder
@@ -176,7 +177,7 @@ class ResourceDecoderTest extends munit.FunSuite:
     dnsNameLabel: Option[String],
     fqdn: String,
     ip: Option[String],
-    ports: List[PortResponse],
+    ports: Iterable[PortResponse],
     `type`: String
   )
   object IpAddressResponse:
@@ -269,9 +270,9 @@ class ResourceDecoderTest extends munit.FunSuite:
         expectedIsSecret = false
       )
 
-      val ports: Output[List[PortResponse]] = resource.ipAddress.map(_.map(_.ports).getOrElse(List.empty))
+      val ports: Output[Iterable[PortResponse]] = resource.ipAddress.map(_.map(_.ports).getOrElse(Iterable.empty))
       checkOutput(ports)(
-        List(PortResponse(port = 8080, protocol = Some("TCP"))),
+        Iterable(PortResponse(port = 8080, protocol = Some("TCP"))),
         expectedDependencies = Set(resource),
         expectedIsSecret = false
       )

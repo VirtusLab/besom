@@ -459,14 +459,14 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
               case _                                                              => false
             ,
             version = inputs.options.version.getOrElse(""), // protobuf expects empty string and not null
-            ignoreChanges = inputs.options.ignoreChanges,
+            ignoreChanges = inputs.options.ignoreChanges.toSeq,
             acceptSecrets = true, // our implementation supports secrets from day one
             acceptResources = ctx.runInfo.acceptResources, // our implementation supports resources from day one
             additionalSecretOutputs = inputs.options match
-              case CustomResolvedResourceOptions(_, _, _, additionalSecretOutputs, _) => additionalSecretOutputs
+              case CustomResolvedResourceOptions(_, _, _, additionalSecretOutputs, _) => additionalSecretOutputs.toSeq
               case _                                                                  => Vector.empty
             ,
-            replaceOnChanges = inputs.options.replaceOnChanges,
+            replaceOnChanges = inputs.options.replaceOnChanges.toSeq,
             importId = inputs.options match
               case CustomResolvedResourceOptions(_, _, _, _, importId) => importId.getOrElse("")
               case _                                                   => ""

@@ -6,6 +6,7 @@ import besom.internal.RunResult.{*, given}
 import besom.types.{EnumCompanion, Label, StringEnum, Output as _, *}
 import besom.util.*
 import com.google.protobuf.struct.*
+import scala.collection.immutable.Iterable
 
 def runWithBothOutputCodecs(body: Context ?=> Unit)(using munit.Location): Unit =
   Vector(true, false).foreach(keepOutputValues => {
@@ -39,7 +40,7 @@ object EncoderTest:
 
   case class TestCaseClass(
     foo: Int,
-    bar: List[String],
+    bar: Iterable[String],
     optNone1: Option[String],
     optNone2: Option[Int],
     optSome: Option[String]
@@ -62,10 +63,10 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
     test(s"encode case class (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
       val e = summon[Encoder[TestCaseClass]]
 
-      val (_, encoded) = e.encode(TestCaseClass(10, List("qwerty"), None, None, Some("abc"))).unsafeRunSync()
+      val (_, encoded) = e.encode(TestCaseClass(10, Iterable("qwerty"), None, None, Some("abc"))).unsafeRunSync()
       val expected = Map(
         "foo" -> 10.asValue,
-        "bar" -> List("qwerty".asValue).asValue,
+        "bar" -> Iterable("qwerty".asValue).asValue,
         "optSome" -> Some("abc").asValue
       ).asValue
 
@@ -203,10 +204,10 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
 
       assertEqualsValue(encodedString, expectedString, encodedString.toProtoString)
 
-      val (_, encodedCaseClass) = e.encode(TestCaseClass(10, List("qwerty"), None, None, Some("abc"))).unsafeRunSync()
+      val (_, encodedCaseClass) = e.encode(TestCaseClass(10, Iterable("qwerty"), None, None, Some("abc"))).unsafeRunSync()
       val expectedCaseClass = Map(
         "foo" -> 10.asValue,
-        "bar" -> List("qwerty".asValue).asValue,
+        "bar" -> Iterable("qwerty".asValue).asValue,
         "optSome" -> Some("abc").asValue
       ).asValue
 
@@ -338,12 +339,12 @@ object ProviderArgsEncoderTest:
   case class TestProviderArgs(
     `type`: Output[String],
     pcc: Output[PlainCaseClass],
-    ls: Output[List[Output[String]]]
+    ls: Output[Iterable[Output[String]]]
   ) derives ProviderArgsEncoder
   case class TestProviderOptionArgs(
     `type`: Output[Option[String]],
     pcc: Output[Option[PlainCaseClass]],
-    ls: Output[Option[List[Output[String]]]]
+    ls: Output[Option[Iterable[Output[String]]]]
   ) derives ProviderArgsEncoder
 
   case class ExampleResourceArgs(
@@ -414,7 +415,7 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
           TestProviderArgs(
             Output("SOME-TEST-PROVIDER"),
             Output(PlainCaseClass(data = "werks?", moreData = 123)),
-            Output(List(Output("a"), Output("b"), Output("c")))
+            Output(Iterable(Output("a"), Output("b"), Output("c")))
           ),
           _ => false
         )
@@ -432,7 +433,7 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
               "data" -> "werks?".asValue,
               "moreData" -> 123.asValue
             ).asValue.asJsonStringOrThrow.asValue.asOutputValue(isSecret = false, dependencies = Nil).asValue,
-            "ls" -> List("a", "b", "c").asValue.asJsonStringOrThrow.asValue.asOutputValue(isSecret = false, dependencies = Nil).asValue
+            "ls" -> Iterable("a", "b", "c").asValue.asJsonStringOrThrow.asValue.asOutputValue(isSecret = false, dependencies = Nil).asValue
           ).asValue
         else
           Map(
@@ -441,7 +442,7 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
               "data" -> "werks?".asValue,
               "moreData" -> 123.asValue
             ).asValue.asJsonStringOrThrow.asValue,
-            "ls" -> List("a", "b", "c").asValue.asJsonStringOrThrow.asValue
+            "ls" -> Iterable("a", "b", "c").asValue.asJsonStringOrThrow.asValue
           ).asValue
 
       assertEqualsValue(encoded.asValue, expected, encoded.asValue.toProtoString)
@@ -722,7 +723,7 @@ class PropertiesSerializerTest extends munit.FunSuite with ValueAssertions:
                 TaskDefinitionContainerDefinitionArgs(
                   portMappings = Output(
                     Some(
-                      List(
+                      Iterable(
                         TaskDefinitionPortMappingArgs(
                           targetGroup = Output(
                             Some(
@@ -749,7 +750,7 @@ class PropertiesSerializerTest extends munit.FunSuite with ValueAssertions:
         if Context().featureSupport.keepOutputValues then
           Map(
             "container" -> Map(
-              "portMappings" -> List(
+              "portMappings" -> Iterable(
                 Map(
                   "targetGroup" -> Map(
                     Constants.SpecialSig.Key -> Constants.SpecialSig.ResourceSig.asValue,
@@ -763,7 +764,7 @@ class PropertiesSerializerTest extends munit.FunSuite with ValueAssertions:
         else
           Map(
             "container" -> Map(
-              "portMappings" -> List(
+              "portMappings" -> Iterable(
                 Map(
                   "targetGroup" -> Map(
                     Constants.SpecialSig.Key -> Constants.SpecialSig.ResourceSig.asValue,
@@ -844,7 +845,7 @@ object PropertiesSerializerTest:
   object FargateServiceTaskDefinitionArgs:
     given encoder(using Context): Encoder[FargateServiceTaskDefinitionArgs]         = Encoder.derived[FargateServiceTaskDefinitionArgs]
     given argsEncoder(using Context): ArgsEncoder[FargateServiceTaskDefinitionArgs] = ArgsEncoder.derived[FargateServiceTaskDefinitionArgs]
-  final case class TaskDefinitionContainerDefinitionArgs(portMappings: Output[Option[List[TaskDefinitionPortMappingArgs]]])
+  final case class TaskDefinitionContainerDefinitionArgs(portMappings: Output[Option[Iterable[TaskDefinitionPortMappingArgs]]])
   object TaskDefinitionContainerDefinitionArgs:
     given encoder(using Context): Encoder[TaskDefinitionContainerDefinitionArgs] =
       Encoder.derived[TaskDefinitionContainerDefinitionArgs]

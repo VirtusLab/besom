@@ -2,6 +2,7 @@ package besom.internal
 
 import besom.util.*
 import RunResult.{given, *}
+import scala.collection.immutable.Iterable
 
 class OutputTest extends munit.FunSuite:
 
@@ -11,12 +12,12 @@ class OutputTest extends munit.FunSuite:
 
   def takesAList(list: Input[List[Input[String]]])(using
     Context
-  ): Output[List[String]] =
+  ): Output[Iterable[String]] =
     list.asOutput()
 
   def takesAnOptionalList(list: Input.Optional[List[Input[String]]])(using
     Context
-  ): Output[Option[List[String]]] =
+  ): Output[Option[Iterable[String]]] =
     list.asOptionOutput()
 
   def takesAMap(map: Input[Map[String, Input[String]]])(using
@@ -29,9 +30,9 @@ class OutputTest extends munit.FunSuite:
   ): Output[Option[Map[String, String]]] =
     map.asOptionOutput()
 
-  def takesManyStrings(strings: Input.OneOrList[String])(using
+  def takesManyStrings(strings: Input.OneOrIterable[String])(using
     Context
-  ): Output[List[String]] =
+  ): Output[Iterable[String]] =
     strings.asManyOutput()
 
   test("multi-input type functions") {

@@ -1,10 +1,11 @@
 package besom.internal
 
 opaque type Input[+A] >: A | Output[A] = A | Output[A]
+import scala.collection.immutable.Iterable
 
 object Input:
-  opaque type Optional[+A] >: Input[A | Option[A]]              = Input[A | Option[A]]
-  opaque type OneOrList[+A] >: Input[A] | Input[List[Input[A]]] = Input[A] | Input[List[Input[A]]]
+  opaque type Optional[+A] >: Input[A | Option[A]]                      = Input[A | Option[A]]
+  opaque type OneOrIterable[+A] >: Input[A] | Input[Iterable[Input[A]]] = Input[A] | Input[Iterable[Input[A]]]
 
   extension [A](optional: A | Option[A])
     private def asOption: Option[A] =
@@ -49,26 +50,28 @@ object Input:
           case None      => Output(None)
         }
 
-  given listInputOps: {} with
-    private def inputListToListOutput[A](inputList: List[Input[A]], isSecret: Boolean)(using ctx: Context): Output[List[A]] =
-      val outputList = inputList.map(simpleInputOps.asOutput(_)(isSecret = isSecret))
-      Output.sequence(outputList)
+  given iterableInputOps: {} with
+    private def inputIterableToIterableOutput[A](inputIterable: Iterable[Input[A]], isSecret: Boolean)(using
+      ctx: Context
+    ): Output[Iterable[A]] =
+      val outputIterable = inputIterable.map(simpleInputOps.asOutput(_)(isSecret = isSecret))
+      Output.sequence(outputIterable)
 
-    extension [A](input: Input.OneOrList[A])
-      def asManyOutput(isSecret: Boolean = false)(using ctx: Context): Output[List[A]] =
+    extension [A](input: Input.OneOrIterable[A])
+      def asManyOutput(isSecret: Boolean = false)(using ctx: Context): Output[Iterable[A]] =
         input.wrappedAsOutput(isSecret).flatMap {
-          case list: List[Input[A]] @unchecked => inputListToListOutput(list, isSecret = isSecret)
-          case a: A @unchecked                 => Output(List(a))
+          case iterable: Iterable[Input[A]] @unchecked => inputIterableToIterableOutput(iterable, isSecret = isSecret)
+          case a: A @unchecked                         => Output(Iterable(a))
         }
 
-    extension [A](input: Input[List[Input[A]]])
-      def asOutput(isSecret: Boolean = false)(using ctx: Context): Output[List[A]] =
-        input.wrappedAsOutput(isSecret).flatMap(inputListToListOutput(_, isSecret = isSecret))
+    extension [A](input: Input[Iterable[Input[A]]])
+      def asOutput(isSecret: Boolean = false)(using ctx: Context): Output[Iterable[A]] =
+        input.wrappedAsOutput(isSecret).flatMap(inputIterableToIterableOutput(_, isSecret = isSecret))
 
-    extension [A](input: Input.Optional[List[Input[A]]])
-      def asOptionOutput(isSecret: Boolean = false)(using ctx: Context): Output[Option[List[A]]] =
+    extension [A](input: Input.Optional[Iterable[Input[A]]])
+      def asOptionOutput(isSecret: Boolean = false)(using ctx: Context): Output[Option[Iterable[A]]] =
         input.wrappedAsOptionOutput(isSecret).flatMap {
-          case Some(map) => inputListToListOutput(map, isSecret = isSecret).map(Option(_))
+          case Some(map) => inputIterableToIterableOutput(map, isSecret = isSecret).map(Option(_))
           case None      => Output(None)
         }
 end Input

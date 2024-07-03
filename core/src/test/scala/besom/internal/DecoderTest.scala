@@ -8,11 +8,12 @@ import besom.types.{Label, PulumiAny}
 import besom.util.*
 import besom.util.Validated.*
 import com.google.protobuf.struct.*
+import scala.collection.immutable.Iterable
 
 object DecoderTest:
   case class TestCaseClass(
     foo: Int,
-    bar: List[String],
+    bar: Iterable[String],
     optNone1: Option[String],
     optNone2: Option[Int],
     optSome: Option[String]
@@ -47,7 +48,7 @@ object DecoderTest:
   ) derives Decoder
 
   case class DiscriminatedUnionResult(
-    value: scala.Option[List[DiscriminatedUnionTypeA | DiscriminatedUnionTypeB | DiscriminatedUnionTypeC]]
+    value: scala.Option[Iterable[DiscriminatedUnionTypeA | DiscriminatedUnionTypeB | DiscriminatedUnionTypeC]]
   )
   object DiscriminatedUnionResult:
     given decoder: besom.types.Decoder[DiscriminatedUnionResult] =
@@ -64,7 +65,7 @@ object DecoderTest:
       )
 
   case class NonDiscriminatedUnionResult(
-    value: scala.Option[List[String | Double | Int | besom.types.PulumiAny | Boolean]]
+    value: scala.Option[Iterable[String | Double | Int | besom.types.PulumiAny | Boolean]]
   )
   object NonDiscriminatedUnionResult:
     given decoder: besom.types.Decoder[NonDiscriminatedUnionResult] =
@@ -138,20 +139,20 @@ class DecoderTest extends munit.FunSuite:
         then
           Map(
             "foo" -> 10.asValue.asOutputValue(isSecret = false, Nil),
-            "bar" -> List("qwerty".asValue).asValue.asOutputValue(isSecret = false, Nil),
+            "bar" -> Iterable("qwerty".asValue).asValue.asOutputValue(isSecret = false, Nil),
             "optNone1" -> Null.asOutputValue(isSecret = false, Nil),
             "optSome" -> Some("abc").asValue.asOutputValue(isSecret = false, Nil)
           ).asValue
         else
           Map(
             "foo" -> 10.asValue,
-            "bar" -> List("qwerty".asValue).asValue,
+            "bar" -> Iterable("qwerty".asValue).asValue,
             "optNone1" -> Null,
             "optSome" -> Some("abc").asValue
           ).asValue
 
       val d        = summon[Decoder[TestCaseClass]]
-      val expected = TestCaseClass(10, List("qwerty"), None, None, Some("abc"))
+      val expected = TestCaseClass(10, Iterable("qwerty"), None, None, Some("abc"))
 
       d.decode(v, dummyLabel).verify {
         case Validated.Invalid(ex)                          => throw ex.head
@@ -242,7 +243,7 @@ class DecoderTest extends munit.FunSuite:
 
   runWithBothOutputCodecs {
     test(s"decode crazy union (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
-      val a = List("A".asValue, 1.asValue, true.asValue).asValue
+      val a = Iterable("A".asValue, 1.asValue, true.asValue).asValue
 
       given ld: Decoder[String | Double | besom.types.PulumiAny | Boolean] = Decoder.nonDiscriminated(
         Map(
@@ -253,10 +254,10 @@ class DecoderTest extends munit.FunSuite:
         )
       )
 
-      val d = summon[besom.internal.Decoder[List[String | Double | besom.types.PulumiAny | Boolean]]]
+      val d = summon[besom.internal.Decoder[Iterable[String | Double | besom.types.PulumiAny | Boolean]]]
       d.decode(a, dummyLabel).verify {
         case Validated.Invalid(ex)                          => throw ex.head
-        case Validated.Valid(OutputData.Known(_, _, value)) => assert(value == Some(List("A", 1, true)), value)
+        case Validated.Valid(OutputData.Known(_, _, value)) => assert(value == Some(Iterable("A", 1, true)), value)
         case Validated.Valid(_)                             => throw Exception("Unexpected unknown!")
       }
     }
@@ -283,7 +284,7 @@ class DecoderTest extends munit.FunSuite:
     test(s"decode a generic union of 2 (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
       val v1 = Map(
         "foo" -> 10.asValue,
-        "bar" -> List("qwerty".asValue).asValue,
+        "bar" -> Iterable("qwerty".asValue).asValue,
         "optNone1" -> Null,
         "optSome" -> Some("abc").asValue
       ).asValue
@@ -297,7 +298,7 @@ class DecoderTest extends munit.FunSuite:
       d.decode(v1, dummyLabel).verify {
         case Validated.Invalid(ex) => throw ex.head
         case Validated.Valid(OutputData.Known(_, _, value)) =>
-          assert(value == Some(TestCaseClass(10, List("qwerty"), None, None, Some("abc"))))
+          assert(value == Some(TestCaseClass(10, Iterable("qwerty"), None, None, Some("abc"))))
         case Validated.Valid(_) => throw Exception("Unexpected unknown!")
       }
       d.decode(v2, dummyLabel).verify {
@@ -312,7 +313,7 @@ class DecoderTest extends munit.FunSuite:
   runWithBothOutputCodecs {
     test(s"decode a discriminated union - by key (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
       val a = Map(
-        "value" -> List(
+        "value" -> Iterable(
           Map(
             "type" -> "A".asValue,
             "value" -> "abc".asValue
@@ -320,7 +321,7 @@ class DecoderTest extends munit.FunSuite:
         ).asValue
       ).asValue
       val b = Map(
-        "value" -> List(
+        "value" -> Iterable(
           Map(
             "type" -> "B".asValue,
             "value" -> 1.asValue
@@ -328,7 +329,7 @@ class DecoderTest extends munit.FunSuite:
         ).asValue
       ).asValue
       val c = Map(
-        "value" -> List(
+        "value" -> Iterable(
           Map(
             "type" -> "C".asValue,
             "value" -> false.asValue
@@ -341,19 +342,19 @@ class DecoderTest extends munit.FunSuite:
       d.decode(a, dummyLabel).verify {
         case Validated.Invalid(ex) => throw ex.head
         case Validated.Valid(OutputData.Known(_, _, value)) =>
-          assert(value == Some(DiscriminatedUnionResult(Some(List(DiscriminatedUnionTypeA("abc", "A"))))), clue = value)
+          assert(value == Some(DiscriminatedUnionResult(Some(Iterable(DiscriminatedUnionTypeA("abc", "A"))))), clue = value)
         case Validated.Valid(_) => throw Exception("Unexpected unknown!")
       }
       d.decode(b, dummyLabel).verify {
         case Validated.Invalid(ex) => throw ex.head
         case Validated.Valid(OutputData.Known(_, _, value)) =>
-          assert(value == Some(DiscriminatedUnionResult(Some(List(DiscriminatedUnionTypeB(1, "B"))))), clue = value)
+          assert(value == Some(DiscriminatedUnionResult(Some(Iterable(DiscriminatedUnionTypeB(1, "B"))))), clue = value)
         case Validated.Valid(_) => throw Exception("Unexpected unknown!")
       }
       d.decode(c, dummyLabel).verify {
         case Validated.Invalid(ex) => throw ex.head
         case Validated.Valid(OutputData.Known(_, _, value)) =>
-          assert(value == Some(DiscriminatedUnionResult(Some(List(DiscriminatedUnionTypeC(false, "C"))))), clue = value)
+          assert(value == Some(DiscriminatedUnionResult(Some(Iterable(DiscriminatedUnionTypeC(false, "C"))))), clue = value)
         case Validated.Valid(_) => throw Exception("Unexpected unknown!")
       }
     }
@@ -362,7 +363,7 @@ class DecoderTest extends munit.FunSuite:
   runWithBothOutputCodecs {
     test(s"decode non-discriminated union - by index (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
       val a = Map(
-        "value" -> List(
+        "value" -> Iterable(
           "A".asValue,
           1.asValue,
           2.3.asValue,
@@ -373,7 +374,7 @@ class DecoderTest extends munit.FunSuite:
 
       val d = summon[Decoder[NonDiscriminatedUnionResult]]
       val expected = NonDiscriminatedUnionResult(
-        Some(List("A", 1, 2.3, true, besom.json.JsObject("z" -> besom.json.JsNumber(0)).asInstanceOf[PulumiAny]))
+        Some(Iterable("A", 1, 2.3, true, besom.json.JsObject("z" -> besom.json.JsNumber(0)).asInstanceOf[PulumiAny]))
       )
 
       d.decode(a, dummyLabel).verify {
