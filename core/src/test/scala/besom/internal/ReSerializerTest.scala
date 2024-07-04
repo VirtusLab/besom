@@ -4,7 +4,6 @@ import besom.internal.RunResult.{*, given}
 import besom.types.{Output as _, *}
 import besom.util.Validated
 import com.google.protobuf.struct.*
-import scala.collection.immutable.Iterable
 
 class ReSerializerTest extends munit.FunSuite:
 
@@ -17,14 +16,14 @@ class ReSerializerTest extends munit.FunSuite:
     assertEquals(reSerialize(123.0).unsafeRunSync(), 123.0)
     assertEquals(reSerialize(true).unsafeRunSync(), true)
     assertEquals(reSerialize(false).unsafeRunSync(), false)
-    assertEquals(reSerialize(Iterable.empty[String]).unsafeRunSync(), List.empty[String])
-    assertEquals(reSerialize(Iterable("asdf", "qwer")).unsafeRunSync(), List("asdf", "qwer"))
-    assertEquals(reSerialize(Iterable(1, 2, 3)).unsafeRunSync(), List(1, 2, 3))
-    assertEquals(reSerialize(Iterable(1.0, 2.0, 3.0)).unsafeRunSync(), List(1.0, 2.0, 3.0))
+    assertEquals(reSerialize(List.empty[String]).unsafeRunSync(), List.empty[String])
+    assertEquals(reSerialize(List("asdf", "qwer")).unsafeRunSync(), List("asdf", "qwer"))
+    assertEquals(reSerialize(List(1, 2, 3)).unsafeRunSync(), List(1, 2, 3))
+    assertEquals(reSerialize(List(1.0, 2.0, 3.0)).unsafeRunSync(), List(1.0, 2.0, 3.0))
     assertEquals(reSerialize(Map.empty[String, String]).unsafeRunSync(), Map.empty[String, String])
     assertEquals(reSerialize(Map("asdf" -> Option.empty[String])).unsafeRunSync(), Map.empty) // special case, we remove null values in maps
     assertEquals(reSerialize(Map("asdf" -> Option("qwer"))).unsafeRunSync(), Map("asdf" -> Option("qwer")))
-    assertEquals(reSerialize(Map("asdf" -> Iterable("qwer"))).unsafeRunSync(), Map("asdf" -> Iterable("qwer")))
+    assertEquals(reSerialize(Map("asdf" -> List("qwer"))).unsafeRunSync(), Map("asdf" -> List("qwer")))
 
     case class Foo(a: Option[String], b: Option[Boolean]) derives Encoder, Decoder
     assertEquals(reSerialize(Foo(None, None)).unsafeRunSync(), Foo(None, None))

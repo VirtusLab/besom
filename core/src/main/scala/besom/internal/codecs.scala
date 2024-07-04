@@ -285,7 +285,31 @@ object Decoder extends DecoderInstancesLowPrio1:
   given unionIntStringDecoder: Decoder[Int | String]         = unionDecoder2[Int, String]
   given unionBooleanStringDecoder: Decoder[Boolean | String] = unionDecoder2[Boolean, String]
 
-  // this is kinda different from what other pulumi sdks are doing because we disallow nulls in the iterable
+  // this is kinda different from what other pulumi sdks are doing because we disallow nulls in the list
+  given listDecoder[A](using innerDecoder: Decoder[A]): Decoder[List[A]] = new Decoder[List[A]]:
+    override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[List[A]]] =
+      decodeAsPossibleSecretOrOutput(value, label).flatMap { (odv: OutputData[Value]) =>
+        odv
+          .traverseValidatedResult { (v: Value) =>
+            if !v.kind.isListValue then error(s"$label: Expected a list, got ${v.kind}", label).invalidResult
+            else
+              v.getListValue.values.zipWithIndex
+                .map { case (v, i) =>
+                  innerDecoder.decode(v, label.atIndex(i))
+                }
+                .foldLeft[ValidatedResult[DecodingError, Vector[OutputData[A]]]](ValidatedResult.valid(Vector.empty))(
+                  accumulatedOutputDataOrErrors(_, _, "list", label)
+                )
+                .map(_.toList)
+                .map(OutputData.sequence)
+            end if
+          }
+          .map(_.flatten)
+          .lmap(exception => DecodingError(s"$label: Encountered an error when deserializing a iterable", label = label, cause = exception))
+      }
+
+    def mapping(value: Value, label: Label): Validated[DecodingError, List[A]] = ???
+
   given iterableDecoder[A](using innerDecoder: Decoder[A]): Decoder[Iterable[A]] = new Decoder[Iterable[A]]:
     override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Iterable[A]]] =
       decodeAsPossibleSecretOrOutput(value, label).flatMap { (odv: OutputData[Value]) =>
@@ -1078,7 +1102,7 @@ object Encoder:
   given iterableEncoder[A](using innerEncoder: Encoder[A]): Encoder[Iterable[A]] = new Encoder[Iterable[A]]:
     def encode(iterable: Iterable[A])(using Context): Result[(Metadata, Value)] =
       Result
-        .sequence(iterable.map(innerEncoder.encode(_)))
+        .sequence(iterable.toList.map(innerEncoder.encode(_)))
         .map { lst =>
           val (resources, values) = lst.unzip
           val joinedMetadata      = resources.foldLeft(Metadata.empty)(_.combine(_))
