@@ -6,6 +6,7 @@ import besom.types.{Label, URN}
 import besom.util.*
 import besom.util.Validated.*
 import com.google.protobuf.struct.*
+import scala.collection.immutable.Iterable
 
 class OutputValueCodecTest extends munit.FunSuite with ValueAssertions:
   val dummyLabel: Label = Label.fromNameAndType("dummy", "dummy:pkg:Dummy")
@@ -19,7 +20,7 @@ class OutputValueCodecTest extends munit.FunSuite with ValueAssertions:
   t(1)
   t("")
   t("hi")
-  t(List.empty[Value])
+  t(Iterable.empty[Value])
   t(Map.empty[String, Value])
 
   def typeName(a: Any): String = if a == null then "null" else a.getClass.getSimpleName
