@@ -200,10 +200,14 @@ object PulumiPackageInfo {
         pkg.split("\\.").filter(_.nonEmpty).toSeq
       }.toMap
 
+      // needed for overlays
+      val additionalKubernetesModule =
+        Option.when(pulumiPackage.name == "kubernetes")("apiextensions.k8s.io", Seq("apiextensions"))
+
       PreProcessed(
         name = reconciledMetadata.name,
         version = reconciledMetadata.version.orDefault,
-        moduleToPackageParts = moduleToPackageParts(pulumiPackage, overrideModuleToPackages),
+        moduleToPackageParts = moduleToPackageParts(pulumiPackage, overrideModuleToPackages ++ additionalKubernetesModule),
         providerToPackageParts = providerToPackageParts
       )(pulumiPackage, providerConfig)
     }
@@ -238,6 +242,7 @@ object PulumiPackageInfo {
           }
           .toMap
           .withDefault(slashModuleToPackageParts) // fallback to slash mapping
+
       } else {
         // use nodejs mapping as a fallback
         pulumiPackage.language.nodejs.moduleToPackage.view
