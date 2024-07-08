@@ -12,6 +12,7 @@ import com.google.protobuf.struct.Value.Kind
 import scala.annotation.implicitNotFound
 import scala.deriving.Mirror
 import scala.util.*
+import scala.collection.immutable.Iterable
 
 //noinspection ScalaFileName
 object Constants:
@@ -304,10 +305,34 @@ object Decoder extends DecoderInstancesLowPrio1:
             end if
           }
           .map(_.flatten)
-          .lmap(exception => DecodingError(s"$label: Encountered an error when deserializing a list", label = label, cause = exception))
+          .lmap(exception => DecodingError(s"$label: Encountered an error when deserializing a iterable", label = label, cause = exception))
       }
 
     def mapping(value: Value, label: Label): Validated[DecodingError, List[A]] = ???
+
+  given iterableDecoder[A](using innerDecoder: Decoder[A]): Decoder[Iterable[A]] = new Decoder[Iterable[A]]:
+    override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Iterable[A]]] =
+      decodeAsPossibleSecretOrOutput(value, label).flatMap { (odv: OutputData[Value]) =>
+        odv
+          .traverseValidatedResult { (v: Value) =>
+            if !v.kind.isListValue then error(s"$label: Expected a list, got ${v.kind}", label).invalidResult
+            else
+              v.getListValue.values.zipWithIndex
+                .map { case (v, i) =>
+                  innerDecoder.decode(v, label.atIndex(i))
+                }
+                .foldLeft[ValidatedResult[DecodingError, Vector[OutputData[A]]]](ValidatedResult.valid(Vector.empty))(
+                  accumulatedOutputDataOrErrors(_, _, "iterable", label)
+                )
+                .map(_.toIterable)
+                .map(OutputData.sequence)
+            end if
+          }
+          .map(_.flatten)
+          .lmap(exception => DecodingError(s"$label: Encountered an error when deserializing a iterable", label = label, cause = exception))
+      }
+
+    def mapping(value: Value, label: Label): Validated[DecodingError, Iterable[A]] = ???
 
   given setDecoder[A](using innerDecoder: Decoder[A]): Decoder[Set[A]] = new Decoder[Set[A]]:
     override def decode(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Set[A]]] =
@@ -594,7 +619,7 @@ trait DecoderInstancesLowPrio1 extends DecoderInstancesLowPrio2:
   given unionJsonDecoder[A: Decoder](using NotGiven[A <:< JsValue]): Decoder[JsValue | A]    = unionDecoder2[A, JsValue]
 
 trait DecoderInstancesLowPrio2 extends DecoderHelpers:
-  given singleOrListDecoder[A: Decoder, L <: List[?]: Decoder]: Decoder[A | L] = unionDecoder2[A, L]
+  given singleOrIterableDecoder[A: Decoder, L <: Iterable[?]: Decoder]: Decoder[A | L] = unionDecoder2[A, L]
 
 trait DecoderHelpers:
   import Constants.*
@@ -1074,16 +1099,24 @@ object Encoder:
         case a: Asset   => assetEncoder.encode(a)
         case a: Archive => archiveEncoder.encode(a)
 
-  given listEncoder[A](using innerEncoder: Encoder[A]): Encoder[List[A]] = new Encoder[List[A]]:
-    def encode(list: List[A])(using Context): Result[(Metadata, Value)] =
+  given iterableEncoder[A](using innerEncoder: Encoder[A]): Encoder[Iterable[A]] = new Encoder[Iterable[A]]:
+    def encode(iterable: Iterable[A])(using Context): Result[(Metadata, Value)] =
       Result
-        .sequence(list.map(innerEncoder.encode(_)))
+        .sequence(iterable.toList.map(innerEncoder.encode(_)))
         .map { lst =>
           val (resources, values) = lst.unzip
           val joinedMetadata      = resources.foldLeft(Metadata.empty)(_.combine(_))
 
-          joinedMetadata -> values.asValue
+          joinedMetadata -> values.toList.asValue
         }
+
+  given listEncoder[A](using innerEncoder: Encoder[A]): Encoder[List[A]] = iterableEncoder.contramap[List[A]](a => a)
+
+  given seqEncoder[A](using innerEncoder: Encoder[A]): Encoder[Seq[A]] = iterableEncoder.contramap[Seq[A]](a => a)
+
+  given indexedSeqEncoder[A](using innerEncoder: Encoder[A]): Encoder[IndexedSeq[A]] = iterableEncoder.contramap[IndexedSeq[A]](a => a)
+
+  given setEncoder[A](using innerEncoder: Encoder[A]): Encoder[Set[A]] = iterableEncoder.contramap[Set[A]](a => a)
 
   // TODO is this ever necessary?
   given vectorEncoder[A](using lstEncoder: Encoder[List[A]]): Encoder[Vector[A]] =

@@ -3,6 +3,8 @@ package besom.internal
 import besom.types.{ResourceId, URN}
 import besom.util.*
 
+import scala.collection.immutable.Iterable
+
 sealed trait ResourceOptsVariant:
   type Constructor
   val constructor: Constructor
@@ -19,15 +21,15 @@ object ResourceOptsVariant:
 
 sealed trait ResolvedResourceOptions:
   def parent: Option[Resource]
-  def dependsOn: List[Resource]
+  def dependsOn: Iterable[Resource]
   def protect: Boolean
-  def ignoreChanges: List[String]
+  def ignoreChanges: Iterable[String]
   def version: Option[String]
   def customTimeouts: Option[CustomTimeouts]
-  // def resourceTransformations: List[ResourceTransformation], // TODO
-  // def aliases: List[Output[Alias]], // TODO
+  // def resourceTransformations: Iterable[ResourceTransformation], // TODO
+  // def aliases: Iterable[Output[Alias]], // TODO
   def urn: Option[URN]
-  def replaceOnChanges: List[String]
+  def replaceOnChanges: Iterable[String]
   def retainOnDelete: Boolean
   def pluginDownloadUrl: Option[String]
   def deletedWith: Option[Resource]
@@ -39,15 +41,15 @@ sealed trait ResolvedResourceOptions:
 
 case class CommonResolvedResourceOptions(
   parent: Option[Resource],
-  dependsOn: List[Resource],
+  dependsOn: Iterable[Resource],
   protect: Boolean,
-  ignoreChanges: List[String],
+  ignoreChanges: Iterable[String],
   version: Option[String],
   customTimeouts: Option[CustomTimeouts],
-  // resourceTransformations: List[ResourceTransformation], // TODO
-  // aliases: List[Output[Alias]], // TODO
+  // resourceTransformations: Iterable[ResourceTransformation], // TODO
+  // aliases: Iterable[Output[Alias]], // TODO
   urn: Option[URN],
-  replaceOnChanges: List[String],
+  replaceOnChanges: Iterable[String],
   retainOnDelete: Boolean,
   pluginDownloadUrl: Option[String],
   deletedWith: Option[Resource]
@@ -57,14 +59,14 @@ case class CustomResolvedResourceOptions(
   common: CommonResolvedResourceOptions,
   provider: Option[ProviderResource],
   deleteBeforeReplace: Boolean,
-  additionalSecretOutputs: List[String],
+  additionalSecretOutputs: Iterable[String],
   importId: Option[ResourceId]
 ) extends ResolvedResourceOptions:
   export common.*
 
 case class ComponentResolvedResourceOptions(
   common: CommonResolvedResourceOptions,
-  providers: List[ProviderResource]
+  providers: Iterable[ProviderResource]
 ) extends ResolvedResourceOptions:
   export common.*
 
@@ -76,16 +78,16 @@ case class StackReferenceResolvedResourceOptions(
 
 trait CommonResourceOptions:
   def parent: Output[Option[Resource]]
-  def dependsOn: Output[List[Resource]]
+  def dependsOn: Output[Iterable[Resource]]
   def protect: Output[Boolean]
-  def ignoreChanges: Output[List[String]]
+  def ignoreChanges: Output[Iterable[String]]
   def version: Output[Option[String]]
   def customTimeouts: Output[Option[CustomTimeouts]]
-  // def resourceTransformations: List[ResourceTransformation], // TODO
-  // def aliases: List[Output[Alias]], // TODO
+  // def resourceTransformations: Iterable[ResourceTransformation], // TODO
+  // def aliases: Iterable[Output[Alias]], // TODO
   // TODO this is only necessary for Resource deserialization, dependency resources and multi-language remote components
   def urn: Output[Option[URN]]
-  def replaceOnChanges: Output[List[String]]
+  def replaceOnChanges: Output[Iterable[String]]
   def retainOnDelete: Output[Boolean]
   def pluginDownloadUrl: Output[Option[String]]
   // TODO: new resource option: https://github.com/pulumi/pulumi/pull/11883 this also needs a supported feature check!
@@ -109,13 +111,13 @@ extension (cro: CommonResourceOptions)
     yield CommonResolvedResourceOptions(
       // if no parent is provided by the user explicitly, use the implicit parent from Context
       parent = explicitParent.getValueOrElse(None).orElse(implicitParent),
-      dependsOn = dependsOn.getValueOrElse(List.empty),
+      dependsOn = dependsOn.getValueOrElse(Iterable.empty),
       protect = protect.getValueOrElse(false),
-      ignoreChanges = ignoreChanges.getValueOrElse(List.empty),
+      ignoreChanges = ignoreChanges.getValueOrElse(Iterable.empty),
       version = version.getValueOrElse(None),
       customTimeouts = customTimeouts.getValueOrElse(None),
       urn = urn.getValueOrElse(None),
-      replaceOnChanges = replaceOnChanges.getValueOrElse(List.empty),
+      replaceOnChanges = replaceOnChanges.getValueOrElse(Iterable.empty),
       retainOnDelete = retainOnDelete.getValueOrElse(false),
       pluginDownloadUrl = pluginDownloadUrl.getValueOrElse(None),
       deletedWith = deletedWith.getValueOrElse(None)
@@ -123,15 +125,15 @@ extension (cro: CommonResourceOptions)
 
 final case class CommonResourceOptionsImpl(
   parent: Output[Option[Resource]],
-  dependsOn: Output[List[Resource]],
+  dependsOn: Output[Iterable[Resource]],
   protect: Output[Boolean],
-  ignoreChanges: Output[List[String]],
+  ignoreChanges: Output[Iterable[String]],
   version: Output[Option[String]],
   customTimeouts: Output[Option[CustomTimeouts]],
-  // resourceTransformations: List[ResourceTransformation], // TODO
-  // aliases: List[Output[Alias]], // TODO
+  // resourceTransformations: Iterable[ResourceTransformation], // TODO
+  // aliases: Iterable[Output[Alias]], // TODO
   urn: Output[Option[URN]],
-  replaceOnChanges: Output[List[String]],
+  replaceOnChanges: Output[Iterable[String]],
   retainOnDelete: Output[Boolean],
   pluginDownloadUrl: Output[Option[String]],
   deletedWith: Output[Option[Resource]]
@@ -141,10 +143,10 @@ sealed trait ResourceOptions:
   def parent: Output[Option[Resource]]
   def version: Output[Option[String]]
   def pluginDownloadUrl: Output[Option[String]]
-  def dependsOn: Output[List[Resource]]
+  def dependsOn: Output[Iterable[Resource]]
   def protect: Output[Boolean]
-  def ignoreChanges: Output[List[String]]
-  def replaceOnChanges: Output[List[String]]
+  def ignoreChanges: Output[Iterable[String]]
+  def replaceOnChanges: Output[Iterable[String]]
   def retainOnDelete: Output[Boolean]
   def urn: Output[Option[URN]]
 
@@ -158,7 +160,7 @@ sealed trait ResourceOptions:
             provider                <- cr.provider.getValueOrElse(None)
             importId                <- cr.importId.getValueOrElse(None)
             deleteBeforeReplace     <- cr.deleteBeforeReplace.getValueOrElse(false)
-            additionalSecretOutputs <- cr.additionalSecretOutputs.getValueOrElse(List.empty)
+            additionalSecretOutputs <- cr.additionalSecretOutputs.getValueOrElse(Iterable.empty)
           yield CustomResolvedResourceOptions(
             common,
             provider = provider,
@@ -177,7 +179,7 @@ sealed trait ResourceOptions:
         }
       case co: ComponentResourceOptions =>
         co.common.resolve(maybeComponentParent).flatMap { common =>
-          for providers <- co.providers.getValueOrElse(List.empty)
+          for providers <- co.providers.getValueOrElse(Iterable.empty)
           yield ComponentResolvedResourceOptions(
             common,
             providers = providers
@@ -207,7 +209,7 @@ final case class CustomResourceOptions private[internal] (
   common: CommonResourceOptions,
   provider: Output[Option[ProviderResource]],
   deleteBeforeReplace: Output[Boolean],
-  additionalSecretOutputs: Output[List[String]],
+  additionalSecretOutputs: Output[Iterable[String]],
   importId: Output[Option[ResourceId]]
 ) extends ResourceOptions,
       CommonResourceOptions:
@@ -215,7 +217,7 @@ final case class CustomResourceOptions private[internal] (
 
 final case class ComponentResourceOptions private[internal] (
   common: CommonResourceOptions,
-  providers: Output[List[ProviderResource]]
+  providers: Output[Iterable[ProviderResource]]
 ) extends ResourceOptions,
       CommonResourceOptions:
   export common.*
@@ -230,21 +232,21 @@ final case class StackReferenceResourceOptions private[internal] (
 trait CustomResourceOptionsFactory:
   def apply(using Context)(
     parent: Input.Optional[Resource] = None,
-    dependsOn: Input.OneOrList[Resource] = List.empty,
+    dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
     deletedWith: Input.Optional[Resource] = None,
     protect: Input[Boolean] = false,
-    ignoreChanges: Input.OneOrList[String] = List.empty,
+    ignoreChanges: Input.OneOrIterable[String] = Iterable.empty,
     version: Input.Optional[NonEmptyString] = None,
     provider: Input.Optional[ProviderResource] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
-    // resourceTransformations: List[ResourceTransformation], // TODO
-    // aliases: List[Output[Alias]], // TODO
+    // resourceTransformations: Iterable[ResourceTransformation], // TODO
+    // aliases: Iterable[Output[Alias]], // TODO
     urn: Input.Optional[URN] = None,
-    replaceOnChanges: Input.OneOrList[String] = List.empty,
+    replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
     retainOnDelete: Input[Boolean] = false,
     pluginDownloadUrl: Input.Optional[String] = None,
     deleteBeforeReplace: Input[Boolean] = false,
-    additionalSecretOutputs: Input.OneOrList[String] = List.empty,
+    additionalSecretOutputs: Input.OneOrIterable[String] = Iterable.empty,
     importId: Input.Optional[ResourceId] = None
   ): CustomResourceOptions = CustomResourceOptions.apply(
     parent = parent.asOptionOutput(),
@@ -267,21 +269,21 @@ trait CustomResourceOptionsFactory:
 object CustomResourceOptions:
   def apply(using Context)(
     parent: Input.Optional[Resource] = None,
-    dependsOn: Input.OneOrList[Resource] = List.empty,
+    dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
     deletedWith: Input.Optional[Resource] = None,
     protect: Input[Boolean] = false,
-    ignoreChanges: Input.OneOrList[String] = List.empty,
+    ignoreChanges: Input.OneOrIterable[String] = Iterable.empty,
     version: Input.Optional[NonEmptyString] = None,
     provider: Input.Optional[ProviderResource] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
-    // resourceTransformations: List[ResourceTransformation], // TODO
-    // aliases: List[Output[Alias]], // TODO
+    // resourceTransformations: Iterable[ResourceTransformation], // TODO
+    // aliases: Iterable[Output[Alias]], // TODO
     urn: Input.Optional[URN] = None,
-    replaceOnChanges: Input.OneOrList[String] = List.empty,
+    replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
     retainOnDelete: Input[Boolean] = false,
     pluginDownloadUrl: Input.Optional[String] = None,
     deleteBeforeReplace: Input[Boolean] = false,
-    additionalSecretOutputs: Input.OneOrList[String] = List.empty,
+    additionalSecretOutputs: Input.OneOrIterable[String] = Iterable.empty,
     importId: Input.Optional[ResourceId] = None
   ): CustomResourceOptions =
     val common = CommonResourceOptionsImpl(
@@ -308,17 +310,17 @@ end CustomResourceOptions
 
 trait ComponentResourceOptionsFactory:
   def apply(using Context)(
-    providers: Input.OneOrList[ProviderResource] = List.empty,
+    providers: Input.OneOrIterable[ProviderResource] = Iterable.empty,
     parent: Input.Optional[Resource] = None,
-    dependsOn: Input.OneOrList[Resource] = List.empty,
+    dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
     protect: Input[Boolean] = false,
-    ignoreChanges: Input.OneOrList[String] = List.empty,
+    ignoreChanges: Input.OneOrIterable[String] = Iterable.empty,
     version: Input.Optional[NonEmptyString] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
-    // resourceTransformations: List[ResourceTransformation], // TODO
-    // aliases: List[Output[Alias]], // TODO
+    // resourceTransformations: Iterable[ResourceTransformation], // TODO
+    // aliases: Iterable[Output[Alias]], // TODO
     urn: Input.Optional[URN] = None,
-    replaceOnChanges: Input.OneOrList[String] = List.empty,
+    replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
     retainOnDelete: Input[Boolean] = false,
     pluginDownloadUrl: Input.Optional[String] = None,
     deletedWith: Input.Optional[Resource] = None
@@ -339,17 +341,17 @@ trait ComponentResourceOptionsFactory:
 
 object ComponentResourceOptions:
   def apply(using Context)(
-    providers: Input.OneOrList[ProviderResource] = List.empty,
+    providers: Input.OneOrIterable[ProviderResource] = Iterable.empty,
     parent: Input.Optional[Resource] = None,
-    dependsOn: Input.OneOrList[Resource] = List.empty,
+    dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
     protect: Input[Boolean] = false,
-    ignoreChanges: Input.OneOrList[String] = List.empty,
+    ignoreChanges: Input.OneOrIterable[String] = Iterable.empty,
     version: Input.Optional[NonEmptyString] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
-    // resourceTransformations: List[ResourceTransformation], // TODO
-    // aliases: List[Output[Alias]], // TODO
+    // resourceTransformations: Iterable[ResourceTransformation], // TODO
+    // aliases: Iterable[Output[Alias]], // TODO
     urn: Input.Optional[URN] = None,
-    replaceOnChanges: Input.OneOrList[String] = List.empty,
+    replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
     retainOnDelete: Input[Boolean] = false,
     pluginDownloadUrl: Input.Optional[String] = None,
     deletedWith: Input.Optional[Resource] = None
@@ -372,15 +374,15 @@ object ComponentResourceOptions:
 object StackReferenceResourceOptions:
   def apply(using Context)(
     parent: Input.Optional[Resource] = None,
-    dependsOn: Input.OneOrList[Resource] = List.empty,
+    dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
     protect: Input[Boolean] = false,
-    ignoreChanges: Input.OneOrList[String] = List.empty,
+    ignoreChanges: Input.OneOrIterable[String] = Iterable.empty,
     version: Input.Optional[NonEmptyString] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
-    // resourceTransformations: List[ResourceTransformation], // TODO
-    // aliases: List[Output[Alias]], // TODO
+    // resourceTransformations: Iterable[ResourceTransformation], // TODO
+    // aliases: Iterable[Output[Alias]], // TODO
     urn: Input.Optional[URN] = None,
-    replaceOnChanges: Input.OneOrList[String] = List.empty,
+    replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
     retainOnDelete: Input[Boolean] = false,
     pluginDownloadUrl: Input.Optional[String] = None,
     deletedWith: Input.Optional[Resource] = None,
@@ -404,15 +406,15 @@ object StackReferenceResourceOptions:
 trait StackReferenceResourceOptionsFactory:
   def apply(using Context)(
     parent: Input.Optional[Resource] = None,
-    dependsOn: Input.OneOrList[Resource] = List.empty,
+    dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
     protect: Input[Boolean] = false,
-    ignoreChanges: Input.OneOrList[String] = List.empty,
+    ignoreChanges: Input.OneOrIterable[String] = Iterable.empty,
     version: Input.Optional[NonEmptyString] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
-    // resourceTransformations: List[ResourceTransformation], // TODO
-    // aliases: List[Output[Alias]], // TODO
+    // resourceTransformations: Iterable[ResourceTransformation], // TODO
+    // aliases: Iterable[Output[Alias]], // TODO
     urn: Input.Optional[URN] = None,
-    replaceOnChanges: Input.OneOrList[String] = List.empty,
+    replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
     retainOnDelete: Input[Boolean] = false,
     pluginDownloadUrl: Input.Optional[String] = None,
     deletedWith: Input.Optional[Resource] = None,

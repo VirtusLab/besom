@@ -298,7 +298,7 @@ compile-cfg-lib: publish-local-json publish-local-core
 
 # Compiles besom-cfg k8s module
 compile-cfg-k8s: publish-local-cfg-lib
-	just cli packages local kubernetes:4.10.0
+	just cli packages local kubernetes
 	scala-cli --power compile besom-cfg/k8s --suppress-experimental-feature-warning
 
 # Compiles all besom-cfg modules
@@ -517,13 +517,16 @@ upsert-gh-release:
 # Troubleshooting
 ####################
 
-# Cleans everything, including the local ivy, git untracked files, and kills all java processes
-power-wash: clean-all
+# Cleans the local ivy
+clean-local-snapshots:
 	rm -rf ~/.ivy2/local/org.virtuslab/
 	rm -rf ~/.m2/repository/org/virtuslab/
 	rm -rf ~/.cache/coursier/v1/https/repo1.maven.org/maven2/org/virtuslab/ # Linux
 	rm -rf ~/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/virtuslab/ # Mac
 	rm -rf ~/Library/Caches/Coursier/v1/https/oss.sonatype.org/content/repositories/snapshots/org/virtuslab/ # Mac snapshots
+
+# Cleans everything, including the local ivy, git untracked files, and kills all java processes
+power-wash: clean-all clean-local-snapshots
 	git clean -i -d -x -e ".idea"
 	killall -9 java
 
