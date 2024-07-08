@@ -242,6 +242,7 @@ object PulumiPackageInfo {
           }
           .toMap
           .withDefault(slashModuleToPackageParts) // fallback to slash mapping
+
       } else {
         // use nodejs mapping as a fallback
         pulumiPackage.language.nodejs.moduleToPackage.view
