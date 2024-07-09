@@ -1,14 +1,20 @@
 import besom.*
 import besom.api.random.*
+import besom.internal.SpecResourceAlias
 
 @main
 def main(): Unit = Pulumi.run {
+  val oldName = "random-string"
+  val newName = "random-string-2"
+
+  val testAlias = sys.env.getOrElse("TEST_ALIAS", "false").toBoolean
 
   def strOutput = RandomString(
-    name = "random-string",
+    name = if (testAlias) newName else oldName,
     args = RandomStringArgs(
       length = 10
-    )
+    ),
+    opts = opts(aliases = if (testAlias) List(SpecResourceAlias(name = Some(oldName))) else List.empty)
   )
 
   val str = strOutput

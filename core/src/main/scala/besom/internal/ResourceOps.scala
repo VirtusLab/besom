@@ -324,7 +324,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     providerId: Option[String],
     providerRefs: Map[String, String],
     depUrns: AggregatedDependencyUrns,
-    aliases: List[String],
+    aliases: List[ResourceAlias],
     options: ResolvedResourceOptions
   )
 
@@ -348,9 +348,6 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
 
   private[internal] def resolveDeletedWithUrn(options: ResolvedResourceOptions): Result[Option[URN]] =
     options.deletedWith.map(_.urn.getValue).getOrElse(Result.pure(None))
-
-  private[internal] def resolveAliases(@unused resource: Resource): Result[List[String]] =
-    Result.pure(List.empty) // TODO aliases
 
   private[internal] def resolveProviderRegistrationId(state: ResourceState): Result[Option[String]] =
     state match
@@ -388,10 +385,17 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       providerRefs      <- resolveProviderReferences(state)
       _                 <- log.trace(s"Preparing inputs: resolved provider refs, aggregating dep URNs")
       depUrns           <- aggregateDependencyUrns(directDeps, serResult.propertyToDependentResources, ctx.resources)
-      _                 <- log.trace(s"Preparing inputs: aggregated dep URNs, resolving aliases")
-      aliases           <- resolveAliases(resource)
       _                 <- log.trace(s"Preparing inputs: resolved aliases, done")
-    yield PreparedInputs(serResult.serialized, parentUrnOpt, deletedWithUrnOpt, provIdOpt, providerRefs, depUrns, aliases, options)
+    yield PreparedInputs(
+      serResult.serialized,
+      parentUrnOpt,
+      deletedWithUrnOpt,
+      provIdOpt,
+      providerRefs,
+      depUrns,
+      options.aliases.toList,
+      options
+    )
 
   private[internal] def executeReadResourceRequest[R <: Resource](
     state: ResourceState,
@@ -471,8 +475,23 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
               case CustomResolvedResourceOptions(_, _, _, _, importId) => importId.getOrElse("")
               case _                                                   => ""
             ,
-            aliases = inputs.aliases.map { alias =>
-              pulumirpc.alias.Alias(pulumirpc.alias.Alias.Alias.Urn(alias))
+            aliases = inputs.aliases.map {
+              case UrnResourceAlias(urn) => pulumirpc.alias.Alias(pulumirpc.alias.Alias.Alias.Urn(urn))
+              case SpecResourceAlias(name, resourceType, stack, project, parent) =>
+                pulumirpc.alias.Alias(
+                  pulumirpc.alias.Alias.Alias.Spec(
+                    pulumirpc.alias.Alias.Spec(
+                      name = name.getOrElse(""),
+                      `type` = resourceType.getOrElse(""),
+                      stack = stack.getOrElse(""),
+                      project = project.getOrElse(""),
+                      parent = parent match
+                        case Some(ResourceAliasParentUrn(urn))     => pulumirpc.alias.Alias.Spec.Parent.ParentUrn(urn)
+                        case Some(ResourceAliasNoParent(noParent)) => pulumirpc.alias.Alias.Spec.Parent.NoParent(noParent)
+                        case None                                  => pulumirpc.alias.Alias.Spec.Parent.Empty
+                    )
+                  )
+                )
             },
             remote = remote,
             customTimeouts = Some(
