@@ -27,7 +27,7 @@ sealed trait ResolvedResourceOptions:
   def version: Option[String]
   def customTimeouts: Option[CustomTimeouts]
   // def resourceTransformations: Iterable[ResourceTransformation], // TODO
-  // def aliases: Iterable[Output[Alias]], // TODO
+  def aliases: Iterable[ResourceAlias]
   def urn: Option[URN]
   def replaceOnChanges: Iterable[String]
   def retainOnDelete: Boolean
@@ -47,7 +47,7 @@ case class CommonResolvedResourceOptions(
   version: Option[String],
   customTimeouts: Option[CustomTimeouts],
   // resourceTransformations: Iterable[ResourceTransformation], // TODO
-  // aliases: Iterable[Output[Alias]], // TODO
+  aliases: Iterable[ResourceAlias],
   urn: Option[URN],
   replaceOnChanges: Iterable[String],
   retainOnDelete: Boolean,
@@ -84,7 +84,7 @@ trait CommonResourceOptions:
   def version: Output[Option[String]]
   def customTimeouts: Output[Option[CustomTimeouts]]
   // def resourceTransformations: Iterable[ResourceTransformation], // TODO
-  // def aliases: Iterable[Output[Alias]], // TODO
+  def aliases: Output[Iterable[ResourceAlias]]
   // TODO this is only necessary for Resource deserialization, dependency resources and multi-language remote components
   def urn: Output[Option[URN]]
   def replaceOnChanges: Output[Iterable[String]]
@@ -103,6 +103,7 @@ extension (cro: CommonResourceOptions)
       ignoreChanges     <- cro.ignoreChanges.getData
       version           <- cro.version.getData
       customTimeouts    <- cro.customTimeouts.getData
+      aliases           <- cro.aliases.getData
       urn               <- cro.urn.getData
       replaceOnChanges  <- cro.replaceOnChanges.getData
       retainOnDelete    <- cro.retainOnDelete.getData
@@ -116,6 +117,7 @@ extension (cro: CommonResourceOptions)
       ignoreChanges = ignoreChanges.getValueOrElse(Iterable.empty),
       version = version.getValueOrElse(None),
       customTimeouts = customTimeouts.getValueOrElse(None),
+      aliases = aliases.getValueOrElse(Iterable.empty),
       urn = urn.getValueOrElse(None),
       replaceOnChanges = replaceOnChanges.getValueOrElse(Iterable.empty),
       retainOnDelete = retainOnDelete.getValueOrElse(false),
@@ -131,7 +133,7 @@ final case class CommonResourceOptionsImpl(
   version: Output[Option[String]],
   customTimeouts: Output[Option[CustomTimeouts]],
   // resourceTransformations: Iterable[ResourceTransformation], // TODO
-  // aliases: Iterable[Output[Alias]], // TODO
+  aliases: Output[Iterable[ResourceAlias]],
   urn: Output[Option[URN]],
   replaceOnChanges: Output[Iterable[String]],
   retainOnDelete: Output[Boolean],
@@ -240,7 +242,7 @@ trait CustomResourceOptionsFactory:
     provider: Input.Optional[ProviderResource] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
     // resourceTransformations: Iterable[ResourceTransformation], // TODO
-    // aliases: Iterable[Output[Alias]], // TODO
+    aliases: Input.OneOrIterable[ResourceAlias] = Iterable.empty,
     urn: Input.Optional[URN] = None,
     replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
     retainOnDelete: Input[Boolean] = false,
@@ -257,6 +259,7 @@ trait CustomResourceOptionsFactory:
     version = version.asOptionOutput(),
     provider = provider.asOptionOutput(),
     customTimeouts = customTimeouts.asOptionOutput(),
+    aliases = aliases.asManyOutput(),
     urn = urn.asOptionOutput(),
     replaceOnChanges = replaceOnChanges.asManyOutput(),
     retainOnDelete = retainOnDelete.asOutput(),
@@ -277,7 +280,7 @@ object CustomResourceOptions:
     provider: Input.Optional[ProviderResource] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
     // resourceTransformations: Iterable[ResourceTransformation], // TODO
-    // aliases: Iterable[Output[Alias]], // TODO
+    aliases: Input.OneOrIterable[ResourceAlias] = Iterable.empty,
     urn: Input.Optional[URN] = None,
     replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
     retainOnDelete: Input[Boolean] = false,
@@ -293,6 +296,7 @@ object CustomResourceOptions:
       ignoreChanges = ignoreChanges.asManyOutput(),
       version = version.asOptionOutput(),
       customTimeouts = customTimeouts.asOptionOutput(),
+      aliases = aliases.asManyOutput(),
       urn = urn.asOptionOutput(),
       replaceOnChanges = replaceOnChanges.asManyOutput(),
       retainOnDelete = retainOnDelete.asOutput(),
@@ -306,6 +310,7 @@ object CustomResourceOptions:
       additionalSecretOutputs = additionalSecretOutputs.asManyOutput(),
       importId = importId.asOptionOutput()
     )
+  end apply
 end CustomResourceOptions
 
 trait ComponentResourceOptionsFactory:
@@ -318,7 +323,7 @@ trait ComponentResourceOptionsFactory:
     version: Input.Optional[NonEmptyString] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
     // resourceTransformations: Iterable[ResourceTransformation], // TODO
-    // aliases: Iterable[Output[Alias]], // TODO
+    aliases: Input.OneOrIterable[ResourceAlias] = Iterable.empty,
     urn: Input.Optional[URN] = None,
     replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
     retainOnDelete: Input[Boolean] = false,
@@ -332,6 +337,7 @@ trait ComponentResourceOptionsFactory:
     ignoreChanges = ignoreChanges.asManyOutput(),
     version = version.asOptionOutput(),
     customTimeouts = customTimeouts.asOptionOutput(),
+    aliases = aliases.asManyOutput(),
     urn = urn.asOptionOutput(),
     replaceOnChanges = replaceOnChanges.asManyOutput(),
     retainOnDelete = retainOnDelete.asOutput(),
@@ -349,7 +355,7 @@ object ComponentResourceOptions:
     version: Input.Optional[NonEmptyString] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
     // resourceTransformations: Iterable[ResourceTransformation], // TODO
-    // aliases: Iterable[Output[Alias]], // TODO
+    aliases: Input.OneOrIterable[ResourceAlias] = Iterable.empty,
     urn: Input.Optional[URN] = None,
     replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
     retainOnDelete: Input[Boolean] = false,
@@ -363,6 +369,7 @@ object ComponentResourceOptions:
       ignoreChanges = ignoreChanges.asManyOutput(),
       version = version.asOptionOutput(),
       customTimeouts = customTimeouts.asOptionOutput(),
+      aliases = aliases.asManyOutput(),
       urn = urn.asOptionOutput(),
       replaceOnChanges = replaceOnChanges.asManyOutput(),
       retainOnDelete = retainOnDelete.asOutput(),
@@ -380,7 +387,7 @@ object StackReferenceResourceOptions:
     version: Input.Optional[NonEmptyString] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
     // resourceTransformations: Iterable[ResourceTransformation], // TODO
-    // aliases: Iterable[Output[Alias]], // TODO
+    aliases: Input.OneOrIterable[ResourceAlias] = Iterable.empty,
     urn: Input.Optional[URN] = None,
     replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
     retainOnDelete: Input[Boolean] = false,
@@ -395,6 +402,7 @@ object StackReferenceResourceOptions:
       ignoreChanges = ignoreChanges.asManyOutput(),
       version = version.asOptionOutput(),
       customTimeouts = customTimeouts.asOptionOutput(),
+      aliases = aliases.asManyOutput(),
       urn = urn.asOptionOutput(),
       replaceOnChanges = replaceOnChanges.asManyOutput(),
       retainOnDelete = retainOnDelete.asOutput(),
@@ -412,7 +420,7 @@ trait StackReferenceResourceOptionsFactory:
     version: Input.Optional[NonEmptyString] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
     // resourceTransformations: Iterable[ResourceTransformation], // TODO
-    // aliases: Iterable[Output[Alias]], // TODO
+    aliases: Input.OneOrIterable[ResourceAlias] = Iterable.empty,
     urn: Input.Optional[URN] = None,
     replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
     retainOnDelete: Input[Boolean] = false,
@@ -427,6 +435,7 @@ trait StackReferenceResourceOptionsFactory:
       ignoreChanges = ignoreChanges.asManyOutput(),
       version = version.asOptionOutput(),
       customTimeouts = customTimeouts.asOptionOutput(),
+      aliases = aliases.asManyOutput(),
       urn = urn.asOptionOutput(),
       replaceOnChanges = replaceOnChanges.asManyOutput(),
       retainOnDelete = retainOnDelete.asOutput(),
