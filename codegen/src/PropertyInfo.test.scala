@@ -43,7 +43,7 @@ class PropertyInfoTest extends munit.FunSuite {
                 |}
                 |""".stripMargin,
       expectedName = "routingRules",
-      expectedType = "String | scala.collection.immutable.List[String]"
+      expectedType = "String | scala.collection.immutable.Iterable[String]"
     ),
     Data(
       name = "property with underlying object",
@@ -105,8 +105,8 @@ class PropertyInfoTest extends munit.FunSuite {
                 |}
                 |""".stripMargin,
       expectedName = "`enum`",
-      expectedType = "scala.collection.immutable.List[besom.types.PulumiJson]",
-      expectedInputArgsType = Some("scala.collection.immutable.List[besom.types.Input[besom.types.PulumiJson]]")
+      expectedType = "scala.collection.immutable.Iterable[besom.types.PulumiJson]",
+      expectedInputArgsType = Some("scala.collection.immutable.Iterable[besom.types.Input[besom.types.PulumiJson]]")
     )
   ).foreach(data =>
     test(data.name.withTags(data.tags)) {

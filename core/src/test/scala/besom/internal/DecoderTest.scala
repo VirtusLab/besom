@@ -401,4 +401,82 @@ class DecoderTest extends munit.FunSuite:
       }
     }
   }
+
+  runWithBothOutputCodecs {
+    test(s"decode output string (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val v = Map(
+        "4dabf18193072939515e22adb298388d" -> "d0e6a833031e9bbcd3f4e8bde6ca49a4".asValue,
+        "value" -> "abc".asValue
+      ).asValue
+
+      val d        = summon[Decoder[Output[String]]]
+      val expected = Output("abc").getData.unsafeRunSync()
+
+      d.decode(v, dummyLabel).verify {
+        case Validated.Invalid(ex) => throw ex.head
+        case Validated.Valid(OutputData.Known(_, _, value)) =>
+          val dataValue = value.map(_.getData.unsafeRunSync())
+          assert(dataValue.contains(expected), clue = value)
+        case Validated.Valid(_) => throw Exception("Unexpected unknown!")
+      }
+    }
+  }
+
+  runWithBothOutputCodecs {
+    test(s"fail when decode output string when expected output int (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val v = Map(
+        "4dabf18193072939515e22adb298388d" -> "d0e6a833031e9bbcd3f4e8bde6ca49a4".asValue,
+        "value" -> "abc".asValue
+      ).asValue
+
+      val d = summon[Decoder[Output[Int]]]
+      d.decode(v, dummyLabel).verify {
+        case Validated.Invalid(ex) => throw ex.head
+        case Validated.Valid(OutputData.Known(_, _, value)) =>
+          intercept[besom.internal.AggregatedDecodingError] {
+            value.map(_.getData.unsafeRunSync())
+          }
+        case Validated.Valid(_) => throw Exception("Unexpected unknown!")
+      }
+    }
+  }
+
+  runWithBothOutputCodecs {
+    test(s"decode string as output string (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val d        = summon[Decoder[Output[String]]]
+      val expected = Output("abc").getData.unsafeRunSync()
+      d.decode("abc".asValue, dummyLabel).verify {
+        case Validated.Invalid(ex) => throw ex.head
+        case Validated.Valid(OutputData.Known(_, _, value)) =>
+          val dataValue = value.map(_.getData.unsafeRunSync())
+          assert(dataValue.contains(expected), clue = value)
+        case Validated.Valid(_) => throw Exception("Unexpected unknown!")
+      }
+    }
+  }
+
+  runWithBothOutputCodecs {
+    test(s"decode case class with outputs (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      case class TestClass(i: Output[Int], s: Output[String]) derives Decoder
+      val v = Map(
+        "i" -> "value1".asValue,
+        "s" -> "value2".asValue
+      ).asValue
+
+      val d = summon[Decoder[TestClass]]
+      d.decode(v, dummyLabel).verify {
+        case Validated.Invalid(ex) => throw ex.head
+        case Validated.Valid(OutputData.Known(_, _, value)) =>
+          val dataValue  = value.map(_.productIterator.toSeq.map(_.asInstanceOf[Output[_]]))
+          val firstValue = dataValue.flatMap(_.headOption)
+          val lastValue  = dataValue.flatMap(_.lastOption)
+          intercept[besom.internal.AggregatedDecodingError] {
+            firstValue.map(_.getValue.unsafeRunSync())
+          }
+          val lv = lastValue.flatMap(_.getValue.unsafeRunSync())
+          assert(lv.contains("value2"))
+        case Validated.Valid(_) => throw Exception("Unexpected unknown!")
+      }
+    }
+  }
 end DecoderTest

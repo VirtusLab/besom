@@ -74,17 +74,17 @@ object scalameta:
   object types {
     private val Predef: Term.Ref = Term.Select(Term.Name("scala"), Term.Name("Predef"))
 
-    val Boolean: Type.Ref = Type.Name("Boolean")
-    val String: Type.Ref  = Type.Name("String")
-    val Int: Type.Ref     = Type.Name("Int")
-    val Double: Type.Ref  = Type.Name("Double")
-    val Unit: Type.Ref    = Type.Select(Term.Name("scala"), Type.Name("Unit"))
-    val Option: Type.Ref  = Type.Select(Term.Name("scala"), Type.Name("Option"))
-    val List: Type.Ref    = Type.Select(ref("scala", "collection", "immutable"), Type.Name("List"))
-    val Map: Type.Ref     = Type.Select(Predef, Type.Name("Map"))
+    val Boolean: Type.Ref  = Type.Name("Boolean")
+    val String: Type.Ref   = Type.Name("String")
+    val Int: Type.Ref      = Type.Name("Int")
+    val Double: Type.Ref   = Type.Name("Double")
+    val Unit: Type.Ref     = Type.Select(Term.Name("scala"), Type.Name("Unit"))
+    val Option: Type.Ref   = Type.Select(Term.Name("scala"), Type.Name("Option"))
+    val Iterable: Type.Ref = Type.Select(ref("scala", "collection", "immutable"), Type.Name("Iterable"))
+    val Map: Type.Ref      = Type.Select(Predef, Type.Name("Map"))
 
     def Option(a: Type): Type.Apply       = Type.Apply(Option, Type.ArgClause(a :: Nil))
-    def List(a: Type): Type.Apply         = Type.Apply(List, Type.ArgClause(a :: Nil))
+    def Iterable(a: Type): Type.Apply     = Type.Apply(Iterable, Type.ArgClause(a :: Nil))
     def Map(k: Type, v: Type): Type.Apply = Type.Apply(Map, Type.ArgClause(k :: v :: Nil))
     def Map(v: Type): Type.Apply          = Type.Apply(Map, Type.ArgClause(String :: v :: Nil))
 

@@ -132,7 +132,7 @@ class TypeMapper(
       case NumberType             => scalameta.types.Double
       case UrnType                => scalameta.types.besom.types.URN
       case ResourceIdType         => scalameta.types.besom.types.ResourceId
-      case ArrayType(elemType, _) => scalameta.types.List(asScalaType(elemType, asArgsType))
+      case ArrayType(elemType, _) => scalameta.types.Iterable(asScalaType(elemType, asArgsType))
       case MapType(elemType, _)   => scalameta.types.Map(scalameta.types.String, asScalaType(elemType, asArgsType))
       case unionType: UnionType =>
         unionType.oneOf.map(asScalaType(_, asArgsType, unionType.`type`)).reduce { (t1, t2) =>

@@ -1,7 +1,6 @@
 package besom.codegen.metaschema
 
 import besom.codegen.*
-import besom.codegen.Config
 import besom.codegen.Utils.PulumiPackageOps
 
 import scala.meta.*
@@ -332,7 +331,7 @@ class CodeGenTest extends munit.FunSuite {
              |
              |
              |final case class ClusterGetKubeconfigResult private(
-             |  kubeconfig: String
+             |  kubeconfig: besom.types.Output[String]
              |)
              |object ClusterGetKubeconfigResult :
              |
@@ -343,11 +342,11 @@ class CodeGenTest extends munit.FunSuite {
              |
              |  given outputOps: {} with
              |    extension(output: besom.types.Output[ClusterGetKubeconfigResult])
-             |      def kubeconfig : besom.types.Output[String] = output.map(_.kubeconfig)
+             |      def kubeconfig : besom.types.Output[String] = output.flatMap(_.kubeconfig)
              |
              |  given optionOutputOps: {} with
              |    extension(output: besom.types.Output[scala.Option[ClusterGetKubeconfigResult]])
-             |      def kubeconfig : besom.types.Output[scala.Option[String]] = output.map(_.map(_.kubeconfig))
+             |      def kubeconfig : besom.types.Output[scala.Option[String]] = output.flatMapOption(_.kubeconfig)
              |""".stripMargin,
         "src/container/v1/getCluster.scala" ->
           """|package besom.api.googlenative.container.v1
@@ -736,9 +735,9 @@ class CodeGenTest extends munit.FunSuite {
              |
              |
              |final case class EniConfig private(
-             |  apiVersion: String,
-             |  kind: String,
-             |  spec: scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]
+             |  apiVersion: besom.types.Output[String],
+             |  kind: besom.types.Output[String],
+             |  spec: besom.types.Output[scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]]
              |)
              |object EniConfig :
              |
@@ -749,15 +748,15 @@ class CodeGenTest extends munit.FunSuite {
              |
              |  given outputOps: {} with
              |    extension(output: besom.types.Output[EniConfig])
-             |      def apiVersion : besom.types.Output[String] = output.map(_.apiVersion)
-             |      def kind : besom.types.Output[String] = output.map(_.kind)
-             |      def spec : besom.types.Output[scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]] = output.map(_.spec)
+             |      def apiVersion : besom.types.Output[String] = output.flatMap(_.apiVersion)
+             |      def kind : besom.types.Output[String] = output.flatMap(_.kind)
+             |      def spec : besom.types.Output[scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]] = output.flatMap(_.spec)
              |
              |  given optionOutputOps: {} with
              |    extension(output: besom.types.Output[scala.Option[EniConfig]])
-             |      def apiVersion : besom.types.Output[scala.Option[String]] = output.map(_.map(_.apiVersion))
-             |      def kind : besom.types.Output[scala.Option[String]] = output.map(_.map(_.kind))
-             |      def spec : besom.types.Output[scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]] = output.map(_.flatMap(_.spec))
+             |      def apiVersion : besom.types.Output[scala.Option[String]] = output.flatMapOption(_.apiVersion)
+             |      def kind : besom.types.Output[scala.Option[String]] = output.flatMapOption(_.kind)
+             |      def spec : besom.types.Output[scala.Option[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.outputs.EniConfigSpec]] = output.flatMapOption(_.spec)
              |
              |
              |
@@ -802,8 +801,8 @@ class CodeGenTest extends munit.FunSuite {
              |
              |
              |final case class EniConfigSpec private(
-             |  securityGroups: scala.Option[scala.collection.immutable.List[String]],
-             |  subnet: scala.Option[String]
+             |  securityGroups: besom.types.Output[scala.Option[scala.collection.immutable.Iterable[String]]],
+             |  subnet: besom.types.Output[scala.Option[String]]
              |)
              |object EniConfigSpec :
              |
@@ -814,13 +813,13 @@ class CodeGenTest extends munit.FunSuite {
              |
              |  given outputOps: {} with
              |    extension(output: besom.types.Output[EniConfigSpec])
-             |      def securityGroups : besom.types.Output[scala.Option[scala.collection.immutable.List[String]]] = output.map(_.securityGroups)
-             |      def subnet : besom.types.Output[scala.Option[String]] = output.map(_.subnet)
+             |      def securityGroups : besom.types.Output[scala.Option[scala.collection.immutable.Iterable[String]]] = output.flatMap(_.securityGroups)
+             |      def subnet : besom.types.Output[scala.Option[String]] = output.flatMap(_.subnet)
              |
              |  given optionOutputOps: {} with
              |    extension(output: besom.types.Output[scala.Option[EniConfigSpec]])
-             |      def securityGroups : besom.types.Output[scala.Option[scala.collection.immutable.List[String]]] = output.map(_.flatMap(_.securityGroups))
-             |      def subnet : besom.types.Output[scala.Option[String]] = output.map(_.flatMap(_.subnet))
+             |      def securityGroups : besom.types.Output[scala.Option[scala.collection.immutable.Iterable[String]]] = output.flatMapOption(_.securityGroups)
+             |      def subnet : besom.types.Output[scala.Option[String]] = output.flatMapOption(_.subnet)
              |
              |
              |
@@ -829,13 +828,13 @@ class CodeGenTest extends munit.FunSuite {
           """|package besom.api.kubernetes.crdk8samazonawscom.v1alpha1.inputs
              |
              |final case class EniConfigSpecArgs private(
-             |  securityGroups: besom.types.Output[scala.Option[scala.collection.immutable.List[String]]],
+             |  securityGroups: besom.types.Output[scala.Option[scala.collection.immutable.Iterable[String]]],
              |  subnet: besom.types.Output[scala.Option[String]]
              |)
              |
              |object EniConfigSpecArgs:
              |  def apply(
-             |    securityGroups: besom.types.Input.Optional[scala.collection.immutable.List[besom.types.Input[String]]] = scala.None,
+             |    securityGroups: besom.types.Input.Optional[scala.collection.immutable.Iterable[besom.types.Input[String]]] = scala.None,
              |    subnet: besom.types.Input.Optional[String] = scala.None
              |  )(using besom.types.Context): EniConfigSpecArgs =
              |    new EniConfigSpecArgs(
@@ -844,7 +843,7 @@ class CodeGenTest extends munit.FunSuite {
              |    )
              |
              |  extension (eniConfigSpecArgs: EniConfigSpecArgs) def withArgs(
-             |    securityGroups: besom.types.Input.Optional[scala.collection.immutable.List[besom.types.Input[String]]] = eniConfigSpecArgs.securityGroups,
+             |    securityGroups: besom.types.Input.Optional[scala.collection.immutable.Iterable[besom.types.Input[String]]] = eniConfigSpecArgs.securityGroups,
              |    subnet: besom.types.Input.Optional[String] = eniConfigSpecArgs.subnet
              |  )(using besom.types.Context): EniConfigSpecArgs =
              |    new EniConfigSpecArgs(

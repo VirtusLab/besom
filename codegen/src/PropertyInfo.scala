@@ -33,7 +33,7 @@ object PropertyInfo:
     val argType  = propertyDefinition.typeReference.asScalaType(asArgsType = true)
     val inputArgType = propertyDefinition.typeReference match {
       case ArrayType(innerType, plainItems) =>
-        scalameta.types.List(
+        scalameta.types.Iterable(
           if (plainItems) innerType.asScalaType(asArgsType = true)
           else scalameta.types.besom.types.Input(innerType.asScalaType(asArgsType = true))
         )

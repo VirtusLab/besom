@@ -8,6 +8,7 @@ import com.google.protobuf.util.JsonFormat
 
 import scala.annotation.unused
 import scala.util.*
+import scala.collection.immutable.Iterable
 
 object ProtobufUtil:
   private val printer = JsonFormat.printer().omittingInsignificantWhitespace()
@@ -38,8 +39,8 @@ object ProtobufUtil:
   given ToValue[Value] with
     extension (v: Value) def asValue: Value = v
 
-  given [A: ToValue]: ToValue[List[A]] with
-    extension (l: List[A]) def asValue: Value = Value(Kind.ListValue(ListValue(l.map(_.asValue))))
+  given [A: ToValue]: ToValue[Iterable[A]] with
+    extension (l: Iterable[A]) def asValue: Value = Value(Kind.ListValue(ListValue(l.map(_.asValue).toSeq)))
 
   given [A: ToValue]: ToValue[Vector[A]] with
     extension (v: Vector[A]) def asValue: Value = Value(Kind.ListValue(ListValue(v.map(_.asValue).toList)))
@@ -65,7 +66,7 @@ object ProtobufUtil:
     def asSecretValue: Value = SecretValue(v).asValue
     def asOutputValue(
       isSecret: Boolean,
-      dependencies: List[URN]
+      dependencies: Iterable[URN]
     ): Value = OutputValue.known(value = v, isSecret = isSecret, dependencies = dependencies).asValue
 
     def withSpecialSignature[A](f: PartialFunction[(Struct, SpecialSig), A]): Option[A] =
@@ -134,12 +135,12 @@ object SecretValue:
       ValueName -> s.value
     ).asValue
 
-case class OutputValue(value: Option[Value], isSecret: Boolean, dependencies: List[URN]):
+case class OutputValue(value: Option[Value], isSecret: Boolean, dependencies: Iterable[URN]):
   def isKnown: Boolean = value.isDefined
 
 object OutputValue:
-  def known(value: Value, isSecret: Boolean, dependencies: List[URN]): OutputValue = OutputValue(Some(value), isSecret, dependencies)
-  def unknown(isSecret: Boolean, dependencies: List[URN]): OutputValue             = OutputValue(None, isSecret, dependencies)
+  def known(value: Value, isSecret: Boolean, dependencies: Iterable[URN]): OutputValue = OutputValue(Some(value), isSecret, dependencies)
+  def unknown(isSecret: Boolean, dependencies: Iterable[URN]): OutputValue             = OutputValue(None, isSecret, dependencies)
   def unapply(value: Value): Option[OutputValue] =
     value.withSpecialSignature { case (struct, SpecialSig.OutputSig) =>
       val value            = struct.fields.get(ValueName)
@@ -166,7 +167,7 @@ case class Metadata(
   known: Boolean,
   secret: Boolean,
   empty: Boolean,
-  dependencies: List[URN]
+  dependencies: Iterable[URN]
 ):
   def unknown: Boolean = !known
   def combine(that: Metadata): Metadata =

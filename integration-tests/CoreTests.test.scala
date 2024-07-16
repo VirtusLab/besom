@@ -86,10 +86,14 @@ class CoreTests extends munit.FunSuite {
       )
     },
     teardown = pulumi.fixture.teardown
-  ).test("random provider and memoization should work") { ctx =>
+  ).test("random provider, memoization and aliases should work") { ctx =>
     val result = pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
     val output = result.out.text()
     assert(output.contains("randomString:"), s"Output:\n$output\n")
+
+    val previewResult = pulumi.preview(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env + ("TEST_ALIAS" -> "true"))
+    val previewOutput = previewResult.out.text()
+    assert(previewOutput.contains("2 unchanged"), s"Output:\n$previewOutput\n")
   }
 
   FunFixture[pulumi.FixtureContext](
