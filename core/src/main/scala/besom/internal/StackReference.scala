@@ -77,7 +77,7 @@ trait StackReferenceFactory:
         Context().readOrRegisterResource[StackReference, StackReferenceArgs]("pulumi:pulumi:StackReference", name, stackRefArgs, mergedOpts)
       }
 
-  def apply[T](using
+  def typed[T](using
     ctx: Context,
     jr: JsonReader[T]
   )(name: NonEmptyString, args: Input.Optional[StackReferenceArgs], opts: StackReferenceResourceOptions): Output[TypedStackReference[T]] =
