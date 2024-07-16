@@ -76,3 +76,35 @@ trait StackReferenceFactory:
 
         Context().readOrRegisterResource[StackReference, StackReferenceArgs]("pulumi:pulumi:StackReference", name, stackRefArgs, mergedOpts)
       }
+
+  def typed[T](using
+    ctx: Context,
+    jr: JsonReader[T]
+  )(name: NonEmptyString, args: Input.Optional[StackReferenceArgs], opts: StackReferenceResourceOptions): Output[TypedStackReference[T]] =
+    apply(using ctx)(name, args, opts).flatMap { stackReference =>
+      val objectOutput: Output[T] =
+        requireObject(stackReference.outputs, stackReference.secretOutputNames)
+
+      objectOutput.map(t =>
+        TypedStackReference(
+          urn = stackReference.urn,
+          id = stackReference.id,
+          name = stackReference.name,
+          outputs = t,
+          secretOutputNames = stackReference.secretOutputNames
+        )
+      )
+    }
+
+  private[internal] def requireObject[T: JsonReader](
+    outputs: Output[Map[String, JsValue]],
+    secretOutputNames: Output[Set[String]]
+  ): Output[T] =
+    outputs
+      .map(JsObject(_).convertTo[T])
+      .withIsSecret(
+        secretOutputNames
+          .map(_.nonEmpty)
+          .getValueOrElse(false)
+      )
+end StackReferenceFactory
