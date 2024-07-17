@@ -1,6 +1,7 @@
 //> using scala 3.3.1
 //> using options -release:11 -deprecation -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
 
+//> using dep org.virtuslab::scala-yaml:0.1.0
 //> using dep org.scalameta:scalameta_2.13:4.8.15
 //> using dep com.lihaoyi::upickle:3.1.4
 //> using dep com.lihaoyi::os-lib:0.9.3
