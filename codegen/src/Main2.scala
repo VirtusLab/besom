@@ -25,7 +25,8 @@ case class JsonSchemaProps(
   format: Option[String],
   required: Option[Set[String]],
   items: Option[JsonSchemaProps],
-  properties: Option[Map[String, JsonSchemaProps]]
+  properties: Option[Map[String, JsonSchemaProps]],
+  additionalProperties: Option[Boolean | JsonSchemaProps]
 ) derives YamlDecoder
 
 enum StringFormat:
@@ -53,6 +54,12 @@ object JsonSchemaProps:
   }
   given YamlDecoder[Map[String, JsonSchemaProps]] = YamlDecoder { case node =>
     YamlDecoder.forMap[String, JsonSchemaProps].construct(node)
+  }
+  given booleanOrJsonSchemaProps: YamlDecoder[Boolean | JsonSchemaProps] = YamlDecoder { case node =>
+    YamlDecoder.forBoolean
+      .construct(node)
+      .left
+      .flatMap(_ => summon[YamlDecoder[JsonSchemaProps]].construct(node))
   }
 
 @main def main = {
@@ -101,7 +108,10 @@ private def createCaseClass(
   val (classParams, sourceFiles) = fields
     .map(_.toList)
     .getOrElse(List.empty)
-    .map(parseJsonSchemaProps(packagePath)(_, _))
+    .map((fieldName, jsonSchema) =>
+      val (fieldType, sf) = parseJsonSchemaProps(packagePath)(fieldName, jsonSchema)
+      (FieldNameWithType(fieldName, fieldType), sf)
+    )
     .unzip
 
   val fieldsSyntax = classParams.map { fieldNameWithType =>
@@ -114,48 +124,57 @@ private def createCaseClass(
   sourceFile +: sourceFiles.flatten
 }
 
-private def parseJsonSchemaProps(packagePath: Seq[String]): (String, JsonSchemaProps) => (FieldNameWithType, Seq[SourceFile]) =
+private def parseJsonSchemaProps(packagePath: Seq[String]): (String, JsonSchemaProps) => (Type, Seq[SourceFile]) =
   case (fieldName, jsonSchema) if jsonSchema.`enum`.nonEmpty =>
     val enumList   = jsonSchema.`enum`.get
     val enumName   = fieldName.capitalize
     val sourceFile = enumFile(packagePath, enumName, enumList)
-    val field      = FieldNameWithType(fieldName, Type.Name(enumName))
-    (field, Seq(sourceFile))
+    val fieldType  = Type.Name(enumName)
+    (fieldType, Seq(sourceFile))
   case (fieldName, jsonSchema) if jsonSchema.`type`.contains(DataTypeEnum.number) =>
     val fieldType = if jsonSchema.format.contains("float") then types.Float else types.Double
 
-    (FieldNameWithType(fieldName, fieldType), Seq.empty)
+    (fieldType, Seq.empty)
   case (fieldName, jsonSchema) if jsonSchema.`type`.contains(DataTypeEnum.integer) =>
     val fieldType = if jsonSchema.format.contains("int64") then types.Long else types.Int
 
-    (FieldNameWithType(fieldName, fieldType), Seq.empty)
+    (fieldType, Seq.empty)
   case (fieldName, jsonSchema) if jsonSchema.`type`.contains(DataTypeEnum.boolean) =>
-    val field = FieldNameWithType(fieldName, types.Boolean)
-
-    (field, Seq.empty)
+    (types.Boolean, Seq.empty)
   case (fieldName, jsonSchema) if jsonSchema.`type`.contains(DataTypeEnum.string) =>
     val fieldType = jsonSchema.format.map(stringParseType).getOrElse(types.String)
 
-    (FieldNameWithType(fieldName, fieldType), Seq.empty)
+    (fieldType, Seq.empty)
   case (fieldName, jsonSchema) if jsonSchema.`type`.contains(DataTypeEnum.array) && jsonSchema.items.isDefined =>
-    val (classParams, sourceFiles) = parseJsonSchemaProps(packagePath)(fieldName, jsonSchema.items.get)
-    val field                      = FieldNameWithType(fieldName, types.Iterable(classParams.fieldType))
+    val (classType, sourceFiles) = parseJsonSchemaProps(packagePath)(fieldName, jsonSchema.items.get)
+    val fieldType                = types.Iterable(classType)
 
-    (field, sourceFiles)
-  case (fieldName, jsonSchema) if jsonSchema.`type`.contains(DataTypeEnum.`object`) =>
+    (fieldType, sourceFiles)
+  case (fieldName, jsonSchema) if jsonSchema.`type`.contains(DataTypeEnum.`object`) && jsonSchema.properties.nonEmpty =>
     val required     = jsonSchema.required.getOrElse(Set.empty)
     val localization = packagePath :+ fieldName
-    val field        = FieldNameWithType(fieldName, Type.Select(scalameta.ref(localization.toList), Type.Name(fieldName.capitalize)))
+    val fieldType    = Type.Select(scalameta.ref(localization.toList), Type.Name(fieldName.capitalize))
 
-    (field, createCaseClass(localization, fieldName.capitalize, jsonSchema.properties, required))
+    (fieldType, createCaseClass(localization, fieldName.capitalize, jsonSchema.properties, required))
+
+  case (fieldName, jsonSchema) if jsonSchema.`type`.contains(DataTypeEnum.`object`) =>
+    jsonSchema.additionalProperties match
+      case Some(_: Boolean) | None =>
+        val fieldType = types.Map(types.String, Type.Select(scalameta.ref("besom", "json"), Type.Name("JsValue")))
+        (fieldType, Seq.empty)
+      case Some(js: JsonSchemaProps) =>
+        val (classType, sourceFiles) = parseJsonSchemaProps(packagePath)(fieldName, js)
+        val fieldType                = types.Map(types.String, classType)
+        (fieldType, sourceFiles)
+
   case (fieldName, jsonSchema) =>
     println(s"Problem when decoding `$fieldName` field with type ${jsonSchema.`type`}, create Map[String, JsValue]")
-    val field = FieldNameWithType(fieldName, types.Map(types.String, Type.Select(scalameta.ref("besom", "json"), Type.Name("JsValue"))))
+    val fieldType = types.Map(types.String, Type.Select(scalameta.ref("besom", "json"), Type.Name("JsValue")))
 
-    (field, Seq.empty)
+    (fieldType, Seq.empty)
 end parseJsonSchemaProps
 
-private def stringParseType(format: String): Type.Ref =
+private def stringParseType(format: String): Type =
   StringFormat.valueOf(format) match
     case StringFormat.date =>
       Type.Select(scalameta.ref("java", "time"), Type.Name("LocalDate"))
@@ -164,7 +183,7 @@ private def stringParseType(format: String): Type.Ref =
     case StringFormat.password =>
       types.String
     case StringFormat.byte =>
-      types.String
+      types.Iterable(types.Byte)
     case StringFormat.binary =>
       types.String
 
