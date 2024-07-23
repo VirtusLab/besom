@@ -21,8 +21,14 @@ object ProtobufUtil:
   given ToValue[Int] with
     extension (i: Int) def asValue: Value = Value(Kind.NumberValue(i))
 
+  given ToValue[Long] with
+    extension (l: Long) def asValue: Value = Value(Kind.NumberValue(l))
+
   given ToValue[String] with
     extension (s: String) def asValue: Value = Value(Kind.StringValue(s))
+
+  given ToValue[Float] with
+    extension (f: Float) def asValue: Value = Value(Kind.NumberValue(f))
 
   given ToValue[Double] with
     extension (d: Double) def asValue: Value = Value(Kind.NumberValue(d))
