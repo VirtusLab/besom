@@ -3,11 +3,12 @@ package besom.codegen.crd
 import scala.meta.*
 import scala.meta.dialects.Scala33
 import besom.codegen.scalameta.interpolator.*
+import besom.codegen.scalameta.ref
 
-enum AdditionalCodecs(val name: String, val codecs: Seq[Stat]):
+enum AdditionalCodecs(val name: Type, val codecs: Seq[Stat]):
   case LocalDateTime
       extends AdditionalCodecs(
-        "java.time.LocalDateTime",
+        Type.Select(ref("java", "time"), Type.Name("LocalDateTime")),
         Seq(
           m"""
        |  given besom.Encoder[java.time.LocalDateTime] with
@@ -30,7 +31,7 @@ enum AdditionalCodecs(val name: String, val codecs: Seq[Stat]):
 
   case LocalDate
       extends AdditionalCodecs(
-        "java.time.LocalDate",
+        Type.Select(ref("java", "time"), Type.Name("LocalDate")),
         Seq(
           m"""
        |  given besom.Encoder[java.time.LocalDate] with
@@ -53,7 +54,7 @@ enum AdditionalCodecs(val name: String, val codecs: Seq[Stat]):
 end AdditionalCodecs
 
 object AdditionalCodecs:
-  val nameToValuesMap: Map[String, AdditionalCodecs] = AdditionalCodecs.values.map(c => c.name -> c).toMap
+  val nameToValuesMap: Map[Type, AdditionalCodecs] = AdditionalCodecs.values.map(c => c.name -> c).toMap
 
   private def enumEncoder(enumName: String): Stat =
     m"""

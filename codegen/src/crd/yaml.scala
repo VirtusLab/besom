@@ -46,3 +46,18 @@ enum DataTypeEnum:
   case `object` extends DataTypeEnum
   case boolean extends DataTypeEnum
   case array extends DataTypeEnum
+
+enum StringFormat:
+  case date extends StringFormat
+  case `date-time` extends StringFormat
+  case password extends StringFormat
+  case byte extends StringFormat
+  case binary extends StringFormat
+
+enum NumberFormat:
+  case float extends NumberFormat
+  case double extends NumberFormat
+
+enum IntegerFormat:
+  case int32 extends IntegerFormat
+  case int64 extends IntegerFormat
