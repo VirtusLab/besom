@@ -94,17 +94,6 @@ object ArgsClass:
       param.copy(default = Some(m"cls.${param.name.syntax}".parse[Term].get))
     }
 
-    val derivedTypeclasses = {
-      lazy val argsEncoderInstance =
-        m"""|  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[$argsClassName] =
-            |    besom.internal.ArgsEncoder.derived[$argsClassName]
-            |""".stripMargin
-
-      m"""|  given encoder(using besom.types.Context): besom.types.Encoder[$argsClassName] =
-          |    besom.internal.Encoder.derived[$argsClassName]
-          |$argsEncoderInstance""".stripMargin
-    }
-
     m"""|object $argsClassName:
         |  def apply(
         |${argsCompanionApplyParams.map(arg => s"    ${arg.syntax}").mkString(",\n")}
@@ -119,8 +108,6 @@ object ArgsClass:
         |    new $argsClassName(
         |${argsCompanionApplyBodyArgs.map(arg => s"      ${arg.syntax}").mkString(",\n")}
         |    )
-        |
-        |$derivedTypeclasses
         |
         |${additionalCodecs.flatMap(_.codecs).mkString("\n")}
         |""".stripMargin.parse[Stat].get
