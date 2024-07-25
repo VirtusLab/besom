@@ -14,25 +14,21 @@ import besom.api.kubernetescertmanager.*
     )
   )
 
-  val issuerSpec = issuer.v1.Spec(
-    venafi = None,
-    ca = None,
-    acme = None,
-    selfSigned = Some(issuer.v1.spec.SelfSigned(Some(Seq("test")))),
-    vault = None
+  val issuerSpec = issuer.v1.Issuer(
+    selfSigned = issuer.v1.SelfSigned(Some(Seq("test")))
   )
 
-  val cr = k8s.apiextensions.CustomResource[issuer.v1.Spec](
+  val cr = k8s.apiextensions.CustomResource[issuer.v1.Issuer](
     "test-cr",
     k8s.apiextensions.CustomResourceArgs(
       apiVersion = "cert-manager.io/v1",
       kind = "Issuer",
-      spec = Output(issuerSpec)
+      spec = issuerSpec
     ),
     opts(dependsOn = certManager)
   )
 
   Stack.exports(
-    crlDistributionPoints = cr.spec.map(_.selfSigned.get.crlDistributionPoints.get)
+    crlDistributionPoints = cr.spec.map(_.selfSigned.map(_.get.crlDistributionPoints))
   )
 }
