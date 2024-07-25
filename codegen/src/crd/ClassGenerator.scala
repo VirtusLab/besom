@@ -105,7 +105,7 @@ object ClassGenerator:
     case (fieldName, jsonSchema) if jsonSchema.`type`.contains(DataTypeEnum.string) =>
       stringType(fieldName, jsonSchema, parentJsonSchema)
     case (fieldName, jsonSchema) if jsonSchema.`type`.contains(DataTypeEnum.array) && jsonSchema.items.isDefined =>
-      arrayType(packagePath, fieldName, jsonSchema)
+      arrayType(packagePath, fieldName, jsonSchema, parentJsonSchema)
     case (fieldName, jsonSchema) if jsonSchema.`type`.contains(DataTypeEnum.`object`) =>
       objectType(packagePath, fieldName, jsonSchema, parentJsonSchema)
     case (fieldName, jsonSchema) =>
@@ -123,7 +123,7 @@ object ClassGenerator:
     val fieldTypeInfo =
       FieldTypeInfo(
         name = Name(fieldName),
-        isOptional = parentJsonSchema.required.getOrElse(Set.empty).contains(fieldName),
+        isOptional = isOptional(parentJsonSchema.required, fieldName),
         baseType = Type.Select(scalameta.ref(packagePath.path.toList), Type.Name(enumName)),
         isSecret = false
       )
@@ -142,7 +142,7 @@ object ClassGenerator:
     val fieldTypeInfo =
       FieldTypeInfo(
         name = Name(fieldName),
-        isOptional = parentJsonSchema.required.getOrElse(Set.empty).contains(fieldName),
+        isOptional = isOptional(parentJsonSchema.required, fieldName),
         baseType = baseType,
         isSecret = false
       )
@@ -161,7 +161,7 @@ object ClassGenerator:
     val fieldTypeInfo =
       FieldTypeInfo(
         name = Name(fieldName),
-        isOptional = parentJsonSchema.required.getOrElse(Set.empty).contains(fieldName),
+        isOptional = isOptional(parentJsonSchema.required, fieldName),
         baseType = baseType,
         isSecret = false
       )
@@ -172,7 +172,7 @@ object ClassGenerator:
     val fieldTypeInfo =
       FieldTypeInfo(
         name = Name(fieldName),
-        isOptional = parentJsonSchema.required.getOrElse(Set.empty).contains(fieldName),
+        isOptional = isOptional(parentJsonSchema.required, fieldName),
         baseType = types.Boolean,
         isSecret = false
       )
@@ -187,7 +187,7 @@ object ClassGenerator:
     val (isSecret, baseType) = jsonSchema.format.map(stringParseType).getOrElse((false, types.String))
     val fieldTypeInfo = FieldTypeInfo(
       name = Name(fieldName),
-      isOptional = parentJsonSchema.required.getOrElse(Set.empty).contains(fieldName),
+      isOptional = isOptional(parentJsonSchema.required, fieldName),
       baseType = baseType,
       isSecret = isSecret
     )
@@ -209,11 +209,21 @@ object ClassGenerator:
       case StringFormat.binary =>
         (false, types.String)
 
-  private def arrayType(packagePath: PackagePath, fieldName: String, jsonSchema: JsonSchemaProps): (FieldTypeInfo, Seq[SourceFile]) = {
+  private def arrayType(
+    packagePath: PackagePath,
+    fieldName: String,
+    jsonSchema: JsonSchemaProps,
+    parentJsonSchema: JsonSchemaProps
+  ): (FieldTypeInfo, Seq[SourceFile]) = {
     val (classType, sourceFiles) =
       parseJsonSchemaProperty(packagePath, jsonSchema)(fieldName, jsonSchema.items.get)
     val fieldTypeInfo =
-      classType.copy(baseType = types.Iterable(classType.baseType))
+      FieldTypeInfo(
+        name = Name(fieldName),
+        isOptional = isOptional(parentJsonSchema.required, fieldName),
+        baseType = types.Iterable(classType.baseType),
+        isSecret = classType.isSecret
+      )
     (fieldTypeInfo, sourceFiles)
   }
 
@@ -229,7 +239,7 @@ object ClassGenerator:
         val fieldTypeInfo =
           FieldTypeInfo(
             name = Name(fieldName),
-            isOptional = !parentJsonSchema.required.getOrElse(Set.empty).contains(fieldName),
+            isOptional = isOptional(parentJsonSchema.required, fieldName),
             baseType = Type.Select(scalameta.ref(packagePath.path.toList), Type.Name(className)),
             isSecret = false
           )
@@ -238,7 +248,7 @@ object ClassGenerator:
         val fieldTypeInfo =
           FieldTypeInfo(
             name = Name(fieldName),
-            isOptional = parentJsonSchema.required.getOrElse(Set.empty).contains(fieldName),
+            isOptional = isOptional(parentJsonSchema.required, fieldName),
             baseType = types.Map(types.String, jsValueType),
             isSecret = false
           )
@@ -247,7 +257,12 @@ object ClassGenerator:
         val (classType, sourceFiles) =
           parseJsonSchemaProperty(packagePath, jsonSchema)(fieldName, js)
         val fieldTypeInfo =
-          classType.copy(baseType = types.Map(types.String, classType.baseType))
+          FieldTypeInfo(
+            name = Name(fieldName),
+            isOptional = isOptional(parentJsonSchema.required, fieldName),
+            baseType = types.Map(types.String, classType.baseType),
+            isSecret = classType.isSecret
+          )
         (fieldTypeInfo, sourceFiles)
   }
 
@@ -260,7 +275,7 @@ object ClassGenerator:
     val fieldTypeInfo =
       FieldTypeInfo(
         name = Name(fieldName),
-        isOptional = parentJsonSchema.required.getOrElse(Set.empty).contains(fieldName),
+        isOptional = isOptional(parentJsonSchema.required, fieldName),
         baseType = types.Map(types.String, jsValueType),
         isSecret = false
       )
@@ -286,6 +301,9 @@ object ClassGenerator:
       sourceCode = createdClass.syntax
     )
   }
+
+  private def isOptional(required: Option[Set[String]], fieldName: String): Boolean =
+    !required.getOrElse(Set.empty).contains(fieldName)
 
 end ClassGenerator
 case class PackagePath(baseSegments: Seq[String], segments: Seq[String] = Seq.empty):
