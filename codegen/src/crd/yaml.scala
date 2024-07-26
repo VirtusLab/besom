@@ -12,6 +12,7 @@ case class CRDNames(singular: String, kind: String) derives YamlDecoder
 case class CRDVersion(name: String, schema: CustomResourceValidation) derives YamlDecoder
 case class CustomResourceValidation(openAPIV3Schema: JsonSchemaProps) derives YamlDecoder
 case class JsonSchemaProps(
+  description: Option[Description],
   `enum`: Option[List[String]],
   `type`: Option[DataTypeEnum],
   format: Option[String],
@@ -37,6 +38,15 @@ object JsonSchemaProps:
       .construct(node)
       .left
       .flatMap(_ => summon[YamlDecoder[JsonSchemaProps]].construct(node))
+  }
+
+opaque type Description = Seq[String]
+
+extension (d: Description) def value: Seq[String] = d
+
+object Description:
+  given YamlDecoder[Description] = YamlDecoder { case node =>
+    YamlDecoder.forString.map(_.split("\\\\n").toSeq).construct(node)
   }
 
 enum DataTypeEnum:
