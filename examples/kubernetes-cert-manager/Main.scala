@@ -15,7 +15,7 @@ import besom.api.kubernetescertmanager.*
   )
 
   val issuerSpec = issuer.v1.Issuer(
-    selfSigned = issuer.v1.SelfSigned(Some(Seq("test")))
+    selfSigned = issuer.v1.SelfSigned(Seq("test"))
   )
 
   val cr = k8s.apiextensions.CustomResource[issuer.v1.Issuer](
@@ -29,6 +29,6 @@ import besom.api.kubernetescertmanager.*
   )
 
   Stack.exports(
-    crlDistributionPoints = cr.spec.map(_.selfSigned.map(_.get.crlDistributionPoints))
+    crlDistributionPoints = cr.spec.selfSigned.crlDistributionPoints
   )
 }
