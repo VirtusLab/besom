@@ -26,9 +26,9 @@ object ArgsClass:
     val fileContent =
       m"""|package ${packagePath.path.mkString(".")}
           |
-          |${argsClass}
+          |$argsClass
           |
-          |${argsCompanion}
+          |$argsCompanion
           |""".stripMargin.parse[Source].get
     SourceFile(
       filePath = FilePath(packagePath.path :+ s"$argsClassName.scala"),
@@ -37,7 +37,7 @@ object ArgsClass:
   }
 
   private def makeArgsClass(argsClassName: meta.Type, properties: Seq[FieldTypeInfo]): Stat = {
-    val argsClassParams = properties.map { propertyInfo =>
+    val argsClassParams = properties.flatMap { propertyInfo =>
       val paramType =
         if propertyInfo.isOptional
         then types.besom.types.Output(types.Option(propertyInfo.baseType))
@@ -49,16 +49,13 @@ object ArgsClass:
         decltpe = Some(paramType),
         default = None
       )
-      (termParam, propertyInfo.description)
+
+      val docs = propertyInfo.description.map(_.mkString(s"  /**\n   * ", s"\n   * ", s"\n   */"))
+      Seq(docs, Some(s"  ${termParam.syntax},")).flatten
     }
 
     m"""|final case class $argsClassName private(
-        |${argsClassParams.headOption.toSeq
-         .flatMap { (arg, desc) =>
-           val docs = desc.map(_.mkString(s"  /**\n   * ", s"\n   * ", s"\n   */"))
-           Seq(docs, Some(s"  ${arg.syntax},")).flatten
-         }
-         .mkString("\n")}
+        |${argsClassParams.mkString("\n")}
         |) derives besom.Decoder, besom.Encoder""".stripMargin.parse[Stat].get
   }
 
@@ -89,9 +86,9 @@ object ArgsClass:
       val isSecret = Lit.Boolean(propertyInfo.isSecret)
       val argValue =
         if (propertyInfo.isOptional)
-          m"${propertyInfo.name}.asOptionOutput(isSecret = ${isSecret})".parse[Term].get
+          m"${propertyInfo.name}.asOptionOutput(isSecret = $isSecret)".parse[Term].get
         else
-          m"${propertyInfo.name}.asOutput(isSecret = ${isSecret})".parse[Term].get
+          m"${propertyInfo.name}.asOutput(isSecret = $isSecret)".parse[Term].get
 
       Term.Assign(Term.Name(propertyInfo.name.value), argValue)
     }
@@ -127,7 +124,7 @@ object ArgsClass:
         |${argsCompanionApplyBodyArgs.map(arg => s"      ${arg.syntax}").mkString(",\n")}
         |    )
         |
-        |  extension (cls: ${argsClassName}) def withArgs(
+        |  extension (cls: $argsClassName) def withArgs(
         |${argsCompanionWithArgsParams.map(arg => s"    ${arg.syntax}").mkString(",\n")}
         |  )(using besom.types.Context): $argsClassName =
         |    new $argsClassName(
@@ -148,13 +145,13 @@ object ArgsClass:
   }
 
   private val outputOptionExtension =
-    m"""  extension [A](output: besom.types.Output[scala.Option[A]])
-       |    def flatMapOpt[B](f: A => besom.types.Output[Option[B]]): besom.types.Output[scala.Option[B]] =
-       |      output.flatMap(
-       |        _.map(f)
-       |          .getOrElse(output.map(_ => scala.None))
-       |      )
-       |
-       |    def mapOpt[B](f: A => besom.types.Output[B]): besom.types.Output[scala.Option[B]] =
-       |      flatMapOpt(f(_).map(Some(_)))""".stripMargin.parse[Stat].get
+    m"""|  extension [A](output: besom.types.Output[scala.Option[A]])
+        |    def flatMapOpt[B](f: A => besom.types.Output[Option[B]]): besom.types.Output[scala.Option[B]] =
+        |      output.flatMap(
+        |        _.map(f)
+        |          .getOrElse(output.map(_ => scala.None))
+        |      )
+        |
+        |    def mapOpt[B](f: A => besom.types.Output[B]): besom.types.Output[scala.Option[B]] =
+        |      flatMapOpt(f(_).map(Some(_)))""".stripMargin.parse[Stat].get
 end ArgsClass
