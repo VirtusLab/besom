@@ -38,15 +38,17 @@ object ClassGenerator:
     for
       yamlFile <- Try(os.read(yamlFile)).toEither
       rawCrds = yamlFile.split("---").toSeq
-      crds <- rawCrds.map(_.as[CRD]).flattenWithFirstError
-      _ <- crds
-        .flatMap(c => createCaseClassVersions(c.spec))
-        .map(sourceToFile(outputDir, _))
+      sourceFiles <- rawCrds.map(createSourceFiles).flattenWithFirstError
+      _ <- sourceFiles.flatten
+        .map(createSourceFile(outputDir, _))
         .flattenWithFirstError
     yield ()
   }
 
-  private def sourceToFile(mainDir: os.Path, sourceFile: SourceFile): Either[Throwable, Unit] = {
+  private[crd] def createSourceFiles(rawCrd: String): Either[Throwable, Seq[SourceFile]] =
+    rawCrd.as[CRD].map(crd => createCaseClassVersions(crd.spec))
+
+  private def createSourceFile(mainDir: os.Path, sourceFile: SourceFile): Either[Throwable, Unit] = {
     val filePath = mainDir / sourceFile.filePath.osSubPath
     os.makeDir.all(filePath / os.up)
     Try(os.write(filePath, sourceFile.sourceCode, createFolders = true)).toEither
@@ -81,7 +83,7 @@ object ClassGenerator:
         packagePath = packagePath.removeLastSegment,
         properties = classFields,
         additionalCodecs = classFields
-          .flatMap(fieldNameWithType => AdditionalCodecs.nameToValuesMap.get(fieldNameWithType.baseType))
+          .flatMap(fieldNameWithType => AdditionalCodecs.getCodec(fieldNameWithType.baseType))
           .distinct
       )
 

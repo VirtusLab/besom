@@ -54,7 +54,11 @@ enum AdditionalCodecs(val name: Type, val codecs: Seq[Stat]):
 end AdditionalCodecs
 
 object AdditionalCodecs:
-  val nameToValuesMap: Map[Type, AdditionalCodecs] = AdditionalCodecs.values.map(c => c.name -> c).toMap
+  private val nameToValuesMap: Map[String, AdditionalCodecs] =
+    AdditionalCodecs.values.map(c => c.name.syntax -> c).toMap
+
+  def getCodec(name: Type): Option[AdditionalCodecs] =
+    nameToValuesMap.get(name.syntax)
 
   private def enumEncoder(enumName: String): Stat =
     m"""
