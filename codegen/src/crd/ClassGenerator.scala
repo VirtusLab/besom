@@ -1,12 +1,10 @@
 package besom.codegen.crd
 
-import besom.codegen.scalameta.interpolator.*
 import besom.codegen.scalameta.types
 import besom.codegen.*
 import org.virtuslab.yaml.*
 
 import scala.meta.*
-import scala.meta.dialects.Scala33
 import scala.util.Try
 
 object ClassGenerator:
@@ -119,14 +117,13 @@ object ClassGenerator:
   ): (FieldTypeInfo, Seq[SourceFile]) = {
     val enumList   = jsonSchema.`enum`.get
     val enumName   = fieldName.capitalize
-    val sourceFile = enumFile(packagePath, enumName, enumList)
+    val sourceFile = EnumClass.enumFile(packagePath, enumName, enumList)
     val fieldTypeInfo =
       FieldTypeInfo(
-        name = Name(fieldName),
-        description = jsonSchema.description.map(_.value),
-        isOptional = isOptional(parentJsonSchema.required, fieldName),
+        name = fieldName,
         baseType = Type.Select(scalameta.ref(packagePath.path.toList), Type.Name(enumName)),
-        isSecret = false
+        jsonSchema = jsonSchema,
+        parentJsonSchema = parentJsonSchema
       )
     (fieldTypeInfo, Seq(sourceFile))
   }
@@ -142,11 +139,10 @@ object ClassGenerator:
 
     val fieldTypeInfo =
       FieldTypeInfo(
-        name = Name(fieldName),
-        description = jsonSchema.description.map(_.value),
-        isOptional = isOptional(parentJsonSchema.required, fieldName),
+        name = fieldName,
         baseType = baseType,
-        isSecret = false
+        jsonSchema = jsonSchema,
+        parentJsonSchema = parentJsonSchema
       )
     (fieldTypeInfo, Seq.empty)
   }
@@ -162,11 +158,10 @@ object ClassGenerator:
 
     val fieldTypeInfo =
       FieldTypeInfo(
-        name = Name(fieldName),
-        description = jsonSchema.description.map(_.value),
-        isOptional = isOptional(parentJsonSchema.required, fieldName),
+        name = fieldName,
         baseType = baseType,
-        isSecret = false
+        jsonSchema = jsonSchema,
+        parentJsonSchema = parentJsonSchema
       )
     (fieldTypeInfo, Seq.empty)
   }
@@ -178,11 +173,10 @@ object ClassGenerator:
   ): (FieldTypeInfo, Seq[SourceFile]) = {
     val fieldTypeInfo =
       FieldTypeInfo(
-        name = Name(fieldName),
-        description = jsonSchema.description.map(_.value),
-        isOptional = isOptional(parentJsonSchema.required, fieldName),
+        name = fieldName,
         baseType = types.Boolean,
-        isSecret = false
+        jsonSchema = jsonSchema,
+        parentJsonSchema = parentJsonSchema
       )
     (fieldTypeInfo, Seq.empty)
   }
@@ -195,10 +189,10 @@ object ClassGenerator:
     val (isSecret, baseType) = jsonSchema.format.map(stringParseType).getOrElse((false, types.String))
     val fieldTypeInfo =
       FieldTypeInfo(
-        name = Name(fieldName),
-        description = jsonSchema.description.map(_.value),
-        isOptional = isOptional(parentJsonSchema.required, fieldName),
+        name = fieldName,
         baseType = baseType,
+        jsonSchema = jsonSchema,
+        parentJsonSchema = parentJsonSchema,
         isSecret = isSecret
       )
     (fieldTypeInfo, Seq.empty)
@@ -229,11 +223,10 @@ object ClassGenerator:
       parseJsonSchemaProperty(packagePath, jsonSchema)(fieldName, jsonSchema.items.get)
     val fieldTypeInfo =
       FieldTypeInfo(
-        name = Name(fieldName),
-        description = jsonSchema.description.map(_.value),
-        isOptional = isOptional(parentJsonSchema.required, fieldName),
+        name = fieldName,
         baseType = types.Iterable(classType.baseType),
-        isSecret = classType.isSecret
+        jsonSchema = jsonSchema,
+        parentJsonSchema = parentJsonSchema
       )
     (fieldTypeInfo, sourceFiles)
   }
@@ -249,21 +242,19 @@ object ClassGenerator:
         val className = fieldName.capitalize
         val fieldTypeInfo =
           FieldTypeInfo(
-            name = Name(fieldName),
-            description = jsonSchema.description.map(_.value),
-            isOptional = isOptional(parentJsonSchema.required, fieldName),
+            name = fieldName,
             baseType = Type.Select(scalameta.ref(packagePath.path.toList), Type.Name(className)),
-            isSecret = false
+            jsonSchema = jsonSchema,
+            parentJsonSchema = parentJsonSchema
           )
         (fieldTypeInfo, parseJsonSchema(packagePath.addPart(fieldName), className, jsonSchema))
       case (_, Some(_: Boolean) | None) =>
         val fieldTypeInfo =
           FieldTypeInfo(
-            name = Name(fieldName),
-            description = jsonSchema.description.map(_.value),
-            isOptional = isOptional(parentJsonSchema.required, fieldName),
+            name = fieldName,
             baseType = types.Map(types.String, jsValueType),
-            isSecret = false
+            jsonSchema = jsonSchema,
+            parentJsonSchema = parentJsonSchema
           )
         (fieldTypeInfo, Seq.empty)
       case (_, Some(js: JsonSchemaProps)) =>
@@ -271,10 +262,10 @@ object ClassGenerator:
           parseJsonSchemaProperty(packagePath, jsonSchema)(fieldName, js)
         val fieldTypeInfo =
           FieldTypeInfo(
-            name = Name(fieldName),
-            description = jsonSchema.description.map(_.value),
-            isOptional = isOptional(parentJsonSchema.required, fieldName),
+            name = fieldName,
             baseType = types.Map(types.String, classType.baseType),
+            jsonSchema = jsonSchema,
+            parentJsonSchema = parentJsonSchema,
             isSecret = classType.isSecret
           )
         (fieldTypeInfo, sourceFiles)
@@ -288,50 +279,18 @@ object ClassGenerator:
     println(s"Problem when decoding `$fieldName` field with type ${jsonSchema.`type`}, create Map[String, JsValue]")
     val fieldTypeInfo =
       FieldTypeInfo(
-        name = Name(fieldName),
-        description = jsonSchema.description.map(_.value),
-        isOptional = isOptional(parentJsonSchema.required, fieldName),
+        name = fieldName,
         baseType = types.Map(types.String, jsValueType),
-        isSecret = false
+        jsonSchema = jsonSchema,
+        parentJsonSchema = parentJsonSchema
       )
     (fieldTypeInfo, Seq.empty)
   }
-
-  private def enumFile(packagePath: PackagePath, enumName: String, enumList: List[String]): SourceFile = {
-    val companionObject =
-      m"""|object $enumName:
-          |${AdditionalCodecs.enumCodecs(enumName).mkString("\n")}
-          |""".stripMargin.parse[Stat].get
-
-    val createdClass =
-      m"""|package ${packagePath.path.mkString(".")}
-          |
-          |enum $enumName:
-          |${enumList.map(e => s"  case ${Type.Name(e).syntax} extends $enumName").mkString("\n")}
-          |
-          |$companionObject
-          |""".stripMargin.parse[Source].get
-    SourceFile(
-      filePath = besom.codegen.FilePath(packagePath.path :+ s"$enumName.scala"),
-      sourceCode = createdClass.syntax
-    )
-  }
-
-  private def isOptional(required: Option[Set[String]], fieldName: String): Boolean =
-    !required.getOrElse(Set.empty).contains(fieldName)
-
 end ClassGenerator
+
 case class PackagePath(baseSegments: Seq[String], segments: Seq[String] = Seq.empty):
   def addPart(part: String): PackagePath = PackagePath(baseSegments, part +: segments)
   def path: Seq[String]                  = baseSegments ++ segments.reverse
   def removeLastSegment: PackagePath     = PackagePath(baseSegments, segments.drop(1))
 object PackagePath:
   def apply(base: Seq[String]): PackagePath = new PackagePath(base)
-
-case class FieldTypeInfo(
-  name: Name,
-  description: Option[Seq[String]],
-  isOptional: Boolean,
-  baseType: Type,
-  isSecret: Boolean
-)
