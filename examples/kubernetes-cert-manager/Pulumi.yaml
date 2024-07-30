@@ -1,3 +1,0 @@
-name: kubernetes-cert-manager
-runtime: scala
-description: Example Scala app using cert manager and generated CRD classes
