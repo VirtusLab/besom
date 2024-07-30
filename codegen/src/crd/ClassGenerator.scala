@@ -27,7 +27,7 @@ object ClassGenerator:
         sys.exit(1)
     } match
       case Left(value) =>
-        println("Error " + value)
+        System.err.println("Error " + value)
       case Right(_) =>
         println("Success")
   }
