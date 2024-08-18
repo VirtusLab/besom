@@ -39,6 +39,6 @@ import besom.api.azurenative
 
   Stack(containerGroup).exports(
     // TODO uncomment when bug https://github.com/VirtusLab/besom/issues/432 will be fixed
-    // containerIPv4Address = containerGroup.ipAddress.ip
+    containerIPv4Address = containerGroup.ipAddress.ip
   )
 }
