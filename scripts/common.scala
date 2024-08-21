@@ -140,7 +140,7 @@ lazy val isCI: Boolean =
   println(s"CI: ${ci}")
   ci
 
-lazy val CIMaxMem: Option[Int] = 
+lazy val CIMaxMem: Option[Int] =
   val ciMem = sys.env.get("CI_MAX_MEM").flatMap { str =>
     str.toIntOption
   }
