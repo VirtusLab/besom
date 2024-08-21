@@ -298,7 +298,7 @@ compile-cfg-lib: publish-local-json publish-local-core
 
 # Compiles besom-cfg k8s module
 compile-cfg-k8s: publish-local-cfg-lib
-	just cli packages local kubernetes
+	just cli packages local kubernetes:4.17.1
 	scala-cli --power compile besom-cfg/k8s --suppress-experimental-feature-warning
 
 # Compiles all besom-cfg modules
