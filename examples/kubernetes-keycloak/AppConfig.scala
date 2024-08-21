@@ -1,8 +1,5 @@
 import besom.*
-import besom.json.{DefaultJsonProtocol, JsonFormat, JsonProtocol}
-import DefaultJsonProtocol.*
-
-given DefaultJsonProtocol = DefaultJsonProtocol
+import besom.json.*
 
 case class AppConfig(
   adminDb: DbConfig,

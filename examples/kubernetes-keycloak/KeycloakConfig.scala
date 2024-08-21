@@ -1,6 +1,5 @@
 import besom.*
-import besom.json.{DefaultJsonProtocol, JsonFormat, JsonProtocol}
-import DefaultJsonProtocol.*
+import besom.json.*
 
 case class KeycloakConfig(
   user: String,
