@@ -114,18 +114,24 @@ object Packages:
   )
 
   lazy val compileLocalOpts: Vector[os.Shellable] =
-    if isCI
+    if isCI && CIMaxMem.isDefined
+    then compileOpts(heapMaxGb = CIMaxMem.get)
+    else if isCI 
     then compileOpts(heapMaxGb = 16)
     else compileOpts(heapMaxGb = 32)
 
   lazy val localOpts: Vector[os.Shellable] =
-    if isCI
+    if isCI && CIMaxMem.isDefined
+    then publishOpts(heapMaxGb = CIMaxMem.get, jarCompression = 1)
+    else if isCI
     then publishOpts(heapMaxGb = 16, jarCompression = 1)
     else publishOpts(heapMaxGb = 32, jarCompression = 1)
 
   lazy val mavenOpts: Vector[os.Shellable] = {
-    if isCI
-    then publishOpts(heapMaxGb = 16, jarCompression = 9, sources = true, docs = true)
+    if isCI && CIMaxMem.isDefined
+    then publishOpts(heapMaxGb = CIMaxMem.get, jarCompression = 9, sources = true, docs = true)
+    else if isCI 
+    then publishOpts(heapMaxGb = 16, jarCompression = 9, sources = true, docs = true) 
     else publishOpts(heapMaxGb = 32, jarCompression = 9, sources = true, docs = true)
   } ++ mavenAuthOpts(pgpKey = envOrExit("PGP_KEY_ID"))
     ++ Vector(
