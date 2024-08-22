@@ -128,7 +128,7 @@ object Postgres:
                 containers = k8s.core.v1.inputs.ContainerArgs(
                   name = "delete-directory",
                   image = "busybox",
-                  command = List("sh", "-c", s"rm -r .$storagePath/*"),
+                  command = List("sh", "-c", s"rm -fr $storagePath/*"),
                   volumeMounts = k8s.core.v1.inputs.VolumeMountArgs(
                     mountPath = storagePath,
                     name = pv.metadata.name.map(_.get)

@@ -43,7 +43,7 @@ Example for macOS:
 4. Login to Keycloak using `keycloakUrl`.
     - default url: `https://keycloak.localhost`
     - default user: `admin`
-    - default password: `SUPERsecret`
+    - default password: `password`
 
 5. To clean up resources, destroy your stack and remove it:
 
