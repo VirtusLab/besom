@@ -46,3 +46,4 @@ object Nginx:
         namespace = ingressController.status.namespace
       )
     }
+end Nginx

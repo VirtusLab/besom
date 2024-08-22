@@ -11,7 +11,7 @@ object AppConfig:
     def adminDb: Output[DbConfig]        = o.map(_.adminDb)
     def keycloakDb: Output[DbConfig]     = o.map(_.keycloakDb)
     def keycloak: Output[KeycloakConfig] = o.map(_.keycloak)
-  
+
   val default = AppConfig(
     adminDb = DbConfig(
       user = "postgres",
