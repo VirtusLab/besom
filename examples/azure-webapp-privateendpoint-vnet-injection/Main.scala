@@ -156,6 +156,6 @@ import besom.api.azurenative
     backendURL = backendApp.defaultHostName,
     frontEndURL = frontendApp.defaultHostName,
     privateEndpointURL = privateDNSZoneGroup.privateDnsZoneConfigs
-      .map(zoneConfigs => zoneConfigs.get.head.recordSets.head.fqdn)
+      .flatMap(zoneConfigs => zoneConfigs.get.head.recordSets.map(_.head.fqdn))
   )
 }
