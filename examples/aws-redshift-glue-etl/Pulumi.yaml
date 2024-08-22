@@ -1,0 +1,3 @@
+name: aws-redshift-glue-etl
+description: An ETL pipeline with Amazon Redshift and AWS Glue
+runtime: scala
