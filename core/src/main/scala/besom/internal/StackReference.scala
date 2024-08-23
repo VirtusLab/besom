@@ -51,11 +51,46 @@ case class StackReference(
 end StackReference
 
 trait StackReferenceFactory:
-  def apply(using Context)(
+  sealed trait StackReferenceType[T]:
+    type Out[T]
+    def transform(stackReference: StackReference): Output[Out[T]]
+
+  class TypedStackReferenceType[T](using JsonReader[T]) extends StackReferenceType[T]:
+    type Out[T] = TypedStackReference[T]
+    def transform(stackReference: StackReference): Output[Out[T]] =
+      val objectOutput: Output[T] =
+        requireObject(stackReference.outputs, stackReference.secretOutputNames)
+
+      objectOutput.map(t =>
+        TypedStackReference(
+          urn = stackReference.urn,
+          id = stackReference.id,
+          name = stackReference.name,
+          outputs = t,
+          secretOutputNames = stackReference.secretOutputNames
+        )
+      )
+
+  class UntypedStackReferenceType(using Context) extends StackReferenceType[Any]:
+    type Out[T] = StackReference
+    def transform(stackReference: StackReference): Output[StackReference] = Output(stackReference)
+
+  import scala.compiletime.summonFrom
+  inline implicit def stackRefTypeProvider[T](using Context): StackReferenceType[T] =
+    summonFrom {
+      case _: besom.json.JsonReader[T] => typedStackReference[T]
+      case _                           => untypedStackReference.asInstanceOf[StackReferenceType[T]]
+    }
+
+  def untypedStackReference(using Context): StackReferenceType[Any] = UntypedStackReferenceType()
+
+  def typedStackReference[T: JsonReader]: TypedStackReferenceType[T] = TypedStackReferenceType()
+
+  def apply[T](using stackRefType: StackReferenceType[T], ctx: Context)(
     name: NonEmptyString,
     args: Input.Optional[StackReferenceArgs] = None,
     opts: StackReferenceResourceOptions = StackReferenceResourceOptions()
-  ): Output[StackReference] =
+  ): Output[stackRefType.Out[T]] =
     args
       .asOptionOutput(false)
       .flatMap {
@@ -76,25 +111,26 @@ trait StackReferenceFactory:
 
         Context().readOrRegisterResource[StackReference, StackReferenceArgs]("pulumi:pulumi:StackReference", name, stackRefArgs, mergedOpts)
       }
+      .flatMap(stackRefType.transform)
 
-  def typed[T](using
-    ctx: Context,
-    jr: JsonReader[T]
-  )(name: NonEmptyString, args: Input.Optional[StackReferenceArgs], opts: StackReferenceResourceOptions): Output[TypedStackReference[T]] =
-    apply(using ctx)(name, args, opts).flatMap { stackReference =>
-      val objectOutput: Output[T] =
-        requireObject(stackReference.outputs, stackReference.secretOutputNames)
+  // def apply[T](using
+  //   ctx: Context,
+  //   jr: JsonReader[T]
+  // )(name: NonEmptyString, args: Input.Optional[StackReferenceArgs], opts: StackReferenceResourceOptions): Output[TypedStackReference[T]] =
+  //   apply(using ctx)(name, args, opts).flatMap { stackReference =>
+  //     val objectOutput: Output[T] =
+  //       requireObject(stackReference.outputs, stackReference.secretOutputNames)
 
-      objectOutput.map(t =>
-        TypedStackReference(
-          urn = stackReference.urn,
-          id = stackReference.id,
-          name = stackReference.name,
-          outputs = t,
-          secretOutputNames = stackReference.secretOutputNames
-        )
-      )
-    }
+  //     objectOutput.map(t =>
+  //       TypedStackReference(
+  //         urn = stackReference.urn,
+  //         id = stackReference.id,
+  //         name = stackReference.name,
+  //         outputs = t,
+  //         secretOutputNames = stackReference.secretOutputNames
+  //       )
+  //     )
+  //   }
 
   private[internal] def requireObject[T: JsonReader](
     outputs: Output[Map[String, JsValue]],
