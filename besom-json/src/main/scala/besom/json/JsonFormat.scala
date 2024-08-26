@@ -33,7 +33,7 @@ object JsonReader {
     def read(json: JsValue) = f(json)
   }
 
-  inline def derived[T <: Product](using JsonProtocol): JsonReader[T] = summon[JsonProtocol].jsonFormatN[T]
+  inline def derived[T <: Product](using JsonProtocol): JsonReader[T] = summon[JsonProtocol].jsonReaderN[T]
 }
 
 /** Provides the JSON serialization for type T.

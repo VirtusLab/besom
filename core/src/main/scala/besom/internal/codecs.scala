@@ -324,7 +324,7 @@ object Decoder extends DecoderInstancesLowPrio1:
                 .foldLeft[ValidatedResult[DecodingError, Vector[OutputData[A]]]](ValidatedResult.valid(Vector.empty))(
                   accumulatedOutputDataOrErrors(_, _, "iterable", label)
                 )
-                .map(_.toIterable)
+                .map(_.toVector)
                 .map(OutputData.sequence)
             end if
           }

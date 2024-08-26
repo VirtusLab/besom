@@ -140,7 +140,7 @@ class CoreTests extends munit.FunSuite {
     case pulumi.FixtureMultiContext(ctx, Vector(ctx1, ctx2)) =>
       println(s"Source stack name: ${ctx1.stackName}, pulumi home: ${ctx.home}")
       pulumi.up(ctx1.stackName).call(cwd = ctx1.programDir, env = ctx1.env)
-      val outputs1 = upickle.default.read[Map[String, ujson.Value]](
+      val expected = upickle.default.read[Map[String, ujson.Value]](
         pulumi.outputs(ctx1.stackName, "--show-secrets").call(cwd = ctx1.programDir, env = ctx1.env).out.text()
       )
 
@@ -148,11 +148,11 @@ class CoreTests extends munit.FunSuite {
       pulumi
         .up(ctx2.stackName, "--config", s"sourceStack=organization/source-stack-test/${ctx1.stackName}")
         .call(cwd = ctx2.programDir, env = ctx2.env)
-      val outputs2 = upickle.default.read[Map[String, ujson.Value]](
+      val obtained = upickle.default.read[Map[String, ujson.Value]](
         pulumi.outputs(ctx2.stackName, "--show-secrets").call(cwd = ctx2.programDir, env = ctx2.env).out.text()
       )
 
-      assertEquals(outputs1, outputs2)
+      assertEquals(obtained, expected)
 
     case _ => throw new Exception("Invalid number of contexts")
   }
@@ -182,7 +182,7 @@ class CoreTests extends munit.FunSuite {
     case pulumi.FixtureMultiContext(ctx, Vector(ctx1, ctx2)) =>
       println(s"Source stack name: ${ctx1.stackName}, pulumi home: ${ctx.home}")
       pulumi.up(ctx1.stackName).call(cwd = ctx1.programDir, env = ctx1.env)
-      val outputs1 = upickle.default.read[Map[String, ujson.Value]](
+      val expected = upickle.default.read[Map[String, ujson.Value]](
         pulumi.outputs(ctx1.stackName, "--show-secrets").call(cwd = ctx1.programDir, env = ctx1.env).out.text()
       )
 
@@ -190,11 +190,11 @@ class CoreTests extends munit.FunSuite {
       pulumi
         .up(ctx2.stackName, "--config", s"sourceStack=organization/source-stack-test/${ctx1.stackName}")
         .call(cwd = ctx2.programDir, env = ctx2.env)
-      val outputs2 = upickle.default.read[Map[String, ujson.Value]](
+      val obtained = upickle.default.read[Map[String, ujson.Value]](
         pulumi.outputs(ctx2.stackName, "--show-secrets").call(cwd = ctx2.programDir, env = ctx2.env).out.text()
       )
 
-      assertEquals(outputs1, outputs2)
+      assertEquals(obtained, expected)
 
     case _ => throw new Exception("Invalid number of contexts")
   }
