@@ -53,4 +53,5 @@ object aliases:
   object CustomTimeouts extends besom.internal.CustomTimeoutsFactory
 
   export besom.internal.InvokeOptions
+  export besom.util.JsonReaderInstances.*
 end aliases

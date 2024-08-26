@@ -23,6 +23,7 @@ trait ProductFormats:
   def requireNullsForOptions: Boolean = false
 
   inline def jsonFormatN[T <: Product]: RootJsonFormat[T] = ${ ProductFormatsMacro.jsonFormatImpl[T]('self) }
+  inline def jsonReaderN[T <: Product]: RootJsonReader[T] = ${ ProductFormatsMacro.jsonReaderImpl[T]('self) }
 
 object ProductFormatsMacro:
   import scala.deriving.*
@@ -57,29 +58,45 @@ object ProductFormatsMacro:
           '{ $namesExpr.zip($identsExpr).toMap }
         catch case cce: ClassCastException => '{ Map.empty[String, Any] } // TODO drop after https://github.com/lampepfl/dotty/issues/19732
 
+  private def prepareFormatInstances(elemLabels: Type[?], elemTypes: Type[?])(using Quotes): List[Expr[(String, JsonFormat[?], Boolean)]] =
+    (elemLabels, elemTypes) match
+      case ('[EmptyTuple], '[EmptyTuple]) => Nil
+      case ('[label *: labelsTail], '[tpe *: tpesTail]) =>
+        val label = Type.valueOfConstant[label].get.asInstanceOf[String]
+        val isOption = Type.of[tpe] match
+          case '[Option[?]] => Expr(true)
+          case _            => Expr(false)
+
+        val fieldName = Expr(label)
+        val fieldFormat = Expr.summon[JsonFormat[tpe]].getOrElse {
+          quotes.reflect.report.errorAndAbort("Missing given instance of JsonFormat[" ++ Type.show[tpe] ++ "]")
+        } // TODO: Handle missing instance
+        val namedInstance = '{ (${ fieldName }, $fieldFormat, ${ isOption }) }
+        namedInstance :: prepareFormatInstances(Type.of[labelsTail], Type.of[tpesTail])
+
+  private def prepareReaderInstances(elemLabels: Type[?], elemTypes: Type[?])(using Quotes): List[Expr[(String, JsonReader[?], Boolean)]] =
+    (elemLabels, elemTypes) match
+      case ('[EmptyTuple], '[EmptyTuple]) => Nil
+      case ('[label *: labelsTail], '[tpe *: tpesTail]) =>
+        val label = Type.valueOfConstant[label].get.asInstanceOf[String]
+        val isOption = Type.of[tpe] match
+          case '[Option[?]] => Expr(true)
+          case _            => Expr(false)
+
+        val fieldName = Expr(label)
+        val fieldFormat = Expr.summon[JsonReader[tpe]].getOrElse {
+          quotes.reflect.report.errorAndAbort("Missing given instance of JsonFormat[" ++ Type.show[tpe] ++ "]")
+        } // TODO: Handle missing instance
+        val namedInstance = '{ (${ fieldName }, $fieldFormat, ${ isOption }) }
+        namedInstance :: prepareReaderInstances(Type.of[labelsTail], Type.of[tpesTail])
+
   def jsonFormatImpl[T <: Product: Type](prodFormats: Expr[ProductFormats])(using Quotes): Expr[RootJsonFormat[T]] =
     Expr.summon[Mirror.Of[T]].get match
       case '{
             $m: Mirror.ProductOf[T] { type MirroredElemLabels = elementLabels; type MirroredElemTypes = elementTypes }
           } =>
-        def prepareInstances(elemLabels: Type[?], elemTypes: Type[?]): List[Expr[(String, JsonFormat[?], Boolean)]] =
-          (elemLabels, elemTypes) match
-            case ('[EmptyTuple], '[EmptyTuple]) => Nil
-            case ('[label *: labelsTail], '[tpe *: tpesTail]) =>
-              val label = Type.valueOfConstant[label].get.asInstanceOf[String]
-              val isOption = Type.of[tpe] match
-                case '[Option[?]] => Expr(true)
-                case _            => Expr(false)
-
-              val fieldName = Expr(label)
-              val fieldFormat = Expr.summon[JsonFormat[tpe]].getOrElse {
-                quotes.reflect.report.errorAndAbort("Missing given instance of JsonFormat[" ++ Type.show[tpe] ++ "]")
-              } // TODO: Handle missing instance
-              val namedInstance = '{ (${ fieldName }, $fieldFormat, ${ isOption }) }
-              namedInstance :: prepareInstances(Type.of[labelsTail], Type.of[tpesTail])
-
         // instances are in correct order of fields of the product
-        val allInstancesExpr = Expr.ofList(prepareInstances(Type.of[elementLabels], Type.of[elementTypes]))
+        val allInstancesExpr = Expr.ofList(prepareFormatInstances(Type.of[elementLabels], Type.of[elementTypes]))
         val defaultArguments = findDefaultParams[T]
 
         '{
@@ -121,6 +138,44 @@ object ProductFormatsMacro:
 
               JsObject(fields.toMap)
         }
+
+  def jsonReaderImpl[T <: Product: Type](prodFormats: Expr[ProductFormats])(using Quotes): Expr[RootJsonReader[T]] =
+    Expr.summon[Mirror.Of[T]].get match
+      case '{
+            $m: Mirror.ProductOf[T] { type MirroredElemLabels = elementLabels; type MirroredElemTypes = elementTypes }
+          } =>
+        // instances are in correct order of fields of the product
+        val allInstancesExpr = Expr.ofList(prepareReaderInstances(Type.of[elementLabels], Type.of[elementTypes]))
+        val defaultArguments = findDefaultParams[T]
+
+        '{
+          new RootJsonReader[T]:
+            private val allInstances = ${ allInstancesExpr }
+            private val fmts         = ${ prodFormats }
+            private val defaultArgs  = ${ defaultArguments }
+
+            def read(json: JsValue): T = json match
+              case JsObject(fields) =>
+                val values = allInstances.map { case (fieldName, fieldFormat, isOption) =>
+                  try fieldFormat.read(fields(fieldName))
+                  catch
+                    case e: NoSuchElementException =>
+                      // if field has a default value, use it, we didn't find anything in the JSON
+                      if defaultArgs.contains(fieldName) then defaultArgs(fieldName)
+                      // if field is optional and requireNullsForOptions is disabled, return None
+                      // otherwise we require an explicit null value
+                      else if isOption && !fmts.requireNullsForOptions then None
+                      // it's missing so we throw an exception
+                      else throw DeserializationException("Object is missing required member '" ++ fieldName ++ "'", null, fieldName :: Nil)
+                    case DeserializationException(msg, cause, fieldNames) =>
+                      throw DeserializationException(msg, cause, fieldName :: fieldNames)
+                }
+                $m.fromProduct(Tuple.fromArray(values.toArray))
+
+              case _ => throw DeserializationException("Object expected", null, allInstances.map(_._1))
+
+        }
+
 end ProductFormatsMacro
 
 /** This trait supplies an alternative rendering mode for optional case class members. Normally optional members that are undefined (`None`)
