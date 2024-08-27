@@ -370,6 +370,26 @@ publish-maven-codegen: test-codegen
 	scala-cli --power publish {{no-bloop-ci}} codegen --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 ####################
+# crd2besom
+####################
+
+# Compiles crd2besom module
+compile-crd2besom:
+	scala-cli --power compile {{no-bloop-ci}} crd2besom --suppress-experimental-feature-warning
+
+# Runs tests for crd2besom
+test-crd2besom:
+	scala-cli --power test {{no-bloop-ci}} crd2besom --suppress-experimental-feature-warning
+
+# Cleans crd2besom build
+clean-crd2besom:
+	scala-cli clean crd2besom
+
+# Build crd2besom binary
+build-crd2besom:
+	scala-cli --power package {{no-bloop-ci}} crd2besom --suppress-experimental-feature-warning --graal -o .out/crd2besom/bin/$(arch)/crd2besom
+
+####################
 # Integration testing
 ####################
 

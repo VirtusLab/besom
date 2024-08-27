@@ -3,7 +3,7 @@
 //> using options -deprecation -feature -Werror -Wunused:all
 
 //> using dep org.virtuslab::besom-codegen:0.4.0-SNAPSHOT
-//> using dep org.virtuslab::scala-yaml:0.3.0
+//> using dep org.virtuslab::scala-yaml:0.1.0
 
 //> using dep org.scalameta::munit:1.0.1
 
