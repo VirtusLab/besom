@@ -76,7 +76,10 @@ object scalameta:
 
     val Boolean: Type.Ref  = Type.Name("Boolean")
     val String: Type.Ref   = Type.Name("String")
+    val Byte: Type.Ref     = Type.Name("Byte")
     val Int: Type.Ref      = Type.Name("Int")
+    val Long: Type.Ref     = Type.Name("Long")
+    val Float: Type.Ref    = Type.Name("Float")
     val Double: Type.Ref   = Type.Name("Double")
     val Unit: Type.Ref     = Type.Select(Term.Name("scala"), Type.Name("Unit"))
     val Option: Type.Ref   = Type.Select(Term.Name("scala"), Type.Name("Option"))

@@ -206,10 +206,20 @@ object Decoder extends DecoderInstancesLowPrio1:
       if v.kind.isNumberValue then v.getNumberValue.valid
       else error(s"$label: Expected a number, got: '${v.kind}'", label).invalid
 
+  given floatDecoder: Decoder[Float] with
+    def mapping(v: Value, label: Label): Validated[DecodingError, Float] =
+      doubleDecoder.mapping(v, label).map(_.toFloat)
+
   given intDecoder(using doubleDecoder: Decoder[Double]): Decoder[Int] =
     doubleDecoder.emap { (double, label) =>
       if (double % 1 == 0) ValidatedResult.valid(double.toInt)
       else error(s"$label: Numeric value was expected to be integer, but had a decimal value", label).invalidResult
+    }
+
+  given longDecoder(using doubleDecoder: Decoder[Double]): Decoder[Long] =
+    doubleDecoder.emap { (double, label) =>
+      if (double % 1 == 0) ValidatedResult.valid(double.toLong)
+      else error(s"$label: Numeric value was expected to be long, but had a decimal value", label).invalidResult
     }
 
   given stringDecoder: Decoder[String] with
@@ -963,6 +973,12 @@ object Encoder:
 
   given intEncoder: Encoder[Int] with
     def encode(int: Int)(using Context): Result[(Metadata, Value)] = Result.pure(Metadata.empty -> int.asValue)
+
+  given longEncoder: Encoder[Long] with
+    def encode(long: Long)(using Context): Result[(Metadata, Value)] = Result.pure(Metadata.empty -> long.asValue)
+
+  given floatEncoder: Encoder[Float] with
+    def encode(float: Float)(using Context): Result[(Metadata, Value)] = Result.pure(Metadata.empty -> float.asValue)
 
   given doubleEncoder: Encoder[Double] with
     def encode(dbl: Double)(using Context): Result[(Metadata, Value)] = Result.pure(Metadata.empty -> dbl.asValue)
