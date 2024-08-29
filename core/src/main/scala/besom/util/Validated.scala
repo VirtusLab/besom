@@ -1,6 +1,7 @@
 package besom.util
 
 import besom.internal.Zippable
+import scala.util.Try
 
 enum Validated[+E, +A]:
   case Valid(a: A) extends Validated[E, A]
@@ -20,6 +21,16 @@ enum Validated[+E, +A]:
     this match
       case Valid(a)       => Valid(f(a))
       case i @ Invalid(_) => i.asInstanceOf[Validated[E, B]]
+
+  def bimap[EE, B](f: E => EE, g: A => B): Validated[EE, B] =
+    this match
+      case Valid(a)   => Valid(g(a))
+      case Invalid(e) => Invalid(e.map(f))
+
+  def redeem[B](fe: NonEmptyVector[E] => B, fa: A => B): Validated[Nothing, B] =
+    this match
+      case Valid(a)   => Valid(fa(a))
+      case Invalid(e) => Valid(fe(e))
 
   def flatMap[EE >: E, B](f: A => Validated[EE, B]): Validated[EE, B] =
     this match
@@ -45,6 +56,13 @@ enum Validated[+E, +A]:
     this match
       case Valid(a)   => Valid(a)
       case Invalid(e) => Invalid(e.map(f))
+
+  def isValid: Boolean = this match
+    case Valid(_) => true
+    case _        => false
+
+  def isInvalid: Boolean = !isValid
+
 end Validated
 
 extension [A](a: A)
@@ -61,6 +79,10 @@ extension [E, A](e: Either[E, A])
   def toValidatedResult: Validated.ValidatedResult[E, A] =
     e.fold(_.invalidResult, _.validResult)
 
+extension [A](t: Try[A])
+  def toValidated: Validated[Throwable, A] =
+    t.fold(_.invalid, _.valid)
+
 extension [A](a: Option[A])
   def toValidatedOrError[E](e: => E): Validated[E, A] =
     a.fold(e.invalid)(_.valid)
@@ -72,10 +94,25 @@ extension [A](vec: Vector[A])
     vec.foldLeft[Validated[E, Vector[B]]](Vector.empty[B].valid) { (acc, a) =>
       acc.zipWith(f(a))(_ :+ _)
     }
+
+  def sequenceV[E, R](using ev: A =:= Validated[E, R]): Validated[E, Vector[R]] =
+    vec.traverseV(v => ev(v))
+
   def traverseVR[E, B](f: A => Validated.ValidatedResult[E, B]): Validated.ValidatedResult[E, Vector[B]] =
     vec.foldLeft[Validated.ValidatedResult[E, Vector[B]]](Vector.empty[B].validResult) { (acc, a) =>
       acc.zipWith(f(a))(_ :+ _)
     }
+
+extension [A](vec: List[A])
+  def traverseL[E, B](f: A => Validated[E, B]): Validated[E, List[B]] =
+    vec
+      .foldLeft[Validated[E, Vector[B]]](Vector.empty[B].valid) { (acc, a) =>
+        acc.zipWith(f(a))(_ :+ _)
+      }
+      .map(_.toList)
+
+  def sequenceL[E, R](using ev: A =:= Validated[E, R]): Validated[E, List[R]] =
+    vec.traverseL(v => ev(v))
 
 extension [E, A](vec: Vector[Validated[E, A]])
   def sequenceV: Validated[E, Vector[A]] =

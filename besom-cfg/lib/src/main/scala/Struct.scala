@@ -71,11 +71,14 @@ object Struct extends Dynamic:
 
     args match
       case Varargs(argExprs) =>
-        val refinementTypes = argExprs.toList.map { case '{ ($key: String, $value: v) } =>
-          (key.valueOrAbort, TypeRepr.of[v])
+        val refinementTypes = argExprs.toList.map {
+          case '{ ($key: String, $value: v) } => (key.valueOrAbort, TypeRepr.of[v])
+          case _ => report.errorAndAbort("Expected explicit named varargs sequence. Notation `args*` is not supported.", args)
         }
-        val exprs = argExprs.map { case '{ ($key: String, $value: v) } =>
-          '{ ($key, $value) }
+
+        val exprs = argExprs.map {
+          case '{ ($key: String, $value: v) } => '{ ($key, $value) }
+          case _ => report.errorAndAbort("Expected explicit named varargs sequence. Notation `args*` is not supported.", args)
         }
         val argsExpr = Expr.ofSeq(exprs)
 
@@ -84,36 +87,5 @@ object Struct extends Dynamic:
             '{ Struct.make(${ argsExpr }.to(ListMap)).asInstanceOf[t] }
 
       case _ =>
-        report.errorAndAbort(
-          "Expected explicit varargs sequence. " +
-            "Notation `args*` is not supported.",
-          args
-        )
-
-  extension (s: Struct)
-    def foldToEnv: Output[List[(String, String)]] = s.fold[List[(String, String)]](
-      onStruct = { mapB =>
-        mapB.foldLeft(Output(List.empty[(String, String)])) { case (acc, (k, v)) =>
-          acc.flatMap { accList =>
-            v.map { vList =>
-              accList ++ vList.map { case (k2, v2) =>
-                // println(s"struct, serializing '$k' '$k2' to ${if k2.isBlank() then s"$k -> $v2" else s"$k.$k2 -> $v2"}")
-                if k2.isBlank then k -> v2 else s"$k.$k2" -> v2
-              }
-            }
-          }
-        }
-      },
-      onList = { list =>
-        Output(list.zipWithIndex.flatMap { (lst, idx) =>
-          lst.map { case (k, v) =>
-            // println(s"list: serializing $k, $v to $k$idx -> $v")
-            if k.isBlank() then s"$k$idx" -> v else s"$idx.$k" -> v
-          }
-        })
-      },
-      onValue = a =>
-        // println(s"serializing $a to List(\"\" -> $a)")
-        Output(List("" -> a.toString))
-    )
+        report.errorAndAbort("Expected explicit named varargs sequence. Notation `args*` is not supported.", args)
 end Struct

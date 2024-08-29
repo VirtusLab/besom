@@ -4,6 +4,7 @@
 
 //> using dep org.virtuslab::besom-json:0.4.0-SNAPSHOT
 //> using dep org.virtuslab::besom-core:0.4.0-SNAPSHOT
+//> using dep org.virtuslab::besom-model:0.4.0-SNAPSHOT
 //> using dep org.virtuslab::scala-yaml:0.0.8
 //> using dep com.lihaoyi::os-lib:0.10.0
 //> using dep com.lihaoyi::os-lib-watch:0.10.0

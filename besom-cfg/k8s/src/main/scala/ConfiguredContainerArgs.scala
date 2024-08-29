@@ -11,9 +11,9 @@ import scala.util.*
 import scala.quoted.*
 import besom.cfg.k8s.syntax.*
 
-// this is besom-cfg-kubernetes entrypoint
-
 object syntax:
+  import besom.cfg.from.env.*
+
   extension (s: Struct)
     def foldedToEnvVarArgs: Output[List[EnvVarArgs]] =
       s.foldToEnv.map(_.map { case (k, v) => EnvVarArgs(name = k, value = v) })
@@ -47,7 +47,9 @@ object ConfiguredContainerArgs:
     tty: Input.Optional[Boolean] = None,
     volumeDevices: Input.Optional[List[Input[VolumeDeviceArgs]]] = None,
     volumeMounts: Input.Optional[List[Input[VolumeMountArgs]]] = None,
-    workingDir: Input.Optional[String] = None
+    workingDir: Input.Optional[String] = None,
+    dontUseCache: Boolean = false,
+    overrideClasspathPath: Option[String] = None
   ) = ${
     applyImpl(
       'name,
@@ -74,7 +76,9 @@ object ConfiguredContainerArgs:
       'tty,
       'volumeDevices,
       'volumeMounts,
-      'workingDir
+      'workingDir,
+      'dontUseCache,
+      'overrideClasspathPath
     )
   }
 
@@ -103,7 +107,9 @@ object ConfiguredContainerArgs:
     tty: Expr[Input.Optional[Boolean]],
     volumeDevices: Expr[Input.Optional[List[Input[VolumeDeviceArgs]]]],
     volumeMounts: Expr[Input.Optional[List[Input[VolumeMountArgs]]]],
-    workingDir: Expr[Input.Optional[String]]
+    workingDir: Expr[Input.Optional[String]],
+    dontUseCache: Expr[Boolean],
+    overrideClasspathPath: Expr[Option[String]]
   )(using Quotes): Expr[ContainerArgs] =
     import quotes.reflect.*
 
@@ -115,9 +121,17 @@ object ConfiguredContainerArgs:
       case None        => report.errorAndAbort("Image name has to be a literal!", image)
       case Some(value) => value
 
-    val schema = getDockerImageMetadata(dockerImage) match
+    val classpathPath = overrideClasspathPath.value.flatten
+
+    val schema = getDockerImageMetadata(dockerImage, dontUseCache.value.getOrElse(false), classpathPath) match
       case Left(throwable) => report.errorAndAbort(s"Failed to get metadata for image $dockerImage:$NL${pprint(throwable)}", image)
       case Right(schema)   => schema
+
+    if schema.medium != Configured.FromEnv.MediumIdentifier then
+      report.errorAndAbort(
+        s"Medium ${schema.medium} requested by besom-cfg schema for image $dockerImage is not supported by k8s container configuration yet.",
+        image
+      )
 
     Diff.performDiff(schema, configuration) match
       case Left(prettyDiff) => // TODO maybe strip all the ansi codes if in CI?

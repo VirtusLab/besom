@@ -1,7 +1,6 @@
 # Big idea behind using a Justfile is so that we can have modules like in sbt.
 
 besom-version := `cat version.txt`
-besom-cfg-version := `cat besom-cfg/version.txt`
 is-snapshot := if "{{besom-version}}" =~ '.*-SNAPSHOT' { "true" } else { "false" }
 no-bloop := if env_var_or_default('BESOM_BUILD_NO_BLOOP', "") == "true" { "--server=false" } else { "" }
 
@@ -44,20 +43,20 @@ build-packages-for-templates-and-examples:
   grep -hr "0.3-SNAPSHOT" examples/**/*.scala templates/**/*.scala | sed -n 's/.*besom-\([^:]*:[^"]*\).*-core.0.3-SNAPSHOT.*/\1/p' | sort -u | tr '\n' ' ' | xargs -I {} just cli packages local {}
 
 # Cleans everything
-clean-all: clean-json clean-rpc clean-sdk clean-auto clean-out clean-compiler-plugin clean-codegen clean-scripts clean-test-integration clean-cfg clean-test-templates clean-test-examples clean-test-markdown
+clean-all: clean-json clean-model clean-rpc clean-sdk clean-auto clean-out clean-compiler-plugin clean-codegen clean-scripts clean-test-integration clean-cfg clean-test-templates clean-test-examples clean-test-markdown
 
 # Compiles everything
-compile-all: compile-json compile-rpc compile-sdk compile-auto compile-codegen compile-scripts compile-compiler-plugin build-language-plugin
+compile-all: compile-json compile-model compile-rpc compile-sdk compile-auto compile-codegen compile-scripts compile-compiler-plugin build-language-plugin
 
 # Tests everything
-test-all: test-json test-sdk test-auto test-codegen test-scripts test-integration build-packages-for-templates-and-examples test-templates test-examples test-markdown
+test-all: test-json test-model test-sdk test-auto test-codegen test-scripts test-integration build-packages-for-templates-and-examples test-templates test-examples test-markdown
 
 # Publishes everything locally
-publish-local-all: publish-local-json publish-local-rpc publish-local-sdk publish-local-auto publish-local-codegen publish-local-scripts install-language-plugin
+publish-local-all: publish-local-json publish-local-model publish-local-rpc publish-local-sdk publish-local-auto publish-local-codegen publish-local-scripts install-language-plugin
 
 # Publishes everything to Maven
 # TODO add publish-maven-auto once stable
-publish-maven-all: publish-maven-json publish-maven-rpc publish-maven-sdk publish-maven-codegen publish-maven-scripts
+publish-maven-all: publish-maven-json publish-maven-model publish-maven-rpc publish-maven-sdk publish-maven-codegen publish-maven-scripts
 
 # Runs all necessary checks before committing
 before-commit: compile-all test-all
@@ -215,7 +214,7 @@ publish-maven-json:
 ####################
 
 # Compiles auto module
-compile-auto: publish-local-core
+compile-auto: publish-local-core publish-local-model
     scala-cli --power compile auto --suppress-experimental-feature-warning
 
 # Runs tests for auto module
@@ -314,65 +313,106 @@ publish-language-plugins-all: package-language-plugins-all
 compile-cfg-lib: publish-local-json publish-local-core
 	scala-cli --power compile besom-cfg/lib --suppress-experimental-feature-warning
 
+compile-cfg-containers: publish-local-cfg-lib publish-local-model
+	scala-cli --power compile besom-cfg/containers --suppress-experimental-feature-warning
+
 # Compiles besom-cfg k8s module
-compile-cfg-k8s: publish-local-cfg-lib
+compile-cfg-k8s: publish-local-cfg-lib publish-local-cfg-containers
 	just cli packages local kubernetes:4.17.1
 	scala-cli --power compile besom-cfg/k8s --suppress-experimental-feature-warning
 
-# Compiles all besom-cfg modules
-compile-cfg: compile-cfg-lib compile-cfg-k8s
-
 # Publishes locally besom-cfg lib module
 publish-local-cfg-lib:
-	scala-cli --power publish local besom-cfg/lib --project-version {{besom-cfg-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish local besom-cfg/lib --project-version {{besom-version}} --suppress-experimental-feature-warning
+
+publish-local-cfg-containers: compile-cfg-containers
+	scala-cli --power publish local besom-cfg/containers --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes locally besom-cfg k8s module
 publish-local-cfg-k8s: compile-cfg-k8s
-	scala-cli --power publish local besom-cfg/k8s --project-version {{besom-cfg-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish local besom-cfg/k8s --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes locally all besom-cfg modules
-publish-local-cfg: publish-local-cfg-lib publish-local-cfg-k8s
+publish-local-cfg: publish-local-cfg-lib publish-local-cfg-containers publish-local-cfg-k8s
 
 # Publishes besom-cfg lib module to Maven
 publish-maven-cfg-lib:
-	scala-cli --power publish besom-cfg/lib --project-version {{besom-cfg-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+	scala-cli --power publish besom-cfg/lib --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+
+publish-maven-cfg-containers:
+	scala-cli --power publish besom-cfg/containers --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 # Publishes besom-cfg k8s module to Maven
 publish-maven-cfg-k8s:
-	scala-cli --power publish besom-cfg/k8s --project-version {{besom-cfg-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+	scala-cli --power publish besom-cfg/k8s --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 # Tests besom-cfg lib module
 test-cfg-lib: compile-cfg-lib
 	scala-cli --power test besom-cfg/lib --suppress-experimental-feature-warning
 
+# Tests besom-cfg containers module
+test-cfg-containers: compile-cfg-containers
+	scala-cli --power test besom-cfg/containers --suppress-experimental-feature-warning
+
 # Tests besom-cfg k8s module
-test-cfg-k8s: publish-local-cfg-lib compile-cfg-k8s
+test-cfg-k8s: compile-cfg-k8s
 	scala-cli --power test besom-cfg/k8s --suppress-experimental-feature-warning
 
+# Compiles all besom-cfg modules
+compile-cfg: compile-cfg-lib compile-cfg-containers compile-cfg-k8s
+
 # Runs all tests of besom-cfg
-test-cfg: test-cfg-lib test-cfg-k8s
+test-cfg: test-cfg-lib test-cfg-containers test-cfg-k8s
 
 # Cleans besom-cfg-lib build
 clean-cfg-lib:
 	scala-cli clean besom-cfg/lib
+
+# Cleans besom-cfg-containers build
+clean-cfg-containers:
+	scala-cli clean besom-cfg/containers
 
 # Cleans besom-cfg-k8s build
 clean-cfg-k8s:
 	scala-cli clean besom-cfg/k8s
 
 # Cleans all besom-cfg builds
-clean-cfg: clean-cfg-lib clean-cfg-k8s
+clean-cfg: clean-cfg-lib clean-cfg-containers clean-cfg-k8s
+
+####################
+# Model
+####################
+
+# Compiles model module
+compile-model:
+	scala-cli --power compile {{no-bloop-ci}} model --suppress-experimental-feature-warning
+
+# Runs tests for model module
+test-model:
+	scala-cli --power test {{no-bloop-ci}} model --suppress-experimental-feature-warning
+
+# Cleans model module
+clean-model:
+	scala-cli --power clean model
+
+# Publishes locally model module
+publish-local-model: test-model
+	scala-cli --power publish local {{no-bloop-ci}} model --project-version {{besom-version}} --suppress-experimental-feature-warning
+
+# Publishes model module
+publish-maven-model: test-model
+	scala-cli --power publish {{no-bloop-ci}} model --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 ####################
 # Codegen
 ####################
 
 # Compiles Besom codegen module
-compile-codegen:
+compile-codegen: publish-local-model
 	scala-cli --power compile {{no-bloop}} codegen --suppress-experimental-feature-warning
 
 # Runs tests for Besom codegen
-test-codegen:
+test-codegen: compile-codegen
 	scala-cli --power test {{no-bloop}} codegen --suppress-experimental-feature-warning
 
 # Cleans codegen build
