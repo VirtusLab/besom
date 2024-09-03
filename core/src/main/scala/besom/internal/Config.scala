@@ -43,7 +43,7 @@ class Config private (
     * @return
     *   the configuration value of the requested type
     */
-  private def getRawValue(key: NonEmptyString)(using ctx: Context): Output[Option[String]] =
+  private def getRawValue(key: NonEmptyString): Output[Option[String]] =
     if configSecretKeys.contains(key)
     then Output.secret(tryGet(key))
     else Output(tryGet(key))
@@ -555,4 +555,4 @@ trait ConfigFactory:
     */
   def apply(namespace: NonEmptyString)(using Context): Output[Config] =
     val projectConfig = Context().config
-    Output(Config.forNamespace(namespace, projectConfig.configMap, projectConfig.configSecretKeys))
+    Output.ofResult(Config.forNamespace(namespace, projectConfig.configMap, projectConfig.configSecretKeys))

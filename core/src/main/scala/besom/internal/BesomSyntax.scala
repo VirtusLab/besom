@@ -103,8 +103,8 @@ trait BesomSyntax:
 
           val componentContext = ComponentContext(ctx, urnRes, componentBase)
           val componentOutput =
-            try Output(Result.pure(f(using componentContext)(using componentBase)))
-            catch case e: Exception => Output(Result.fail(e))
+            try Output(f(using componentContext)(using componentBase))
+            catch case e: Exception => Output.fail(e)
 
           val componentResult = componentOutput.getValueOrFail {
             s"Component resource $name of type $typ did not return a value. This should not happen."
@@ -120,22 +120,22 @@ trait BesomSyntax:
   end component
 
   extension [A <: ProviderResource](pr: A)
-    def provider(using Context): Output[Option[ProviderResource]] = Output {
+    def provider(using Context): Output[Option[ProviderResource]] = Output.ofResult {
       Context().resources.getStateFor(pr).map(_.custom.provider)
     }
 
   extension [A <: CustomResource](cr: A)
-    def provider(using Context): Output[Option[ProviderResource]] = Output {
+    def provider(using Context): Output[Option[ProviderResource]] = Output.ofResult {
       Context().resources.getStateFor(cr).map(_.provider)
     }
 
   extension [A <: ComponentResource](cmpr: A)
-    def providers(using Context): Output[Map[String, ProviderResource]] = Output {
+    def providers(using Context): Output[Map[String, ProviderResource]] = Output.ofResult {
       Context().resources.getStateFor(cmpr).map(_.providers)
     }
 
   extension [A <: RemoteComponentResource](cb: A)
-    def providers(using Context): Output[Map[String, ProviderResource]] = Output {
+    def providers(using Context): Output[Map[String, ProviderResource]] = Output.ofResult {
       Context().resources.getStateFor(cb).map(_.providers)
     }
 

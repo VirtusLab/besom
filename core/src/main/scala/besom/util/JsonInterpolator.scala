@@ -1,7 +1,7 @@
 package besom.util
 
 import besom.json.*
-import besom.internal.{Context, Output}
+import besom.internal.Output
 import scala.util.{Failure, Success}
 import interpolator.interleave
 import java.util.Objects
@@ -12,10 +12,9 @@ object JsonInterpolator:
 
   private val NL = System.lineSeparator()
 
-  extension (inline sc: StringContext)
-    inline def json(inline args: Any*)(using ctx: besom.internal.Context): Output[JsValue] = ${ jsonImpl('sc, 'args, 'ctx) }
+  extension (inline sc: StringContext) inline def json(inline args: Any*): Output[JsValue] = ${ jsonImpl('sc, 'args) }
 
-  private def jsonImpl(sc: Expr[StringContext], args: Expr[Seq[Any]], ctx: Expr[Context])(using Quotes): Expr[Output[JsValue]] =
+  private def jsonImpl(sc: Expr[StringContext], args: Expr[Seq[Any]])(using Quotes): Expr[Output[JsValue]] =
     import quotes.reflect.*
 
     def defaultFor(field: Expr[Any], tpe: Type[_], wrappers: List[Type[_]] = Nil): Any = tpe match
@@ -64,7 +63,7 @@ object JsonInterpolator:
       arg match
         case '{ $arg: String } =>
           '{
-            Output($arg)(using $ctx).map { str =>
+            Output($arg).map { str =>
               val sb = java.lang.StringBuilder()
               if str == null then JsNull
               else
@@ -73,20 +72,20 @@ object JsonInterpolator:
                 JsString(str)
             }
           }
-        case '{ $arg: Int }     => '{ Output(JsNumber($arg))(using $ctx) }
-        case '{ $arg: Short }   => '{ Output(JsNumber($arg))(using $ctx) }
-        case '{ $arg: Long }    => '{ Output(JsNumber($arg))(using $ctx) }
-        case '{ $arg: Float }   => '{ Output(JsNumber($arg))(using $ctx) }
-        case '{ $arg: Double }  => '{ Output(JsNumber($arg))(using $ctx) }
-        case '{ $arg: Boolean } => '{ Output(JsBoolean($arg))(using $ctx) }
-        case '{ $arg: JsValue } => '{ Output($arg)(using $ctx) }
+        case '{ $arg: Int }     => '{ Output(JsNumber($arg)) }
+        case '{ $arg: Short }   => '{ Output(JsNumber($arg)) }
+        case '{ $arg: Long }    => '{ Output(JsNumber($arg)) }
+        case '{ $arg: Float }   => '{ Output(JsNumber($arg)) }
+        case '{ $arg: Double }  => '{ Output(JsNumber($arg)) }
+        case '{ $arg: Boolean } => '{ Output(JsBoolean($arg)) }
+        case '{ $arg: JsValue } => '{ Output($arg) }
         case _ =>
           arg.asTerm.tpe.asType match
             case '[Output[Option[t]]] =>
               '{
                 $arg.asInstanceOf[Output[Option[t]]].flatMap {
                   case Some(value) => ${ convert('value) }
-                  case None        => Output(JsNull)(using $ctx)
+                  case None        => Output(JsNull)
                 }
               }
             case '[Output[t]] =>
@@ -100,7 +99,7 @@ object JsonInterpolator:
               '{
                 $arg.asInstanceOf[Option[t]] match
                   case Some(value) => ${ convert('value) }
-                  case None        => Output(JsNull)(using $ctx)
+                  case None        => Output(JsNull)
               }
 
             case '[t] =>
@@ -119,13 +118,13 @@ object JsonInterpolator:
           case Varargs(argExprs) =>
             if argExprs.isEmpty then
               parts.map(_.valueOrAbort).mkString match
-                case "" => '{ Output(JsObject.empty)(using $ctx) }
+                case "" => '{ Output(JsObject.empty) }
                 case str =>
                   scala.util.Try(JsonParser(str)) match
                     case Failure(exception) =>
                       report.errorAndAbort(s"Failed to parse JSON:$NL  ${exception.getMessage}")
                     case Success(value) =>
-                      '{ Output(JsonParser(ParserInput.apply(${ Expr(str) })))(using $ctx) }
+                      '{ Output(JsonParser(ParserInput.apply(${ Expr(str) }))) }
             else
               val defaults = argExprs.map { arg =>
                 defaultFor(arg, arg.asTerm.tpe.asType)
@@ -144,7 +143,7 @@ object JsonInterpolator:
 
                   '{
                     interleave(${ liftedParts }.toList, ${ liftedExprOfSeq }.toList)
-                      .foldLeft(Output("")(using $ctx)) { case (acc, e) =>
+                      .foldLeft(Output("")) { case (acc, e) =>
                         e match
                           case o: Output[?] => acc.flatMap(s => o.map(v => s + Objects.toString(v))) // handle nulls too
                           case s: String    => acc.map(_ + s)

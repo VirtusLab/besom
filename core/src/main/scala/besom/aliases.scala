@@ -5,8 +5,8 @@ import besom.internal.ResourceOptsVariant
 object aliases:
   type Output[+A] = besom.internal.Output[A]
   object Output extends besom.internal.OutputFactory
-  object OutputExtensions extends besom.internal.OutputExtensionsFactory
-  export OutputExtensions.*
+  // object OutputExtensions extends besom.internal.OutputExtensionsFactory
+  // export OutputExtensions.*
   type Input[+A] = besom.internal.Input[A]
   object Input:
     export besom.internal.Input.*
