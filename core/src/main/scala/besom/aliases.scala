@@ -1,7 +1,5 @@
 package besom
 
-import besom.internal.ResourceOptsVariant
-
 object aliases:
   type Output[+A] = besom.internal.Output[A]
   object Output extends besom.internal.OutputFactory

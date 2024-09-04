@@ -1211,7 +1211,6 @@ object ArgsEncoder:
     elems: List[(String, Encoder[?])]
   ): ArgsEncoder[A] =
     new ArgsEncoder[A]:
-      import Constants.*
       override def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Metadata], Struct)] =
         Result
           .sequence {
@@ -1262,7 +1261,6 @@ object ProviderArgsEncoder:
     elems: List[(String, Encoder[?])]
   ): ProviderArgsEncoder[A] =
     new ProviderArgsEncoder[A]:
-      import Constants.*
       override def encode(a: A, filterOut: String => Boolean)(using Context): Result[(Map[String, Metadata], Struct)] =
         Result
           .sequence {
