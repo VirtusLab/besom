@@ -1,6 +1,6 @@
 package besom.internal
 
-import besom.internal.logging.{LocalBesomLogger => logger, BesomLogger}
+import besom.internal.logging.{BesomMDC, LocalBesomLogger => logger, BesomLogger}
 import besom.util.printer
 
 /** An abstract effect Besom module, which can be implemented for different effect types.
@@ -40,6 +40,8 @@ trait EffectBesomModule extends BesomSyntax:
     *   the program to run
     */
   def run(program: Context ?=> Stack): Unit =
+    given emptyMDC: BesomMDC[_] = BesomMDC.empty
+
     val everything: Result[Unit] = Result.scoped {
       for
         _              <- BesomLogger.setupLogger()

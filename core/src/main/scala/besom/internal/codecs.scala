@@ -1034,7 +1034,7 @@ object Encoder:
           }
       }
 
-    private def urns(r: Set[Resource]): Result[List[URN]] = Result
+    private def urns(r: Set[Resource])(using Context): Result[List[URN]] = Result
       .sequence {
         r.toList.map(_.urn.getValue)
       }

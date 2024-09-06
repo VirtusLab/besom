@@ -1,8 +1,8 @@
 package besom.internal
 
 import besom.json.*
-import besom.types.*
 import besom.util.NonEmptyString
+import besom.types.{URN, ResourceId}
 
 case class StackReference(
   urn: Output[URN],
@@ -13,7 +13,7 @@ case class StackReference(
 ) extends CustomResource
     derives ResourceDecoder:
 
-  def getOutput(name: NonEmptyString)(using Context): Output[Option[JsValue]] =
+  def getOutput(name: NonEmptyString): Output[Option[JsValue]] =
     getOutput(Output(name))
 
   def getOutput(name: Output[NonEmptyString]): Output[Option[JsValue]] =
@@ -21,21 +21,25 @@ case class StackReference(
       outputs.get(name)
     }
 
-    output.withIsSecret(isSecretOutputName(name))
+    Output.getContext.flatMap { ctx =>
+      output.withIsSecret(isSecretOutputName(name)(using ctx))
+    }
 
-  def requireOutput(name: NonEmptyString)(using Context): Output[JsValue] =
+  def requireOutput(name: NonEmptyString): Output[JsValue] =
     requireOutput(Output(name))
 
-  def requireOutput(name: Output[NonEmptyString])(using Context): Output[JsValue] =
+  def requireOutput(name: Output[NonEmptyString]): Output[JsValue] =
     val output = name.zip(outputs).flatMap { case (name, outputs) =>
       outputs.get(name) match
         case Some(value) => Output(value)
         case None        => Output.fail(Exception(s"Missing required output '$name'"))
     }
 
-    output.withIsSecret(isSecretOutputName(name))
+    Output.getContext.flatMap { ctx =>
+      output.withIsSecret(isSecretOutputName(name)(using ctx))
+    }
 
-  private def isSecretOutputName(name: Output[String]): Result[Boolean] =
+  private def isSecretOutputName(name: Output[String])(using Context): Result[Boolean] =
     for
       nameOd  <- name.getData
       namesOd <- secretOutputNames.getData
@@ -115,11 +119,14 @@ trait StackReferenceFactory:
     outputs: Output[Map[String, JsValue]],
     secretOutputNames: Output[Set[String]]
   ): Output[T] =
-    outputs
-      .map(JsObject(_).convertTo[T])
-      .withIsSecret(
-        secretOutputNames
-          .map(_.nonEmpty)
-          .getValueOrElse(false)
-      )
+    Output.getContext.flatMap { ctx =>
+      outputs
+        .map(JsObject(_).convertTo[T])
+        .withIsSecret(
+          secretOutputNames
+            .map(_.nonEmpty)
+            .getValueOrElse(false)(using ctx)
+        )
+    }
+
 end StackReferenceFactory

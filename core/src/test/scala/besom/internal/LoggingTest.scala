@@ -25,6 +25,8 @@ class LoggingTest extends munit.FunSuite:
     val res      = TestResource(Output(urn), Output("bar"), Output("url"))
     val messages = mutable.ArrayBuffer.empty[LogRecord]
 
+    given logging.BesomMDC[_] = logging.BesomMDC.empty
+
     scribe.Logger.root
       .clearHandlers()
       .clearModifiers()

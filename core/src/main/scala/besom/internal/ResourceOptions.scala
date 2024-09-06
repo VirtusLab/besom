@@ -189,9 +189,9 @@ sealed trait ResourceOptions:
         }
   end resolve
 
-  private[besom] def hasURN: Result[Boolean] = urn.map(_.isDefined).getValueOrElse(false)
+  private[besom] def hasURN(using Context): Result[Boolean] = urn.map(_.isDefined).getValueOrElse(false)
 
-  private[besom] def getURN: Result[URN] = urn.getValueOrElse(None).flatMap {
+  private[besom] def getURN(using Context): Result[URN] = urn.getValueOrElse(None).flatMap {
     case Some(urn) => Result.pure(urn)
     case None      => Result.fail(Exception("URN is not defined"))
   }

@@ -2,7 +2,7 @@ package besom.internal
 
 class ResourceStateMismatchException(msg: String) extends Exception(msg)
 object ResourceStateMismatchException:
-  def fail(r: Resource, state: ResourceState, expected: String)(using dbg: Debug): Result[Nothing] =
+  def fail(r: Resource, state: ResourceState, expected: String)(using ctx: Context, dbg: Debug): Result[Nothing] =
     (for
       rstr <- r.asString
       msg = s"state for resource $r / ${rstr.getOrElse("???")} is $state, expected $expected, caller: $dbg"
@@ -11,7 +11,7 @@ object ResourceStateMismatchException:
 class ResourceStateMissingException(msg: String) extends Exception(msg)
 object ResourceStateMissingException:
   inline private def nl = System.lineSeparator
-  def fail(r: Resource, rs: Map[Resource, ResourceState])(using dbg: Debug): Result[Nothing] =
+  def fail(r: Resource, rs: Map[Resource, ResourceState])(using ctx: Context, dbg: Debug): Result[Nothing] =
     (for
       rstr <- r.asString
       msg = s"state for resource $r / ${rstr.getOrElse("???")} not found$nl - caller: $dbg$nl - state available for resources:$nl${rs.keys
@@ -31,7 +31,7 @@ class Resources private (private val resources: Ref[Map[Resource, ResourceState]
   def add(resource: RemoteComponentResource, state: ComponentResourceState): Result[Unit] =
     resources.update(_ + (resource -> state))
 
-  def add(resource: Resource, state: ResourceState): Result[Unit] = (resource, state) match
+  def add(resource: Resource, state: ResourceState)(using Context): Result[Unit] = (resource, state) match
     case (pr: ProviderResource, prs: ProviderResourceState) =>
       add(pr, prs)
     case (cr: CustomResource, crs: CustomResourceState) =>
@@ -43,7 +43,7 @@ class Resources private (private val resources: Ref[Map[Resource, ResourceState]
     case _ =>
       resource.asString.flatMap(s => Result.fail(Exception(s"resource ${s} and state ${state} don't match")))
 
-  def getStateFor(resource: ProviderResource)(using Debug): Result[ProviderResourceState] =
+  def getStateFor(resource: ProviderResource)(using Context, Debug): Result[ProviderResourceState] =
     resources.get.flatMap { rs =>
       rs.get(resource) match
         case Some(state) =>
@@ -55,7 +55,7 @@ class Resources private (private val resources: Ref[Map[Resource, ResourceState]
           ResourceStateMissingException.fail(resource, rs)
     }
 
-  def getStateFor(resource: CustomResource)(using Debug): Result[CustomResourceState] =
+  def getStateFor(resource: CustomResource)(using Context, Debug): Result[CustomResourceState] =
     resources.get.flatMap { rs =>
       rs.get(resource) match
         case Some(state) =>
@@ -67,7 +67,7 @@ class Resources private (private val resources: Ref[Map[Resource, ResourceState]
           ResourceStateMissingException.fail(resource, rs)
     }
 
-  def getStateFor(resource: ComponentResource)(using Debug): Result[ComponentResourceState] =
+  def getStateFor(resource: ComponentResource)(using Context, Debug): Result[ComponentResourceState] =
     resources.get.flatMap { rs =>
       rs.get(resource.componentBase) match
         case Some(state) =>
@@ -79,7 +79,7 @@ class Resources private (private val resources: Ref[Map[Resource, ResourceState]
           ResourceStateMissingException.fail(resource, rs)
     }
 
-  def getStateFor(resource: Resource)(using dbg: Debug): Result[ResourceState] =
+  def getStateFor(resource: Resource)(using ctx: Context, dbg: Debug): Result[ResourceState] =
     resources.get.flatMap { rs =>
       resource match
         case compr: ComponentResource =>

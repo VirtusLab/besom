@@ -36,7 +36,7 @@ class ExportsTest extends munit.FunSuite with ValueAssertions:
       val stackDeps = Stack(
         Output("foo"),
         Output("bar"),
-        Output(Result.defer { atomicBoolean.set(true); "baz" })
+        Output.ofResult(Result.defer { atomicBoolean.set(true); "baz" })
       ).getDependsOn
 
       assertEquals(stackDeps.size, 3)
@@ -62,7 +62,7 @@ class ExportsTest extends munit.FunSuite with ValueAssertions:
           Output("bar")
         ).exports(
           baz = Output("baz"),
-          qux = Output(Result.defer {
+          qux = Output.ofResult(Result.defer {
             "qux"
           })
         )

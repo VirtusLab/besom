@@ -24,7 +24,7 @@ class ResourceDecoderTest extends munit.FunSuite:
 
   def checkOutput[A](
     output: Output[A]
-  )(expectedValue: A, expectedDependencies: Set[Resource], expectedIsSecret: Boolean): Unit =
+  )(expectedValue: A, expectedDependencies: Set[Resource], expectedIsSecret: Boolean)(using Context): Unit =
     (output.getData.unsafeRunSync(): @unchecked) match
       case OutputData.Known(dependencies, isSecret, Some(value)) =>
         assertEquals(value, expectedValue)
@@ -33,7 +33,7 @@ class ResourceDecoderTest extends munit.FunSuite:
       case obtained => fail(s"Expected OutputData.Known", clues(expectedValue, obtained.getValue))
 
   // noinspection TypeAnnotation
-  def assertDecodingError[A](output: Output[A]) =
+  def assertDecodingError[A](output: Output[A])(using Context): Unit =
     try
       output.getData.unsafeRunSync()
       fail(s"Expected failed output, got successful output: ${output.getData.unsafeRunSync()}")

@@ -2,34 +2,6 @@ package besom.internal
 
 import scala.collection.BuildFrom
 
-// trait Output[+A]:
-//   def map[B](f: A => B): Output[B]
-//   def flatMap[B](f: A => Output[B]): Output[B]
-//   def flatMap[F[_]: Result.ToFuture, B](f: A => F[B]): Output[B]
-//   inline def flatMap[B](f: A => B): Nothing = scala.compiletime.error(
-//     """Output#flatMap can only be used with functions that return an Output or a structure like scala.concurrent.Future, cats.effect.IO or zio.Task.
-//   If you want to map over the value of an Output, use the map method instead."""
-//   )
-//   def recover[B >: A](f: Throwable => B): Output[B]
-//   def recoverWith[B >: A](f: Throwable => Output[B]): Output[B]
-//   def recoverWith[B >: A, F[_]: Result.ToFuture](f: Throwable => F[B]): Output[B]
-//   def tap(f: A => Output[Unit]): Output[A]
-//   def tapError(f: Throwable => Output[Unit]): Output[A]
-//   def tapBoth(f: A => Output[Unit], onError: Throwable => Output[Unit]): Output[A]
-//   def zip[B](that: => Output[B])(using z: Zippable[A, B]): Output[z.Out]
-//   def flatten[B](using ev: A <:< Output[B]): Output[B]
-//   def asPlaintext: Output[A]
-//   def asSecret: Output[A]
-//   def void: Output[Unit]
-
-//   private[besom] def flatMapOption[B, C](using ev: A <:< Option[B])(f: B => Output[C] | Output[Option[C]]): Output[Option[C]]
-
-//   private[internal] def getData: Result[OutputData[A]]
-//   private[internal] def getValue: Result[Option[A]]
-//   private[internal] def getValueOrElse[B >: A](default: => B): Result[B]
-//   private[internal] def getValueOrFail(msg: String): Result[A]
-//   private[internal] def withIsSecret(isSecretEff: Result[Boolean]): Output[A]
-
 class Output[+A](private val inner: Context => Result[OutputData[A]]):
 
   def map[B](f: A => B): Output[B] = new Output[B](ctx => inner(ctx).map(_.map(f)))
@@ -50,7 +22,7 @@ class Output[+A](private val inner: Context => Result[OutputData[A]]):
 
   inline def flatMap[B](f: A => B): Nothing = scala.compiletime.error(
     """Output#flatMap can only be used with functions that return an Output or a structure like scala.concurrent.Future, cats.effect.IO or zio.Task.
-  If you want to map over the value of an Output, use the map method instead."""
+If you want to map over the value of an Output, use the map method instead."""
   )
 
   def flatten[B](using ev: A <:< Output[B]): Output[B] = flatMap(a => ev(a))
@@ -110,10 +82,20 @@ class Output[+A](private val inner: Context => Result[OutputData[A]]):
         case None => Output(None)
     }
 
-  private[internal] def getData: Result[OutputData[A]]                   = ???
-  private[internal] def getValue: Result[Option[A]]                      = ???
-  private[internal] def getValueOrElse[B >: A](default: => B): Result[B] = ???
-  private[internal] def getValueOrFail(msg: String): Result[A]           = ???
+  private[internal] def getData(using Context): Result[OutputData[A]] =
+    Context().registerTask(inner(Context()))
+
+  private[internal] def getValue(using Context): Result[Option[A]] =
+    Context().registerTask(inner(Context())).map(_.getValue)
+
+  private[internal] def getValueOrElse[B >: A](default: => B)(using Context): Result[B] =
+    Context().registerTask(inner(Context())).map(_.getValueOrElse(default))
+
+  private[internal] def getValueOrFail(msg: String)(using Context): Result[A] =
+    Context().registerTask(inner(Context())).flatMap {
+      case OutputData.Known(_, _, Some(value)) => Result.pure(value)
+      case _                                   => Result.fail(Exception(msg))
+    }
 
   private[internal] def withIsSecret(isSecretEff: Result[Boolean]): Output[A] = new Output(ctx =>
     for
@@ -215,23 +197,17 @@ object Output:
 
   def parSequence[A, CC[X] <: IterableOnce[X], To](
     coll: CC[Output[A]]
-  )(using bf: BuildFrom[CC[Output[A]], A, To]): Output[To] = ???
-  // Output
-  //   .ofResult {
-  //     Result
-  //       .defer {
-  //         Result.parSequence(coll.iterator.map(_.dataResult).toVector)
-  //       }
-  //       .flatten
-  //       .map { vecOfOutputData =>
-  //         vecOfOutputData.map(OutputX.ofData(_))
-  //       }
-  //   }
-  //   .flatMap { vecOfOutputX =>
-  //     OutputX.sequence(vecOfOutputX).map { vecOfA =>
-  //       bf.fromSpecific(coll)(vecOfA)
-  //     }
-  //   }
+  )(using bf: BuildFrom[CC[Output[A]], A, To]): Output[To] =
+    new Output(ctx => {
+      Result
+        .defer {
+          Result.parSequence(coll.iterator.map(_.inner(ctx)).toVector)
+        }
+        .flatten
+        .map { vecOfOutputData =>
+          OutputData.sequence(vecOfOutputData).map(v => bf.fromSpecific(coll)(v))
+        }
+    })
 
   def empty(isSecret: Boolean = false): Output[Nothing] =
     new Output(ctx => Result.pure(OutputData.empty[Nothing](isSecret = isSecret)))
@@ -256,9 +232,268 @@ object Output:
   def when[A](cond: => Input[Boolean])(
     a: => Input.Optional[A]
   ): Output[Option[A]] =
-    ???
-  // cond.asOutput().flatMap { c =>
-  //   if c then a.asOptionOutput(isSecret = false) else Output.pure(None)
-  // }
+    cond.asOutput().flatMap { c =>
+      if c then a.asOptionOutput(isSecret = false) else Output.pure(None)
+    }
   end when
 end Output
+
+trait OutputExtensionsFactory:
+  implicit object OutputSequenceOps:
+    extension [A, CC[X] <: Iterable[X]](coll: CC[Output[A]])
+      /** Creates an `Output` of a collection from a collection of Outputs.
+        *
+        * @see
+        *   [[parSequence]] for parallel execution
+        */
+      def sequence[To](using BuildFrom[CC[Output[A]], A, To], Context): Output[To] =
+        Output.sequence(coll)
+
+      /** Creates an `Output` of a collection from a collection of Outputs in parallel.
+        * @see
+        *   [[sequence]] for sequential execution
+        */
+      def parSequence[To](using BuildFrom[CC[Output[A]], A, To], Context): Output[To] =
+        Output.parSequence(coll)
+
+  implicit object OutputTraverseOps:
+    extension [A, CC[X] <: Iterable[X]](coll: CC[A])
+      /** Applies an Output-returning function to each element in the collection, and then combines the results into an Output.
+        *
+        * @param f
+        *   the Output-returning function to apply to each element in the collection
+        * @see
+        *   [[parTraverse]] for parallel execution
+        */
+      def traverse[B, To](f: A => Output[B])(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] =
+        Output.sequence(coll.map(f).asInstanceOf[CC[Output[B]]])
+
+      /** Applies an Output-returning function to each element in the collection, in parallel, and then combines the results into an Output.
+        *
+        * @param f
+        *   the Output-returning function to apply to each element in the collection
+        * @see
+        *   [[traverse]] for sequential execution
+        */
+      def parTraverse[B, To](f: A => Output[B])(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] =
+        coll.map(f).asInstanceOf[CC[Output[B]]].parSequence
+
+  implicit final class OutputOptionOps[A](output: Output[Option[A]]):
+    /** Behaves like [[Option.getOrElse]] on the underlying [[Option]]
+      * @param default
+      *   the default value to return if the underlying [[Option]] is [[None]]
+      * @return
+      *   an [[Output]] with the value of the underlying [[Some]] or the `default` value if [[None]]
+      */
+    def getOrElse[B >: A](default: => B | Output[B])(using ctx: Context): Output[B] =
+      output.flatMap { opt =>
+        opt match
+          case Some(a) => Output(a)
+          case None =>
+            default match
+              case b: Output[B @unchecked] => b
+              case b: B @unchecked         => Output(b)
+      }
+
+    /** Get the value of the underlying [[Option]] or fail the outer [[Output]] with the given [[Throwable]]
+      *
+      * @param throwable
+      *   the throwable to fail with if the underlying [[Option]] is [[None]]
+      * @return
+      *   an [[Output]] with the value of the underlying [[Some]] or a failed [[Output]] with the given `throwable` if [[None]]
+      * @see
+      *   [[OutputFactory.fail]] for creating a failed [[Output]] with a [[Throwable]]
+      */
+    def getOrFail(throwable: => Throwable)(using ctx: Context): Output[A] =
+      output.flatMap {
+        case Some(a) => Output(a)
+        case None    => Output.fail(throwable)
+      }
+
+    /** Behaves like [[Option.orElse]] on the underlying [[Option]]
+      * @param alternative
+      *   the alternative [[Option]] to return if the underlying [[Option]] is [[None]]
+      * @return
+      *   an [[Output]] with the underlying [[Some]] or the `alternative` value if [[None]]
+      */
+    def orElse[B >: A](alternative: => Option[B] | Output[Option[B]])(using ctx: Context): Output[Option[B]] =
+      output.flatMap {
+        case some @ Some(_) => Output(some)
+        case None =>
+          alternative match
+            case b: Output[Option[B]] => b
+            case b: Option[B]         => Output(b)
+      }
+
+    /** Calls [[Option.map]] on the underlying [[Option]] with the given function
+      * @return
+      *   an [[Output]] of the mapped [[Option]]
+      */
+    def mapInner[B](f: A => B | Output[B])(using ctx: Context): Output[Option[B]] =
+      output.flatMap {
+        case Some(a) =>
+          f(a) match
+            case b: Output[B @unchecked] => b.map(Some(_))
+            case b: B @unchecked         => Output(Some(b))
+        case None => Output(None)
+      }
+
+    /** Calls [[Option.flatMap]] on the underlying [[Option]] with the given function
+      * @return
+      *   an [[Output]] of the flat-mapped [[Option]]
+      */
+    def flatMapInner[B](f: A => Option[B] | Output[Option[B]])(using ctx: Context): Output[Option[B]] =
+      output.flatMap {
+        case Some(a) =>
+          f(a) match
+            case b: Output[Option[B]] => b
+            case b: Option[B]         => Output(b)
+        case None => Output(None)
+      }
+  end OutputOptionOps
+
+  implicit final class OutputListOps[A](output: Output[List[A]]):
+    /** Calls [[List.headOption]] on the underlying [[List]]
+      * @return
+      *   an [[Output]] of [[Option]] of the head of the list
+      */
+    def headOption: Output[Option[A]] = output.map(_.headOption)
+
+    /** Calls [[List.lastOption]] on the underlying [[List]]
+      * @return
+      *   an [[Output]] of [[Option]] of the last element of the list
+      */
+    def lastOption: Output[Option[A]] = output.map(_.lastOption)
+
+    /** Calls [[List.tail]] on the underlying [[List]], but does not fail on `Nil`
+      * @return
+      *   an [[Output]] of the `tail` of the [[List]] or an empty list if the list is empty
+      */
+    def tailOrEmpty: Output[List[A]] = output.map {
+      case Nil  => Nil
+      case list => list.tail
+    }
+
+    /** Calls [[List.init]] on the underlying [[List]], but does not fail on `Nil`
+      * @return
+      *   an [[Output]] of the `init` of the [[List]] or an empty list if the list is empty
+      */
+    def initOrEmpty: Output[List[A]] = output.map {
+      case Nil  => Nil
+      case list => list.init
+    }
+
+    /** Calls [[List.map]] on the underlying [[List]] with the given function
+      * @return
+      *   an [[Output]] of the mapped [[List]]
+      */
+    def mapInner[B](f: A => B | Output[B]): Output[List[B]] = output.flatMap {
+      case Nil => Output(List.empty[B])
+      case h :: t =>
+        f(h) match
+          case b: Output[B @unchecked] =>
+            Output.sequence(b :: t.map(f.asInstanceOf[A => Output[B]](_)))
+          case b: B @unchecked =>
+            Output(b :: t.map(f.asInstanceOf[A => B](_)))
+    }
+
+    /** Calls [[List.flatMap]] on the underlying [[List]] with the given function
+      * @return
+      *   an [[Output]] of the flat-mapped [[List]]
+      */
+    def flatMapInner[B](f: A => List[B] | Output[List[B]]): Output[List[B]] = output.flatMap {
+      case Nil => Output(List.empty[B])
+      case h :: t =>
+        f(h) match
+          case bs: Output[List[B]] =>
+            bs.flatMap { (bb: List[B]) =>
+              val tailOfOutputs = t.map(f.asInstanceOf[A => Output[List[B]]](_))
+              val tailOutput    = Output.sequence(tailOfOutputs).map(_.flatten)
+              tailOutput.map(bb ::: _)
+            }
+          case bs: List[B] =>
+            Output(bs ::: t.flatMap(f.asInstanceOf[A => List[B]](_)))
+    }
+  end OutputListOps
+
+  implicit final class OutputOptionListOps[A](output: Output[Option[List[A]]]):
+
+    /** Calls [[List.headOption]] on the underlying optional [[List]]
+      * @return
+      *   an [[Output]] of [[Option]] of the head of the [[List]]
+      */
+    def headOption: Output[Option[A]] = output.map(_.flatMap(_.headOption))
+
+    /** Calls [[List.lastOption]] on the underlying optional [[List]]
+      * @return
+      *   an [[Output]] of [[Option]] of the last element of the [[List]]
+      */
+    def lastOption: Output[Option[A]] = output.map(_.flatMap(_.lastOption))
+
+    /** Calls [[List.tail]] on the underlying optional [[List]], but does not fail on `Nil`
+      * @return
+      *   an [[Output]] of the `tail` of the [[List]] or an empty list if the optional [[List]] is [[None]]
+      */
+    def tailOrEmpty: Output[List[A]] = output.map {
+      case Some(list) => if list.isEmpty then List.empty else list.tail
+      case None       => List.empty
+    }
+
+    /** Calls [[List.init]] on the underlying optional [[List]], but does not fail on `Nil`
+      * @return
+      *   an [[Output]] of the `init` of the [[List]] or an empty list if the optional [[List]] is [[None]]
+      */
+    def initOrEmpty: Output[List[A]] = output.map {
+      case Some(list) => if list.isEmpty then List.empty else list.init
+      case None       => List.empty
+    }
+
+    /** Calls [[List.map]] on the underlying optional [[List]] with the given function
+      * @param f
+      *   the function to apply to the value
+      * @return
+      *   an [[Output]] of the mapped [[List]] or an empty list if the optional [[List]] is [[None]]
+      */
+    def mapInner[B](f: A => B | Output[B]): Output[List[B]] = output
+      .map {
+        case Some(list) => list
+        case None       => List.empty
+      }
+      .mapInner(f)
+
+    /** Calls [[List.flatMap]] on the underlying optional [[List]] with the given function
+      *
+      * @param f
+      *   the function to apply to the value
+      * @return
+      *   an [[Output]] of the flat-mapped [[List]] or an empty list if the optional [[List]] is [[None]]
+      */
+    def flatMapInner[B](f: A => List[B] | Output[List[B]]): Output[List[B]] = output
+      .map {
+        case Some(list) => list
+        case None       => List.empty
+      }
+      .flatMapInner(f)
+
+  end OutputOptionListOps
+
+  // implicit class OutputOfTupleOps[A <: NonEmptyTuple](private val output: Output[A]):
+
+  /** Unzips the [[Output]] of a non-empty tuple into a tuple of [[Output]]s of the same arity. This operation is equivalent to:
+    *
+    * {{{o: Output[(A, B, C)] => (o.map(_._1), o.map(_._2), o.map(_._3))}}}
+    *
+    * and therefore will yield three descendants of the original [[Output]]. Evaluation of the descendants will cause the original
+    * [[Output]] to be evaluated as well and may therefore lead to unexpected side effects. This is usually not a problem with properties of
+    * resources but can be surprising if other effects are subsumed into the original [[Output]]. If this behavior is not desired, consider
+    * using [[unzipOutput]] instead.
+    *
+    * @tparam Output
+    *   the type of the [[Output]]s
+    * @return
+    *   a tuple of [[Output]]s
+    */
+  // inline def unzip: Tuple.Map[A, Output] = OutputUnzip.unzip(output)
+  // end OutputOfTupleOps
+
+end OutputExtensionsFactory

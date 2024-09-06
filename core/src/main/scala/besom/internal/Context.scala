@@ -129,7 +129,7 @@ class ContextImpl(
   override private[besom] def pulumiStack: NonEmptyString                = runInfo.stack
 
   override private[besom] def getParentURN: Result[URN] =
-    stackPromise.get.flatMap(_.urn.getData).map(_.getValue).flatMap {
+    stackPromise.get.flatMap(_.urn.getData(using this)).map(_.getValue).flatMap {
       case Some(urn) => Result.pure(urn)
       case None      => Result.fail(Exception("Stack urn is not available. This should not happen."))
     }
