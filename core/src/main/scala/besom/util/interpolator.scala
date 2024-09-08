@@ -10,7 +10,7 @@ object interpolator:
 
   implicit final class PulumiInterpolationOps(sc: StringContext):
     def pulumi(args: Any*)(using Context): Output[String] =
-      interleave(sc.parts.toList, args.toList).foldLeft(Output("")) { case (acc, e) =>
+      interleave(sc.parts.toList, args.toList).foldLeft(Output.pure("")) { case (acc, e) =>
         e match
           case o: Output[?] => acc.flatMap(s => o.map(s + _.toString))
           case s: Any       => acc.map(_ + s.toString)

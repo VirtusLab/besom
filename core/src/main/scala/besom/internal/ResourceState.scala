@@ -1,7 +1,7 @@
 package besom.internal
 
 import besom.util.*
-import besom.types.*
+import besom.types.{ResourceType, ResourceId, Label}
 
 sealed trait ResourceState:
   def children: Set[Resource]

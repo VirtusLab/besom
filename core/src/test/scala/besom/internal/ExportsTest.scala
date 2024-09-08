@@ -10,7 +10,7 @@ class ExportsTest extends munit.FunSuite with ValueAssertions:
 
   runWithBothOutputCodecs {
     test(s"exports alone work as intended (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
-      val stackOutputs = Stack.exports(foo = Output("bar")).getExports.result.unsafeRunSync()
+      val stackOutputs = Stack.exports(foo = Output.pure("bar")).getExports.result.unsafeRunSync()
 
       val encoded = Value(Kind.StructValue(stackOutputs))
 
@@ -34,8 +34,8 @@ class ExportsTest extends munit.FunSuite with ValueAssertions:
       val atomicBoolean = new java.util.concurrent.atomic.AtomicBoolean(false)
 
       val stackDeps = Stack(
-        Output("foo"),
-        Output("bar"),
+        Output.pure("foo"),
+        Output.pure("bar"),
         Output.ofResult(Result.defer { atomicBoolean.set(true); "baz" })
       ).getDependsOn
 
@@ -58,10 +58,10 @@ class ExportsTest extends munit.FunSuite with ValueAssertions:
     test(s"exports with dependencies work as intended (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
       val stack =
         Stack(
-          Output("foo"),
-          Output("bar")
+          Output.pure("foo"),
+          Output.pure("bar")
         ).exports(
-          baz = Output("baz"),
+          baz = Output.pure("baz"),
           qux = Output.ofResult(Result.defer {
             "qux"
           })
@@ -108,11 +108,11 @@ class ExportsTest extends munit.FunSuite with ValueAssertions:
       val stack =
         Stack
           .exports(
-            foo = Output("foo"),
+            foo = Output.pure("foo"),
             bar = Output.secret("bar")
           )
           .exports(
-            baz = Output("baz"),
+            baz = Output.pure("baz"),
             qux = Output.secret("qux")
           )
 

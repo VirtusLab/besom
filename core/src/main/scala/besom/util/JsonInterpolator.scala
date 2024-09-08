@@ -63,7 +63,7 @@ object JsonInterpolator:
       arg match
         case '{ $arg: String } =>
           '{
-            Output($arg).map { str =>
+            Output.pure($arg).map { str =>
               val sb = java.lang.StringBuilder()
               if str == null then JsNull
               else
@@ -72,20 +72,20 @@ object JsonInterpolator:
                 JsString(str)
             }
           }
-        case '{ $arg: Int }     => '{ Output(JsNumber($arg)) }
-        case '{ $arg: Short }   => '{ Output(JsNumber($arg)) }
-        case '{ $arg: Long }    => '{ Output(JsNumber($arg)) }
-        case '{ $arg: Float }   => '{ Output(JsNumber($arg)) }
-        case '{ $arg: Double }  => '{ Output(JsNumber($arg)) }
-        case '{ $arg: Boolean } => '{ Output(JsBoolean($arg)) }
-        case '{ $arg: JsValue } => '{ Output($arg) }
+        case '{ $arg: Int }     => '{ Output.pure(JsNumber($arg)) }
+        case '{ $arg: Short }   => '{ Output.pure(JsNumber($arg)) }
+        case '{ $arg: Long }    => '{ Output.pure(JsNumber($arg)) }
+        case '{ $arg: Float }   => '{ Output.pure(JsNumber($arg)) }
+        case '{ $arg: Double }  => '{ Output.pure(JsNumber($arg)) }
+        case '{ $arg: Boolean } => '{ Output.pure(JsBoolean($arg)) }
+        case '{ $arg: JsValue } => '{ Output.pure($arg) }
         case _ =>
           arg.asTerm.tpe.asType match
             case '[Output[Option[t]]] =>
               '{
                 $arg.asInstanceOf[Output[Option[t]]].flatMap {
                   case Some(value) => ${ convert('value) }
-                  case None        => Output(JsNull)
+                  case None        => Output.pure(JsNull)
                 }
               }
             case '[Output[t]] =>
@@ -99,7 +99,7 @@ object JsonInterpolator:
               '{
                 $arg.asInstanceOf[Option[t]] match
                   case Some(value) => ${ convert('value) }
-                  case None        => Output(JsNull)
+                  case None        => Output.pure(JsNull)
               }
 
             case '[t] =>
@@ -118,13 +118,13 @@ object JsonInterpolator:
           case Varargs(argExprs) =>
             if argExprs.isEmpty then
               parts.map(_.valueOrAbort).mkString match
-                case "" => '{ Output(JsObject.empty) }
+                case "" => '{ Output.pure(JsObject.empty) }
                 case str =>
                   scala.util.Try(JsonParser(str)) match
                     case Failure(exception) =>
                       report.errorAndAbort(s"Failed to parse JSON:$NL  ${exception.getMessage}")
                     case Success(value) =>
-                      '{ Output(JsonParser(ParserInput.apply(${ Expr(str) }))) }
+                      '{ Output.pure(JsonParser(ParserInput.apply(${ Expr(str) }))) }
             else
               val defaults = argExprs.map { arg =>
                 defaultFor(arg, arg.asTerm.tpe.asType)
@@ -143,7 +143,7 @@ object JsonInterpolator:
 
                   '{
                     interleave(${ liftedParts }.toList, ${ liftedExprOfSeq }.toList)
-                      .foldLeft(Output("")) { case (acc, e) =>
+                      .foldLeft(Output.pure("")) { case (acc, e) =>
                         e match
                           case o: Output[?] => acc.flatMap(s => o.map(v => s + Objects.toString(v))) // handle nulls too
                           case s: String    => acc.map(_ + s)

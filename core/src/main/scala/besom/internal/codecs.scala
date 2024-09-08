@@ -1,7 +1,7 @@
 package besom.internal
 
 import besom.internal.ProtobufUtil.{*, given}
-import besom.types.*
+import besom.types.{Label, URN, Archive, Asset, AssetOrArchive, ResourceId}
 import besom.types.Archive.*
 import besom.types.Asset.*
 import besom.util.Validated.*
@@ -246,7 +246,7 @@ object Decoder extends DecoderInstancesLowPrio1:
         .decode(value, label)
         .redeem(
           errs => OutputData(Output.fail(AggregatedDecodingError(errs))),
-          _.map(Output(_))
+          _.map(Output.pure(_))
         )
 
     override def mapping(value: Value, label: Label): Validated[DecodingError, Output[A]] = ???
@@ -468,7 +468,7 @@ object Decoder extends DecoderInstancesLowPrio1:
                     error(s"$label: Expected a resource urn in resource struct, not found", label)
                   )
                   .flatMap(urnString => URN.from(urnString).toEither.toValidatedResult)
-                  .map(urn => OutputData(DependencyResource(Output(urn))))
+                  .map(urn => OutputData(DependencyResource(Output.pure(urn))))
               case Some(sig) =>
                 error(s"$label: Expected a special resource signature, got: '$sig'", label).invalidResult
           }
@@ -797,7 +797,7 @@ trait DecoderHelpers:
                       val l = depsLabel.atIndex(i)
                       v.getStringValue.validResult
                         .flatMap(URN.from(_).toEither.left.map(e => error(s"$l: Expected a valid URN string", l, e)).toValidatedResult)
-                        .map(urn => DependencyResource(Output(urn)))
+                        .map(urn => DependencyResource(Output.pure(urn)))
                     }
                     .foldLeft[ValidatedResult[DecodingError, Vector[Resource]]](ValidatedResult.valid(Vector.empty)) { (acc, vr) =>
                       acc.zipWith(vr) { (acc, v) =>

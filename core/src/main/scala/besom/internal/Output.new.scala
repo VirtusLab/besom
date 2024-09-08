@@ -79,7 +79,7 @@ If you want to map over the value of an Output, use the map method instead."""
             case None    => None
             case c       => Some(c.asInstanceOf[C])
           }
-        case None => Output(None)
+        case None => Output.pure(None)
     }
 
   private[internal] def getData(using Context): Result[OutputData[A]] =
@@ -169,7 +169,7 @@ trait OutputFactory:
 
   /** Creates an `Output` that contains Unit
     */
-  def unit: Output[Unit] = Output(())
+  def unit: Output[Unit] = Output.pure(())
 
 end OutputFactory
 
@@ -186,7 +186,7 @@ object Output:
     Output.ofResult {
       Result.defer {
         coll.iterator
-          .foldLeft(Output(bf.newBuilder(coll))) { (acc, curr) =>
+          .foldLeft(Output.pure(bf.newBuilder(coll))) { (acc, curr) =>
             acc.zip(curr).map { case (b, r) =>
               b += r
             }
@@ -219,7 +219,7 @@ object Output:
 
   def ofResult[A](value: => Result[A]): Output[A] = new Output(ctx => value.map(OutputData(_)))
 
-  def apply[A](value: => A): Output[A] = new Output(ctx => Result.defer(OutputData(value)))
+  def defer[A](value: => A): Output[A] = new Output(ctx => Result.defer(OutputData(value)))
 
   def pure[A](value: A): Output[A] = new Output(ctx => Result.pure(OutputData(value)))
 
@@ -288,11 +288,11 @@ trait OutputExtensionsFactory:
     def getOrElse[B >: A](default: => B | Output[B])(using ctx: Context): Output[B] =
       output.flatMap { opt =>
         opt match
-          case Some(a) => Output(a)
+          case Some(a) => Output.pure(a)
           case None =>
             default match
               case b: Output[B @unchecked] => b
-              case b: B @unchecked         => Output(b)
+              case b: B @unchecked         => Output.pure(b)
       }
 
     /** Get the value of the underlying [[Option]] or fail the outer [[Output]] with the given [[Throwable]]
@@ -306,7 +306,7 @@ trait OutputExtensionsFactory:
       */
     def getOrFail(throwable: => Throwable)(using ctx: Context): Output[A] =
       output.flatMap {
-        case Some(a) => Output(a)
+        case Some(a) => Output.pure(a)
         case None    => Output.fail(throwable)
       }
 
@@ -318,11 +318,11 @@ trait OutputExtensionsFactory:
       */
     def orElse[B >: A](alternative: => Option[B] | Output[Option[B]])(using ctx: Context): Output[Option[B]] =
       output.flatMap {
-        case some @ Some(_) => Output(some)
+        case some @ Some(_) => Output.pure(some)
         case None =>
           alternative match
             case b: Output[Option[B]] => b
-            case b: Option[B]         => Output(b)
+            case b: Option[B]         => Output.pure(b)
       }
 
     /** Calls [[Option.map]] on the underlying [[Option]] with the given function
@@ -334,8 +334,8 @@ trait OutputExtensionsFactory:
         case Some(a) =>
           f(a) match
             case b: Output[B @unchecked] => b.map(Some(_))
-            case b: B @unchecked         => Output(Some(b))
-        case None => Output(None)
+            case b: B @unchecked         => Output.pure(Some(b))
+        case None => Output.pure(None)
       }
 
     /** Calls [[Option.flatMap]] on the underlying [[Option]] with the given function
@@ -347,8 +347,8 @@ trait OutputExtensionsFactory:
         case Some(a) =>
           f(a) match
             case b: Output[Option[B]] => b
-            case b: Option[B]         => Output(b)
-        case None => Output(None)
+            case b: Option[B]         => Output.pure(b)
+        case None => Output.pure(None)
       }
   end OutputOptionOps
 
@@ -388,13 +388,13 @@ trait OutputExtensionsFactory:
       *   an [[Output]] of the mapped [[List]]
       */
     def mapInner[B](f: A => B | Output[B]): Output[List[B]] = output.flatMap {
-      case Nil => Output(List.empty[B])
+      case Nil => Output.pure(List.empty[B])
       case h :: t =>
         f(h) match
           case b: Output[B @unchecked] =>
             Output.sequence(b :: t.map(f.asInstanceOf[A => Output[B]](_)))
           case b: B @unchecked =>
-            Output(b :: t.map(f.asInstanceOf[A => B](_)))
+            Output.pure(b :: t.map(f.asInstanceOf[A => B](_)))
     }
 
     /** Calls [[List.flatMap]] on the underlying [[List]] with the given function
@@ -402,7 +402,7 @@ trait OutputExtensionsFactory:
       *   an [[Output]] of the flat-mapped [[List]]
       */
     def flatMapInner[B](f: A => List[B] | Output[List[B]]): Output[List[B]] = output.flatMap {
-      case Nil => Output(List.empty[B])
+      case Nil => Output.pure(List.empty[B])
       case h :: t =>
         f(h) match
           case bs: Output[List[B]] =>
@@ -412,7 +412,7 @@ trait OutputExtensionsFactory:
               tailOutput.map(bb ::: _)
             }
           case bs: List[B] =>
-            Output(bs ::: t.flatMap(f.asInstanceOf[A => List[B]](_)))
+            Output.pure(bs ::: t.flatMap(f.asInstanceOf[A => List[B]](_)))
     }
   end OutputListOps
 

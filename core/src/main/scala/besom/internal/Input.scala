@@ -18,7 +18,7 @@ object Input:
       private[Input] def wrappedAsOutput(isSecret: Boolean = false): Output[A] =
         input match
           case output: Output[_] => output.asInstanceOf[Output[A]]
-          case a: A @unchecked   => if isSecret then Output.secret(a) else Output(a)
+          case a: A @unchecked   => if isSecret then Output.secret(a) else Output.pure(a)
 
     extension [A](input: Input[A])
       def asOutput(isSecret: Boolean = false): Output[A] =
@@ -28,7 +28,7 @@ object Input:
       private[Input] def wrappedAsOptionOutput(isSecret: Boolean = false): Output[Option[A]] =
         val output = input match
           case output: Output[_]                  => output.asInstanceOf[Output[A | Option[A]]]
-          case maybeA: (A | Option[A]) @unchecked => if isSecret then Output.secret(maybeA) else Output(maybeA)
+          case maybeA: (A | Option[A]) @unchecked => if isSecret then Output.secret(maybeA) else Output.pure(maybeA)
         output.map(_.asOption)
 
       def asOptionOutput(isSecret: Boolean = false): Output[Option[A]] =
@@ -47,7 +47,7 @@ object Input:
       def asOptionOutput(isSecret: Boolean = false): Output[Option[Map[String, A]]] =
         input.wrappedAsOptionOutput(isSecret).flatMap {
           case Some(map) => inputMapToMapOutput(map, isSecret = isSecret).map(Option(_))
-          case None      => Output(None)
+          case None      => Output.pure(None)
         }
 
   given iterableInputOps: {} with
@@ -59,7 +59,7 @@ object Input:
       def asManyOutput(isSecret: Boolean = false): Output[Iterable[A]] =
         input.wrappedAsOutput(isSecret).flatMap {
           case iterable: Iterable[Input[A]] @unchecked => inputIterableToIterableOutput(iterable, isSecret = isSecret)
-          case a: A @unchecked                         => Output(Iterable(a))
+          case a: A @unchecked                         => Output.pure(Iterable(a))
         }
 
     extension [A](input: Input[Iterable[Input[A]]])
@@ -70,6 +70,6 @@ object Input:
       def asOptionOutput(isSecret: Boolean = false): Output[Option[Iterable[A]]] =
         input.wrappedAsOptionOutput(isSecret).flatMap {
           case Some(map) => inputIterableToIterableOutput(map, isSecret = isSecret).map(Option(_))
-          case None      => Output(None)
+          case None      => Output.pure(None)
         }
 end Input

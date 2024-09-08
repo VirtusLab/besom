@@ -1,7 +1,7 @@
 package besom.internal
 
 import besom.util.NonEmptyString
-import besom.types.*
+import besom.types.{URN, ResourceId, ResourceType}
 import com.google.protobuf.struct.*
 import scala.deriving.Mirror
 import scala.annotation.implicitNotFound

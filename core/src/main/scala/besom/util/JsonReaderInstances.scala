@@ -14,7 +14,7 @@ object JsonReaderInstances:
               val maybeInnerValue = fields.get(Constants.ValueName)
               maybeInnerValue
                 .map { innerValue =>
-                  try Output(jsonReader.read(innerValue))
+                  try Output.pure(jsonReader.read(innerValue))
                   catch case e: Throwable => Output.fail(e)
                 }
                 .getOrElse(Output.fail(Exception("Invalid JSON")))

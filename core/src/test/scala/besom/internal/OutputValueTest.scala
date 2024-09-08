@@ -37,7 +37,7 @@ class OutputValueCodecTest extends munit.FunSuite with ValueAssertions:
         // calculate the expected test values for various stages of the test
         val maybeValue               = Option(value)
         val urns: List[URN]          = deps.map(URN.from(_).get)
-        val resources: Set[Resource] = urns.map(urn => DependencyResource(Output(urn))).toSet
+        val resources: Set[Resource] = urns.map(urn => DependencyResource(Output.pure(urn))).toSet
         val protoValue               = value.asValue
         // we don't know with the unknown value is empty or not so we default to false to not short-circuit the Metadata#combine method
         val empty          = if !isKnown then false else protoValue.kind.isNullValue

@@ -103,7 +103,7 @@ trait BesomSyntax:
 
           val componentContext = ComponentContext(ctx, urnRes, componentBase)
           val componentOutput =
-            try Output(f(using componentContext)(using componentBase))
+            try Output.pure(f(using componentContext)(using componentBase))
             catch case e: Exception => Output.fail(e)
 
           val componentResult = componentOutput.getValueOrFail {
@@ -160,7 +160,7 @@ trait BesomSyntax:
       * an [[IllegalArgumentException]].
       */
     def toNonEmptyOutput(using Context): Output[NonEmptyString] =
-      NonEmptyString(s).fold(Output.fail(IllegalArgumentException(s"String $s was empty!")))(Output.apply(_))
+      NonEmptyString(s).fold(Output.fail(IllegalArgumentException(s"String $s was empty!")))(Output.pure(_))
 
   extension (os: Output[String])
     /** Converts an [[Output]] of [[String]] to an [[Output]] of [[NonEmptyString]] which will be failed if the string is empty.

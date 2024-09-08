@@ -14,7 +14,7 @@ case class StackReference(
     derives ResourceDecoder:
 
   def getOutput(name: NonEmptyString): Output[Option[JsValue]] =
-    getOutput(Output(name))
+    getOutput(Output.pure(name))
 
   def getOutput(name: Output[NonEmptyString]): Output[Option[JsValue]] =
     val output = name.zip(outputs).map { case (name, outputs) =>
@@ -26,12 +26,12 @@ case class StackReference(
     }
 
   def requireOutput(name: NonEmptyString): Output[JsValue] =
-    requireOutput(Output(name))
+    requireOutput(Output.pure(name))
 
   def requireOutput(name: Output[NonEmptyString]): Output[JsValue] =
     val output = name.zip(outputs).flatMap { case (name, outputs) =>
       outputs.get(name) match
-        case Some(value) => Output(value)
+        case Some(value) => Output.pure(value)
         case None        => Output.fail(Exception(s"Missing required output '$name'"))
     }
 
@@ -82,7 +82,7 @@ trait StackReferenceFactory:
 
   class UntypedStackReferenceType extends StackReferenceType[Any]:
     type Out[T] = StackReference
-    def transform(stackReference: StackReference)(using Context): Output[StackReference] = Output(stackReference)
+    def transform(stackReference: StackReference)(using Context): Output[StackReference] = Output.pure(stackReference)
 
   def untypedStackReference(using Context): StackReferenceType[Any] = UntypedStackReferenceType()
 
@@ -97,18 +97,18 @@ trait StackReferenceFactory:
       .asOptionOutput(false)
       .flatMap {
         case Some(stackRefArgs) => stackRefArgs.name
-        case None               => Output(name)
+        case None               => Output.pure(name)
       }
       .flatMap { selectedName =>
         val importId = ResourceId.unsafeOf(selectedName)
 
         val stackRefArgs = StackReferenceArgs(
-          Output(selectedName)
+          Output.pure(selectedName)
         )
 
         val mergedOpts = new StackReferenceResourceOptions( // use constructor directly to avoid apply
           opts.common,
-          Output(Some(importId))
+          Output.pure(Some(importId))
         )
 
         Context().readOrRegisterResource[StackReference, StackReferenceArgs]("pulumi:pulumi:StackReference", name, stackRefArgs, mergedOpts)

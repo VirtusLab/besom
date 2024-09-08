@@ -103,7 +103,7 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
     test(s"encode output null (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
       val e = summon[Encoder[Output[Option[String]]]]
 
-      val (_, encoded) = e.encode(Output(None)).unsafeRunSync()
+      val (_, encoded) = e.encode(Output.pure(None)).unsafeRunSync()
       val expected =
         if Context().featureSupport.keepOutputValues
         then Null.asOutputValue(isSecret = false, dependencies = Nil)
@@ -225,8 +225,8 @@ class ArgsEncoderTest extends munit.FunSuite with ValueAssertions:
       val (res, encoded) = ae
         .encode(
           TestArgs(
-            Output("SOME-TEST-PROVIDER"),
-            Output(PlainCaseClass(data = "werks?", moreData = 123))
+            Output.pure("SOME-TEST-PROVIDER"),
+            Output.pure(PlainCaseClass(data = "werks?", moreData = 123))
           ),
           _ => false
         )
@@ -264,8 +264,8 @@ class ArgsEncoderTest extends munit.FunSuite with ValueAssertions:
       val (res, encoded) = ae
         .encode(
           TestOptionArgs(
-            Output(None),
-            Output(None)
+            Output.pure(None),
+            Output.pure(None)
           ),
           _ => false
         )
@@ -412,9 +412,9 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
       val (res, encoded) = pae
         .encode(
           TestProviderArgs(
-            Output("SOME-TEST-PROVIDER"),
-            Output(PlainCaseClass(data = "werks?", moreData = 123)),
-            Output(List(Output("a"), Output("b"), Output("c")))
+            Output.pure("SOME-TEST-PROVIDER"),
+            Output.pure(PlainCaseClass(data = "werks?", moreData = 123)),
+            Output.pure(List(Output.pure("a"), Output.pure("b"), Output.pure("c")))
           ),
           _ => false
         )
@@ -453,9 +453,9 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
       val pae = summon[ProviderArgsEncoder[TestProviderOptionArgs]]
 
       val args = TestProviderOptionArgs(
-        Output(None),
-        Output(None),
-        Output(None)
+        Output.pure(None),
+        Output.pure(None),
+        Output.pure(None)
       )
       val (res, encoded) = pae.encode(args, _ => false).unsafeRunSync()
 
@@ -519,7 +519,7 @@ class PropertiesSerializerTest extends munit.FunSuite with ValueAssertions:
         .serializeResourceProperties(
           InputOptionalCaseClass(
             Output.secret(Some("secret1")),
-            Output(Some(Map("key" -> Output.secret("value1"))))
+            Output.pure(Some(Map("key" -> Output.secret("value1"))))
           )
         )
         .unsafeRunSync()
@@ -557,9 +557,9 @@ class PropertiesSerializerTest extends munit.FunSuite with ValueAssertions:
       val res = PropertiesSerializer
         .serializeResourceProperties(
           ExampleResourceArgs(
-            Output(Some("x")),
+            Output.pure(Some("x")),
             Output.secret(Some(true)),
-            Output(Some(HelperArgs(Output(Some(1)))))
+            Output.pure(Some(HelperArgs(Output.pure(Some(1)))))
           )
         )
         .unsafeRunSync()
@@ -717,18 +717,18 @@ class PropertiesSerializerTest extends munit.FunSuite with ValueAssertions:
       val res = PropertiesSerializer
         .serializeResourceProperties(
           FargateServiceTaskDefinitionArgs(
-            container = Output(
+            container = Output.pure(
               Some(
                 TaskDefinitionContainerDefinitionArgs(
-                  portMappings = Output(
+                  portMappings = Output.pure(
                     Some(
                       List(
                         TaskDefinitionPortMappingArgs(
-                          targetGroup = Output(
+                          targetGroup = Output.pure(
                             Some(
                               TargetGroup(
                                 urn = URN.parse(testUrn),
-                                id = Output(testId)
+                                id = Output.pure(testId)
                               )
                             )
                           )
@@ -739,7 +739,7 @@ class PropertiesSerializerTest extends munit.FunSuite with ValueAssertions:
                 )
               )
             ),
-            containers = Output(None)
+            containers = Output.pure(None)
           )
         )
         .unsafeRunSync()

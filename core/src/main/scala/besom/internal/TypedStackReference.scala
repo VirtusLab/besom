@@ -1,6 +1,6 @@
 package besom.internal
 
-import besom.types.*
+import besom.types.{ResourceId, URN}
 
 case class TypedStackReference[T](
   urn: Output[URN],

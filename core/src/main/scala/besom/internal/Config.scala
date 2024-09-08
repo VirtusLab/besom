@@ -46,7 +46,7 @@ class Config private (
   private def getRawValue(key: NonEmptyString): Output[Option[String]] =
     if configSecretKeys.contains(key)
     then Output.secret(tryGet(key))
-    else Output(tryGet(key))
+    else Output.pure(tryGet(key))
 
   private def readConfigValue[A: ConfigValueReader](
     key: NonEmptyString,
@@ -99,7 +99,7 @@ class Config private (
       .orElse(environment.collectFirst {
         case env if sys.env.contains(env) => sys.env(env)
       })
-    val value = if isSecret then Output.secret(rawValue) else Output(rawValue)
+    val value = if isSecret then Output.secret(rawValue) else Output.pure(rawValue)
     readConfigValue(key, value).map(_.orElse(default))
 
   /** Loads an optional configuration or secret value by its key, or returns [[None]] if it doesn't exist. If the configuration value is a
@@ -132,7 +132,7 @@ class Config private (
     def secretOption = if configSecretKeys.contains(key) then "[--secret]" else ""
     get[A](key).flatMap { valueOpt =>
       valueOpt match
-        case Some(value) => Output(value)
+        case Some(value) => Output.pure(value)
         case None =>
           Output.fail {
             ConfigError(

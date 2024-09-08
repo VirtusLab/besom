@@ -1,7 +1,7 @@
 package besom.internal
 
 import com.google.protobuf.struct.*
-import besom.types.*
+import besom.types.{URN, ResourceId, FunctionToken}
 import besom.util.printer
 
 case class RawResourceResult(urn: URN, id: Option[ResourceId], data: Struct, dependencies: Map[String, Set[Resource]])
@@ -31,7 +31,7 @@ object RawResourceResult:
 
             val depsForProperty: Result[Set[Resource]] = urnsResult.map { setOfUrns =>
               setOfUrns
-                .map(Output(_))
+                .map(Output.pure(_))
                 .map(DependencyResource(_)) // we do not register DependencyResources!
             }
 

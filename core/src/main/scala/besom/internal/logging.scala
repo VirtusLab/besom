@@ -235,7 +235,7 @@ object logging:
       name: sourcecode.Name,
       line: sourcecode.Line,
       mdc: MDC = MDC.empty
-    ): Output[Unit] = Output {
+    ): Output[Unit] = Output.ofResult {
       res match
         case Some(r) =>
           r.urn
@@ -250,7 +250,7 @@ object logging:
       name: sourcecode.Name,
       line: sourcecode.Line,
       mdc: MDC = MDC.empty
-    ): Output[Unit] = Output {
+    ): Output[Unit] = Output.ofResult {
       res match
         case Some(r) =>
           r.urn
@@ -265,7 +265,7 @@ object logging:
       name: sourcecode.Name,
       line: sourcecode.Line,
       mdc: MDC = MDC.empty
-    ): Output[Unit] = Output {
+    ): Output[Unit] = Output.ofResult {
       res match
         case Some(r) =>
           r.urn
@@ -280,7 +280,7 @@ object logging:
       name: sourcecode.Name,
       line: sourcecode.Line,
       mdc: MDC = MDC.empty
-    ): Output[Unit] = Output {
+    ): Output[Unit] = Output.ofResult {
       res match
         case Some(r) =>
           r.urn
@@ -295,7 +295,7 @@ object logging:
       name: sourcecode.Name,
       line: sourcecode.Line,
       mdc: MDC = MDC.empty
-    ): Output[Unit] = Output {
+    ): Output[Unit] = Output.ofResult {
       res match
         case Some(r) =>
           r.urn

@@ -3,7 +3,7 @@ package besom.internal
 import besom.internal.ProtobufUtil.{*, given}
 import besom.internal.RunResult.{*, given}
 import besom.internal.logging.*
-import besom.types.*
+import besom.types.{URN, ResourceId, Label}
 import besom.util.*
 import com.google.protobuf.struct.*
 
@@ -45,7 +45,7 @@ class ResourceDecoderTest extends munit.FunSuite:
   runWithBothOutputCodecs {
     test(s"resource resolver - happy path (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
       val resourceDecoder    = summon[ResourceDecoder[TestResource]]
-      val dependencyResource = DependencyResource(Output(URN.empty))
+      val dependencyResource = DependencyResource(Output.pure(URN.empty))
 
       val errorOrResourceResult = Right(
         RawResourceResult(
@@ -131,7 +131,7 @@ class ResourceDecoderTest extends munit.FunSuite:
       s"resource resolver - required property received as NullValue, issue #150 (keepOutputValues: ${Context().featureSupport.keepOutputValues})"
     ) {
       val resourceDecoder    = summon[ResourceDecoder[TestResource]]
-      val dependencyResource = DependencyResource(Output(URN.empty))
+      val dependencyResource = DependencyResource(Output.pure(URN.empty))
 
       val errorOrResourceResult = Right(
         RawResourceResult(
