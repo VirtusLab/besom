@@ -130,7 +130,7 @@ object ConfiguredContainerArgs:
 
       case Right(()) =>
         val envExpr = '{
-          val envOutput                 = ${ env }.asOptionOutput()(using ${ context })
+          val envOutput                 = ${ env }.asOptionOutput()
           val conf                      = ${ configuration }
           val configurationAsEnvVarArgs = conf.foldedToEnvVarArgs(using $context)
           envOutput.zip(configurationAsEnvVarArgs).map {
