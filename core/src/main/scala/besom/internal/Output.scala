@@ -82,20 +82,22 @@ If you want to map over the value of an Output, use the map method instead."""
         case None => Output.pure(None)
     }
 
-  private[internal] def getData(using Context): Result[OutputData[A]] =
-    Context().registerTask(inner(Context()))
+  private[internal] def getData(using ctx: Context): Result[OutputData[A]] =
+    Context().registerTask(inner(ctx))
 
-  private[internal] def getValue(using Context): Result[Option[A]] =
-    Context().registerTask(inner(Context())).map(_.getValue)
+  private[internal] def getValue(using ctx: Context): Result[Option[A]] =
+    Context().registerTask(inner(ctx)).map(_.getValue)
 
-  private[internal] def getValueOrElse[B >: A](default: => B)(using Context): Result[B] =
-    Context().registerTask(inner(Context())).map(_.getValueOrElse(default))
+  private[internal] def getValueOrElse[B >: A](default: => B)(using ctx: Context): Result[B] =
+    Context().registerTask(inner(ctx)).map(_.getValueOrElse(default))
 
-  private[internal] def getValueOrFail(msg: String)(using Context): Result[A] =
-    Context().registerTask(inner(Context())).flatMap {
+  private[internal] def getValueOrFail(msg: String)(using ctx: Context): Result[A] =
+    Context().registerTask(inner(ctx)).flatMap {
       case OutputData.Known(_, _, Some(value)) => Result.pure(value)
       case _                                   => Result.fail(Exception(msg))
     }
+
+  // private[internal] def withContext(ctx: Context): Output[A] = Output.ofData(inner(ctx))
 
   private[internal] def withIsSecret(isSecretEff: Result[Boolean]): Output[A] = new Output(ctx =>
     for

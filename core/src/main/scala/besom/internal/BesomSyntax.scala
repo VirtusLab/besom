@@ -120,23 +120,31 @@ trait BesomSyntax:
   end component
 
   extension [A <: ProviderResource](pr: A)
-    def provider(using Context): Output[Option[ProviderResource]] = Output.ofResult {
-      Context().resources.getStateFor(pr).map(_.custom.provider)
+    def provider: Output[Option[ProviderResource]] = Output.getContext.flatMap { implicit ctx =>
+      Output.ofResult {
+        ctx.resources.getStateFor(pr).map(_.custom.provider)
+      }
     }
 
   extension [A <: CustomResource](cr: A)
-    def provider(using Context): Output[Option[ProviderResource]] = Output.ofResult {
-      Context().resources.getStateFor(cr).map(_.provider)
+    def provider: Output[Option[ProviderResource]] = Output.getContext.flatMap { implicit ctx =>
+      Output.ofResult {
+        ctx.resources.getStateFor(cr).map(_.provider)
+      }
     }
 
   extension [A <: ComponentResource](cmpr: A)
-    def providers(using Context): Output[Map[String, ProviderResource]] = Output.ofResult {
-      Context().resources.getStateFor(cmpr).map(_.providers)
+    def providers: Output[Map[String, ProviderResource]] = Output.getContext.flatMap { implicit ctx =>
+      Output.ofResult {
+        ctx.resources.getStateFor(cmpr).map(_.providers)
+      }
     }
 
   extension [A <: RemoteComponentResource](cb: A)
-    def providers(using Context): Output[Map[String, ProviderResource]] = Output.ofResult {
-      Context().resources.getStateFor(cb).map(_.providers)
+    def providers: Output[Map[String, ProviderResource]] = Output.getContext.flatMap { implicit ctx =>
+      Output.ofResult {
+        ctx.resources.getStateFor(cb).map(_.providers)
+      }
     }
 
   extension [A <: Resource: ResourceDecoder](companion: ResourceCompanion[A])
@@ -159,13 +167,13 @@ trait BesomSyntax:
     /** Converts a [[String]] to an [[Output]] of [[NonEmptyString]] if it is not empty or blank, otherwise returns a failed [[Output]] with
       * an [[IllegalArgumentException]].
       */
-    def toNonEmptyOutput(using Context): Output[NonEmptyString] =
+    def toNonEmptyOutput: Output[NonEmptyString] =
       NonEmptyString(s).fold(Output.fail(IllegalArgumentException(s"String $s was empty!")))(Output.pure(_))
 
   extension (os: Output[String])
     /** Converts an [[Output]] of [[String]] to an [[Output]] of [[NonEmptyString]] which will be failed if the string is empty.
       */
-    def toNonEmptyOutput(using Context): Output[NonEmptyString] =
+    def toNonEmptyOutput: Output[NonEmptyString] =
       os.flatMap(_.toNonEmptyOutput)
 
   /** Shortcut function allowing for uniform resource options syntax everywhere.

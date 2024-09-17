@@ -314,7 +314,7 @@ object CustomResourceOptions:
 end CustomResourceOptions
 
 trait ComponentResourceOptionsFactory:
-  def apply(using Context)(
+  def apply(
     providers: Input.OneOrIterable[ProviderResource] = Iterable.empty,
     parent: Input.Optional[Resource] = None,
     dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
@@ -346,7 +346,7 @@ trait ComponentResourceOptionsFactory:
   )
 
 object ComponentResourceOptions:
-  def apply(using Context)(
+  def apply(
     providers: Input.OneOrIterable[ProviderResource] = Iterable.empty,
     parent: Input.Optional[Resource] = None,
     dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
@@ -379,7 +379,7 @@ object ComponentResourceOptions:
     new ComponentResourceOptions(common, providers.asManyOutput())
 
 object StackReferenceResourceOptions:
-  def apply(using Context)(
+  def apply(
     parent: Input.Optional[Resource] = None,
     dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
     protect: Input[Boolean] = false,
@@ -412,7 +412,7 @@ object StackReferenceResourceOptions:
     new StackReferenceResourceOptions(common, importId.asOptionOutput())
 
 trait StackReferenceResourceOptionsFactory:
-  def apply(using Context)(
+  def apply(
     parent: Input.Optional[Resource] = None,
     dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
     protect: Input[Boolean] = false,
