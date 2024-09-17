@@ -34,7 +34,7 @@ sealed trait ResolvedResourceOptions:
   def pluginDownloadUrl: Option[String]
   def deletedWith: Option[Resource]
 
-  private[besom] def getImportId(using Context): Option[ResourceId] = this match
+  private[besom] def getImportId: Option[ResourceId] = this match
     case cr: CustomResolvedResourceOptions         => cr.importId
     case sr: StackReferenceResolvedResourceOptions => sr.importId
     case _                                         => None
@@ -232,7 +232,7 @@ final case class StackReferenceResourceOptions private[internal] (
   export common.*
 
 trait CustomResourceOptionsFactory:
-  def apply(using Context)(
+  def apply(
     parent: Input.Optional[Resource] = None,
     dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
     deletedWith: Input.Optional[Resource] = None,
@@ -270,7 +270,7 @@ trait CustomResourceOptionsFactory:
   )
 
 object CustomResourceOptions:
-  def apply(using Context)(
+  def apply(
     parent: Input.Optional[Resource] = None,
     dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
     deletedWith: Input.Optional[Resource] = None,

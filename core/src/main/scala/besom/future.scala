@@ -64,10 +64,10 @@ import scala.reflect.Typeable
   * @return
   *   The component resource.
   */
-def component[A <: ComponentResource & Product: RegistersOutputs: Typeable](using ctx: Context)(
+def component[A <: ComponentResource & Product: RegistersOutputs: Typeable](
   name: NonEmptyString,
   typ: ResourceType,
   opts: ComponentResourceOptions = ComponentResourceOptions()
 )(
-  f: Context ?=> ComponentBase ?=> A
+  f: ComponentBase ?=> A
 ): Output[A] = Pulumi.component(name, typ, opts)(f)

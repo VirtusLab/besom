@@ -57,7 +57,7 @@ end StackReference
 trait StackReferenceFactory:
   sealed trait StackReferenceType[T]:
     type Out[T]
-    def transform(stackReference: StackReference)(using Context): Output[Out[T]]
+    def transform(stackReference: StackReference): Output[Out[T]]
 
   object StackReferenceType:
     given untyped: UntypedStackReferenceType = UntypedStackReferenceType()
@@ -66,7 +66,7 @@ trait StackReferenceFactory:
 
   class TypedStackReferenceType[T](using JsonReader[T]) extends StackReferenceType[T]:
     type Out[T] = TypedStackReference[T]
-    def transform(stackReference: StackReference)(using Context): Output[Out[T]] =
+    def transform(stackReference: StackReference): Output[Out[T]] =
       val objectOutput: Output[T] =
         requireObject(stackReference.outputs, stackReference.secretOutputNames)
 
@@ -82,17 +82,17 @@ trait StackReferenceFactory:
 
   class UntypedStackReferenceType extends StackReferenceType[Any]:
     type Out[T] = StackReference
-    def transform(stackReference: StackReference)(using Context): Output[StackReference] = Output.pure(stackReference)
+    def transform(stackReference: StackReference): Output[StackReference] = Output.pure(stackReference)
 
-  def untypedStackReference(using Context): StackReferenceType[Any] = UntypedStackReferenceType()
+  def untypedStackReference: StackReferenceType[Any] = UntypedStackReferenceType()
 
   def typedStackReference[T: JsonReader]: TypedStackReferenceType[T] = TypedStackReferenceType()
 
-  def apply[T](using stackRefType: StackReferenceType[T], ctx: Context)(
+  def apply[T](
     name: NonEmptyString,
     args: Input.Optional[StackReferenceArgs] = None,
     opts: StackReferenceResourceOptions = StackReferenceResourceOptions()
-  ): Output[stackRefType.Out[T]] =
+  )(using stackRefType: StackReferenceType[T]): Output[stackRefType.Out[T]] =
     args
       .asOptionOutput(false)
       .flatMap {
@@ -111,7 +111,9 @@ trait StackReferenceFactory:
           Output.pure(Some(importId))
         )
 
-        Context().readOrRegisterResource[StackReference, StackReferenceArgs]("pulumi:pulumi:StackReference", name, stackRefArgs, mergedOpts)
+        Output.getContext.flatMap { implicit ctx =>
+          ctx.readOrRegisterResource[StackReference, StackReferenceArgs]("pulumi:pulumi:StackReference", name, stackRefArgs, mergedOpts)
+        }
       }
       .flatMap(stackRefType.transform)
 

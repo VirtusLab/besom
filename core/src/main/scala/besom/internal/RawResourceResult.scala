@@ -7,7 +7,7 @@ import besom.util.printer
 case class RawResourceResult(urn: URN, id: Option[ResourceId], data: Struct, dependencies: Map[String, Set[Resource]])
 
 object RawResourceResult:
-  def fromResponse(response: pulumirpc.resource.ReadResourceResponse, id: ResourceId)(using Context): Result[RawResourceResult] =
+  def fromResponse(response: pulumirpc.resource.ReadResourceResponse, id: ResourceId): Result[RawResourceResult] =
     Result.evalTry(URN.from(response.urn)).map { urn =>
       RawResourceResult(
         urn = urn,
@@ -19,7 +19,7 @@ object RawResourceResult:
       )
     }
 
-  def fromResponse(response: pulumirpc.resource.RegisterResourceResponse)(using Context): Result[RawResourceResult] =
+  def fromResponse(response: pulumirpc.resource.RegisterResourceResponse): Result[RawResourceResult] =
     val dependenciesPerField =
       Result.sequenceMap {
         response.propertyDependencies
@@ -53,7 +53,7 @@ object RawResourceResult:
       dependencies = deps
     )
 
-  def fromValue(tok: FunctionToken, value: Value)(using Context): Result[RawResourceResult] =
+  def fromValue(tok: FunctionToken, value: Value): Result[RawResourceResult] =
     value match
       case Value(Value.Kind.StructValue(struct), _) =>
         lazy val missingUrnErr =

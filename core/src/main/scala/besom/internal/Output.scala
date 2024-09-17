@@ -248,14 +248,14 @@ trait OutputExtensionsFactory:
         * @see
         *   [[parSequence]] for parallel execution
         */
-      def sequence[To](using BuildFrom[CC[Output[A]], A, To], Context): Output[To] =
+      def sequence[To](using BuildFrom[CC[Output[A]], A, To]): Output[To] =
         Output.sequence(coll)
 
       /** Creates an `Output` of a collection from a collection of Outputs in parallel.
         * @see
         *   [[sequence]] for sequential execution
         */
-      def parSequence[To](using BuildFrom[CC[Output[A]], A, To], Context): Output[To] =
+      def parSequence[To](using BuildFrom[CC[Output[A]], A, To]): Output[To] =
         Output.parSequence(coll)
 
   implicit object OutputTraverseOps:
@@ -267,7 +267,7 @@ trait OutputExtensionsFactory:
         * @see
         *   [[parTraverse]] for parallel execution
         */
-      def traverse[B, To](f: A => Output[B])(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] =
+      def traverse[B, To](f: A => Output[B])(using BuildFrom[CC[Output[B]], B, To]): Output[To] =
         Output.sequence(coll.map(f).asInstanceOf[CC[Output[B]]])
 
       /** Applies an Output-returning function to each element in the collection, in parallel, and then combines the results into an Output.
@@ -277,7 +277,7 @@ trait OutputExtensionsFactory:
         * @see
         *   [[traverse]] for sequential execution
         */
-      def parTraverse[B, To](f: A => Output[B])(using BuildFrom[CC[Output[B]], B, To], Context): Output[To] =
+      def parTraverse[B, To](f: A => Output[B])(using BuildFrom[CC[Output[B]], B, To]): Output[To] =
         coll.map(f).asInstanceOf[CC[Output[B]]].parSequence
 
   implicit final class OutputOptionOps[A](output: Output[Option[A]]):
@@ -287,7 +287,7 @@ trait OutputExtensionsFactory:
       * @return
       *   an [[Output]] with the value of the underlying [[Some]] or the `default` value if [[None]]
       */
-    def getOrElse[B >: A](default: => B | Output[B])(using ctx: Context): Output[B] =
+    def getOrElse[B >: A](default: => B | Output[B]): Output[B] =
       output.flatMap { opt =>
         opt match
           case Some(a) => Output.pure(a)
@@ -306,7 +306,7 @@ trait OutputExtensionsFactory:
       * @see
       *   [[OutputFactory.fail]] for creating a failed [[Output]] with a [[Throwable]]
       */
-    def getOrFail(throwable: => Throwable)(using ctx: Context): Output[A] =
+    def getOrFail(throwable: => Throwable): Output[A] =
       output.flatMap {
         case Some(a) => Output.pure(a)
         case None    => Output.fail(throwable)
@@ -318,7 +318,7 @@ trait OutputExtensionsFactory:
       * @return
       *   an [[Output]] with the underlying [[Some]] or the `alternative` value if [[None]]
       */
-    def orElse[B >: A](alternative: => Option[B] | Output[Option[B]])(using ctx: Context): Output[Option[B]] =
+    def orElse[B >: A](alternative: => Option[B] | Output[Option[B]]): Output[Option[B]] =
       output.flatMap {
         case some @ Some(_) => Output.pure(some)
         case None =>
@@ -331,7 +331,7 @@ trait OutputExtensionsFactory:
       * @return
       *   an [[Output]] of the mapped [[Option]]
       */
-    def mapInner[B](f: A => B | Output[B])(using ctx: Context): Output[Option[B]] =
+    def mapInner[B](f: A => B | Output[B]): Output[Option[B]] =
       output.flatMap {
         case Some(a) =>
           f(a) match
@@ -344,7 +344,7 @@ trait OutputExtensionsFactory:
       * @return
       *   an [[Output]] of the flat-mapped [[Option]]
       */
-    def flatMapInner[B](f: A => Option[B] | Output[Option[B]])(using ctx: Context): Output[Option[B]] =
+    def flatMapInner[B](f: A => Option[B] | Output[Option[B]]): Output[Option[B]] =
       output.flatMap {
         case Some(a) =>
           f(a) match

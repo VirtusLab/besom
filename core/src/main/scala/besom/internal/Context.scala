@@ -22,6 +22,7 @@ trait Context extends TaskTracker:
   private[besom] def runInfo: RunInfo
   private[besom] def monitor: Monitor
   private[besom] def memo: Memo
+  private[besom] def getStackURN: Result[URN]
   private[besom] def getParentURN: Result[URN]
   private[besom] def getParent: Option[Resource]
   private[besom] def config: Config
@@ -133,6 +134,8 @@ class ContextImpl(
       case Some(urn) => Result.pure(urn)
       case None      => Result.fail(Exception("Stack urn is not available. This should not happen."))
     }
+
+  override private[besom] def getStackURN: Result[URN] = getParentURN
 
   // top level Context does not return a parent (stack is the top level resource and it's providers are default provider instances)
   override private[besom] def getParent: Option[Resource] = None
