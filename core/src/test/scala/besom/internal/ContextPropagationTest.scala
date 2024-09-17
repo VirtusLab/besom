@@ -4,7 +4,7 @@ import besom.types.{URN, ResourceId, ResourceType}
 import RunOutput.{*, given}
 import ProtobufUtil.given
 
-import pulumirpc.resource.{RegisterResourceRequest, RegisterResourceResponse}
+import pulumirpc.resource.{RegisterResourceRequest, RegisterResourceResponse, RegisterResourceOutputsRequest}
 import com.google.protobuf.struct.Struct
 import com.google.protobuf.struct.*
 import besom.util.NonEmptyString
@@ -81,7 +81,7 @@ class ContextPropagationTest extends munit.FunSuite:
 
             val obj: Struct = Map.empty[String, Value].asStruct
 
-            RegisterResourceResponse(urn = resourceUrn.asString, `object` = Some(obj))
+            RegisterResourceResponse(urn = componentUrn.asString, `object` = Some(obj))
           case (TestResource.typeToken, "test-resource") =>
             assert(registerResourceRequest.parent == componentUrn.asString)
 
@@ -91,8 +91,10 @@ class ContextPropagationTest extends munit.FunSuite:
 
           case _ =>
             fail("Unexpected resource type")
-
       }
+
+      override def registerResourceOutputs(registerResourceOutputsRequest: RegisterResourceOutputsRequest): Result[Unit] =
+        Result.pure(())
 
     given ctx: Context = DummyContext(monitor = spyMonitor, stackURN = stackUrn).unsafeRunSync()
 
