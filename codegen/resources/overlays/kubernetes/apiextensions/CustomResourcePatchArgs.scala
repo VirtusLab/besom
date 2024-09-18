@@ -13,7 +13,7 @@ object CustomResourcePatchArgs:
     kind: String,
     metadata: besom.types.Input.Optional[besom.api.kubernetes.meta.v1.inputs.ObjectMetaPatchArgs] = scala.None,
     spec: besom.types.Input.Optional[A] = scala.None
-  )(using besom.types.Context): CustomResourcePatchArgs[A] =
+  ): CustomResourcePatchArgs[A] =
     new CustomResourcePatchArgs(
       apiVersion = apiVersion,
       kind = kind,
@@ -27,7 +27,7 @@ object CustomResourcePatchArgs:
       kind: String = customResourcePatchArgs.kind,
       metadata: besom.types.Input.Optional[besom.api.kubernetes.meta.v1.inputs.ObjectMetaPatchArgs] = customResourcePatchArgs.metadata,
       spec: besom.types.Input.Optional[A] = customResourcePatchArgs.spec
-    )(using besom.types.Context): CustomResourcePatchArgs[A] =
+    ): CustomResourcePatchArgs[A] =
       new CustomResourcePatchArgs(
         apiVersion = apiVersion,
         kind = kind,

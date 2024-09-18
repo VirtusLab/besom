@@ -94,19 +94,20 @@ class CodeGenTest extends munit.FunSuite {
               |    *        )
               |    *        }}}
               |    */
-              |  def apply(using ctx: besom.types.Context)(
+              |  def apply(
               |    name: besom.util.NonEmptyString,
               |    args: ProviderArgs = ProviderArgs(),
               |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
-              |  ): besom.types.Output[Provider] =
+              |  ): besom.types.Output[Provider] = besom.internal.Output.getContext.flatMap { implicit ctx =>
               |    ctx.readOrRegisterResource[Provider, ProviderArgs]("pulumi:providers:example", name, args, opts(using besom.ResourceOptsVariant.Custom))
+              |  }
               |
               |  private[besom] def typeToken: besom.types.ResourceType = "pulumi:providers:example"
               |
-              |  given resourceDecoder(using besom.types.Context): besom.types.ResourceDecoder[Provider] =
+              |  given resourceDecoder: besom.types.ResourceDecoder[Provider] =
               |    besom.internal.ResourceDecoder.derived[Provider]
               |
-              |  given decoder(using besom.types.Context): besom.types.Decoder[Provider] =
+              |  given decoder: besom.types.Decoder[Provider] =
               |    besom.internal.Decoder.customResourceDecoder[Provider]
               |
               |
@@ -125,21 +126,21 @@ class CodeGenTest extends munit.FunSuite {
               |object ProviderArgs:
               |  def apply(
               |    helmReleaseSettings: besom.types.Input.Optional[besom.api.example.inputs.HelmReleaseSettingsArgs] = scala.None
-              |  )(using besom.types.Context): ProviderArgs =
+              |  ): ProviderArgs =
               |    new ProviderArgs(
               |      helmReleaseSettings = helmReleaseSettings.asOptionOutput(isSecret = false)
               |    )
               |
               |  extension (providerArgs: ProviderArgs) def withArgs(
               |    helmReleaseSettings: besom.types.Input.Optional[besom.api.example.inputs.HelmReleaseSettingsArgs] = providerArgs.helmReleaseSettings
-              |  )(using besom.types.Context): ProviderArgs =
+              |  ): ProviderArgs =
               |    new ProviderArgs(
               |      helmReleaseSettings = helmReleaseSettings.asOptionOutput(isSecret = false)
               |    )
               |
-              |  given encoder(using besom.types.Context): besom.types.Encoder[ProviderArgs] =
+              |  given encoder: besom.types.Encoder[ProviderArgs] =
               |    besom.internal.Encoder.derived[ProviderArgs]
-              |  given providerArgsEncoder(using besom.types.Context): besom.types.ProviderArgsEncoder[ProviderArgs] =
+              |  given providerArgsEncoder: besom.types.ProviderArgsEncoder[ProviderArgs] =
               |    besom.internal.ProviderArgsEncoder.derived[ProviderArgs]
               |""".stripMargin
       ),
@@ -223,11 +224,12 @@ class CodeGenTest extends munit.FunSuite {
              |  id: besom.types.Output[besom.types.ResourceId],
              |  name: besom.types.Output[String]
              |) extends besom.CustomResource:
-             |  def getKubeconfig(using ctx: besom.types.Context)(
+             |  def getKubeconfig(
              |    args: besom.api.googlenative.container.v1.ClusterGetKubeconfigArgs = besom.api.googlenative.container.v1.ClusterGetKubeconfigArgs(),
              |    opts: besom.InvokeOptions = besom.InvokeOptions()
-             |  ): besom.types.Output[besom.api.googlenative.container.v1.ClusterGetKubeconfigResult] =
+             |  ): besom.types.Output[besom.api.googlenative.container.v1.ClusterGetKubeconfigResult] = besom.internal.Output.getContext.flatMap { implicit ctx =>
              |     ctx.call[besom.api.googlenative.container.v1.ClusterGetKubeconfigArgs, besom.api.googlenative.container.v1.ClusterGetKubeconfigResult, besom.api.googlenative.container.v1.Cluster]("google-native:container/v1:Cluster/getKubeconfig", args, this, opts)
+             |  }
              |
              |object Cluster extends besom.ResourceCompanion[Cluster]:
              |  /** Resource constructor for Cluster. 
@@ -250,19 +252,20 @@ class CodeGenTest extends munit.FunSuite {
              |    *        )
              |    *        }}}
              |    */
-             |  def apply(using ctx: besom.types.Context)(
+             |  def apply(
              |    name: besom.util.NonEmptyString,
              |    args: ClusterArgs = ClusterArgs(),
              |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
-             |  ): besom.types.Output[Cluster] =
+             |  ): besom.types.Output[Cluster] = besom.internal.Output.getContext.flatMap { implicit ctx =>
              |    ctx.readOrRegisterResource[Cluster, ClusterArgs]("google-native:container/v1:Cluster", name, args, opts(using besom.ResourceOptsVariant.Custom))
+             |  }
              |
              |  private[besom] def typeToken: besom.types.ResourceType = "google-native:container/v1:Cluster"
              |
-             |  given resourceDecoder(using besom.types.Context): besom.types.ResourceDecoder[Cluster] =
+             |  given resourceDecoder: besom.types.ResourceDecoder[Cluster] =
              |    besom.internal.ResourceDecoder.derived[Cluster]
              |
-             |  given decoder(using besom.types.Context): besom.types.Decoder[Cluster] =
+             |  given decoder: besom.types.Decoder[Cluster] =
              |    besom.internal.Decoder.customResourceDecoder[Cluster]
              |
              |
@@ -282,21 +285,21 @@ class CodeGenTest extends munit.FunSuite {
              |object ClusterArgs:
              |  def apply(
              |
-             |  )(using besom.types.Context): ClusterArgs =
+             |  ): ClusterArgs =
              |    new ClusterArgs(
              |
              |    )
              |
              |  extension (clusterArgs: ClusterArgs) def withArgs(
              |
-             |  )(using besom.types.Context): ClusterArgs =
+             |  ): ClusterArgs =
              |    new ClusterArgs(
              |
              |    )
              |
-             |  given encoder(using besom.types.Context): besom.types.Encoder[ClusterArgs] =
+             |  given encoder: besom.types.Encoder[ClusterArgs] =
              |    besom.internal.Encoder.derived[ClusterArgs]
-             |  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[ClusterArgs] =
+             |  given argsEncoder: besom.types.ArgsEncoder[ClusterArgs] =
              |    besom.internal.ArgsEncoder.derived[ClusterArgs]
              |""".stripMargin,
         "src/container/v1/ClusterGetKubeconfigArgs.scala" ->
@@ -309,21 +312,21 @@ class CodeGenTest extends munit.FunSuite {
              |object ClusterGetKubeconfigArgs:
              |  def apply(
              |
-             |  )(using besom.types.Context): ClusterGetKubeconfigArgs =
+             |  ): ClusterGetKubeconfigArgs =
              |    new ClusterGetKubeconfigArgs(
              |
              |    )
              |
              |  extension (clusterGetKubeconfigArgs: ClusterGetKubeconfigArgs) def withArgs(
              |
-             |  )(using besom.types.Context): ClusterGetKubeconfigArgs =
+             |  ): ClusterGetKubeconfigArgs =
              |    new ClusterGetKubeconfigArgs(
              |
              |    )
              |
-             |  given encoder(using besom.types.Context): besom.types.Encoder[ClusterGetKubeconfigArgs] =
+             |  given encoder: besom.types.Encoder[ClusterGetKubeconfigArgs] =
              |    besom.internal.Encoder.derived[ClusterGetKubeconfigArgs]
-             |  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[ClusterGetKubeconfigArgs] =
+             |  given argsEncoder: besom.types.ArgsEncoder[ClusterGetKubeconfigArgs] =
              |    besom.internal.ArgsEncoder.derived[ClusterGetKubeconfigArgs]
              |""".stripMargin,
         "src/container/v1/ClusterGetKubeconfigResult.scala" ->
@@ -335,7 +338,7 @@ class CodeGenTest extends munit.FunSuite {
              |)
              |object ClusterGetKubeconfigResult :
              |
-             |  given decoder(using besom.types.Context): besom.types.Decoder[ClusterGetKubeconfigResult] =
+             |  given decoder: besom.types.Decoder[ClusterGetKubeconfigResult] =
              |    besom.internal.Decoder.derived[ClusterGetKubeconfigResult]
              |
              |
@@ -351,11 +354,12 @@ class CodeGenTest extends munit.FunSuite {
         "src/container/v1/getCluster.scala" ->
           """|package besom.api.googlenative.container.v1
              |
-             |def getCluster(using ctx: besom.types.Context)(
+             |def getCluster(
              |  args: besom.api.googlenative.container.v1.GetClusterArgs,
              |  opts: besom.InvokeOptions = besom.InvokeOptions()
-             |): besom.types.Output[scala.Unit] =
+             |): besom.types.Output[scala.Unit] = besom.internal.Output.getContext.flatMap { implicit ctx =>
              |   ctx.invoke[besom.api.googlenative.container.v1.GetClusterArgs, scala.Unit]("google-native:container/v1:getCluster", args, opts)
+             |}
              |""".stripMargin,
         "src/container/v1/GetClusterArgs.scala" ->
           """|package besom.api.googlenative.container.v1
@@ -369,7 +373,7 @@ class CodeGenTest extends munit.FunSuite {
              |  def apply(
              |    clusterId: besom.types.Input[String],
              |    location: besom.types.Input.Optional[String] = scala.None
-             |  )(using besom.types.Context): GetClusterArgs =
+             |  ): GetClusterArgs =
              |    new GetClusterArgs(
              |      clusterId = clusterId.asOutput(isSecret = false),
              |      location = location.asOptionOutput(isSecret = false)
@@ -378,15 +382,15 @@ class CodeGenTest extends munit.FunSuite {
              |  extension (getClusterArgs: GetClusterArgs) def withArgs(
              |    clusterId: besom.types.Input[String] = getClusterArgs.clusterId,
              |    location: besom.types.Input.Optional[String] = getClusterArgs.location
-             |  )(using besom.types.Context): GetClusterArgs =
+             |  ): GetClusterArgs =
              |    new GetClusterArgs(
              |      clusterId = clusterId.asOutput(isSecret = false),
              |      location = location.asOptionOutput(isSecret = false)
              |    )
              |
-             |  given encoder(using besom.types.Context): besom.types.Encoder[GetClusterArgs] =
+             |  given encoder: besom.types.Encoder[GetClusterArgs] =
              |    besom.internal.Encoder.derived[GetClusterArgs]
-             |  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[GetClusterArgs] =
+             |  given argsEncoder: besom.types.ArgsEncoder[GetClusterArgs] =
              |    besom.internal.ArgsEncoder.derived[GetClusterArgs]
              |""".stripMargin
       ),
@@ -470,21 +474,21 @@ class CodeGenTest extends munit.FunSuite {
              |object MultipleActivationKeyArgs:
              |  def apply(
              |    supportType: besom.types.Input[String | besom.api.azurenative.windowsesu.enums.SupportType] = "SupplementalServicing"
-             |  )(using besom.types.Context): MultipleActivationKeyArgs =
+             |  ): MultipleActivationKeyArgs =
              |    new MultipleActivationKeyArgs(
              |      supportType = supportType.asOutput(isSecret = false)
              |    )
              |
              |  extension (multipleActivationKeyArgs: MultipleActivationKeyArgs) def withArgs(
              |    supportType: besom.types.Input[String | besom.api.azurenative.windowsesu.enums.SupportType] = multipleActivationKeyArgs.supportType
-             |  )(using besom.types.Context): MultipleActivationKeyArgs =
+             |  ): MultipleActivationKeyArgs =
              |    new MultipleActivationKeyArgs(
              |      supportType = supportType.asOutput(isSecret = false)
              |    )
              |
-             |  given encoder(using besom.types.Context): besom.types.Encoder[MultipleActivationKeyArgs] =
+             |  given encoder: besom.types.Encoder[MultipleActivationKeyArgs] =
              |    besom.internal.Encoder.derived[MultipleActivationKeyArgs]
-             |  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[MultipleActivationKeyArgs] =
+             |  given argsEncoder: besom.types.ArgsEncoder[MultipleActivationKeyArgs] =
              |    besom.internal.ArgsEncoder.derived[MultipleActivationKeyArgs]
              |""".stripMargin
       )
@@ -558,21 +562,21 @@ class CodeGenTest extends munit.FunSuite {
              |object JobDefinitionArgs:
              |  def apply(
              |    userConfirmation: besom.types.Input[besom.api.azurenative.hybriddata.enums.UserConfirmation] = besom.api.azurenative.hybriddata.enums.UserConfirmation.NotRequired
-             |  )(using besom.types.Context): JobDefinitionArgs =
+             |  ): JobDefinitionArgs =
              |    new JobDefinitionArgs(
              |      userConfirmation = userConfirmation.asOutput(isSecret = false)
              |    )
              |
              |  extension (jobDefinitionArgs: JobDefinitionArgs) def withArgs(
              |    userConfirmation: besom.types.Input[besom.api.azurenative.hybriddata.enums.UserConfirmation] = jobDefinitionArgs.userConfirmation
-             |  )(using besom.types.Context): JobDefinitionArgs =
+             |  ): JobDefinitionArgs =
              |    new JobDefinitionArgs(
              |      userConfirmation = userConfirmation.asOutput(isSecret = false)
              |    )
              |
-             |  given encoder(using besom.types.Context): besom.types.Encoder[JobDefinitionArgs] =
+             |  given encoder: besom.types.Encoder[JobDefinitionArgs] =
              |    besom.internal.Encoder.derived[JobDefinitionArgs]
-             |  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[JobDefinitionArgs] =
+             |  given argsEncoder: besom.types.ArgsEncoder[JobDefinitionArgs] =
              |    besom.internal.ArgsEncoder.derived[JobDefinitionArgs]
              |""".stripMargin
       )
@@ -665,7 +669,7 @@ class CodeGenTest extends munit.FunSuite {
              |  def apply(
              |    brightness: besom.types.Input[besom.api.plant.enums.ContainerBrightness] = besom.api.plant.enums.ContainerBrightness.One,
              |    size: besom.types.Input[besom.api.plant.enums.ContainerSize] = besom.api.plant.enums.ContainerSize.FourInch
-             |  )(using besom.types.Context): ContainerArgs =
+             |  ): ContainerArgs =
              |    new ContainerArgs(
              |      brightness = brightness.asOutput(isSecret = false),
              |      size = size.asOutput(isSecret = false)
@@ -674,15 +678,15 @@ class CodeGenTest extends munit.FunSuite {
              |  extension (containerArgs: ContainerArgs) def withArgs(
              |    brightness: besom.types.Input[besom.api.plant.enums.ContainerBrightness] = containerArgs.brightness,
              |    size: besom.types.Input[besom.api.plant.enums.ContainerSize] = containerArgs.size
-             |  )(using besom.types.Context): ContainerArgs =
+             |  ): ContainerArgs =
              |    new ContainerArgs(
              |      brightness = brightness.asOutput(isSecret = false),
              |      size = size.asOutput(isSecret = false)
              |    )
              |
-             |  given encoder(using besom.types.Context): besom.types.Encoder[ContainerArgs] =
+             |  given encoder: besom.types.Encoder[ContainerArgs] =
              |    besom.internal.Encoder.derived[ContainerArgs]
-             |  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[ContainerArgs] =
+             |  given argsEncoder: besom.types.ArgsEncoder[ContainerArgs] =
              |    besom.internal.ArgsEncoder.derived[ContainerArgs]
              |""".stripMargin
       )
@@ -741,7 +745,7 @@ class CodeGenTest extends munit.FunSuite {
              |)
              |object EniConfig :
              |
-             |  given decoder(using besom.types.Context): besom.types.Decoder[EniConfig] =
+             |  given decoder: besom.types.Decoder[EniConfig] =
              |    besom.internal.Decoder.derived[EniConfig]
              |
              |
@@ -773,7 +777,7 @@ class CodeGenTest extends munit.FunSuite {
              |object EniConfigArgs:
              |  def apply(
              |    spec: besom.types.Input.Optional[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.inputs.EniConfigSpecArgs] = scala.None
-             |  )(using besom.types.Context): EniConfigArgs =
+             |  ): EniConfigArgs =
              |    new EniConfigArgs(
              |      apiVersion = besom.types.Output("crd.k8s.amazonaws.com/v1alpha1"),
              |      kind = besom.types.Output("ENIConfig"),
@@ -782,16 +786,16 @@ class CodeGenTest extends munit.FunSuite {
              |
              |  extension (eniConfigArgs: EniConfigArgs) def withArgs(
              |    spec: besom.types.Input.Optional[besom.api.kubernetes.crdk8samazonawscom.v1alpha1.inputs.EniConfigSpecArgs] = eniConfigArgs.spec
-             |  )(using besom.types.Context): EniConfigArgs =
+             |  ): EniConfigArgs =
              |    new EniConfigArgs(
              |      apiVersion = besom.types.Output("crd.k8s.amazonaws.com/v1alpha1"),
              |      kind = besom.types.Output("ENIConfig"),
              |      spec = spec.asOptionOutput(isSecret = false)
              |    )
              |
-             |  given encoder(using besom.types.Context): besom.types.Encoder[EniConfigArgs] =
+             |  given encoder: besom.types.Encoder[EniConfigArgs] =
              |    besom.internal.Encoder.derived[EniConfigArgs]
-             |  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[EniConfigArgs] =
+             |  given argsEncoder: besom.types.ArgsEncoder[EniConfigArgs] =
              |    besom.internal.ArgsEncoder.derived[EniConfigArgs]
              |
              |
@@ -806,7 +810,7 @@ class CodeGenTest extends munit.FunSuite {
              |)
              |object EniConfigSpec :
              |
-             |  given decoder(using besom.types.Context): besom.types.Decoder[EniConfigSpec] =
+             |  given decoder: besom.types.Decoder[EniConfigSpec] =
              |    besom.internal.Decoder.derived[EniConfigSpec]
              |
              |
@@ -836,7 +840,7 @@ class CodeGenTest extends munit.FunSuite {
              |  def apply(
              |    securityGroups: besom.types.Input.Optional[scala.collection.immutable.Iterable[besom.types.Input[String]]] = scala.None,
              |    subnet: besom.types.Input.Optional[String] = scala.None
-             |  )(using besom.types.Context): EniConfigSpecArgs =
+             |  ): EniConfigSpecArgs =
              |    new EniConfigSpecArgs(
              |      securityGroups = securityGroups.asOptionOutput(isSecret = false),
              |      subnet = subnet.asOptionOutput(isSecret = false)
@@ -845,15 +849,15 @@ class CodeGenTest extends munit.FunSuite {
              |  extension (eniConfigSpecArgs: EniConfigSpecArgs) def withArgs(
              |    securityGroups: besom.types.Input.Optional[scala.collection.immutable.Iterable[besom.types.Input[String]]] = eniConfigSpecArgs.securityGroups,
              |    subnet: besom.types.Input.Optional[String] = eniConfigSpecArgs.subnet
-             |  )(using besom.types.Context): EniConfigSpecArgs =
+             |  ): EniConfigSpecArgs =
              |    new EniConfigSpecArgs(
              |      securityGroups = securityGroups.asOptionOutput(isSecret = false),
              |      subnet = subnet.asOptionOutput(isSecret = false)
              |    )
              |
-             |  given encoder(using besom.types.Context): besom.types.Encoder[EniConfigSpecArgs] =
+             |  given encoder: besom.types.Encoder[EniConfigSpecArgs] =
              |    besom.internal.Encoder.derived[EniConfigSpecArgs]
-             |  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[EniConfigSpecArgs] =
+             |  given argsEncoder: besom.types.ArgsEncoder[EniConfigSpecArgs] =
              |    besom.internal.ArgsEncoder.derived[EniConfigSpecArgs]
              |""".stripMargin
       )
@@ -920,19 +924,20 @@ class CodeGenTest extends munit.FunSuite {
               |    *        )
               |    *        }}}
               |    */
-              |  def apply(using ctx: besom.types.Context)(
+              |  def apply(
               |    name: besom.util.NonEmptyString,
               |    args: ProviderArgs,
               |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
-              |  ): besom.types.Output[Provider] =
+              |  ): besom.types.Output[Provider] = besom.internal.Output.getContext.flatMap { implicit ctx =>
               |    ctx.readOrRegisterResource[Provider, ProviderArgs]("pulumi:providers:example", name, args, opts(using besom.ResourceOptsVariant.Custom))
+              |  }
               |
               |  private[besom] def typeToken: besom.types.ResourceType = "pulumi:providers:example"
               |
-              |  given resourceDecoder(using besom.types.Context): besom.types.ResourceDecoder[Provider] =
+              |  given resourceDecoder: besom.types.ResourceDecoder[Provider] =
               |    besom.internal.ResourceDecoder.derived[Provider]
               |
-              |  given decoder(using besom.types.Context): besom.types.Decoder[Provider] =
+              |  given decoder: besom.types.Decoder[Provider] =
               |    besom.internal.Decoder.customResourceDecoder[Provider]
               |
               |
@@ -956,7 +961,7 @@ class CodeGenTest extends munit.FunSuite {
               |    plainOptionalString: scala.Option[String] = scala.None,
               |    plainOptionalStringWithDefault: String = "another",
               |    plainRequiredString: String
-              |  )(using besom.types.Context): ProviderArgs =
+              |  ): ProviderArgs =
               |    new ProviderArgs(
               |      plainConst = "val",
               |      plainOptionalString = plainOptionalString,
@@ -968,7 +973,7 @@ class CodeGenTest extends munit.FunSuite {
               |    plainOptionalString: scala.Option[String] = providerArgs.plainOptionalString,
               |    plainOptionalStringWithDefault: String = providerArgs.plainOptionalStringWithDefault,
               |    plainRequiredString: String = providerArgs.plainRequiredString
-              |  )(using besom.types.Context): ProviderArgs =
+              |  ): ProviderArgs =
               |    new ProviderArgs(
               |      plainConst = "val",
               |      plainOptionalString = plainOptionalString,
@@ -976,9 +981,9 @@ class CodeGenTest extends munit.FunSuite {
               |      plainRequiredString = plainRequiredString
               |    )
               |
-              |  given encoder(using besom.types.Context): besom.types.Encoder[ProviderArgs] =
+              |  given encoder: besom.types.Encoder[ProviderArgs] =
               |    besom.internal.Encoder.derived[ProviderArgs]
-              |  given providerArgsEncoder(using besom.types.Context): besom.types.ProviderArgsEncoder[ProviderArgs] =
+              |  given providerArgsEncoder: besom.types.ProviderArgsEncoder[ProviderArgs] =
               |    besom.internal.ProviderArgsEncoder.derived[ProviderArgs]
               |""".stripMargin
       )
@@ -1104,19 +1109,20 @@ class CodeGenTest extends munit.FunSuite {
              |    *        )
              |    *        }}}
              |    */
-             |  def apply(using ctx: besom.types.Context)(
+             |  def apply(
              |    name: besom.util.NonEmptyString,
              |    args: MangledArgs = MangledArgs(),
              |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
-             |  ): besom.types.Output[Mangled] =
+             |  ): besom.types.Output[Mangled] = besom.internal.Output.getContext.flatMap { implicit ctx =>
              |    ctx.readOrRegisterResource[Mangled, MangledArgs]("mangled-provider:index:mangled", name, args, opts(using besom.ResourceOptsVariant.Custom))
+             |  }
              |
              |  private[besom] def typeToken: besom.types.ResourceType = "mangled-provider:index:mangled"
              |
-             |  given resourceDecoder(using besom.types.Context): besom.types.ResourceDecoder[Mangled] =
+             |  given resourceDecoder: besom.types.ResourceDecoder[Mangled] =
              |    besom.internal.ResourceDecoder.derived[Mangled]
              |
-             |  given decoder(using besom.types.Context): besom.types.Decoder[Mangled] =
+             |  given decoder: besom.types.Decoder[Mangled] =
              |    besom.internal.Decoder.customResourceDecoder[Mangled]
              |
              |

@@ -466,11 +466,12 @@ class CodeGen(using
           val thisTypeRef  = baseClassCoordinates.typeRef
           val tokenLiteral = Lit.String(functionToken.asString)
           val code =
-            m"""|  def ${Term.Name(name)}(using ctx: besom.types.Context)(
+            m"""|  def ${Term.Name(name)}(
                 |    args: ${argsClassRef}${argsDefault},
                 |    opts: besom.InvokeOptions = besom.InvokeOptions()
-                |  ): besom.types.Output[${resultTypeRef}] =
+                |  ): besom.types.Output[${resultTypeRef}] = besom.internal.Output.getContext.flatMap { implicit ctx =>
                 |     ctx.call[$argsClassRef, $resultTypeRef, $thisTypeRef](${tokenLiteral}, args, this, opts)
+                |  }
                 |""".stripMargin.parse[Stat].get
 
           (supportClassSourceFiles, code)
@@ -490,14 +491,14 @@ class CodeGen(using
     val tokenLit = Lit.String(token.asString)
 
     val resourceDecoderInstance =
-      m"""  given resourceDecoder(using besom.types.Context): besom.types.ResourceDecoder[$baseClassName] =
+      m"""  given resourceDecoder: besom.types.ResourceDecoder[$baseClassName] =
          |    besom.internal.ResourceDecoder.derived[$baseClassName]
          |""".stripMargin
 
     val decoderInstanceName = if isRemoteComponent then "remoteComponentResourceDecoder" else "customResourceDecoder"
 
     val decoderInstance =
-      m"""  given decoder(using besom.types.Context): besom.types.Decoder[$baseClassName] =
+      m"""  given decoder: besom.types.Decoder[$baseClassName] =
          |    besom.internal.Decoder.$decoderInstanceName[$baseClassName]
          |""".stripMargin
 
@@ -528,12 +529,13 @@ class CodeGen(using
             |    *        )
             |    *        }}}
             |    */
-            |  def apply(using ctx: besom.types.Context)(
+            |  def apply(
             |    name: besom.util.NonEmptyString,
             |    args: ${argsClassName}${argsDefault},
             |    opts: besom.ResourceOptsVariant.$variant ?=> ${resourceOptsClass} = ${resourceOptsClass}()
-            |  ): besom.types.Output[$baseClassName] =
+            |  ): besom.types.Output[$baseClassName] = besom.internal.Output.getContext.flatMap { implicit ctx =>
             |    ctx.${resourceRegisterMethodName}[$baseClassName, $argsClassName](${tokenLit}, name, args, opts(using besom.ResourceOptsVariant.$variant))
+            |  }
             |
             |  private[besom] def typeToken: besom.types.ResourceType = ${tokenLit}
             |
@@ -685,11 +687,12 @@ class CodeGen(using
       val fileContent =
         s"""|package ${methodCoordinates.packageRef}
             |
-            |def ${Name(methodName)}(using ctx: besom.types.Context)(
+            |def ${Name(methodName)}(
             |  args: ${argsClassRef}${argsDefault},
             |  opts: besom.InvokeOptions = besom.InvokeOptions()
-            |): besom.types.Output[${resultTypeRef}] =
+            |): besom.types.Output[${resultTypeRef}] = besom.internal.Output.getContext.flatMap { implicit ctx =>
             |   ctx.invoke[$argsClassRef, $resultTypeRef](${token}, args, opts)
+            |}
             |""".stripMargin
 
       SourceFile(filePath = methodCoordinates.filePath, sourceCode = fileContent)
@@ -852,7 +855,7 @@ class CodeGen(using
     val _ = scalameta.parseStatement(classDef)
 
     val decoderInstance =
-      m"""|  given decoder(using besom.types.Context): besom.types.Decoder[$className] =
+      m"""|  given decoder: besom.types.Decoder[$className] =
           |    besom.internal.Decoder.derived[$className]
           |""".stripMargin
 
@@ -1017,25 +1020,25 @@ class CodeGen(using
 
     val derivedTypeclasses = {
       lazy val providerArgsEncoderInstance =
-        m"""|  given providerArgsEncoder(using besom.types.Context): besom.types.ProviderArgsEncoder[$argsClassName] =
+        m"""|  given providerArgsEncoder: besom.types.ProviderArgsEncoder[$argsClassName] =
             |    besom.internal.ProviderArgsEncoder.derived[$argsClassName]
             |""".stripMargin
 
       lazy val argsEncoderInstance =
-        m"""|  given argsEncoder(using besom.types.Context): besom.types.ArgsEncoder[$argsClassName] =
+        m"""|  given argsEncoder: besom.types.ArgsEncoder[$argsClassName] =
             |    besom.internal.ArgsEncoder.derived[$argsClassName]
             |""".stripMargin
 
       if (isProvider)
-        m"""|  given encoder(using besom.types.Context): besom.types.Encoder[$argsClassName] =
+        m"""|  given encoder: besom.types.Encoder[$argsClassName] =
             |    besom.internal.Encoder.derived[$argsClassName]
             |$providerArgsEncoderInstance""".stripMargin
       else if (isResource)
-        m"""|  given encoder(using besom.types.Context): besom.types.Encoder[$argsClassName] =
+        m"""|  given encoder: besom.types.Encoder[$argsClassName] =
             |    besom.internal.Encoder.derived[$argsClassName]
             |$argsEncoderInstance""".stripMargin
       else
-        m"""|  given encoder(using besom.types.Context): besom.types.Encoder[$argsClassName] =
+        m"""|  given encoder: besom.types.Encoder[$argsClassName] =
             |    besom.internal.Encoder.derived[$argsClassName]
             |$argsEncoderInstance""".stripMargin
     }
@@ -1043,14 +1046,14 @@ class CodeGen(using
     m"""|object $argsClassName:
         |  def apply(
         |${argsCompanionApplyParams.map(arg => s"    ${arg.syntax}").mkString(",\n")}
-        |  )(using besom.types.Context): $argsClassName =
+        |  ): $argsClassName =
         |    new $argsClassName(
         |${argsCompanionApplyBodyArgs.map(arg => s"      ${arg.syntax}").mkString(",\n")}
         |    )
         |
         |  extension (${argsClassInstanceName}: ${argsClassName}) def withArgs(
         |${argsCompanionWithArgsParams.map(arg => s"    ${arg.syntax}").mkString(",\n")}
-        |  )(using besom.types.Context): $argsClassName =
+        |  ): $argsClassName =
         |    new $argsClassName(
         |${argsCompanionApplyBodyArgs.map(arg => s"      ${arg.syntax}").mkString(",\n")}
         |    )
@@ -1074,7 +1077,7 @@ class CodeGen(using
                 Term.Tuple(List(keyLit, decoder))
               }.toList)
               val name = decoderUniqueName(unionType)
-              name -> m"""|  given ${name}(using besom.types.Context): besom.types.Decoder[$unionType] =
+              name -> m"""|  given ${name}: besom.types.Decoder[$unionType] =
                           |    besom.internal.Decoder.discriminated($keyPropertyNameLit, $indexesLit)
                           |""".stripMargin
             case TypeMapper.UnionMapping.ByIndex(unionType, indexToType) =>
@@ -1084,7 +1087,7 @@ class CodeGen(using
                 Term.Tuple(List(keyLit, decoder))
               }.toList)
               val name = decoderUniqueName(unionType)
-              name -> m"""|  given ${name}(using besom.types.Context): besom.types.Decoder[$unionType] =
+              name -> m"""|  given ${name}: besom.types.Decoder[$unionType] =
                           |    besom.internal.Decoder.nonDiscriminated($indexesLit)
                           |""".stripMargin
           }

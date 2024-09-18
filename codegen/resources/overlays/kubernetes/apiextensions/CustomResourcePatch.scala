@@ -10,7 +10,7 @@ final case class CustomResourcePatch[A] private (
 ) extends besom.CustomResource
 
 object CustomResourcePatch:
-  def apply[A: besom.types.Encoder: besom.types.Decoder](using ctx: besom.types.Context)(
+  def apply[A: besom.types.Encoder: besom.types.Decoder](
     name: besom.util.NonEmptyString,
     args: CustomResourcePatchArgs[A],
     opts: besom.ResourceOptsVariant.Component ?=> besom.ComponentResourceOptions = besom.ComponentResourceOptions()
