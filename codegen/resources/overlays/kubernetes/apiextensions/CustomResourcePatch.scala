@@ -14,7 +14,7 @@ object CustomResourcePatch:
     name: besom.util.NonEmptyString,
     args: CustomResourcePatchArgs[A],
     opts: besom.ResourceOptsVariant.Component ?=> besom.ComponentResourceOptions = besom.ComponentResourceOptions()
-  ): besom.types.Output[CustomResourcePatch[A]] = {
+  ): besom.types.Output[CustomResourcePatch[A]] = besom.internal.Output.getContext.flatMap { implicit ctx =>
     val resourceName = besom.types.ResourceType.unsafeOf(s"kubernetes:${args.apiVersion}:${args.kind}")
     given besom.types.ResourceDecoder[CustomResourcePatch[A]] = besom.internal.ResourceDecoder.derived[CustomResourcePatch[A]]
     given besom.types.Decoder[CustomResourcePatch[A]]         = besom.internal.Decoder.customResourceDecoder[CustomResourcePatch[A]]
