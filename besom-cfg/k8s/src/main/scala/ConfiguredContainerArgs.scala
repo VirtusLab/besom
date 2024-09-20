@@ -15,7 +15,7 @@ import besom.cfg.k8s.syntax.*
 
 object syntax:
   extension (s: Struct)
-    def foldedToEnvVarArgs(using Context): Output[List[EnvVarArgs]] =
+    def foldedToEnvVarArgs: Output[List[EnvVarArgs]] =
       s.foldToEnv.map(_.map { case (k, v) => EnvVarArgs(name = k, value = v) })
 
 object ConfiguredContainerArgs:
@@ -132,7 +132,8 @@ object ConfiguredContainerArgs:
         val envExpr = '{
           val envOutput                 = ${ env }.asOptionOutput()
           val conf                      = ${ configuration }
-          val configurationAsEnvVarArgs = conf.foldedToEnvVarArgs(using $context)
+          val configurationAsEnvVarArgs = conf.foldedToEnvVarArgs
+
           envOutput.zip(configurationAsEnvVarArgs).map {
             case (Some(envVarArgsList), envVarArgsListFromConf) => envVarArgsList ++ envVarArgsListFromConf
             case (None, envVarArgsListFromConf)                 => envVarArgsListFromConf
@@ -165,7 +166,7 @@ object ConfiguredContainerArgs:
             volumeDevices = $volumeDevices,
             volumeMounts = $volumeMounts,
             workingDir = $workingDir
-          )(using $context)
+          )
         }
     end match
   end applyImpl
