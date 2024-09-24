@@ -8,7 +8,7 @@ import scala.concurrent.*
 trait FutureMonadModule extends BesomModule:
   override final type Eff[+A] = scala.concurrent.Future[A]
   given ExecutionContext = ExecutionContext.fromExecutorService(
-    null, // FJP does seem to swallow fatals
+    null, // global Future EC reports fatals and uncaught exceptions to stderr, we want to quit on fatals
     (t: Throwable) =>
       // TODO this has to contain a link to github issue tracker to allow user to easily create a bug report, this is EXTREMELY IMPORTANT
       scribe.error("Uncaught fatal error in Future Runtime", t)
@@ -22,18 +22,27 @@ trait FutureMonadModule extends BesomModule:
 
 /** Besom API entry point for the [[scala.concurrent.Future]] monad.
   *
-  * All Pulumi programs are executed in Besom context [[besom.Context]]
+  * `Pulumi.run` is the entry point for your Pulumi program. Inside the `Pulumi.run` a `besom.Context` is available, 
+  *  which is used by methods that provide metadata about the current Pulumi stack. These methods are:
+  *  - [[besom.internal.BesomSyntax.isDryRun]] - is the current run a dry run (planning instead of deployment)
+  *  - [[besom.internal.BesomSyntax.config]] - provides access to the configuration and secrets
+  *  - [[besom.internal.BesomSyntax.log]] - all your logging needs
+  *  - [[besom.internal.BesomSyntax.urn]] - the URN of the current Pulumi stack
+  *  - [[besom.internal.BesomSyntax.pulumiOrganization]] - the organization of the current Pulumi stack
+  *  - [[besom.internal.BesomSyntax.pulumiProject]] - the project name of the current Pulumi stack
+  *  - [[besom.internal.BesomSyntax.pulumiStack]] - the stack name of the current Pulumi stack
   *
-  * Most notable methods exposed by [[besom.Pulumi]] are:
-  *   - [[besom.internal.BesomModule.run]] - the Pulumi program function
-  *   - [[besom.internal.BesomSyntax.config]] - configuration and secrets
-  *   - [[besom.internal.BesomSyntax.log]] - all your logging needs
-  *
-  * Inside `Pulumi.run` block you can use all methods without `Pulumi.` prefix. All functions that belong to Besom program but are defined
-  * outside the `Pulumi.run` block should have the following using clause: `(using Context)` or `(using besom.Context)` using a fully
-  * qualified name of the type.
+  * Inside `Pulumi.run` block you can use all of the abovemethods without the `Pulumi.` prefix. Should you need to use 
+  * one of these methods outside of the `Pulumi.run` block, you can use the following using clauses:
+  *  - `(using Context)` if you have a `import besom.*` clause on top of the file or
+  *  - `(using besom.Context)` using a fully qualified name of the type.
+  * 
+  * There are also two other functions exported by [[besom.Pulumi]]:
+  *  - [[besom.internal.BesomModule.component]] - creates a new component resource
+  *  - [[besom.internal.BesomModule.opts]] - shortcut function allowing for uniform resource options syntax 
   *
   * The hello world example:
+
   * {{{
   * import besom.*
   *
@@ -42,6 +51,10 @@ trait FutureMonadModule extends BesomModule:
   *   Stack(dependsOn = message)
   * }
   * }}}
+  * 
+  * Notice that Besom is purely functional and therefore evaluation is lazy - you need to reference all the `Output`s you want
+  * evaluated. In the above example, we reference the `Output[Unit]` returned by the `log.warn` method as one of the dependencies
+  * of the `Stack` resource. Should we not do this, the logging statement will not be evaluated (it will be a no-op).
   */
 object Pulumi extends FutureMonadModule
 export Pulumi.{component => _, *, given}

@@ -748,10 +748,7 @@ class CodeGen(using
             | * ${description}${deprecationDocs}
             | * ${returnsDoc}
             | */${deprecationCode}
-            |def ${get}(using ${scalameta.types.besom.types.Context}): ${scalameta.types.besom.types
-             .Output(
-               scalameta.types.Option(propType)
-             )} =
+            |def ${get}: ${scalameta.types.besom.types.Output(scalameta.types.Option(propType))} =
             |  besom.internal.Codegen.config[${propType}](${providerNameLit})(key = ${configNameLit}, isSecret = ${isSecret}, default = ${default}, environment = ${environment})
             |""".stripMargin
 

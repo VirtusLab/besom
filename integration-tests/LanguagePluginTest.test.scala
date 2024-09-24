@@ -17,6 +17,7 @@ class LanguagePluginTest extends munit.FunSuite {
     .filterNot(tags(Slow))
 
   val wd                  = os.pwd / "integration-tests"
+  val besomVersion        = os.read(os.pwd / "version.txt").trim
   val resourcesDir        = wd / "resources"
   val executorsDir        = resourcesDir / "executors"
   val bootstrapLibJarPath = languagePluginDir / "bootstrap.jar"
@@ -216,8 +217,8 @@ class LanguagePluginTest extends munit.FunSuite {
       .arr
       .map(plugin => plugin("name").str -> plugin("version").strOpt.getOrElse("null"))
       .toMap
-
-    val expectedAboutPluginsVersions = Map("scala" -> "null" /* FIXME */, "random" -> "4.3.1", "aci" -> "0.0.6")
+    
+    val expectedAboutPluginsVersions = Map("scala" -> besomVersion, "random" -> "4.3.1", "aci" -> "0.0.6")
     assert {
       clue(aboutInfoJson)
       clue(aboutPluginsVersions) == clue(expectedAboutPluginsVersions)

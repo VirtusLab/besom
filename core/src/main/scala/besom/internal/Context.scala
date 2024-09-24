@@ -8,13 +8,14 @@ import scala.annotation.implicitNotFound
 
 case class InvokeOptions(parent: Option[Resource] = None, provider: Option[ProviderResource] = None, version: Option[String] = None)
 
-@implicitNotFound(s"""|Pulumi code has to be written with a Context in scope.
+@implicitNotFound(s"""|Some of the Pulumi functions require access to the Context.
                       |
-                      |Context is available by default in your main pulumi function, inside of `Pulumi.run`.
-                      |NOTE: Every pulumi program should only have ONE `Pulumi.run` call.
+                      |Context is available as a given (implicitly) in your main pulumi function, inside of `Pulumi.run` block.
+                      |NOTE: Every pulumi program should have only ONE `Pulumi.run` call.
                       |
-                      |If you are writing code outside of `Pulumi.run`, you can pass a Context explicitly.
-                      |This can be done by just adding a `(using Context)` clause to your function.""".stripMargin)
+                      |If you are writing code outside of `Pulumi.run` and need to call, for example, `isDryRun`, 
+                      |you can pass the Context explicitly. This can be done by just adding a `(using Context)` clause 
+                      |to your function.""".stripMargin)
 trait Context extends TaskTracker:
   private[besom] def initializeStack: Result[Unit]
   private[besom] def featureSupport: FeatureSupport

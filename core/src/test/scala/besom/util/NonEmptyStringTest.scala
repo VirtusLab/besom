@@ -120,24 +120,21 @@ class NonEmptyStringTest extends munit.FunSuite with CompileAssertions:
     compiles("""
     import besom.util.NonEmptyString.*
     import besom.util.interpolator.{*, given}
-    import besom.types.{ Context, Output }
-    given Context = ??? // just to make it compile
+    import besom.types.Output
     val x: Output[NonEmptyString] = p"abc${"def"}ghi"
     """)
 
     compiles("""
     import besom.util.NonEmptyString.*
     import besom.util.interpolator.{*, given}
-    import besom.types.{ Context, Output }
-    given Context = ??? // just to make it compile
+    import besom.types.Output
     val x: Output[NonEmptyString] = pulumi"abc${"def"}ghi"
     """)
 
     failsToCompile("""
     import besom.util.NonEmptyString.*
     import besom.util.interpolator.{*, given}
-    import besom.types.{ Context, Output }
-    given Context = ??? // just to make it compile
+    import besom.types.Output
     val x: Output[NonEmptyString] = pulumi"${"doesn't matter"}"
     """)
 
@@ -150,8 +147,7 @@ class NonEmptyStringTest extends munit.FunSuite with CompileAssertions:
     compiles("""
     import besom.util.NonEmptyString.*
     import besom.util.interpolator.{*, given}
-    import besom.types.{ Context, Output }
-    given Context = ??? // just to make it compile
+    import besom.types.Output
     def takesNES(nes: Output[NonEmptyString]): Unit = ()
     takesNES(p"abc${"def"}ghi")
     """)
@@ -159,8 +155,7 @@ class NonEmptyStringTest extends munit.FunSuite with CompileAssertions:
     compiles("""
     import besom.util.NonEmptyString.*
     import besom.util.interpolator.{*, given}
-    import besom.types.{ Context, Output }
-    given Context = ??? // just to make it compile
+    import besom.types.Output
     def takesNES(nes: Output[NonEmptyString]): Unit = ()
     takesNES(pulumi"abc${"def"}ghi")
     """)
@@ -168,8 +163,7 @@ class NonEmptyStringTest extends munit.FunSuite with CompileAssertions:
     failsToCompile("""
     import besom.util.NonEmptyString.*
     import besom.util.interpolator.{*, given}
-    import besom.types.{ Context, Output }
-    given Context = ??? // just to make it compile
+    import besom.types.Output
     def takesNES(nes: Output[NonEmptyString]): Unit = ()
     takesNES(pulumi"${"doesn't matter"}")
     """)
@@ -364,9 +358,8 @@ class NonEmptyStringTest extends munit.FunSuite with CompileAssertions:
   test("issue 462") {
     val errors = scala.compiletime.testing.typeCheckErrors("""
     import besom.*
-    given Context = ???
 
-    def requireString(key: NonEmptyString)(using Context): Output[String] = ???
+    def requireString(key: NonEmptyString): Output[String] = ???
 
     val s: Output[NonEmptyString] = requireString("stuff")
     """)
@@ -380,9 +373,8 @@ class NonEmptyStringTest extends munit.FunSuite with CompileAssertions:
 
     compiles("""
     import besom.*
-    given Context = ???
 
-    def requireString(key: NonEmptyString)(using Context): Output[String] = ???
+    def requireString(key: NonEmptyString): Output[String] = ???
 
     val s: Output[NonEmptyString] = requireString("stuff").flatMap(_.toNonEmptyOutput)
     """)

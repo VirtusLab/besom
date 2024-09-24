@@ -49,8 +49,6 @@ trait ZIOModule extends BesomModule:
         zio.Runtime.default.unsafe.runToFuture(fa.uninterruptible)
       }
 
-  // override def run(program: Context ?=> Output[Exports]): Future[Unit] = ???
-
 object Pulumi extends ZIOModule
 export Pulumi.{component => _, *, given}
 

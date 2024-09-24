@@ -1,7 +1,7 @@
 package besom.cfg.k8s
 
 import besom.cfg.internal.*
-import besom.types.{Input, Context, Output}
+import besom.types.{Input, Output}
 import besom.cfg.*
 import besom.json.*
 import besom.cfg.containers.*
@@ -48,7 +48,7 @@ object ConfiguredContainerArgs:
     volumeDevices: Input.Optional[List[Input[VolumeDeviceArgs]]] = None,
     volumeMounts: Input.Optional[List[Input[VolumeMountArgs]]] = None,
     workingDir: Input.Optional[String] = None
-  )(using ctx: Context) = ${
+  ) = ${
     applyImpl(
       'name,
       'image,
@@ -74,8 +74,7 @@ object ConfiguredContainerArgs:
       'tty,
       'volumeDevices,
       'volumeMounts,
-      'workingDir,
-      'ctx
+      'workingDir
     )
   }
 
@@ -104,8 +103,7 @@ object ConfiguredContainerArgs:
     tty: Expr[Input.Optional[Boolean]],
     volumeDevices: Expr[Input.Optional[List[Input[VolumeDeviceArgs]]]],
     volumeMounts: Expr[Input.Optional[List[Input[VolumeMountArgs]]]],
-    workingDir: Expr[Input.Optional[String]],
-    context: Expr[Context]
+    workingDir: Expr[Input.Optional[String]]
   )(using Quotes): Expr[ContainerArgs] =
     import quotes.reflect.*
 

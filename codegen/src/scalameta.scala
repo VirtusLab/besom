@@ -96,8 +96,6 @@ object scalameta:
     object besom {
       // noinspection TypeAnnotation
       object types {
-        val Context: Type.Ref = Type.Select(Term.Select(Term.Name("besom"), Term.Name("types")), Type.Name("Context"))
-
         def Output(a: Type): Type =
           Type.Apply(Type.Select(Term.Select(Term.Name("besom"), Term.Name("types")), Type.Name("Output")), Type.ArgClause(a :: Nil))
         def Input(a: Type): Type =

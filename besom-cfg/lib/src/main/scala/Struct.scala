@@ -4,7 +4,7 @@ import scala.language.dynamics
 import scala.quoted.*
 import scala.collection.immutable.ListMap
 import besom.cfg.internal.MetaUtils
-import besom.types.{Output, Context}
+import besom.types.Output
 import scala.util.chaining.*
 
 // possible types under `Any`:

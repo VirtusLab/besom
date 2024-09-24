@@ -47,8 +47,6 @@ trait CatsEffectModule extends BesomModule:
   implicit val toFutureCatsEffectIO: Result.ToFuture[Eff] = new Result.ToFuture[IO]:
     def eval[A](fa: => IO[A]): () => Future[A] = () => fa.uncancelable.unsafeToFuture()(using ioRuntime)
 
-  // override def run(program: Context ?=> Output[Exports]): Future[Unit] = ???
-
 object Pulumi extends CatsEffectModule
 export Pulumi.{component => _, *, given}
 

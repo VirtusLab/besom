@@ -81,8 +81,6 @@ class Config private (
     *   whether the configuration value is a secret
     * @param default
     *   the environment variable names to probe for default value
-    * @param Context
-    *   the Besom context
     * @tparam A
     *   the type of the configuration value
     * @return
@@ -106,8 +104,6 @@ class Config private (
     * secret, it will be marked internally as such and redacted in console outputs.
     * @param key
     *   the requested configuration or secret key
-    * @param Context
-    *   the Besom context
     * @tparam A
     *   the type of the configuration or secret value
     * @return
@@ -121,8 +117,6 @@ class Config private (
     *
     * @param key
     *   the requested configuration or secret key
-    * @param Context
-    *   the Besom context
     * @tparam A
     *   the type of the configuration or secret value
     * @return
@@ -148,8 +142,6 @@ class Config private (
     *
     * @param key
     *   the requested configuration or secret key
-    * @param Context
-    *   the Besom context
     * @return
     *   an optional configuration or secret [[String]] value
     */
@@ -160,8 +152,6 @@ class Config private (
     *
     * @param key
     *   the requested configuration or secret key
-    * @param Context
-    *   the Besom context
     * @return
     *   the configuration or secret [[String]] value or [[ConfigError]]
     */
@@ -172,8 +162,6 @@ class Config private (
     *
     * @param key
     *   the requested configuration or secret key
-    * @param Context
-    *   the Besom context
     * @return
     *   an optional configuration or secret [[Double]] value
     */
@@ -184,8 +172,6 @@ class Config private (
     *
     * @param key
     *   the requested configuration or secret key
-    * @param Context
-    *   the Besom context
     * @return
     *   the configuration or secret [[Double]] value or [[ConfigError]]
     */
@@ -196,8 +182,6 @@ class Config private (
     *
     * @param key
     *   the requested configuration or secret key
-    * @param Context
-    *   the Besom context
     * @return
     *   an optional configuration or secret [[Int]] value
     */
@@ -208,8 +192,6 @@ class Config private (
     *
     * @param key
     *   the requested configuration or secret key
-    * @param Context
-    *   the Besom context
     * @return
     *   the configuration or secret [[Int]] value or [[ConfigError]]
     */
@@ -220,8 +202,6 @@ class Config private (
     *
     * @param key
     *   the requested configuration or secret key
-    * @param Context
-    *   the Besom context
     * @return
     *   an optional configuration or secret [[Boolean]] value
     */
@@ -232,8 +212,6 @@ class Config private (
     *
     * @param key
     *   the requested configuration or secret key
-    * @param Context
-    *   the Besom context
     * @return
     *   the configuration or secret [[Boolean]] value or [[ConfigError]]
     */
@@ -243,8 +221,6 @@ class Config private (
     * secret, it will be marked internally as such and redacted in console outputs.
     * @param key
     *   the requested configuration or secret key
-    * @param Context
-    *   the Besom context
     * @return
     *   an optional configuration or secret [[besom.json.JsValue]] value
     */
@@ -254,8 +230,6 @@ class Config private (
     * marked internally as such and redacted in console outputs.
     * @param key
     *   the requested configuration or secret key
-    * @param Context
-    *   the Besom context
     * @return
     *   the configuration or secret [[besom.json.JsValue]] value or [[ConfigError]]
     */
@@ -265,8 +239,6 @@ class Config private (
     * secret, it will be marked internally as such and redacted in console outputs.
     * @param key
     *   the requested configuration or secret key
-    * @param Context
-    *   the Besom context
     * @tparam A
     *   the type to deserialize configuration or secret JSON value into
     * @return
@@ -279,8 +251,6 @@ class Config private (
     *
     * @param key
     *   the requested configuration or secret key
-    * @param Context
-    *   the Besom context
     * @tparam A
     *   the type to deserialize configuration or secret JSON value into
     * @return
@@ -363,8 +333,6 @@ object Config:
       *
       * @param key
       *   the requested configuration or secret key
-      * @param Context
-      *   the Besom context
       * @tparam A
       *   the type of the configuration value
       * @return
@@ -380,8 +348,6 @@ object Config:
       *
       * @param key
       *   the requested configuration or secret key
-      * @param Context
-      *   the Besom context
       * @tparam A
       *   the type of the configuration value
       * @return
@@ -395,8 +361,6 @@ object Config:
       *
       * @param key
       *   the requested configuration or secret key
-      * @param Context
-      *   the Besom context
       * @return
       *   an optional configuration or secret [[String]] value
       */
@@ -407,8 +371,6 @@ object Config:
       *
       * @param key
       *   the requested configuration or secret key
-      * @param Context
-      *   the Besom context
       * @return
       *   the configuration or secret [[String]] value or [[ConfigError]]
       */
@@ -419,8 +381,6 @@ object Config:
       *
       * @param key
       *   the requested configuration or secret key
-      * @param Context
-      *   the Besom context
       * @return
       *   an optional configuration or secret [[Double]] value
       */
@@ -431,8 +391,6 @@ object Config:
       *
       * @param key
       *   the requested configuration or secret key
-      * @param Context
-      *   the Besom context
       * @return
       *   the configuration or secret [[Double]] value or [[ConfigError]]
       */
@@ -443,8 +401,6 @@ object Config:
       *
       * @param key
       *   the requested configuration or secret key
-      * @param Context
-      *   the Besom context
       * @return
       *   an optional configuration or secret [[Int]] value
       */
@@ -455,8 +411,6 @@ object Config:
       *
       * @param key
       *   the requested configuration or secret key
-      * @param Context
-      *   the Besom context
       * @return
       *   the configuration or secret [[Int]] value or [[ConfigError]]
       */
@@ -467,8 +421,6 @@ object Config:
       *
       * @param key
       *   the requested configuration or secret key
-      * @param Context
-      *   the Besom context
       * @return
       *   an optional configuration or secret [[Boolean]] value
       */
@@ -479,8 +431,6 @@ object Config:
       *
       * @param key
       *   the requested configuration or secret key
-      * @param Context
-      *   the Besom context
       * @return
       *   the configuration or secret [[Boolean]] value or [[ConfigError]]
       */
@@ -490,8 +440,6 @@ object Config:
       * secret, it will be marked internally as such and redacted in console outputs.
       * @param key
       *   the requested configuration or secret key
-      * @param Context
-      *   the Besom context
       * @return
       *   an optional configuration or secret [[besom.json.JsValue]] value
       */
@@ -502,8 +450,6 @@ object Config:
       *
       * @param key
       *   the requested configuration or secret key
-      * @param Context
-      *   the Besom context
       * @return
       *   the configuration or secret [[besom.json.JsValue]] value or [[ConfigError]]
       */
@@ -515,8 +461,6 @@ object Config:
       * Requires `JsonReader[A]` or `ConfigValueReader[A]` to be in scope.
       * @param key
       *   the requested configuration or secret key
-      * @param Context
-      *   the Besom context
       * @tparam A
       *   the type to deserialize configuration or secret JSON value into
       * @return
@@ -532,8 +476,6 @@ object Config:
       *
       * @param key
       *   the requested configuration or secret key
-      * @param Context
-      *   the Besom context
       * @tparam A
       *   the type to deserialize configuration or secret JSON value into
       * @return
@@ -548,8 +490,6 @@ trait ConfigFactory:
   /** Creates a new Config with the given namespace.
     * @param namespace
     *   the configuration bag’s logical name that uniquely identifies it.
-    * @param Context
-    *   the Besom context.
     * @return
     *   a new Config with the given namespace.
     */
