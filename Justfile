@@ -175,7 +175,7 @@ compile-rpc:
 	scala-cli --power compile {{no-bloop-ci}} besom-rpc --suppress-experimental-feature-warning
 
 clean-rpc:
-  scala-cli --power clean {{no-bloop-ci}} besom-rpc --suppress-experimental-feature-warning
+  scala-cli --power clean besom-rpc
 
 publish-local-rpc:
 	scala-cli --power publish local {{no-bloop-ci}} besom-rpc --project-version {{besom-version}} --suppress-experimental-feature-warning
