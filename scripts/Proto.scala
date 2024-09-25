@@ -93,7 +93,7 @@ private def compileProto(cwd: os.Path, protoPath: os.Path): Unit =
 
   val files = os.walk(protoPath).filter(_.ext == "proto")
 
-  val scalaOut = cwd / "besom-rpc" / "src" / "main" / "scala" 
+  val scalaOut = cwd / "besom-rpc" / "src" / "main" / "scala"
   os.remove.all(scalaOut)
   os.makeDir.all(scalaOut)
 

@@ -4,6 +4,8 @@
 // -language:noAutoTupling // after https://github.com/VirtusLab/scala-cli/issues/2708
 
 //> using dep "org.virtuslab::besom-json:0.4.0-SNAPSHOT"
+//> using dep "org.virtuslab::besom-rpc:0.4.0-SNAPSHOT"
+
 //> using dep "com.google.protobuf:protobuf-java-util:3.25.1"
 //> using dep "io.grpc:grpc-netty:1.64.0"
 //> using dep "io.netty:netty-transport-native-kqueue:4.1.100.Final"

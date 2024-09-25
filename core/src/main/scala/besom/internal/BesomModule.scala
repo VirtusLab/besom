@@ -20,23 +20,22 @@ trait EffectBesomModule extends BesomSyntax:
 
   /** Run a [[besom.Pulumi]] program with a Besom [[besom.Context]] and export Stack outputs.
     *
-    * Inside `Pulumi.run` block you can use the following methods without `Pulumi.` prefix: 
-    *  - [[besom.internal.BesomSyntax.isDryRun]] - is the current run a dry run (planning instead of deployment)
-    *  - [[besom.internal.BesomSyntax.config]] - provides access to the configuration and secrets
-    *  - [[besom.internal.BesomSyntax.log]] - all your logging needs
-    *  - [[besom.internal.BesomSyntax.urn]] - the URN of the current Pulumi stack
-    *  - [[besom.internal.BesomSyntax.pulumiOrganization]] - the organization of the current Pulumi stack
-    *  - [[besom.internal.BesomSyntax.pulumiProject]] - the project name of the current Pulumi stack
-    *  - [[besom.internal.BesomSyntax.pulumiStack]] - the stack name of the current Pulumi stack
-    * 
-    *  Should you need to use 
-    * one of these methods outside of the `Pulumi.run` block, you can use the following using clauses:
-    *  - `(using Context)` if you have a `import besom.*` clause on top of the file or
-    *  - `(using besom.Context)` using a fully qualified name of the type.
-    * 
+    * Inside `Pulumi.run` block you can use the following methods without `Pulumi.` prefix:
+    *   - [[besom.internal.BesomSyntax.isDryRun]] - is the current run a dry run (planning instead of deployment)
+    *   - [[besom.internal.BesomSyntax.config]] - provides access to the configuration and secrets
+    *   - [[besom.internal.BesomSyntax.log]] - all your logging needs
+    *   - [[besom.internal.BesomSyntax.urn]] - the URN of the current Pulumi stack
+    *   - [[besom.internal.BesomSyntax.pulumiOrganization]] - the organization of the current Pulumi stack
+    *   - [[besom.internal.BesomSyntax.pulumiProject]] - the project name of the current Pulumi stack
+    *   - [[besom.internal.BesomSyntax.pulumiStack]] - the stack name of the current Pulumi stack
+    *
+    * Should you need to use one of these methods outside of the `Pulumi.run` block, you can use the following using clauses:
+    *   - `(using Context)` if you have a `import besom.*` clause on top of the file or
+    *   - `(using besom.Context)` using a fully qualified name of the type.
+    *
     * There are also two other functions exported by [[besom.Pulumi]]:
-    *  - [[besom.internal.BesomModule.component]] - creates a new component resource
-    *  - [[besom.internal.BesomModule.opts]] - shortcut function allowing for uniform resource options syntax 
+    *   - [[besom.internal.BesomModule.component]] - creates a new component resource
+    *   - [[besom.internal.BesomModule.opts]] - shortcut function allowing for uniform resource options syntax
     *
     * Example:
     * {{{

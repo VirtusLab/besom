@@ -217,7 +217,7 @@ class LanguagePluginTest extends munit.FunSuite {
       .arr
       .map(plugin => plugin("name").str -> plugin("version").strOpt.getOrElse("null"))
       .toMap
-    
+
     val expectedAboutPluginsVersions = Map("scala" -> besomVersion, "random" -> "4.3.1", "aci" -> "0.0.6")
     assert {
       clue(aboutInfoJson)
