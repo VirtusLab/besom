@@ -40,8 +40,9 @@ object PulumiPluginsDiscoverer:
     JsArray(foundPlugins.values.toVector).compactPrint
 
   private def writeToFile(path: String, text: String): Unit =
-    val file = new File(path)
+    val file   = new File(path)
     val writer = new PrintWriter(file)
 
     writer.write(text)
     writer.close()
+end PulumiPluginsDiscoverer
