@@ -31,7 +31,7 @@ env:
 jobs:
 
   format:
-    if: !github.event.pull_request.head.repo.fork
+    if: "! github.event.pull_request.head.repo.fork"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -47,7 +47,7 @@ jobs:
 
   # we need: scala-cli, protoc, go, just, pulumi, java
   build:
-    if: !github.event.pull_request.head.repo.fork
+    if: "! github.event.pull_request.head.repo.fork"
     runs-on: ubuntu-latest
     env:
       BESOM_LANGHOST_SCALA_CLI_OPTS: "--server=false"
