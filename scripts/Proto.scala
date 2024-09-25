@@ -93,7 +93,7 @@ private def compileProto(cwd: os.Path, protoPath: os.Path): Unit =
 
   val files = os.walk(protoPath).filter(_.ext == "proto")
 
-  val scalaOut = cwd / "core" / "src" / "main" / "scala" / "besom" / "rpc"
+  val scalaOut = cwd / "besom-rpc" / "src" / "main" / "scala" 
   os.remove.all(scalaOut)
   os.makeDir.all(scalaOut)
 
@@ -101,7 +101,7 @@ private def compileProto(cwd: os.Path, protoPath: os.Path): Unit =
   val protoc = os.proc(
     "protoc",
     s"--plugin=$pluginPath",
-    s"--scala_out=grpc:$scalaOut",
+    s"--scala_out=scala3_sources,grpc:$scalaOut",
     files.map(_.relativeTo(protoPath))
   )
   println(s"running [$protoPath]: ${protoc.commandChunks.mkString(" ")}")

@@ -43,20 +43,20 @@ build-packages-for-templates-and-examples:
   grep -hr "0.3-SNAPSHOT" examples/**/*.scala templates/**/*.scala | sed -n 's/.*besom-\([^:]*:[^"]*\).*-core.0.3-SNAPSHOT.*/\1/p' | sort -u | tr '\n' ' ' | xargs -I {} just cli packages local {}
 
 # Cleans everything
-clean-all: clean-json clean-sdk clean-auto clean-out clean-compiler-plugin clean-codegen clean-scripts clean-test-integration clean-cfg clean-test-templates clean-test-examples clean-test-markdown
+clean-all: clean-json clean-rpc clean-sdk clean-auto clean-out clean-compiler-plugin clean-codegen clean-scripts clean-test-integration clean-cfg clean-test-templates clean-test-examples clean-test-markdown
 
 # Compiles everything
-compile-all: compile-json compile-sdk compile-auto compile-codegen compile-scripts compile-compiler-plugin build-language-plugin
+compile-all: compile-json compile-rpc compile-sdk compile-auto compile-codegen compile-scripts compile-compiler-plugin build-language-plugin
 
 # Tests everything
 test-all: test-json test-sdk test-auto test-codegen test-scripts test-integration build-packages-for-templates-and-examples test-templates test-examples test-markdown
 
 # Publishes everything locally
-publish-local-all: publish-local-json publish-local-sdk publish-local-auto publish-local-codegen publish-local-scripts install-language-plugin
+publish-local-all: publish-local-json publish-local-rpc publish-local-sdk publish-local-auto publish-local-codegen publish-local-scripts install-language-plugin
 
 # Publishes everything to Maven
 # TODO add publish-maven-auto once stable
-publish-maven-all: publish-maven-json publish-maven-sdk publish-maven-codegen publish-maven-scripts
+publish-maven-all: publish-maven-json publish-maven-rpc publish-maven-sdk publish-maven-codegen publish-maven-scripts
 
 # Runs all necessary checks before committing
 before-commit: compile-all test-all
@@ -66,7 +66,7 @@ before-commit: compile-all test-all
 ####################
 
 # Compiles core besom SDK
-compile-core: publish-local-json
+compile-core: publish-local-json publish-local-rpc
 	scala-cli --power compile {{no-bloop-ci}} core --suppress-experimental-feature-warning
 
 # Compiles besom cats-effect extension
@@ -109,7 +109,7 @@ publish-local-sdk: publish-local-core publish-local-cats publish-local-zio publi
 publish-maven-sdk: publish-maven-core publish-maven-cats publish-maven-zio publish-maven-compiler-plugin
 
 # Publishes locally core besom SDK
-publish-local-core: publish-local-json
+publish-local-core: publish-local-json publish-local-rpc
 	scala-cli --power publish local {{no-bloop-ci}} core --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes locally besom cats-effect extension
@@ -168,6 +168,22 @@ clean-coverage: clean-sdk
 	rm -rf {{coverage-output-dir}}
 
 ####################
+# RPC
+####################
+
+compile-rpc:
+	scala-cli --power compile {{no-bloop-ci}} besom-rpc --suppress-experimental-feature-warning
+
+clean-rpc:
+  scala-cli --power clean {{no-bloop-ci}} besom-rpc --suppress-experimental-feature-warning
+
+publish-local-rpc:
+	scala-cli --power publish local {{no-bloop-ci}} besom-rpc --project-version {{besom-version}} --suppress-experimental-feature-warning
+
+publish-maven-rpc:
+	scala-cli --power publish {{no-bloop-ci}} besom-rpc --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+
+####################
 # Json
 ####################
 
@@ -190,7 +206,6 @@ publish-local-json:
 # Publishes json module to Maven
 publish-maven-json:
 	scala-cli --power publish {{no-bloop-ci}} besom-json --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
-
 
 ####################
 # Auto
