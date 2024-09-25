@@ -3,7 +3,7 @@
 besom-version := `cat version.txt`
 besom-cfg-version := `cat besom-cfg/version.txt`
 is-snapshot := if "{{besom-version}}" =~ '.*-SNAPSHOT' { "true" } else { "false" }
-no-bloop-ci := if env_var_or_default('CI', "") == "true" { "--server=false" } else { "" }
+no-bloop := if env_var_or_default('BESOM_BUILD_NO_BLOOP', "") == "true" { "--server=false" } else { "" }
 
 language-plugin-output-dir := justfile_directory() + "/.out/language-plugin"
 codegen-output-dir := justfile_directory() + "/.out/codegen"
@@ -67,37 +67,37 @@ before-commit: compile-all test-all
 
 # Compiles core besom SDK
 compile-core: publish-local-json publish-local-rpc
-	scala-cli --power compile {{no-bloop-ci}} core --suppress-experimental-feature-warning
+	scala-cli --power compile {{no-bloop}} core --suppress-experimental-feature-warning
 
 # Compiles besom cats-effect extension
 compile-cats: publish-local-core
-	scala-cli --power compile {{no-bloop-ci}} besom-cats --suppress-experimental-feature-warning
+	scala-cli --power compile {{no-bloop}} besom-cats --suppress-experimental-feature-warning
 
 # Compiles besom zio extension
 compile-zio: publish-local-core
-	scala-cli --power compile {{no-bloop-ci}} besom-zio --suppress-experimental-feature-warning
+	scala-cli --power compile {{no-bloop}} besom-zio --suppress-experimental-feature-warning
 
 # Compiles all SDK modules
 compile-sdk: compile-core compile-cats compile-zio compile-compiler-plugin
 
 # Compiles besom compiler plugin
 compile-compiler-plugin:
-	scala-cli --power compile {{no-bloop-ci}} compiler-plugin --suppress-experimental-feature-warning
+	scala-cli --power compile {{no-bloop}} compiler-plugin --suppress-experimental-feature-warning
 
 # Runs tests for core besom SDK
 test-core: compile-core
 	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-core}}; fi
-	scala-cli --power test {{no-bloop-ci}} core {{ scala-cli-test-options-core }} --suppress-experimental-feature-warning
+	scala-cli --power test {{no-bloop}} core {{ scala-cli-test-options-core }} --suppress-experimental-feature-warning
 
 # Runs tests for besom cats-effect extension
 test-cats: publish-local-core
 	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-cats}}; fi
-	scala-cli --power test {{no-bloop-ci}} besom-cats {{ scala-cli-test-options-cats }} --suppress-experimental-feature-warning
+	scala-cli --power test {{no-bloop}} besom-cats {{ scala-cli-test-options-cats }} --suppress-experimental-feature-warning
 
 # Runs tests for besom zio extension
 test-zio: publish-local-core
 	@if [ {{ coverage }} = "true" ]; then mkdir -p {{coverage-output-dir-zio}}; fi
-	scala-cli --power test {{no-bloop-ci}} besom-zio {{ scala-cli-test-options-zio }} --suppress-experimental-feature-warning
+	scala-cli --power test {{no-bloop}} besom-zio {{ scala-cli-test-options-zio }} --suppress-experimental-feature-warning
 
 # Runs all tests
 test-sdk: test-core test-cats test-zio
@@ -110,35 +110,35 @@ publish-maven-sdk: publish-maven-core publish-maven-cats publish-maven-zio publi
 
 # Publishes locally core besom SDK
 publish-local-core: publish-local-json publish-local-rpc
-	scala-cli --power publish local {{no-bloop-ci}} core --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish local {{no-bloop}} core --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes locally besom cats-effect extension
 publish-local-cats: publish-local-core
-	scala-cli --power publish local {{no-bloop-ci}} besom-cats --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish local {{no-bloop}} besom-cats --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes locally besom zio extension
 publish-local-zio: publish-local-core
-	scala-cli --power publish local {{no-bloop-ci}} besom-zio --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish local {{no-bloop}} besom-zio --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes locally besom compiler plugin
 publish-local-compiler-plugin:
-	scala-cli --power publish local {{no-bloop-ci}} compiler-plugin --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish local {{no-bloop}} compiler-plugin --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes core besom SDK to Maven
 publish-maven-core:
-	scala-cli --power publish {{no-bloop-ci}} core --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} core --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 # Publishes besom cats-effect extension to Maven
 publish-maven-cats:
-	scala-cli --power publish {{no-bloop-ci}} besom-cats --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-cats --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 # Publishes besom zio extension to Maven
 publish-maven-zio:
-	scala-cli --power publish {{no-bloop-ci}} besom-zio --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-zio --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 # Publishes besom compiler plugin to Maven
 publish-maven-compiler-plugin:
-	scala-cli --power publish {{no-bloop-ci}} compiler-plugin --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} compiler-plugin --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 # Cleans core build
 clean-core: 
@@ -189,11 +189,11 @@ publish-maven-rpc:
 
 # Compiles json module
 compile-json:
-	scala-cli --power compile {{no-bloop-ci}} besom-json --suppress-experimental-feature-warning
+	scala-cli --power compile {{no-bloop}} besom-json --suppress-experimental-feature-warning
 
 # Runs tests for json module
 test-json:
-	scala-cli --power test {{no-bloop-ci}} besom-json --suppress-experimental-feature-warning
+	scala-cli --power test {{no-bloop}} besom-json --suppress-experimental-feature-warning
 
 # Cleans json module
 clean-json:
@@ -201,7 +201,7 @@ clean-json:
 
 # Publishes locally json module
 publish-local-json:
-	scala-cli --power publish local {{no-bloop-ci}} besom-json --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish local {{no-bloop}} besom-json --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes json module to Maven
 publish-maven-json:
@@ -244,7 +244,7 @@ tidy-language-plugin:
 # Packages .jar file with language plugin bootstrap library
 package-language-plugin-bootstrap:
 	mkdir -p {{language-plugin-output-dir}} && \
-	scala-cli --power package {{no-bloop-ci}}  language-plugin/bootstrap --suppress-experimental-feature-warning --assembly -o {{language-plugin-output-dir}}/bootstrap.jar -f
+	scala-cli --power package {{no-bloop}}  language-plugin/bootstrap --suppress-experimental-feature-warning --assembly -o {{language-plugin-output-dir}}/bootstrap.jar -f
 
 # Builds pulumi-language-scala binary
 build-language-plugin $GOOS="" $GOARCH="":
@@ -366,11 +366,11 @@ clean-cfg: clean-cfg-lib clean-cfg-k8s
 
 # Compiles Besom codegen module
 compile-codegen:
-	scala-cli --power compile {{no-bloop-ci}} codegen --suppress-experimental-feature-warning
+	scala-cli --power compile {{no-bloop}} codegen --suppress-experimental-feature-warning
 
 # Runs tests for Besom codegen
 test-codegen:
-	scala-cli --power test {{no-bloop-ci}} codegen --suppress-experimental-feature-warning
+	scala-cli --power test {{no-bloop}} codegen --suppress-experimental-feature-warning
 
 # Cleans codegen build
 clean-codegen:
@@ -378,11 +378,11 @@ clean-codegen:
 
 # Publishes locally Besom codegen
 publish-local-codegen: test-codegen
-	scala-cli --power publish local {{no-bloop-ci}} codegen --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish local {{no-bloop}} codegen --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes Besom codegen
 publish-maven-codegen: test-codegen
-	scala-cli --power publish {{no-bloop-ci}} codegen --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} codegen --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 ####################
 # crd2besom
@@ -390,11 +390,11 @@ publish-maven-codegen: test-codegen
 
 # Compiles crd2besom module
 compile-crd2besom:
-	scala-cli --power compile {{no-bloop-ci}} crd2besom --suppress-experimental-feature-warning
+	scala-cli --power compile {{no-bloop}} crd2besom --suppress-experimental-feature-warning
 
 # Runs tests for crd2besom
 test-crd2besom:
-	scala-cli --power test {{no-bloop-ci}} crd2besom --suppress-experimental-feature-warning
+	scala-cli --power test {{no-bloop}} crd2besom --suppress-experimental-feature-warning
 
 # Cleans crd2besom build
 clean-crd2besom:
@@ -402,7 +402,7 @@ clean-crd2besom:
 
 # Build crd2besom binary
 build-crd2besom:
-	scala-cli --power package {{no-bloop-ci}} crd2besom --suppress-experimental-feature-warning --graal -o .out/crd2besom/bin/$(arch)/crd2besom
+	scala-cli --power package {{no-bloop}} crd2besom --suppress-experimental-feature-warning --graal -o .out/crd2besom/bin/$(arch)/crd2besom
 
 ####################
 # Integration testing
@@ -410,7 +410,7 @@ build-crd2besom:
 
 # Runs all integration tests
 test-integration: test-integration-core test-integration-compiler-plugin test-integration-codegen test-integration-language-plugin
-	scala-cli --power test {{no-bloop-ci}} integration-tests
+	scala-cli --power test {{no-bloop}} integration-tests
 
 # Cleans after integration tests
 clean-test-integration: clean-test-integration-codegen
@@ -418,26 +418,26 @@ clean-test-integration: clean-test-integration-codegen
 
 # Runs integration tests for core
 test-integration-core: publish-local-codegen publish-local-sdk install-language-plugin publish-local-compiler-plugin
-	scala-cli --power test {{no-bloop-ci}} integration-tests --test-only 'besom.integration.core*'
+	scala-cli --power test {{no-bloop}} integration-tests --test-only 'besom.integration.core*'
 
 # Runs integration tests for compiler plugin
 test-integration-compiler-plugin: publish-local-codegen publish-local-core install-language-plugin publish-local-compiler-plugin
-	scala-cli --power test {{no-bloop-ci}} integration-tests --test-only 'besom.integration.compilerplugin*'
+	scala-cli --power test {{no-bloop}} integration-tests --test-only 'besom.integration.compilerplugin*'
 
 # Runs integration tests for language plugin
 test-integration-language-plugin: publish-local-codegen publish-local-core install-language-plugin publish-local-compiler-plugin
 	export GITHUB_TOKEN=$(gh auth token); \
-	scala-cli --power test {{no-bloop-ci}} integration-tests --test-only 'besom.integration.languageplugin*'
+	scala-cli --power test {{no-bloop}} integration-tests --test-only 'besom.integration.languageplugin*'
 
 # Runs fast integration tests for codegen
 test-integration-codegen: publish-local-core publish-local-codegen
 	export GITHUB_TOKEN=$(gh auth token); \
-	scala-cli --power test {{no-bloop-ci}} integration-tests --test-only 'besom.integration.codegen*'
+	scala-cli --power test {{no-bloop}} integration-tests --test-only 'besom.integration.codegen*'
 
 # Runs fast&slow integration tests for codegen
 test-integration-codegen-slow: publish-local-core publish-local-codegen
 	export GITHUB_TOKEN=$(gh auth token); \
-	scala-cli --power test {{no-bloop-ci}} integration-tests --test-only 'besom.integration.codegen*' -- --include-categories=Slow
+	scala-cli --power test {{no-bloop}} integration-tests --test-only 'besom.integration.codegen*' -- --include-categories=Slow
 
 # Cleans after the codegen integration tests
 clean-test-integration-codegen:
@@ -445,7 +445,7 @@ clean-test-integration-codegen:
 
 # Copies test schemas from pulumi repo to the testdata directory
 copy-test-schemas:
-	scala-cli run {{no-bloop-ci}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- schemas all
+	scala-cli run {{no-bloop}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- schemas all
 
 ####################
 # Templates and examples
@@ -456,7 +456,7 @@ test-template template-name:
 	@echo "----------------------------------------"
 	@echo "Testing template {{template-name}}"
 	pulumi --non-interactive --logtostderr --color=never --emoji=false new -y --force --generate-only --dir target/test/{{template-name}} -n templates-test-{{template-name}} --stack templates-test-{{template-name}} ../../../templates/{{template-name}}/
-	scala-cli compile {{no-bloop-ci}} target/test/{{template-name}} {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+	scala-cli compile {{no-bloop}} target/test/{{template-name}} {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 
 # Cleans after a template test
 clean-test-template template-name:
@@ -480,7 +480,7 @@ test-example example-name:
 	@echo "----------------------------------------"
 	@echo "Testing example {{example-name}}"
 	scala-cli bloop exit # allow different examples use different jvms
-	scala-cli compile -v -v -v {{no-bloop-ci}} examples/{{example-name}} {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+	scala-cli compile -v -v -v {{no-bloop}} examples/{{example-name}} {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 
 # Cleans after an example test
 clean-test-example example-name:
@@ -516,7 +516,7 @@ clean-test-markdown:
 
 # Compiles Besom scripts module
 compile-scripts: publish-local-codegen
-	scala-cli --power compile {{no-bloop-ci}} scripts --suppress-experimental-feature-warning
+	scala-cli --power compile {{no-bloop}} scripts --suppress-experimental-feature-warning
 
 # Clean Besom scripts module
 clean-scripts:
@@ -524,19 +524,19 @@ clean-scripts:
 
 # Runs tests for Besom scripts
 test-scripts:
-	scala-cli --power test {{no-bloop-ci}} scripts --suppress-experimental-feature-warning
+	scala-cli --power test {{no-bloop}} scripts --suppress-experimental-feature-warning
 
 # Publishes locally Besom scripts module
 publish-local-scripts: test-scripts
-	scala-cli --power publish local {{no-bloop-ci}} scripts --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish local {{no-bloop}} scripts --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes Besom scripts module
 publish-maven-scripts: test-scripts
-	scala-cli --power publish {{no-bloop-ci}} scripts --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} scripts --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 # Use Besom scripts directly
 cli *ARGS:
-	scala-cli run {{no-bloop-ci}} scripts {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- {{ARGS}}
+	scala-cli run {{no-bloop}} scripts {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning scripts -- {{ARGS}}
 
 # Create or Update GitHub release
 upsert-gh-release:
@@ -604,8 +604,8 @@ clean-slate-liftoff: clean-sdk
 	#!/usr/bin/env sh
 	just publish-local-core
 	just publish-local-compiler-plugin
-	scala-cli run {{no-bloop-ci}} codegen -- named kubernetes 4.2.0
-	scala-cli --power publish local {{no-bloop-ci}} .out/codegen/kubernetes/4.2.0/ --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+	scala-cli run {{no-bloop}} codegen -- named kubernetes 4.2.0
+	scala-cli --power publish local {{no-bloop}} .out/codegen/kubernetes/4.2.0/ --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 	just clean-liftoff
 	just liftoff
 
