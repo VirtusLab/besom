@@ -30,7 +30,8 @@ func (s sbt) NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, error)
 	if err != nil {
 		return nil, err
 	}
-	return s.newSbtExecutor(cmd, opts.BootstrapLibJarPath)
+	pluginDiscovererOutputPath := PluginDiscovererOutputFilePath(opts.WD)
+	return s.newSbtExecutor(cmd, opts.BootstrapLibJarPath, pluginDiscovererOutputPath)
 }
 
 func (sbt) isSbtProject(opts ScalaExecutorOptions) (bool, error) {
@@ -53,7 +54,7 @@ func (sbt) isSbtProject(opts ScalaExecutorOptions) (bool, error) {
 	return false, nil
 }
 
-func (sbt) newSbtExecutor(cmd string, bootstrapLibJarPath string) (*ScalaExecutor, error) {
+func (sbt) newSbtExecutor(cmd string, bootstrapLibJarPath string, pluginDiscovererOutputPath string) (*ScalaExecutor, error) {
 	sbtModule := os.Getenv("BESOM_SBT_MODULE")
 
 	se := &ScalaExecutor{
@@ -61,23 +62,21 @@ func (sbt) newSbtExecutor(cmd string, bootstrapLibJarPath string) (*ScalaExecuto
 		Cmd:         cmd,
 		RunArgs:     makeArgs(sbtModule, "run"),
 		BuildArgs:   makeArgs(sbtModule, "compile"),
-		PluginArgs:  append([]string{"-batch", "-error"}, makePluginsSbtCommandParts(sbtModule, bootstrapLibJarPath)),
+		PluginArgs:  []string{"-batch", makePluginsSbtCommandParts(sbtModule, bootstrapLibJarPath, pluginDiscovererOutputPath)},
 		VersionArgs: []string{"--numeric-version"},
 	}
 
 	return se, nil
 }
 
-func makePluginsSbtCommandParts(sbtModule string, bootstrapLibJarPath string) string {
+func makePluginsSbtCommandParts(sbtModule string, bootstrapLibJarPath string, pluginDiscovererOutputPath string) string {
 	if sbtModule != "" {
 		sbtModule = sbtModule + " / "
 	}
 
 	pluginsSbtCommandParts := []string{
-		// STDOUT needs to be clean of sbt output, because we expect a JSON with plugin results
-		`; set outputStrategy := Some(StdoutOutput)`,
 		fmt.Sprintf(`; set %sCompile / unmanagedJars += Attributed.blank(file("%s"))`, sbtModule, bootstrapLibJarPath),
-		fmt.Sprintf(`; %srunMain besom.bootstrap.PulumiPluginsDiscoverer`, sbtModule),
+		fmt.Sprintf(`; %srunMain besom.bootstrap.PulumiPluginsDiscoverer --output-file %s`, sbtModule, pluginDiscovererOutputPath),
 	}
 	pluginsSbtCommand := strings.Join(pluginsSbtCommandParts, " ")
 
@@ -86,7 +85,7 @@ func makePluginsSbtCommandParts(sbtModule string, bootstrapLibJarPath string) st
 
 func makeArgs(sbtModule string, cmd string) []string {
 	if sbtModule != "" {
-		return append([]string{"-batch", fmt.Sprintf("%s/%s", sbtModule, cmd)})
+		return []string{"-batch", fmt.Sprintf("%s/%s", sbtModule, cmd)}
 	}
 	return []string{"-batch", cmd}
 }

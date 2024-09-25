@@ -25,10 +25,11 @@ func (j jarexec) NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, er
 	if err != nil {
 		return nil, err
 	}
-	return j.newJarExecutor(cmd, opts.BootstrapLibJarPath, opts.Binary)
+	pluginDiscovererOutputPath := PluginDiscovererOutputFilePath(opts.WD)
+	return j.newJarExecutor(cmd, opts.BootstrapLibJarPath, opts.Binary, pluginDiscovererOutputPath)
 }
 
-func (jarexec) newJarExecutor(cmd string, bootstrapLibJarPath string, rawBinaryPath string) (*ScalaExecutor, error) {
+func (jarexec) newJarExecutor(cmd string, bootstrapLibJarPath string, rawBinaryPath string, pluginDiscovererOutputPath string) (*ScalaExecutor, error) {
 	binaryPath := filepath.Clean(rawBinaryPath)
 	classPath := bootstrapLibJarPath + ":" + binaryPath
 
@@ -37,7 +38,7 @@ func (jarexec) newJarExecutor(cmd string, bootstrapLibJarPath string, rawBinaryP
 		Cmd:         cmd,
 		BuildArgs:   nil, // not supported
 		RunArgs:     []string{"-jar", binaryPath},
-		PluginArgs:  []string{"-cp", classPath, "besom.bootstrap.PulumiPluginsDiscoverer"},
+		PluginArgs:  []string{"-cp", classPath, "besom.bootstrap.PulumiPluginsDiscoverer", "--output-file", pluginDiscovererOutputPath},
 		VersionArgs: []string{"-version"},
 	}, nil
 }
