@@ -172,16 +172,16 @@ clean-coverage: clean-sdk
 ####################
 
 compile-rpc:
-	scala-cli --power compile {{no-bloop-ci}} besom-rpc --suppress-experimental-feature-warning
+	scala-cli --power compile {{no-bloop}} besom-rpc --suppress-experimental-feature-warning
 
 clean-rpc:
   scala-cli --power clean besom-rpc
 
 publish-local-rpc:
-	scala-cli --power publish local {{no-bloop-ci}} besom-rpc --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish local {{no-bloop}} besom-rpc --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 publish-maven-rpc:
-	scala-cli --power publish {{no-bloop-ci}} besom-rpc --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-rpc --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 ####################
 # Json
@@ -205,7 +205,7 @@ publish-local-json:
 
 # Publishes json module to Maven
 publish-maven-json:
-	scala-cli --power publish {{no-bloop-ci}} besom-json --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 ####################
 # Auto
