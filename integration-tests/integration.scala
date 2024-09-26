@@ -31,30 +31,30 @@ def testToStack(name: String): String  = "tests-" + sanitizeName(name)
 
 //noinspection TypeAnnotation,ScalaWeakerAccess
 object pulumi {
-  val verboseLogging = List("-v=10", "--logflow")
-
-  def login(pulumiHome: os.Path) = pproc("pulumi", "--non-interactive", "--logtostderr", verboseLogging *, "login", s"file://$pulumiHome")
+  def login(pulumiHome: os.Path) =
+    pproc("pulumi", "--non-interactive", "--logtostderr", "-v=10", "--logflow", "login", s"file://$pulumiHome")
 
   def logout(pulumiHome: os.Path) =
-    pproc("pulumi", "--non-interactive", "--logtostderr", verboseLogging *, "logout", s"file://$pulumiHome")
+    pproc("pulumi", "--non-interactive", "--logtostderr", "logout", s"file://$pulumiHome")
 
   def stackInit(stackName: String) =
-    pproc("pulumi", "--non-interactive", "--logtostderr", verboseLogging *, "stack", "init", "--stack", stackName)
+    pproc("pulumi", "--non-interactive", "--logtostderr", "-v=10", "--logflow", "stack", "init", "--stack", stackName)
 
   def stackRm(stackName: String) =
-    pproc("pulumi", "--non-interactive", "--logtostderr", verboseLogging *, "stack", "rm", "-y", "--stack", stackName)
+    pproc("pulumi", "--non-interactive", "--logtostderr", "-v=10", "--logflow", "stack", "rm", "-y", "--stack", stackName)
 
   def stackLs() =
-    pproc("pulumi", "--non-interactive", "--logtostderr", verboseLogging *, "stack", "ls", "--json")
+    pproc("pulumi", "--non-interactive", "--logtostderr", "-v=10", "--logflow", "stack", "ls", "--json")
 
   def preview(stackName: String, additional: os.Shellable*) =
-    pproc("pulumi", "--non-interactive", "--logtostderr", verboseLogging *, "preview", "--stack", stackName, additional)
+    pproc("pulumi", "--non-interactive", "--logtostderr", "-v=10", "--logflow", "preview", "--stack", stackName, additional)
 
   def up(stackName: String, additional: os.Shellable*) = pproc(
     "pulumi",
     "--non-interactive",
     "--logtostderr",
-    verboseLogging *,
+    "-v=10",
+    "--logflow",
     "up",
     "--stack",
     stackName,
@@ -66,7 +66,8 @@ object pulumi {
     "pulumi",
     "--non-interactive",
     "--logtostderr",
-    verboseLogging *,
+    "-v=10",
+    "--logflow",
     "destroy",
     "--stack",
     stackName,
@@ -78,7 +79,8 @@ object pulumi {
     "pulumi",
     "--non-interactive",
     "--logtostderr",
-    verboseLogging *,
+    "-v=10",
+    "--logflow",
     "config",
     "--stack",
     stackName,
@@ -90,7 +92,8 @@ object pulumi {
     "pulumi",
     "--non-interactive",
     "--logtostderr",
-    verboseLogging *,
+    "-v=10",
+    "--logflow",
     "config",
     "--stack",
     stackName,
@@ -103,7 +106,8 @@ object pulumi {
     "pulumi",
     "--non-interactive",
     "--logtostderr",
-    verboseLogging *,
+    "-v=10",
+    "--logflow",
     "stack",
     "output",
     "--stack",
@@ -117,7 +121,8 @@ object pulumi {
       "pulumi",
       "--non-interactive",
       "--logtostderr",
-      verboseLogging *,
+      "-v=10",
+      "--logflow",
       "plugin",
       "install",
       "language",
