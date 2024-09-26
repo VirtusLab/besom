@@ -197,7 +197,8 @@ object pulumi {
       val allEnv: Map[String, String] =
         opts.pulumiEnv ++ Map(
           "PULUMI_HOME" -> (opts.pulumiHomeDir / ".pulumi").toString,
-          "PULUMI_SKIP_UPDATE_CHECK" -> "true"
+          "PULUMI_SKIP_UPDATE_CHECK" -> "true",
+          "TF_LOG" -> "TRACE"
         )
       pulumi.login(opts.pulumiHomeDir).call(cwd = opts.pulumiHomeDir, env = allEnv)
       pulumi.installScalaPlugin().call(cwd = opts.pulumiHomeDir, env = allEnv)
@@ -210,7 +211,8 @@ object pulumi {
         Map(
           "PULUMI_CONFIG_PASSPHRASE" -> envVarOpt("PULUMI_CONFIG_PASSPHRASE").getOrElse("")
         ) ++ pulumiContext.env ++ Map( // don't override test-critical env vars
-          "PULUMI_STACK" -> stackName
+          "PULUMI_STACK" -> stackName,
+          "TF_LOG" -> "TRACE"
         )
 
       println(s"Test stack: $stackName")
@@ -234,13 +236,13 @@ object pulumi {
     }
 
     def destroy(ctx: ProgramContext): Unit = {
-      pulumi.destroy(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
-      pulumi.stackRm(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
+      pulumi.destroy(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env ++ Map("TF_LOG" -> "TRACE"))
+      pulumi.stackRm(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env ++ Map("TF_LOG" -> "TRACE"))
       // purposely not deleting project.scala to make editing tests easier
     }
 
     def logout(ctx: PulumiContext): Unit = {
-      pulumi.logout(ctx.home).call(cwd = ctx.home, env = ctx.env)
+      pulumi.logout(ctx.home).call(cwd = ctx.home, env = ctx.env ++ Map("TF_LOG" -> "TRACE"))
     }
   }
 }
@@ -327,7 +329,7 @@ object codegen {
 }
 
 def pproc(command: Shellable*) = {
-  val cmd = os.proc(command, env = Map("TF_LOG" -> "TRACE"))
+  val cmd = os.proc(command)
   println(cmd.commandChunks.mkString(" "))
   cmd
 }
