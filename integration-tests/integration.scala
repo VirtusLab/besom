@@ -31,27 +31,30 @@ def testToStack(name: String): String  = "tests-" + sanitizeName(name)
 
 //noinspection TypeAnnotation,ScalaWeakerAccess
 object pulumi {
-  def login(pulumiHome: os.Path) = pproc("pulumi", "--non-interactive", "--logtostderr", "login", s"file://$pulumiHome")
+  val verboseLogging = List("-v=10", "--logflow")
+
+  def login(pulumiHome: os.Path) = pproc("pulumi", "--non-interactive", "--logtostderr", verboseLogging *, "login", s"file://$pulumiHome")
 
   def logout(pulumiHome: os.Path) =
-    pproc("pulumi", "--non-interactive", "--logtostderr", "logout", s"file://$pulumiHome")
+    pproc("pulumi", "--non-interactive", "--logtostderr", verboseLogging *, "logout", s"file://$pulumiHome")
 
   def stackInit(stackName: String) =
-    pproc("pulumi", "--non-interactive", "--logtostderr", "stack", "init", "--stack", stackName)
+    pproc("pulumi", "--non-interactive", "--logtostderr", verboseLogging *, "stack", "init", "--stack", stackName)
 
   def stackRm(stackName: String) =
-    pproc("pulumi", "--non-interactive", "--logtostderr", "stack", "rm", "-y", "--stack", stackName)
+    pproc("pulumi", "--non-interactive", "--logtostderr", verboseLogging *, "stack", "rm", "-y", "--stack", stackName)
 
   def stackLs() =
-    pproc("pulumi", "--non-interactive", "--logtostderr", "stack", "ls", "--json")
+    pproc("pulumi", "--non-interactive", "--logtostderr", verboseLogging *, "stack", "ls", "--json")
 
   def preview(stackName: String, additional: os.Shellable*) =
-    pproc("pulumi", "--non-interactive", "--logtostderr", "preview", "--stack", stackName, additional)
+    pproc("pulumi", "--non-interactive", "--logtostderr", verboseLogging *, "preview", "--stack", stackName, additional)
 
   def up(stackName: String, additional: os.Shellable*) = pproc(
     "pulumi",
     "--non-interactive",
     "--logtostderr",
+    verboseLogging *,
     "up",
     "--stack",
     stackName,
@@ -63,6 +66,7 @@ object pulumi {
     "pulumi",
     "--non-interactive",
     "--logtostderr",
+    verboseLogging *,
     "destroy",
     "--stack",
     stackName,
@@ -74,6 +78,7 @@ object pulumi {
     "pulumi",
     "--non-interactive",
     "--logtostderr",
+    verboseLogging *,
     "config",
     "--stack",
     stackName,
@@ -85,6 +90,7 @@ object pulumi {
     "pulumi",
     "--non-interactive",
     "--logtostderr",
+    verboseLogging *,
     "config",
     "--stack",
     stackName,
@@ -97,6 +103,7 @@ object pulumi {
     "pulumi",
     "--non-interactive",
     "--logtostderr",
+    verboseLogging *,
     "stack",
     "output",
     "--stack",
@@ -110,6 +117,7 @@ object pulumi {
       "pulumi",
       "--non-interactive",
       "--logtostderr",
+      verboseLogging *,
       "plugin",
       "install",
       "language",
@@ -314,7 +322,7 @@ object codegen {
 }
 
 def pproc(command: Shellable*) = {
-  val cmd = os.proc(command)
+  val cmd = os.proc(command, env = Map("TF_LOG" -> "TRACE"))
   println(cmd.commandChunks.mkString(" "))
   cmd
 }
