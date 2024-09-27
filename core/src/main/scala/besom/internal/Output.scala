@@ -97,7 +97,7 @@ If you want to map over the value of an Output, use the map method instead."""
       case _                                   => Result.fail(Exception(msg))
     }
 
-  // private[internal] def withContext(ctx: Context): Output[A] = Output.ofData(inner(ctx))
+  private[internal] def withContext(ctx: Context): Output[A] = Output.ofData(inner(ctx))
 
   private[internal] def withIsSecret(isSecretEff: Result[Boolean]): Output[A] = new Output(ctx =>
     for
@@ -166,8 +166,8 @@ trait OutputFactory:
 
   /** Creates an `Output` with the given `a` if the given `condition` is `true` or returns `None` if the condition is `false`
     */
-  // def when[A](condition: => Input[Boolean])(a: => Input.Optional[A]): Output[Option[A]] =
-  //   Output.when(condition)(a)
+  def when[A](condition: => Input[Boolean])(a: => Input.Optional[A]): Output[Option[A]] =
+    Output.when(condition)(a)
 
   /** Creates an `Output` that contains Unit
     */
@@ -479,23 +479,23 @@ trait OutputExtensionsFactory:
 
   end OutputOptionListOps
 
-  // implicit class OutputOfTupleOps[A <: NonEmptyTuple](private val output: Output[A]):
+  implicit class OutputOfTupleOps[A <: NonEmptyTuple](private val output: Output[A]):
 
-  /** Unzips the [[Output]] of a non-empty tuple into a tuple of [[Output]]s of the same arity. This operation is equivalent to:
-    *
-    * {{{o: Output[(A, B, C)] => (o.map(_._1), o.map(_._2), o.map(_._3))}}}
-    *
-    * and therefore will yield three descendants of the original [[Output]]. Evaluation of the descendants will cause the original
-    * [[Output]] to be evaluated as well and may therefore lead to unexpected side effects. This is usually not a problem with properties of
-    * resources but can be surprising if other effects are subsumed into the original [[Output]]. If this behavior is not desired, consider
-    * using [[unzipOutput]] instead.
-    *
-    * @tparam Output
-    *   the type of the [[Output]]s
-    * @return
-    *   a tuple of [[Output]]s
-    */
-  // inline def unzip: Tuple.Map[A, Output] = OutputUnzip.unzip(output)
-  // end OutputOfTupleOps
+    /** Unzips the [[Output]] of a non-empty tuple into a tuple of [[Output]]s of the same arity. This operation is equivalent to:
+      *
+      * {{{o: Output[(A, B, C)] => (o.map(_._1), o.map(_._2), o.map(_._3))}}}
+      *
+      * and therefore will yield three descendants of the original [[Output]]. Evaluation of the descendants will cause the original
+      * [[Output]] to be evaluated as well and may therefore lead to unexpected side effects. This is usually not a problem with properties
+      * of resources but can be surprising if other effects are subsumed into the original [[Output]]. If this behavior is not desired,
+      * consider using [[unzipOutput]] instead.
+      *
+      * @tparam Output
+      *   the type of the [[Output]]s
+      * @return
+      *   a tuple of [[Output]]s
+      */
+    inline def unzip: Tuple.Map[A, Output] = OutputUnzip.unzip(output)
+  end OutputOfTupleOps
 
 end OutputExtensionsFactory
