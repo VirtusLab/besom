@@ -68,8 +68,18 @@ trait Promise[A]:
 
 object Promise:
   def apply[A](): Result[Promise[A]] = Result.defer {
+    import scala.concurrent.ExecutionContext.Implicits.global // TODO DROP THIS
+    import scala.concurrent.blocking
     new Promise:
-      private val internal                          = scala.concurrent.Promise[A]()
+      private val internal = scala.concurrent.Promise[A]()
+
+      Future { // TODO DROP THIS
+        blocking {
+          Thread.sleep(1000L * 60 * 1) // 1 minute timeout
+        }
+        internal.failure(Exception("Promise timed out!"))
+      }
+
       override def get: Result[A]                   = Result.deferFuture(internal.future)
       override def isCompleted: Result[Boolean]     = Result.defer(internal.isCompleted)
       override def fulfill(a: A): Result[Unit]      = Result.defer(internal.success(a))
