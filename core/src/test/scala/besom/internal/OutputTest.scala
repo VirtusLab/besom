@@ -628,7 +628,6 @@ class OutputTest extends munit.FunSuite:
         assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
       }
   }
-  
 
   test("unzip combinator is able to unzip an Output of a tuple into a tuple of Outputs") {
     object extensions extends OutputExtensionsFactory
