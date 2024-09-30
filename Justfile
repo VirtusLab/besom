@@ -111,6 +111,7 @@ publish-maven-sdk: publish-maven-core publish-maven-cats publish-maven-zio publi
 # Publishes locally core besom SDK
 publish-local-core: publish-local-json publish-local-rpc
 	scala-cli --power publish local {{no-bloop}} core --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish core --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 
 # Publishes locally besom cats-effect extension
 publish-local-cats: publish-local-core
@@ -179,6 +180,7 @@ clean-rpc:
 
 publish-local-rpc:
 	scala-cli --power publish local {{no-bloop}} besom-rpc --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish besom-rpc --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 
 publish-maven-rpc:
 	scala-cli --power publish {{no-bloop}} besom-rpc --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
