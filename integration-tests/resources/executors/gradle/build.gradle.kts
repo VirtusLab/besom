@@ -6,6 +6,10 @@ plugins {
 repositories {
     mavenLocal()
     mavenCentral()
+    // TODO drop just for CI
+    ivy {
+        url("${System.properties['user.home']}/.ivy2/local")
+    }
 }
 
 dependencies {
