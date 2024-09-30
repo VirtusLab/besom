@@ -55,10 +55,6 @@ class LanguagePluginTest extends munit.FunSuite {
         |repositories {
         |    mavenLocal()
         |    mavenCentral()
-        |    // TODO drop just for CI
-        |    ivy {
-        |        url("$${System.properties['user.home']}/.ivy2/local")
-        |    }
         |}
         |
         |dependencies {
