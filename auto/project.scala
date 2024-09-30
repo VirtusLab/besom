@@ -22,4 +22,3 @@
 //> using publish.repository "central"
 //> using publish.developer "lbialy|Łukasz Biały|https://github.com/lbialy"
 //> using publish.developer "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
-//> using repository sonatype:snapshots

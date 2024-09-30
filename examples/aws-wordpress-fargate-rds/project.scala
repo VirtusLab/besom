@@ -4,4 +4,4 @@
 //> using dep org.virtuslab::besom-aws:6.39.0-core.0.3
 //> using dep org.virtuslab::besom-awsx:2.11.0-core.0.3
 //> using dep org.virtuslab::besom-random:4.16.2-core.0.3
-//> using repository sonatype:snapshots
+

@@ -6,4 +6,4 @@
 //> using dep org.virtuslab::besom-tls:5.0.2-core.0.3
 //> using dep org.virtuslab::besom-kubernetes-ingress-nginx:0.0.10-core.0.3
 
-//> using repository sonatype:snapshots
+

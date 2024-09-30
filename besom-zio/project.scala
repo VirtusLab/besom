@@ -15,4 +15,4 @@
 //> using publish.developer "lbialy|Łukasz Biały|https://github.com/lbialy"
 //> using publish.developer "prolativ|Michał Pałka|https://github.com/prolativ"
 //> using publish.developer "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban"
-//> using repository sonatype:snapshots
+
