@@ -459,7 +459,8 @@ test-template template-name:
 	@echo "----------------------------------------"
 	@echo "Testing template {{template-name}}"
 	pulumi --non-interactive --logtostderr --color=never --emoji=false new -y --force --generate-only --dir target/test/{{template-name}} -n templates-test-{{template-name}} --stack templates-test-{{template-name}} ../../../templates/{{template-name}}/
-	scala-cli compile {{no-bloop}} target/test/{{template-name}} {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+	# TODO drop snapshots
+	scala-cli compile --server=false --repository=sonatype:snapshots target/test/{{template-name}} {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 
 # Cleans after a template test
 clean-test-template template-name:
@@ -483,6 +484,7 @@ test-example example-name:
 	#!/usr/bin/env bash
 	echo "----------------------------------------"
 	echo "Testing example {{example-name}}"
+	# TODO drop snapshots
 	scala-cli compile --server=false examples/{{example-name}} --repository=sonatype:snapshots {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 
 # Cleans after an example test
