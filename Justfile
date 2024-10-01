@@ -26,7 +26,8 @@ scala-cli-coverage-options-zio := if coverage == "true" { "-O -coverage-out:" + 
 scala-cli-test-options-zio := scala-cli-coverage-options-zio
 
 publish-maven-auth-options := "--user env:OSSRH_USERNAME --password env:OSSRH_PASSWORD --gpg-key $PGP_KEY_ID --gpg-option --pinentry-mode --gpg-option loopback --gpg-option --passphrase --gpg-option $PGP_PASSWORD"
-ci-opts := if env_var_or_default('CI', "") == "true" { "--repository=sonatype:snapshots" } else { "" }
+ci-opts := ""
+# if env_var_or_default('CI', "") == "true" { "--repository=sonatype:snapshots" } else { "" }
 
 # This list of available targets
 default:
@@ -479,10 +480,10 @@ clean-test-templates:
 
 # Runs an example test
 test-example example-name:
-	@echo "----------------------------------------"
-	@echo "Testing example {{example-name}}"
-	scala-cli bloop exit # allow different examples use different jvms
-	scala-cli compile -v -v -v {{no-bloop}} examples/{{example-name}} {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+	#!/usr/bin/env bash
+	echo "----------------------------------------"
+	echo "Testing example {{example-name}}"
+	scala-cli compile --server=false examples/{{example-name}} --repository=sonatype:snapshots {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
 
 # Cleans after an example test
 clean-test-example example-name:
