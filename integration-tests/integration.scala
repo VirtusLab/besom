@@ -22,8 +22,6 @@ val defaultProjectFile =
       |//> using options -java-output-version:$javaVersion -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
       |//> using plugin org.virtuslab::besom-compiler-plugin:$coreVersion
       |//> using dep org.virtuslab::besom-core:$coreVersion
-      |
-      |//> using repository sonatype:snapshots
       |""".stripMargin
 
 def sanitizeName(name: String): String = name.replaceAll("[^a-zA-Z0-9]", "-").toLowerCase().take(40).stripSuffix("-")
@@ -171,6 +169,13 @@ object pulumi {
   )
 
   object fixture {
+    def setupProject(testDir: os.Path, projectFiles: Map[String, String] = Map("project.scala" -> defaultProjectFile)): Unit =
+      projectFiles.foreach { case (name, content) =>
+        val file = testDir / name
+        println(s"Writing test file: ${file.relativeTo(os.pwd)}")
+        os.write.over(file, content)
+      }
+
     def setup(
       opts: FixtureOpts,
       args: FixtureArgs*
