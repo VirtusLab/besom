@@ -6,7 +6,7 @@ import besom.cfg.Struct
 import besom.types.{Output, Context}
 
 extension (s: Struct)
-  def foldToEnv(using Context): Output[List[(String, String)]] = s.fold[List[(String, String)]](
+  def foldToEnv: Output[List[(String, String)]] = s.fold[List[(String, String)]](
     onStruct = { mapB =>
       mapB.foldLeft(Output(List.empty[(String, String)])) { case (acc, (k, v)) =>
         acc.flatMap { accList =>
