@@ -5,7 +5,6 @@ import besom.json.*
 import besom.cfg.internal.*
 import besom.util.Validated
 import scala.util.control.NoStackTrace
-import org.checkerframework.checker.units.qual.A
 
 final val Version = "0.4.0-SNAPSHOT"
 
