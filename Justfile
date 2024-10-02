@@ -385,11 +385,11 @@ clean-cfg: clean-cfg-lib clean-cfg-containers clean-cfg-k8s
 
 # Compiles model module
 compile-model:
-	scala-cli --power compile {{no-bloop-ci}} model --suppress-experimental-feature-warning
+	scala-cli --power compile {{no-bloop}} model --suppress-experimental-feature-warning
 
 # Runs tests for model module
 test-model:
-	scala-cli --power test {{no-bloop-ci}} model --suppress-experimental-feature-warning
+	scala-cli --power test {{no-bloop}} model --suppress-experimental-feature-warning
 
 # Cleans model module
 clean-model:
@@ -397,11 +397,11 @@ clean-model:
 
 # Publishes locally model module
 publish-local-model: test-model
-	scala-cli --power publish local {{no-bloop-ci}} model --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish local {{no-bloop}} model --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes model module
 publish-maven-model: test-model
-	scala-cli --power publish {{no-bloop-ci}} model --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} model --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 ####################
 # Codegen
