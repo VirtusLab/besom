@@ -6,4 +6,5 @@
 //> using dep "org.virtuslab::besom-azure-native:2.44.1-core.0.3"
 //> using dep "org.virtuslab::besom-tls:5.0.3-core.0.3"
 
-
+// TODO: remove after 0.4.0 release
+//> using repository sonatype:snapshots

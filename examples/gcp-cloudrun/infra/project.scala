@@ -8,3 +8,5 @@
 
 //> using exclude "app/*"
 
+// TODO: remove after 0.4.0 release
+//> using repository sonatype:snapshots
