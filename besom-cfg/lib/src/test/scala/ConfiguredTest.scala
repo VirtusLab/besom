@@ -129,11 +129,11 @@ class ConfiguredTest extends munit.FunSuite:
     given Default[FromEnv.EnvData] = new Default[FromEnv.EnvData]:
       def default: FromEnv.EnvData = env
 
-      resolveConfigurationEither[Test1] match
-        case Right(Test1(los)) =>
-          assertEquals(los, List("test", "test2"))
-        case Left(cfgError) =>
-          fail(cfgError.getMessage())
+    resolveConfigurationEither[Test1] match
+      case Right(Test1(los)) =>
+        assertEquals(los, List("test", "test2"))
+      case Left(cfgError) =>
+        fail(cfgError.getMessage())
   }
 
   test("resolve configuration - use direct argument and either variant") {
