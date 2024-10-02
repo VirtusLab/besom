@@ -103,7 +103,7 @@ class EncoderTest extends munit.FunSuite with ValueAssertions:
     test(s"encode output null (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
       val e = summon[Encoder[Output[Option[String]]]]
 
-      val (_, encoded) = e.encode(Output(None)).unsafeRunSync()
+      val (_, encoded) = e.encode(Output.pure(None)).unsafeRunSync()
       val expected =
         if Context().featureSupport.keepOutputValues
         then Null.asOutputValue(isSecret = false, dependencies = Nil)
@@ -225,8 +225,8 @@ class ArgsEncoderTest extends munit.FunSuite with ValueAssertions:
       val (res, encoded) = ae
         .encode(
           TestArgs(
-            Output("SOME-TEST-PROVIDER"),
-            Output(PlainCaseClass(data = "werks?", moreData = 123))
+            Output.pure("SOME-TEST-PROVIDER"),
+            Output.pure(PlainCaseClass(data = "werks?", moreData = 123))
           ),
           _ => false
         )
@@ -264,8 +264,8 @@ class ArgsEncoderTest extends munit.FunSuite with ValueAssertions:
       val (res, encoded) = ae
         .encode(
           TestOptionArgs(
-            Output(None),
-            Output(None)
+            Output.pure(None),
+            Output.pure(None)
           ),
           _ => false
         )
@@ -384,7 +384,7 @@ object ProviderArgsEncoderTest:
       skipUpdateUnreachable: Input.Optional[Boolean] = None,
       suppressDeprecationWarnings: Input.Optional[Boolean] = None,
       suppressHelmHookWarnings: Input.Optional[Boolean] = None
-    )(using Context): ProviderArgs =
+    ): ProviderArgs =
       new ProviderArgs(
         cluster = cluster.asOptionOutput(isSecret = false),
         context = context.asOptionOutput(isSecret = false),
@@ -412,9 +412,9 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
       val (res, encoded) = pae
         .encode(
           TestProviderArgs(
-            Output("SOME-TEST-PROVIDER"),
-            Output(PlainCaseClass(data = "werks?", moreData = 123)),
-            Output(List(Output("a"), Output("b"), Output("c")))
+            Output.pure("SOME-TEST-PROVIDER"),
+            Output.pure(PlainCaseClass(data = "werks?", moreData = 123)),
+            Output.pure(List(Output.pure("a"), Output.pure("b"), Output.pure("c")))
           ),
           _ => false
         )
@@ -453,9 +453,9 @@ class ProviderArgsEncoderTest extends munit.FunSuite with ValueAssertions:
       val pae = summon[ProviderArgsEncoder[TestProviderOptionArgs]]
 
       val args = TestProviderOptionArgs(
-        Output(None),
-        Output(None),
-        Output(None)
+        Output.pure(None),
+        Output.pure(None),
+        Output.pure(None)
       )
       val (res, encoded) = pae.encode(args, _ => false).unsafeRunSync()
 
@@ -519,7 +519,7 @@ class PropertiesSerializerTest extends munit.FunSuite with ValueAssertions:
         .serializeResourceProperties(
           InputOptionalCaseClass(
             Output.secret(Some("secret1")),
-            Output(Some(Map("key" -> Output.secret("value1"))))
+            Output.pure(Some(Map("key" -> Output.secret("value1"))))
           )
         )
         .unsafeRunSync()
@@ -557,9 +557,9 @@ class PropertiesSerializerTest extends munit.FunSuite with ValueAssertions:
       val res = PropertiesSerializer
         .serializeResourceProperties(
           ExampleResourceArgs(
-            Output(Some("x")),
+            Output.pure(Some("x")),
             Output.secret(Some(true)),
-            Output(Some(HelperArgs(Output(Some(1)))))
+            Output.pure(Some(HelperArgs(Output.pure(Some(1)))))
           )
         )
         .unsafeRunSync()
@@ -717,18 +717,18 @@ class PropertiesSerializerTest extends munit.FunSuite with ValueAssertions:
       val res = PropertiesSerializer
         .serializeResourceProperties(
           FargateServiceTaskDefinitionArgs(
-            container = Output(
+            container = Output.pure(
               Some(
                 TaskDefinitionContainerDefinitionArgs(
-                  portMappings = Output(
+                  portMappings = Output.pure(
                     Some(
                       List(
                         TaskDefinitionPortMappingArgs(
-                          targetGroup = Output(
+                          targetGroup = Output.pure(
                             Some(
                               TargetGroup(
                                 urn = URN.parse(testUrn),
-                                id = Output(testId)
+                                id = Output.pure(testId)
                               )
                             )
                           )
@@ -739,7 +739,7 @@ class PropertiesSerializerTest extends munit.FunSuite with ValueAssertions:
                 )
               )
             ),
-            containers = Output(None)
+            containers = Output.pure(None)
           )
         )
         .unsafeRunSync()
@@ -790,13 +790,13 @@ object PropertiesSerializerTest:
     def apply(
       privateKeyOpenssh: Input.Optional[String] = scala.None,
       privateKeyPem: Input.Optional[String] = scala.None
-    )(using Context): GetPublicKeyArgs =
+    ): GetPublicKeyArgs =
       new GetPublicKeyArgs(
         privateKeyOpenssh = privateKeyOpenssh.asOptionOutput(isSecret = true),
         privateKeyPem = privateKeyPem.asOptionOutput(isSecret = true)
       )
-    given encoder(using Context): Encoder[GetPublicKeyArgs]         = Encoder.derived[GetPublicKeyArgs]
-    given argsEncoder(using Context): ArgsEncoder[GetPublicKeyArgs] = ArgsEncoder.derived[GetPublicKeyArgs]
+    given encoder: Encoder[GetPublicKeyArgs]         = Encoder.derived[GetPublicKeyArgs]
+    given argsEncoder: ArgsEncoder[GetPublicKeyArgs] = ArgsEncoder.derived[GetPublicKeyArgs]
 
   final case class SecretArgs private (
     apiVersion: Output[String],
@@ -808,15 +808,15 @@ object PropertiesSerializerTest:
     def apply(
       data: Input.Optional[Map[String, besom.types.Input[String]]] = scala.None,
       metadata: Input.Optional[ObjectMetaArgs] = scala.None
-    )(using Context): SecretArgs =
+    ): SecretArgs =
       new SecretArgs(
         apiVersion = besom.types.Output("v1"),
         data = data.asOptionOutput(isSecret = true),
         kind = besom.types.Output("Secret"),
         metadata = metadata.asOptionOutput(isSecret = false)
       )
-    given encoder(using Context): Encoder[SecretArgs]         = Encoder.derived[SecretArgs]
-    given argsEncoder(using Context): ArgsEncoder[SecretArgs] = ArgsEncoder.derived[SecretArgs]
+    given encoder: Encoder[SecretArgs]         = Encoder.derived[SecretArgs]
+    given argsEncoder: ArgsEncoder[SecretArgs] = ArgsEncoder.derived[SecretArgs]
 
   final case class ObjectMetaArgs private (
     name: Output[Option[String]],
@@ -828,32 +828,32 @@ object PropertiesSerializerTest:
       name: Input.Optional[String] = scala.None,
       namespace: Input.Optional[String] = scala.None,
       uid: Input.Optional[String] = scala.None
-    )(using Context): ObjectMetaArgs =
+    ): ObjectMetaArgs =
       new ObjectMetaArgs(
         name = name.asOptionOutput(isSecret = false),
         namespace = namespace.asOptionOutput(isSecret = false),
         uid = uid.asOptionOutput(isSecret = false)
       )
-    given encoder(using Context): Encoder[ObjectMetaArgs]         = Encoder.derived[ObjectMetaArgs]
-    given argsEncoder(using Context): ArgsEncoder[ObjectMetaArgs] = ArgsEncoder.derived[ObjectMetaArgs]
+    given encoder: Encoder[ObjectMetaArgs]         = Encoder.derived[ObjectMetaArgs]
+    given argsEncoder: ArgsEncoder[ObjectMetaArgs] = ArgsEncoder.derived[ObjectMetaArgs]
 
   final case class FargateServiceTaskDefinitionArgs(
     container: Output[Option[TaskDefinitionContainerDefinitionArgs]],
     containers: Output[Option[Map[String, TaskDefinitionContainerDefinitionArgs]]]
   )
   object FargateServiceTaskDefinitionArgs:
-    given encoder(using Context): Encoder[FargateServiceTaskDefinitionArgs]         = Encoder.derived[FargateServiceTaskDefinitionArgs]
-    given argsEncoder(using Context): ArgsEncoder[FargateServiceTaskDefinitionArgs] = ArgsEncoder.derived[FargateServiceTaskDefinitionArgs]
+    given encoder: Encoder[FargateServiceTaskDefinitionArgs]         = Encoder.derived[FargateServiceTaskDefinitionArgs]
+    given argsEncoder: ArgsEncoder[FargateServiceTaskDefinitionArgs] = ArgsEncoder.derived[FargateServiceTaskDefinitionArgs]
   final case class TaskDefinitionContainerDefinitionArgs(portMappings: Output[Option[List[TaskDefinitionPortMappingArgs]]])
   object TaskDefinitionContainerDefinitionArgs:
-    given encoder(using Context): Encoder[TaskDefinitionContainerDefinitionArgs] =
+    given encoder: Encoder[TaskDefinitionContainerDefinitionArgs] =
       Encoder.derived[TaskDefinitionContainerDefinitionArgs]
-    given argsEncoder(using Context): ArgsEncoder[TaskDefinitionContainerDefinitionArgs] =
+    given argsEncoder: ArgsEncoder[TaskDefinitionContainerDefinitionArgs] =
       ArgsEncoder.derived[TaskDefinitionContainerDefinitionArgs]
   final case class TaskDefinitionPortMappingArgs(targetGroup: Output[Option[TargetGroup]])
   object TaskDefinitionPortMappingArgs:
-    given encoder(using Context): Encoder[TaskDefinitionPortMappingArgs]         = Encoder.derived[TaskDefinitionPortMappingArgs]
-    given argsEncoder(using Context): ArgsEncoder[TaskDefinitionPortMappingArgs] = ArgsEncoder.derived[TaskDefinitionPortMappingArgs]
+    given encoder: Encoder[TaskDefinitionPortMappingArgs]         = Encoder.derived[TaskDefinitionPortMappingArgs]
+    given argsEncoder: ArgsEncoder[TaskDefinitionPortMappingArgs] = ArgsEncoder.derived[TaskDefinitionPortMappingArgs]
   final case class TargetGroup(urn: Output[URN], id: Output[ResourceId]) extends besom.CustomResource
 end PropertiesSerializerTest
 
@@ -874,16 +874,16 @@ class Regression383Test extends munit.FunSuite with ValueAssertions:
 object Regression383Test:
   final case class SecretArgs private (data: Output[Option[Map[String, String]]])
   object SecretArgs:
-    def apply(data: Input.Optional[Map[String, Input[String]]] = None)(using Context): SecretArgs =
+    def apply(data: Input.Optional[Map[String, Input[String]]] = None): SecretArgs =
       new SecretArgs(data = data.asOptionOutput(isSecret = true))
-    given encoder(using Context): Encoder[SecretArgs]         = Encoder.derived[SecretArgs]
-    given argsEncoder(using Context): ArgsEncoder[SecretArgs] = ArgsEncoder.derived[SecretArgs]
+    given encoder: Encoder[SecretArgs]         = Encoder.derived[SecretArgs]
+    given argsEncoder: ArgsEncoder[SecretArgs] = ArgsEncoder.derived[SecretArgs]
 end Regression383Test
 
 class RecurrentArgsTest extends munit.FunSuite with ValueAssertions:
   case class Recurrent(value: Option[Recurrent])
   object Recurrent:
-    given encoder(using Context): Encoder[Recurrent] = Encoder.derived[Recurrent]
+    given encoder: Encoder[Recurrent] = Encoder.derived[Recurrent]
 
   runWithBothOutputCodecs {
     test(s"encode recurrent type (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {

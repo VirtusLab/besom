@@ -7,4 +7,6 @@
 //> using dep "org.virtuslab::besom-docker:4.5.4-core.0.3"
 
 //> using exclude "app/*"
+
+// TODO: remove after 0.4.0 release
 //> using repository sonatype:snapshots

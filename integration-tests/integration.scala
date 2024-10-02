@@ -22,8 +22,6 @@ val defaultProjectFile =
       |//> using options -java-output-version:$javaVersion -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
       |//> using plugin org.virtuslab::besom-compiler-plugin:$coreVersion
       |//> using dep org.virtuslab::besom-core:$coreVersion
-      |
-      |//> using repository sonatype:snapshots
       |""".stripMargin
 
 def sanitizeName(name: String): String = name.replaceAll("[^a-zA-Z0-9]", "-").toLowerCase().take(40).stripSuffix("-")
@@ -31,27 +29,30 @@ def testToStack(name: String): String  = "tests-" + sanitizeName(name)
 
 //noinspection TypeAnnotation,ScalaWeakerAccess
 object pulumi {
-  def login(pulumiHome: os.Path) = pproc("pulumi", "--non-interactive", "--logtostderr", "login", s"file://$pulumiHome")
+  def login(pulumiHome: os.Path) =
+    pproc("pulumi", "--non-interactive", "--logtostderr", "-v=10", "--logflow", "login", s"file://$pulumiHome")
 
   def logout(pulumiHome: os.Path) =
     pproc("pulumi", "--non-interactive", "--logtostderr", "logout", s"file://$pulumiHome")
 
   def stackInit(stackName: String) =
-    pproc("pulumi", "--non-interactive", "--logtostderr", "stack", "init", "--stack", stackName)
+    pproc("pulumi", "--non-interactive", "--logtostderr", "-v=10", "--logflow", "stack", "init", "--stack", stackName)
 
   def stackRm(stackName: String) =
-    pproc("pulumi", "--non-interactive", "--logtostderr", "stack", "rm", "-y", "--stack", stackName)
+    pproc("pulumi", "--non-interactive", "--logtostderr", "-v=10", "--logflow", "stack", "rm", "-y", "--stack", stackName)
 
   def stackLs() =
-    pproc("pulumi", "--non-interactive", "--logtostderr", "stack", "ls", "--json")
+    pproc("pulumi", "--non-interactive", "--logtostderr", "-v=10", "--logflow", "stack", "ls", "--json")
 
   def preview(stackName: String, additional: os.Shellable*) =
-    pproc("pulumi", "--non-interactive", "--logtostderr", "preview", "--stack", stackName, additional)
+    pproc("pulumi", "--non-interactive", "--logtostderr", "-v=10", "--logflow", "preview", "--stack", stackName, additional)
 
   def up(stackName: String, additional: os.Shellable*) = pproc(
     "pulumi",
     "--non-interactive",
     "--logtostderr",
+    "-v=10",
+    "--logflow",
     "up",
     "--stack",
     stackName,
@@ -63,6 +64,8 @@ object pulumi {
     "pulumi",
     "--non-interactive",
     "--logtostderr",
+    "-v=10",
+    "--logflow",
     "destroy",
     "--stack",
     stackName,
@@ -74,6 +77,8 @@ object pulumi {
     "pulumi",
     "--non-interactive",
     "--logtostderr",
+    "-v=10",
+    "--logflow",
     "config",
     "--stack",
     stackName,
@@ -85,6 +90,8 @@ object pulumi {
     "pulumi",
     "--non-interactive",
     "--logtostderr",
+    "-v=10",
+    "--logflow",
     "config",
     "--stack",
     stackName,
@@ -97,6 +104,8 @@ object pulumi {
     "pulumi",
     "--non-interactive",
     "--logtostderr",
+    "-v=10",
+    "--logflow",
     "stack",
     "output",
     "--stack",
@@ -110,6 +119,8 @@ object pulumi {
       "pulumi",
       "--non-interactive",
       "--logtostderr",
+      "-v=10",
+      "--logflow",
       "plugin",
       "install",
       "language",
@@ -158,6 +169,13 @@ object pulumi {
   )
 
   object fixture {
+    def setupProject(testDir: os.Path, projectFiles: Map[String, String] = Map("project.scala" -> defaultProjectFile)): Unit =
+      projectFiles.foreach { case (name, content) =>
+        val file = testDir / name
+        println(s"Writing test file: ${file.relativeTo(os.pwd)}")
+        os.write.over(file, content)
+      }
+
     def setup(
       opts: FixtureOpts,
       args: FixtureArgs*
@@ -184,7 +202,8 @@ object pulumi {
       val allEnv: Map[String, String] =
         opts.pulumiEnv ++ Map(
           "PULUMI_HOME" -> (opts.pulumiHomeDir / ".pulumi").toString,
-          "PULUMI_SKIP_UPDATE_CHECK" -> "true"
+          "PULUMI_SKIP_UPDATE_CHECK" -> "true",
+          "TF_LOG" -> "TRACE"
         )
       pulumi.login(opts.pulumiHomeDir).call(cwd = opts.pulumiHomeDir, env = allEnv)
       pulumi.installScalaPlugin().call(cwd = opts.pulumiHomeDir, env = allEnv)
@@ -197,7 +216,8 @@ object pulumi {
         Map(
           "PULUMI_CONFIG_PASSPHRASE" -> envVarOpt("PULUMI_CONFIG_PASSPHRASE").getOrElse("")
         ) ++ pulumiContext.env ++ Map( // don't override test-critical env vars
-          "PULUMI_STACK" -> stackName
+          "PULUMI_STACK" -> stackName,
+          "TF_LOG" -> "TRACE"
         )
 
       println(s"Test stack: $stackName")
@@ -221,13 +241,13 @@ object pulumi {
     }
 
     def destroy(ctx: ProgramContext): Unit = {
-      pulumi.destroy(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
-      pulumi.stackRm(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
+      pulumi.destroy(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env ++ Map("TF_LOG" -> "TRACE"))
+      pulumi.stackRm(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env ++ Map("TF_LOG" -> "TRACE"))
       // purposely not deleting project.scala to make editing tests easier
     }
 
     def logout(ctx: PulumiContext): Unit = {
-      pulumi.logout(ctx.home).call(cwd = ctx.home, env = ctx.env)
+      pulumi.logout(ctx.home).call(cwd = ctx.home, env = ctx.env ++ Map("TF_LOG" -> "TRACE"))
     }
   }
 }

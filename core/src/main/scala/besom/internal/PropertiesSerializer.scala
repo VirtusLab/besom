@@ -35,5 +35,5 @@ object PropertiesSerializer:
   private[internal] def detectUnknowns(metadata: Map[String, Metadata]): Boolean = metadata.values.exists(_.unknown)
   private[internal] def fieldsToResources(metadata: Map[String, Metadata])(using Context): Map[String, Set[Resource]] =
     metadata.map { case (k, m) =>
-      (k, m.dependencies.map(urn => DependencyResource(Output(urn)).asInstanceOf[Resource]).toSet)
+      (k, m.dependencies.map(urn => DependencyResource(Output.pure(urn)).asInstanceOf[Resource]).toSet)
     }

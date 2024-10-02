@@ -1,6 +1,5 @@
 package besom.internal
 
-import RunResult.{given, *}
 import besom.types.{Output => _, *}
 
 class ContextTest extends munit.FunSuite:
@@ -9,8 +8,6 @@ class ContextTest extends munit.FunSuite:
   case class AnotherTestResource(urn: Output[URN], id: Output[ResourceId], url: Output[String]) extends CustomResource
 
   test("resource identity - empty outputs, same class") {
-    given Context = DummyContext().unsafeRunSync()
-
     val v1 = TestResource(Output.empty(), Output.empty(), Output.empty())
     val v2 = TestResource(Output.empty(), Output.empty(), Output.empty())
 

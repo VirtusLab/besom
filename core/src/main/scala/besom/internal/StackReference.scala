@@ -1,8 +1,8 @@
 package besom.internal
 
 import besom.json.*
-import besom.types.*
 import besom.util.NonEmptyString
+import besom.types.{URN, ResourceId}
 
 case class StackReference(
   urn: Output[URN],
@@ -13,29 +13,33 @@ case class StackReference(
 ) extends CustomResource
     derives ResourceDecoder:
 
-  def getOutput(name: NonEmptyString)(using Context): Output[Option[JsValue]] =
-    getOutput(Output(name))
+  def getOutput(name: NonEmptyString): Output[Option[JsValue]] =
+    getOutput(Output.pure(name))
 
   def getOutput(name: Output[NonEmptyString]): Output[Option[JsValue]] =
     val output = name.zip(outputs).map { case (name, outputs) =>
       outputs.get(name)
     }
 
-    output.withIsSecret(isSecretOutputName(name))
+    Output.getContext.flatMap { ctx =>
+      output.withIsSecret(isSecretOutputName(name)(using ctx))
+    }
 
-  def requireOutput(name: NonEmptyString)(using Context): Output[JsValue] =
-    requireOutput(Output(name))
+  def requireOutput(name: NonEmptyString): Output[JsValue] =
+    requireOutput(Output.pure(name))
 
-  def requireOutput(name: Output[NonEmptyString])(using Context): Output[JsValue] =
+  def requireOutput(name: Output[NonEmptyString]): Output[JsValue] =
     val output = name.zip(outputs).flatMap { case (name, outputs) =>
       outputs.get(name) match
-        case Some(value) => Output(value)
+        case Some(value) => Output.pure(value)
         case None        => Output.fail(Exception(s"Missing required output '$name'"))
     }
 
-    output.withIsSecret(isSecretOutputName(name))
+    Output.getContext.flatMap { ctx =>
+      output.withIsSecret(isSecretOutputName(name)(using ctx))
+    }
 
-  private def isSecretOutputName(name: Output[String]): Result[Boolean] =
+  private def isSecretOutputName(name: Output[String])(using Context): Result[Boolean] =
     for
       nameOd  <- name.getData
       namesOd <- secretOutputNames.getData
@@ -53,7 +57,7 @@ end StackReference
 trait StackReferenceFactory:
   sealed trait StackReferenceType[T]:
     type Out[T]
-    def transform(stackReference: StackReference)(using Context): Output[Out[T]]
+    def transform(stackReference: StackReference): Output[Out[T]]
 
   object StackReferenceType:
     given untyped: UntypedStackReferenceType = UntypedStackReferenceType()
@@ -62,7 +66,7 @@ trait StackReferenceFactory:
 
   class TypedStackReferenceType[T](using JsonReader[T]) extends StackReferenceType[T]:
     type Out[T] = TypedStackReference[T]
-    def transform(stackReference: StackReference)(using Context): Output[Out[T]] =
+    def transform(stackReference: StackReference): Output[Out[T]] =
       val objectOutput: Output[T] =
         requireObject(stackReference.outputs, stackReference.secretOutputNames)
 
@@ -78,36 +82,38 @@ trait StackReferenceFactory:
 
   class UntypedStackReferenceType extends StackReferenceType[Any]:
     type Out[T] = StackReference
-    def transform(stackReference: StackReference)(using Context): Output[StackReference] = Output(stackReference)
+    def transform(stackReference: StackReference): Output[StackReference] = Output.pure(stackReference)
 
-  def untypedStackReference(using Context): StackReferenceType[Any] = UntypedStackReferenceType()
+  def untypedStackReference: StackReferenceType[Any] = UntypedStackReferenceType()
 
   def typedStackReference[T: JsonReader]: TypedStackReferenceType[T] = TypedStackReferenceType()
 
-  def apply[T](using stackRefType: StackReferenceType[T], ctx: Context)(
+  def apply[T](
     name: NonEmptyString,
     args: Input.Optional[StackReferenceArgs] = None,
     opts: StackReferenceResourceOptions = StackReferenceResourceOptions()
-  ): Output[stackRefType.Out[T]] =
+  )(using stackRefType: StackReferenceType[T]): Output[stackRefType.Out[T]] =
     args
       .asOptionOutput(false)
       .flatMap {
         case Some(stackRefArgs) => stackRefArgs.name
-        case None               => Output(name)
+        case None               => Output.pure(name)
       }
       .flatMap { selectedName =>
         val importId = ResourceId.unsafeOf(selectedName)
 
         val stackRefArgs = StackReferenceArgs(
-          Output(selectedName)
+          Output.pure(selectedName)
         )
 
         val mergedOpts = new StackReferenceResourceOptions( // use constructor directly to avoid apply
           opts.common,
-          Output(Some(importId))
+          Output.pure(Some(importId))
         )
 
-        Context().readOrRegisterResource[StackReference, StackReferenceArgs]("pulumi:pulumi:StackReference", name, stackRefArgs, mergedOpts)
+        Output.getContext.flatMap { implicit ctx =>
+          ctx.readOrRegisterResource[StackReference, StackReferenceArgs]("pulumi:pulumi:StackReference", name, stackRefArgs, mergedOpts)
+        }
       }
       .flatMap(stackRefType.transform)
 
@@ -115,11 +121,14 @@ trait StackReferenceFactory:
     outputs: Output[Map[String, JsValue]],
     secretOutputNames: Output[Set[String]]
   ): Output[T] =
-    outputs
-      .map(JsObject(_).convertTo[T])
-      .withIsSecret(
-        secretOutputNames
-          .map(_.nonEmpty)
-          .getValueOrElse(false)
-      )
+    Output.getContext.flatMap { ctx =>
+      outputs
+        .map(JsObject(_).convertTo[T])
+        .withIsSecret(
+          secretOutputNames
+            .map(_.nonEmpty)
+            .getValueOrElse(false)(using ctx)
+        )
+    }
+
 end StackReferenceFactory

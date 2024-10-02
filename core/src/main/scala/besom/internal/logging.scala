@@ -114,60 +114,107 @@ object logging:
     ): Result[Unit] =
       log(makeLogRecord(level, messages.toList, pkg, fileName, name, line, mdc), urn, streamId, ephemeral)
 
+    // TODO resource-less methods
+
+    def trace(message: LoggableMessage)(using
+      pkg: sourcecode.Pkg,
+      fileName: sourcecode.FileName,
+      name: sourcecode.Name,
+      line: sourcecode.Line,
+      mdc: BesomMDC[_]
+    ): Result[Unit] = log(Level.Trace, mdc, URN.empty, 0, false, message)
+
     def trace(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(using
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
       line: sourcecode.Line,
-      mdc: BesomMDC[_] = BesomMDC.empty
+      mdc: BesomMDC[_] = BesomMDC.empty,
+      ctx: Context
     ): Result[Unit] =
       res match
         case Some(r) =>
           r.urn.getValueOrElse(URN.empty).flatMap(urn => log(Level.Trace, mdc, urn, streamId, ephemeral, message))
         case None => log(Level.Trace, mdc, URN.empty, streamId, ephemeral, message)
 
+    def debug(message: LoggableMessage)(using
+      pkg: sourcecode.Pkg,
+      fileName: sourcecode.FileName,
+      name: sourcecode.Name,
+      line: sourcecode.Line,
+      mdc: BesomMDC[_]
+    ): Result[Unit] = log(Level.Debug, mdc, URN.empty, 0, false, message)
+
     def debug(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(using
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
       line: sourcecode.Line,
-      mdc: BesomMDC[_] = BesomMDC.empty
+      mdc: BesomMDC[_] = BesomMDC.empty,
+      ctx: Context
     ): Result[Unit] =
       res match
         case Some(r) =>
           r.urn.getValueOrElse(URN.empty).flatMap(urn => log(Level.Debug, mdc, urn, streamId, ephemeral, message))
         case None => log(Level.Debug, mdc, URN.empty, streamId, ephemeral, message)
 
+    def info(message: LoggableMessage)(using
+      pkg: sourcecode.Pkg,
+      fileName: sourcecode.FileName,
+      name: sourcecode.Name,
+      line: sourcecode.Line,
+      mdc: BesomMDC[_]
+    ): Result[Unit] = log(Level.Info, mdc, URN.empty, 0, false, message)
+
     def info(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(using
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
       line: sourcecode.Line,
-      mdc: BesomMDC[_] = BesomMDC.empty
+      mdc: BesomMDC[_] = BesomMDC.empty,
+      ctx: Context
     ): Result[Unit] =
       res match
         case Some(r) =>
           r.urn.getValueOrElse(URN.empty).flatMap(urn => log(Level.Info, mdc, urn, streamId, ephemeral, message))
         case None => log(Level.Info, mdc, URN.empty, streamId, ephemeral, message)
 
+    def warn(message: LoggableMessage)(using
+      pkg: sourcecode.Pkg,
+      fileName: sourcecode.FileName,
+      name: sourcecode.Name,
+      line: sourcecode.Line,
+      mdc: BesomMDC[_]
+    ): Result[Unit] = log(Level.Warn, mdc, URN.empty, 0, false, message)
+
     def warn(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(using
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
       line: sourcecode.Line,
-      mdc: BesomMDC[_] = BesomMDC.empty
+      mdc: BesomMDC[_] = BesomMDC.empty,
+      ctx: Context
     ): Result[Unit] =
       res match
         case Some(r) =>
           r.urn.getValueOrElse(URN.empty).flatMap(urn => log(Level.Warn, mdc, urn, streamId, ephemeral, message))
         case None => log(Level.Warn, mdc, URN.empty, streamId, ephemeral, message)
 
+    def error(message: LoggableMessage)(using
+      pkg: sourcecode.Pkg,
+      fileName: sourcecode.FileName,
+      name: sourcecode.Name,
+      line: sourcecode.Line,
+      mdc: BesomMDC[_]
+    ): Result[Unit] = log(Level.Error, mdc, URN.empty, 0, false, message)
+
     def error(message: LoggableMessage, res: Option[Resource] = None, streamId: Int = 0, ephemeral: Boolean = false)(using
       pkg: sourcecode.Pkg,
       fileName: sourcecode.FileName,
       name: sourcecode.Name,
       line: sourcecode.Line,
-      mdc: BesomMDC[_] = BesomMDC.empty
+      mdc: BesomMDC[_] = BesomMDC.empty,
+      ctx: Context
     ): Result[Unit] =
       res match
         case Some(r) =>
@@ -188,7 +235,7 @@ object logging:
       name: sourcecode.Name,
       line: sourcecode.Line,
       mdc: MDC = MDC.empty
-    ): Output[Unit] = Output {
+    ): Output[Unit] = Output.ofResult {
       res match
         case Some(r) =>
           r.urn
@@ -203,7 +250,7 @@ object logging:
       name: sourcecode.Name,
       line: sourcecode.Line,
       mdc: MDC = MDC.empty
-    ): Output[Unit] = Output {
+    ): Output[Unit] = Output.ofResult {
       res match
         case Some(r) =>
           r.urn
@@ -218,7 +265,7 @@ object logging:
       name: sourcecode.Name,
       line: sourcecode.Line,
       mdc: MDC = MDC.empty
-    ): Output[Unit] = Output {
+    ): Output[Unit] = Output.ofResult {
       res match
         case Some(r) =>
           r.urn
@@ -233,7 +280,7 @@ object logging:
       name: sourcecode.Name,
       line: sourcecode.Line,
       mdc: MDC = MDC.empty
-    ): Output[Unit] = Output {
+    ): Output[Unit] = Output.ofResult {
       res match
         case Some(r) =>
           r.urn
@@ -248,7 +295,7 @@ object logging:
       name: sourcecode.Name,
       line: sourcecode.Line,
       mdc: MDC = MDC.empty
-    ): Output[Unit] = Output {
+    ): Output[Unit] = Output.ofResult {
       res match
         case Some(r) =>
           r.urn

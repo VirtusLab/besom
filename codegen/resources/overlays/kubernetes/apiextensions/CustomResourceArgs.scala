@@ -13,7 +13,7 @@ object CustomResourceArgs:
     kind: String,
     metadata: besom.types.Input.Optional[besom.api.kubernetes.meta.v1.inputs.ObjectMetaArgs] = scala.None,
     spec: besom.types.Input[A]
-  )(using besom.types.Context): CustomResourceArgs[A] =
+  ): CustomResourceArgs[A] =
     new CustomResourceArgs(
       apiVersion = apiVersion,
       kind = kind,
@@ -27,7 +27,7 @@ object CustomResourceArgs:
       kind: String = customResourceArgs.kind,
       metadata: besom.types.Input.Optional[besom.api.kubernetes.meta.v1.inputs.ObjectMetaArgs] = customResourceArgs.metadata,
       spec: besom.types.Input[A] = customResourceArgs.spec
-    )(using besom.types.Context): CustomResourceArgs[A] =
+    ): CustomResourceArgs[A] =
       new CustomResourceArgs(
         apiVersion = apiVersion,
         kind = kind,

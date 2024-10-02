@@ -12,7 +12,7 @@ object Codegen:
     isSecret: Boolean,
     environment: List[String],
     default: Option[A]
-  )(using Context): Output[Option[A]] = besom.Config(providerName).flatMap(_.getOrDefault(key, isSecret, environment, default))
+  ): Output[Option[A]] = besom.Config(providerName).flatMap(_.getOrDefault(key, isSecret, environment, default))
 
 /** Used by the codegen module in the generated code.
   */

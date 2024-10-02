@@ -18,12 +18,11 @@ import pulumirpc.resource.{
   SupportsFeatureRequest,
   SupportsFeatureResponse
 }
+import besom.types.URN
 
 //noinspection TypeAnnotation
 object DummyContext:
-  val dummyRunInfo        = RunInfo(Some("test-organization"), "test-project", "test-stack", true, 4, false, "dummy", "dummy")
-  val dummyFeatureSupport = FeatureSupport(true, true, true, true, true)
-  val dummyMonitor = new Monitor:
+  class DummyMonitor extends Monitor:
     def call(callRequest: ResourceCallRequest): Result[CallResponse] =
       Result.fail(Exception("Not implemented"))
     def invoke(invokeRequest: ResourceInvokeRequest): Result[InvokeResponse] =
@@ -38,9 +37,10 @@ object DummyContext:
       Result.fail(Exception("Not implemented"))
     def registerStackTransform(request: Callback): Result[Unit] =
       Result.fail(Exception("Not implemented"))
-    def close(): Result[Unit] = Result.fail(Exception("Not implemented"))
+    def close(): Result[Unit] =
+      Result.fail(Exception("Not implemented"))
 
-  val dummyEngine = new Engine:
+  class DummyEngine extends Engine:
     def getRootResource(getRootResource: GetRootResourceRequest): Result[GetRootResourceResponse] =
       Result.fail(Exception("Not implemented"))
     def setRootResource(setRootResource: SetRootResourceRequest): Result[SetRootResourceResponse] =
@@ -50,6 +50,11 @@ object DummyContext:
     def close(): Result[Unit] =
       Result.fail(Exception("Not implemented"))
 
+  val dummyRunInfo        = RunInfo(Some("test-organization"), "test-project", "test-stack", true, 4, false, "dummy", "dummy")
+  val dummyFeatureSupport = FeatureSupport(true, true, true, true, true)
+  val dummyMonitor        = new DummyMonitor
+  val dummyEngine         = new DummyEngine
+
   def apply(
     runInfo: RunInfo = dummyRunInfo,
     featureSupport: FeatureSupport = dummyFeatureSupport,
@@ -57,7 +62,8 @@ object DummyContext:
     engine: Engine = dummyEngine,
     configMap: Map[NonEmptyString, String] = Map.empty,
     configSecretKeys: Set[NonEmptyString] = Set.empty,
-    resources: Resources | Result[Resources] = Resources()
+    resources: Resources | Result[Resources] = Resources(),
+    stackURN: URN = URN.empty
   ): Result[Context] =
     for
       taskTracker  <- TaskTracker()
@@ -69,7 +75,7 @@ object DummyContext:
         case r: Result[Resources] => r
       memo <- Memo()
       given Context = Context.create(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, memo, stackPromise)
-      _ <- stackPromise.fulfill(StackResource()(using ComponentBase(Output(besom.types.URN.empty))))
+      _ <- stackPromise.fulfill(StackResource()(using ComponentBase(Output.pure(stackURN))))
     yield summon[Context]
 
 end DummyContext

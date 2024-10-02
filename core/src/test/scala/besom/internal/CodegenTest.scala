@@ -1,7 +1,8 @@
 package besom.internal
 
 import besom.*
-import besom.internal.RunResult.{*, given}
+import besom.internal.RunOutput.{*, given}
+import besom.json.JsString
 
 class CodegenTest extends munit.FunSuite:
 
@@ -12,5 +13,9 @@ class CodegenTest extends munit.FunSuite:
     given Context = DummyContext(configMap = nonEmptyKeyConfigMap, configSecretKeys = Set()).unsafeRunSync()
 
     import CodegenProtocol.*
-    Codegen.config[Map[String, PulumiAny]]("provider")("key", false, List(), None)
+
+    Codegen.config[Map[String, PulumiAny]]("provider")("key", false, List(), None).unsafeRunSync() match
+      case None                                    => fail("Expected config to be defined")
+      case Some(None)                              => fail("Expected config to be defined")
+      case Some(Some(map: Map[String, PulumiAny])) => assertEquals(map, Map("a" -> JsString("b")))
   }

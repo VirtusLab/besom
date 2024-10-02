@@ -70,7 +70,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
     val str        = "\"test"
     val int        = 1
     val long       = 5L
-    val float      = Output(2.3f)
+    val float      = Output.pure(2.3f)
     val double     = 3.4d
     val bool       = true
     val jsonOutput = json"""{"a": 1, "b": $str, "c": $int, "d": $long, "e": $float, "f": $double, "g": $bool}"""
@@ -106,11 +106,11 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
     given besom.internal.Context = DummyContext().unsafeRunSync()
 
     val str         = Option(Some("test"))
-    val int         = Output(Option(1))
-    val long        = Some(Output(5L))
-    val float       = Output(Some(2.3f))
-    val double      = Option(Output(3.4d))
-    val bool        = Output(Output(true))
+    val int         = Output.pure(Option(1))
+    val long        = Some(Output.pure(5L))
+    val float       = Output.pure(Some(2.3f))
+    val double      = Option(Output.pure(3.4d))
+    val bool        = Output.pure(Output.pure(true))
     val nullValue   = None
     val anotherNull = Some(None)
     val literalNull = null: String
@@ -152,7 +152,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
          import besom.internal.RunOutput.{*, given}
          given besom.internal.Context = DummyContext().unsafeRunSync()
          
-         def x = Output(java.time.Instant.now())
+         def x = Output.pure(java.time.Instant.now())
       """ +
         code.`val json = json"""{"a": 1, "b": $x}"""`
     )
@@ -194,7 +194,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
          import besom.internal.RunOutput.{*, given}
          given besom.internal.Context = DummyContext().unsafeRunSync()
          
-         val x = Output(Option(java.time.Instant.now()))
+         val x = Output.pure(Option(java.time.Instant.now()))
       """ +
         code.`val json = json"""{"a": 1, "b": $x}"""`
     )
@@ -215,7 +215,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
          import besom.internal.RunOutput.{*, given}
          given besom.internal.Context = DummyContext().unsafeRunSync()
          
-         val x = Option(Output(java.time.Instant.now()))
+         val x = Option(Output.pure(java.time.Instant.now()))
       """ +
         code.`val json = json"""{"a": 1, "b": $x}"""`
     )
@@ -236,7 +236,7 @@ class JsonInterpolatorTest extends FunSuite with CompileAssertions:
          import besom.internal.RunOutput.{*, given}
          given besom.internal.Context = DummyContext().unsafeRunSync()
          
-         val x = Output(Output(java.time.Instant.now()))
+         val x = Output.pure(Output.pure(java.time.Instant.now()))
       """ +
         code.`val json = json"""{"a": 1, "b": $x}"""`
     )

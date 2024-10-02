@@ -130,12 +130,15 @@ import besom.api.aws
 > Besom **does NOT depend on Pulumi Java SDK**, it is a completely separate implementation.
 
 ## Tips
-- Whenever you use Besom outside the `Pulumi.run` block, pass [`Context`](https://virtuslab.github.io/besom/docs/context) with `(using besom.Context)`
 - Resources are initialized lazily. To make them appear in your physical infrastructure make sure 
-their evaluation is triggered directly or transitively from the main for-comprehension block of your Pulumi program.
+their evaluation is triggered directly or transitively (by referencing them or resources that depend on them) by 
+including them in the final `Stack` structure of your program.
 - Use whatever Scala concepts you are familiar with, infrastructure as code in Besom is still a Scala program, 
 so you have the full potential of the language to work with.
 - Pay attention to the types. You will be instantiating case classes to pass parameters, note their package of origin.
+- Some Pulumi functions that allow you to access the metadata of the current stack require access to the `Context`. 
+`Context` is available as a given (implicitly) in the `Pulumi.run` block, but you can also require it explicitly 
+in any of your functions with `(using Context)`.
 
 ## Requirements
 

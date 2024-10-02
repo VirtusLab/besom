@@ -49,7 +49,7 @@ trait BesomSyntax:
     *   the current project [[besom.types.URN]] instance
     */
   def urn(using ctx: Context): Output[URN] =
-    Output.ofData(ctx.getParentURN.map(OutputData(_)))
+    Output.ofData(ctx.getStackURN.map(OutputData(_)))
 
   /** @param ctx
     *   the Besom context
@@ -86,66 +86,75 @@ trait BesomSyntax:
     * @return
     *   the component resource instance
     */
-  def component[A <: ComponentResource & Product: RegistersOutputs: Typeable](using ctx: Context)(
+  def component[A <: ComponentResource & Product: RegistersOutputs: Typeable](
     name: NonEmptyString,
     typ: ResourceType,
     opts: ComponentResourceOptions = ComponentResourceOptions()
   )(
-    f: Context ?=> ComponentBase ?=> A
-  ): Output[A] =
+    f: ComponentBase ?=> A
+  ): Output[A] = Output.getContext.flatMap { ctx =>
     Output.ofData {
       ctx
-        .registerComponentResource(name, typ, opts)
+        .registerComponentResource(name, typ, opts)(using ctx)
         .flatMap { componentBase =>
           val urnRes: Result[URN] = componentBase.urn.getValueOrFail {
             s"Urn for component resource $name is not available. This should not happen."
-          }
+          }(using ctx)
 
           val componentContext = ComponentContext(ctx, urnRes, componentBase)
           val componentOutput =
-            try Output(Result.pure(f(using componentContext)(using componentBase)))
-            catch case e: Exception => Output(Result.fail(e))
+            try Output.pure(f(using componentBase))
+            catch case e: Exception => Output.fail(e)
 
           val componentResult = componentOutput.getValueOrFail {
             s"Component resource $name of type $typ did not return a value. This should not happen."
-          }
+          }(using componentContext)
 
           componentResult.flatMap { a =>
-            val serializedOutputs = RegistersOutputs[A].serializeOutputs(a)
-            ctx.registerResourceOutputs(name, typ, urnRes, serializedOutputs) *> Result.pure(a)
+            val serializedOutputs = RegistersOutputs[A].serializeOutputs(a)(using componentContext)
+            ctx.registerResourceOutputs(name, typ, urnRes, serializedOutputs)(using componentContext) *> Result.pure(a)
           }
         }
         .map(OutputData(_))
     }
-  end component
+  }
 
   extension [A <: ProviderResource](pr: A)
-    def provider(using Context): Output[Option[ProviderResource]] = Output {
-      Context().resources.getStateFor(pr).map(_.custom.provider)
+    def provider: Output[Option[ProviderResource]] = Output.getContext.flatMap { implicit ctx =>
+      Output.ofResult {
+        ctx.resources.getStateFor(pr).map(_.custom.provider)
+      }
     }
 
   extension [A <: CustomResource](cr: A)
-    def provider(using Context): Output[Option[ProviderResource]] = Output {
-      Context().resources.getStateFor(cr).map(_.provider)
+    def provider: Output[Option[ProviderResource]] = Output.getContext.flatMap { implicit ctx =>
+      Output.ofResult {
+        ctx.resources.getStateFor(cr).map(_.provider)
+      }
     }
 
   extension [A <: ComponentResource](cmpr: A)
-    def providers(using Context): Output[Map[String, ProviderResource]] = Output {
-      Context().resources.getStateFor(cmpr).map(_.providers)
+    def providers: Output[Map[String, ProviderResource]] = Output.getContext.flatMap { implicit ctx =>
+      Output.ofResult {
+        ctx.resources.getStateFor(cmpr).map(_.providers)
+      }
     }
 
   extension [A <: RemoteComponentResource](cb: A)
-    def providers(using Context): Output[Map[String, ProviderResource]] = Output {
-      Context().resources.getStateFor(cb).map(_.providers)
+    def providers: Output[Map[String, ProviderResource]] = Output.getContext.flatMap { implicit ctx =>
+      Output.ofResult {
+        ctx.resources.getStateFor(cb).map(_.providers)
+      }
     }
 
   extension [A <: Resource: ResourceDecoder](companion: ResourceCompanion[A])
-    def get(name: Input[NonEmptyString], id: Input[ResourceId])(using ctx: Context): Output[A] =
+    def get(name: Input[NonEmptyString], id: Input[ResourceId]): Output[A] = Output.getContext.flatMap { implicit ctx =>
       for
         name <- name.asOutput()
         id   <- id.asOutput()
         res  <- ctx.readOrRegisterResource[A, EmptyArgs](companion.typeToken, name, EmptyArgs(), CustomResourceOptions(importId = id))
       yield res
+    }
 
   extension (s: String)
     /** Converts a [[String]] to a [[NonEmptyString]] if it is not empty or blank.
@@ -159,13 +168,13 @@ trait BesomSyntax:
     /** Converts a [[String]] to an [[Output]] of [[NonEmptyString]] if it is not empty or blank, otherwise returns a failed [[Output]] with
       * an [[IllegalArgumentException]].
       */
-    def toNonEmptyOutput(using Context): Output[NonEmptyString] =
-      NonEmptyString(s).fold(Output.fail(IllegalArgumentException(s"String $s was empty!")))(Output.apply(_))
+    def toNonEmptyOutput: Output[NonEmptyString] =
+      NonEmptyString(s).fold(Output.fail(IllegalArgumentException(s"String $s was empty!")))(Output.pure(_))
 
   extension (os: Output[String])
     /** Converts an [[Output]] of [[String]] to an [[Output]] of [[NonEmptyString]] which will be failed if the string is empty.
       */
-    def toNonEmptyOutput(using Context): Output[NonEmptyString] =
+    def toNonEmptyOutput: Output[NonEmptyString] =
       os.flatMap(_.toNonEmptyOutput)
 
   /** Shortcut function allowing for uniform resource options syntax everywhere.

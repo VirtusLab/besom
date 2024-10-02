@@ -34,7 +34,7 @@ sealed trait ResolvedResourceOptions:
   def pluginDownloadUrl: Option[String]
   def deletedWith: Option[Resource]
 
-  private[besom] def getImportId(using Context): Option[ResourceId] = this match
+  private[besom] def getImportId: Option[ResourceId] = this match
     case cr: CustomResolvedResourceOptions         => cr.importId
     case sr: StackReferenceResolvedResourceOptions => sr.importId
     case _                                         => None
@@ -189,9 +189,9 @@ sealed trait ResourceOptions:
         }
   end resolve
 
-  private[besom] def hasURN: Result[Boolean] = urn.map(_.isDefined).getValueOrElse(false)
+  private[besom] def hasURN(using Context): Result[Boolean] = urn.map(_.isDefined).getValueOrElse(false)
 
-  private[besom] def getURN: Result[URN] = urn.getValueOrElse(None).flatMap {
+  private[besom] def getURN(using Context): Result[URN] = urn.getValueOrElse(None).flatMap {
     case Some(urn) => Result.pure(urn)
     case None      => Result.fail(Exception("URN is not defined"))
   }
@@ -232,7 +232,7 @@ final case class StackReferenceResourceOptions private[internal] (
   export common.*
 
 trait CustomResourceOptionsFactory:
-  def apply(using Context)(
+  def apply(
     parent: Input.Optional[Resource] = None,
     dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
     deletedWith: Input.Optional[Resource] = None,
@@ -270,7 +270,7 @@ trait CustomResourceOptionsFactory:
   )
 
 object CustomResourceOptions:
-  def apply(using Context)(
+  def apply(
     parent: Input.Optional[Resource] = None,
     dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
     deletedWith: Input.Optional[Resource] = None,
@@ -314,7 +314,7 @@ object CustomResourceOptions:
 end CustomResourceOptions
 
 trait ComponentResourceOptionsFactory:
-  def apply(using Context)(
+  def apply(
     providers: Input.OneOrIterable[ProviderResource] = Iterable.empty,
     parent: Input.Optional[Resource] = None,
     dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
@@ -346,7 +346,7 @@ trait ComponentResourceOptionsFactory:
   )
 
 object ComponentResourceOptions:
-  def apply(using Context)(
+  def apply(
     providers: Input.OneOrIterable[ProviderResource] = Iterable.empty,
     parent: Input.Optional[Resource] = None,
     dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
@@ -379,7 +379,7 @@ object ComponentResourceOptions:
     new ComponentResourceOptions(common, providers.asManyOutput())
 
 object StackReferenceResourceOptions:
-  def apply(using Context)(
+  def apply(
     parent: Input.Optional[Resource] = None,
     dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
     protect: Input[Boolean] = false,
@@ -412,7 +412,7 @@ object StackReferenceResourceOptions:
     new StackReferenceResourceOptions(common, importId.asOptionOutput())
 
 trait StackReferenceResourceOptionsFactory:
-  def apply(using Context)(
+  def apply(
     parent: Input.Optional[Resource] = None,
     dependsOn: Input.OneOrIterable[Resource] = Iterable.empty,
     protect: Input[Boolean] = false,

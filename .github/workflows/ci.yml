@@ -57,9 +57,9 @@ jobs:
     - uses: extractions/setup-just@v1
       with:
         just-version: '1.14.0' # just for sanity
-    - uses: pulumi/actions@v4
+    - uses: pulumi/actions@v5
       with:
-        pulumi-version: '3.116.1'
+        pulumi-version: '3.134.0'
     - uses: coursier/cache-action@v6.4.3
     - uses: VirtusLab/scala-cli-setup@v1.1.0
       with:

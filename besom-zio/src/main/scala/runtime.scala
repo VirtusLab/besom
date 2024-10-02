@@ -49,8 +49,6 @@ trait ZIOModule extends BesomModule:
         zio.Runtime.default.unsafe.runToFuture(fa.uninterruptible)
       }
 
-  // override def run(program: Context ?=> Output[Exports]): Future[Unit] = ???
-
 object Pulumi extends ZIOModule
 export Pulumi.{component => _, *, given}
 
@@ -72,10 +70,10 @@ import scala.reflect.Typeable
   * @return
   *   The component resource.
   */
-def component[A <: ComponentResource & Product: RegistersOutputs: Typeable](using ctx: Context)(
+def component[A <: ComponentResource & Product: RegistersOutputs: Typeable](
   name: NonEmptyString,
   typ: ResourceType,
   opts: ComponentResourceOptions = ComponentResourceOptions()
 )(
-  f: Context ?=> ComponentBase ?=> A
+  f: ComponentBase ?=> A
 ): Output[A] = Pulumi.component(name, typ, opts)(f)

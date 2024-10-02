@@ -1,7 +1,7 @@
 package besom.internal
 
 import besom.util.NonEmptyString
-import besom.types.*
+import besom.types.{URN, ResourceId, ResourceType}
 import com.google.protobuf.struct.*
 import scala.deriving.Mirror
 import scala.annotation.implicitNotFound
@@ -26,7 +26,8 @@ sealed trait Resource:
 
   // this method can lead to deadlocks as it waits for URN to be resolved, use carefully
   // resources can be visually compared by references using toString() if URN is not strictly required
-  private[internal] def asString: Result[Option[String]] = urn.getValue.map(_.map(v => s"${this.getClass.getSimpleName}($v)"))
+  private[internal] def asString(using Context): Result[Option[String]] =
+    urn.getValue.map(_.map(v => s"${this.getClass.getSimpleName}($v)"))
 
 trait CustomResource extends Resource:
   /** @return
@@ -50,7 +51,7 @@ trait ComponentResource(using
   private[besom] def componentBase: ComponentBase = base
 
 trait ProviderResource extends CustomResource:
-  private[internal] def registrationId: Result[String] =
+  private[internal] def registrationId(using Context): Result[String] =
     for
       urn <- urn.getValueOrElse(URN.empty)
       id  <- id.getValueOrElse(Constants.UnknownStringValue)

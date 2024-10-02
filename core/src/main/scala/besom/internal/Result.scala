@@ -69,7 +69,8 @@ trait Promise[A]:
 object Promise:
   def apply[A](): Result[Promise[A]] = Result.defer {
     new Promise:
-      private val internal                          = scala.concurrent.Promise[A]()
+      private val internal = scala.concurrent.Promise[A]()
+
       override def get: Result[A]                   = Result.deferFuture(internal.future)
       override def isCompleted: Result[Boolean]     = Result.defer(internal.isCompleted)
       override def fulfill(a: A): Result[Unit]      = Result.defer(internal.success(a))

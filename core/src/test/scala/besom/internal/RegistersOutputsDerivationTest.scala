@@ -1,6 +1,6 @@
 package besom.internal
 
-import besom.types.*
+import besom.types.URN
 import RunResult.{given, *}
 import com.google.protobuf.struct.Struct
 
@@ -9,12 +9,12 @@ class RegistersOutputsDerivationTest extends munit.FunSuite {
 
   runWithBothOutputCodecs {
     test(s"derive an instance for TestRegistersOutputs (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
-      given ComponentBase = ComponentBase(Output(URN.empty))
+      given ComponentBase = ComponentBase(Output.pure(URN.empty))
 
       val intEncoder = summon[Encoder[Output[Int]]]
       val instance   = summon[RegistersOutputs[TestRegistersOutputs]]
 
-      val testRegistersOutputs = TestRegistersOutputs(Output(1))
+      val testRegistersOutputs = TestRegistersOutputs(Output.pure(1))
       val serializedStruct     = instance.serializeOutputs(testRegistersOutputs).unsafeRunSync()
       val expectedStruct = Struct(
         Map("a" -> intEncoder.encode(testRegistersOutputs.a).map(_._2).unsafeRunSync())
@@ -30,14 +30,14 @@ class RegistersOutputsDerivationTest extends munit.FunSuite {
 
   runWithBothOutputCodecs {
     test(s"derive an instance for TestRegistersOutputs3 (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
-      given ComponentBase = ComponentBase(Output(URN.empty))
+      given ComponentBase = ComponentBase(Output.pure(URN.empty))
 
       val intEncoder     = summon[Encoder[Output[Int]]]
       val stringEncoder  = summon[Encoder[Output[String]]]
       val booleanEncoder = summon[Encoder[Output[Boolean]]]
       val instance       = summon[RegistersOutputs[TestRegistersOutputs3]]
 
-      val testRegistersOutputs = TestRegistersOutputs3(Output(1), Output("XD"), Output(false))
+      val testRegistersOutputs = TestRegistersOutputs3(Output.pure(1), Output.pure("XD"), Output.pure(false))
       val serializedStruct     = instance.serializeOutputs(testRegistersOutputs).unsafeRunSync()
       val expectedStruct = Struct(
         Map(

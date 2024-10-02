@@ -410,7 +410,7 @@ class DecoderTest extends munit.FunSuite:
       ).asValue
 
       val d        = summon[Decoder[Output[String]]]
-      val expected = Output("abc").getData.unsafeRunSync()
+      val expected = Output.pure("abc").getData.unsafeRunSync()
 
       d.decode(v, dummyLabel).verify {
         case Validated.Invalid(ex) => throw ex.head
@@ -444,7 +444,7 @@ class DecoderTest extends munit.FunSuite:
   runWithBothOutputCodecs {
     test(s"decode string as output string (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
       val d        = summon[Decoder[Output[String]]]
-      val expected = Output("abc").getData.unsafeRunSync()
+      val expected = Output.pure("abc").getData.unsafeRunSync()
       d.decode("abc".asValue, dummyLabel).verify {
         case Validated.Invalid(ex) => throw ex.head
         case Validated.Valid(OutputData.Known(_, _, value)) =>

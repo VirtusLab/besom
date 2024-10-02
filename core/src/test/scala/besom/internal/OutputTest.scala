@@ -39,7 +39,7 @@ class OutputTest extends munit.FunSuite:
     given Context = DummyContext().unsafeRunSync()
 
     assertEquals(takesNEString("string").getData.unsafeRunSync(), OutputData(Option("string")))
-    assertEquals(takesNEString(Output("string")).getData.unsafeRunSync(), OutputData(Option("string")))
+    assertEquals(takesNEString(Output.pure("string")).getData.unsafeRunSync(), OutputData(Option("string")))
     assertEquals(takesNEString(None).getData.unsafeRunSync(), OutputData(None))
 
     Context().waitForAllTasks.unsafeRunSync()
@@ -51,9 +51,9 @@ class OutputTest extends munit.FunSuite:
     assertEquals(takesManyStrings("value").getData.unsafeRunSync(), OutputData(List("value")))
     assertEquals(takesManyStrings(List("value")).getData.unsafeRunSync(), OutputData(List("value")))
     assertEquals(takesManyStrings(List("value")).getData.unsafeRunSync(), OutputData(List("value")))
-    assertEquals(takesManyStrings(List(Output("value"))).getData.unsafeRunSync(), OutputData(List("value")))
-    assertEquals(takesManyStrings(Output(List("value"))).getData.unsafeRunSync(), OutputData(List("value")))
-    assertEquals(takesManyStrings(Output(List(Output("value")))).getData.unsafeRunSync(), OutputData(List("value")))
+    assertEquals(takesManyStrings(List(Output.pure("value"))).getData.unsafeRunSync(), OutputData(List("value")))
+    assertEquals(takesManyStrings(Output.pure(List("value"))).getData.unsafeRunSync(), OutputData(List("value")))
+    assertEquals(takesManyStrings(Output.pure(List(Output.pure("value")))).getData.unsafeRunSync(), OutputData(List("value")))
 
     Context().waitForAllTasks.unsafeRunSync()
   }
@@ -62,18 +62,21 @@ class OutputTest extends munit.FunSuite:
     given Context = DummyContext().unsafeRunSync()
 
     assertEquals(takesAList(List("value")).getData.unsafeRunSync(), OutputData(List("value")))
-    assertEquals(takesAList(List(Output("value"))).getData.unsafeRunSync(), OutputData(List("value")))
-    assertEquals(takesAList(Output(List("value"))).getData.unsafeRunSync(), OutputData(List("value")))
-    assertEquals(takesAList(Output(List(Output("value")))).getData.unsafeRunSync(), OutputData(List("value")))
+    assertEquals(takesAList(List(Output.pure("value"))).getData.unsafeRunSync(), OutputData(List("value")))
+    assertEquals(takesAList(Output.pure(List("value"))).getData.unsafeRunSync(), OutputData(List("value")))
+    assertEquals(takesAList(Output.pure(List(Output.pure("value")))).getData.unsafeRunSync(), OutputData(List("value")))
 
     assertEquals(takesAnOptionalList(List("value")).getData.unsafeRunSync(), OutputData(Option(List("value"))))
-    assertEquals(takesAnOptionalList(List(Output("value"))).getData.unsafeRunSync(), OutputData(Option(List("value"))))
-    assertEquals(takesAnOptionalList(Output(List("value"))).getData.unsafeRunSync(), OutputData(Option(List("value"))))
-    assertEquals(takesAnOptionalList(Output(List(Output("value")))).getData.unsafeRunSync(), OutputData(Option(List("value"))))
+    assertEquals(takesAnOptionalList(List(Output.pure("value"))).getData.unsafeRunSync(), OutputData(Option(List("value"))))
+    assertEquals(takesAnOptionalList(Output.pure(List("value"))).getData.unsafeRunSync(), OutputData(Option(List("value"))))
+    assertEquals(takesAnOptionalList(Output.pure(List(Output.pure("value")))).getData.unsafeRunSync(), OutputData(Option(List("value"))))
     assertEquals(takesAnOptionalList(Option(List("value"))).getData.unsafeRunSync(), OutputData(Option(List("value"))))
-    assertEquals(takesAnOptionalList(Option(List(Output("value")))).getData.unsafeRunSync(), OutputData(Option(List("value"))))
-    assertEquals(takesAnOptionalList(Output(Option(List("value")))).getData.unsafeRunSync(), OutputData(Option(List("value"))))
-    assertEquals(takesAnOptionalList(Output(Option(List(Output("value"))))).getData.unsafeRunSync(), OutputData(Option(List("value"))))
+    assertEquals(takesAnOptionalList(Option(List(Output.pure("value")))).getData.unsafeRunSync(), OutputData(Option(List("value"))))
+    assertEquals(takesAnOptionalList(Output.pure(Option(List("value")))).getData.unsafeRunSync(), OutputData(Option(List("value"))))
+    assertEquals(
+      takesAnOptionalList(Output.pure(Option(List(Output.pure("value"))))).getData.unsafeRunSync(),
+      OutputData(Option(List("value")))
+    )
 
     Context().waitForAllTasks.unsafeRunSync()
   }
@@ -82,28 +85,28 @@ class OutputTest extends munit.FunSuite:
     given Context = DummyContext().unsafeRunSync()
 
     assertEquals(takesAMap(Map("key" -> "value")).getData.unsafeRunSync(), OutputData(Map("key" -> "value")))
-    assertEquals(takesAMap(Map("key" -> Output("value"))).getData.unsafeRunSync(), OutputData(Map("key" -> "value")))
-    assertEquals(takesAMap(Output(Map("key" -> "value"))).getData.unsafeRunSync(), OutputData(Map("key" -> "value")))
-    assertEquals(takesAMap(Output(Map("key" -> Output("value")))).getData.unsafeRunSync(), OutputData(Map("key" -> "value")))
+    assertEquals(takesAMap(Map("key" -> Output.pure("value"))).getData.unsafeRunSync(), OutputData(Map("key" -> "value")))
+    assertEquals(takesAMap(Output.pure(Map("key" -> "value"))).getData.unsafeRunSync(), OutputData(Map("key" -> "value")))
+    assertEquals(takesAMap(Output.pure(Map("key" -> Output.pure("value")))).getData.unsafeRunSync(), OutputData(Map("key" -> "value")))
 
     assertEquals(takesAnOptionalMap(Map("key" -> "value")).getData.unsafeRunSync(), OutputData(Option(Map("key" -> "value"))))
-    assertEquals(takesAnOptionalMap(Map("key" -> Output("value"))).getData.unsafeRunSync(), OutputData(Option(Map("key" -> "value"))))
-    assertEquals(takesAnOptionalMap(Output(Map("key" -> "value"))).getData.unsafeRunSync(), OutputData(Option(Map("key" -> "value"))))
+    assertEquals(takesAnOptionalMap(Map("key" -> Output.pure("value"))).getData.unsafeRunSync(), OutputData(Option(Map("key" -> "value"))))
+    assertEquals(takesAnOptionalMap(Output.pure(Map("key" -> "value"))).getData.unsafeRunSync(), OutputData(Option(Map("key" -> "value"))))
     assertEquals(
-      takesAnOptionalMap(Output(Map("key" -> Output("value")))).getData.unsafeRunSync(),
+      takesAnOptionalMap(Output.pure(Map("key" -> Output.pure("value")))).getData.unsafeRunSync(),
       OutputData(Option(Map("key" -> "value")))
     )
     assertEquals(takesAnOptionalMap(Option(Map("key" -> "value"))).getData.unsafeRunSync(), OutputData(Option(Map("key" -> "value"))))
     assertEquals(
-      takesAnOptionalMap(Option(Map("key" -> Output("value")))).getData.unsafeRunSync(),
+      takesAnOptionalMap(Option(Map("key" -> Output.pure("value")))).getData.unsafeRunSync(),
       OutputData(Option(Map("key" -> "value")))
     )
     assertEquals(
-      takesAnOptionalMap(Output(Option(Map("key" -> "value")))).getData.unsafeRunSync(),
+      takesAnOptionalMap(Output.pure(Option(Map("key" -> "value")))).getData.unsafeRunSync(),
       OutputData(Option(Map("key" -> "value")))
     )
     assertEquals(
-      takesAnOptionalMap(Output(Option(Map("key" -> Output("value"))))).getData.unsafeRunSync(),
+      takesAnOptionalMap(Output.pure(Option(Map("key" -> Output.pure("value"))))).getData.unsafeRunSync(),
       OutputData(Option(Map("key" -> "value")))
     )
 
@@ -113,7 +116,7 @@ class OutputTest extends munit.FunSuite:
   test("multiple evaluations of sequence") {
     given Context = DummyContext().unsafeRunSync()
 
-    val seq = Output.sequence(List(Output("value"), Output("value2")))
+    val seq = Output.sequence(List(Output.pure("value"), Output.pure("value2")))
 
     val firstEval = seq.getData.unsafeRunSync()
     assertEquals(firstEval, OutputData(List("value", "value2")))
@@ -127,7 +130,7 @@ class OutputTest extends munit.FunSuite:
   test("multiple evaluations of parSequence") {
     given Context = DummyContext().unsafeRunSync()
 
-    val seq = Output.parSequence(List(Output("value"), Output("value2")))
+    val seq = Output.parSequence(List(Output.pure("value"), Output.pure("value2")))
 
     val firstEval = seq.getData.unsafeRunSync()
     assertEquals(firstEval, OutputData(List("value", "value2")))
@@ -143,10 +146,10 @@ class OutputTest extends munit.FunSuite:
     given Context = DummyContext().unsafeRunSync()
 
     def sleepAndReturn[A](value: A): Output[A] =
-      Output.apply(Result.sleep(50).map(_ => value))
+      Output.ofResult(Result.sleep(50).map(_ => value))
 
     def timeOutput(output: Output[?]): Output[Long] =
-      Output(Result.defer(System.currentTimeMillis())).zip(output).map { case (start, _) => System.currentTimeMillis() - start }
+      Output.ofResult(Result.defer(System.currentTimeMillis())).zip(output).map { case (start, _) => System.currentTimeMillis() - start }
 
     val time = timeOutput(Output.parSequence(List(sleepAndReturn("value"), sleepAndReturn("value2"), sleepAndReturn("value3"))))
 
@@ -160,7 +163,7 @@ class OutputTest extends munit.FunSuite:
     given Context = DummyContext().unsafeRunSync()
 
     import besom.aliases.OutputExtensions.*
-    val out: Output[List[String]] = List("value", "value2").traverse(Output(_))
+    val out: Output[List[String]] = List("value", "value2").traverse(Output.pure(_))
 
     val firstEval = out.getData.unsafeRunSync()
     assertEquals(firstEval, OutputData(List("value", "value2")))
@@ -174,15 +177,24 @@ class OutputTest extends munit.FunSuite:
   test("Output.sequence works with all kinds of collections") {
     given Context = DummyContext().unsafeRunSync()
 
-    assertEquals(Output.sequence(List(Output("value"), Output("value2"))).getData.unsafeRunSync(), OutputData(List("value", "value2")))
-    assertEquals(Output.sequence(Vector(Output("value"), Output("value2"))).getData.unsafeRunSync(), OutputData(Vector("value", "value2")))
-    assertEquals(Output.sequence(Set(Output("value"), Output("value2"))).getData.unsafeRunSync(), OutputData(Set("value", "value2")))
     assertEquals(
-      Output.sequence(Array(Output("value"), Output("value2")).toList).getData.unsafeRunSync(),
+      Output.sequence(List(Output.pure("value"), Output.pure("value2"))).getData.unsafeRunSync(),
+      OutputData(List("value", "value2"))
+    )
+    assertEquals(
+      Output.sequence(Vector(Output.pure("value"), Output.pure("value2"))).getData.unsafeRunSync(),
+      OutputData(Vector("value", "value2"))
+    )
+    assertEquals(
+      Output.sequence(Set(Output.pure("value"), Output.pure("value2"))).getData.unsafeRunSync(),
+      OutputData(Set("value", "value2"))
+    )
+    assertEquals(
+      Output.sequence(Array(Output.pure("value"), Output.pure("value2")).toList).getData.unsafeRunSync(),
       OutputData(List("value", "value2"))
     )
     val iter: Iterable[String] = List("value", "value2")
-    assertEquals(Output.sequence(iter.map(Output(_))).getData.unsafeRunSync(), OutputData(List("value", "value2")))
+    assertEquals(Output.sequence(iter.map(Output.pure(_))).getData.unsafeRunSync(), OutputData(List("value", "value2")))
 
     Context().waitForAllTasks.unsafeRunSync()
   }
@@ -192,7 +204,10 @@ class OutputTest extends munit.FunSuite:
     given Context = DummyContext().unsafeRunSync()
 
     assertEquals(List(Output("value"), Output("value2")).sequence.getData.unsafeRunSync(), OutputData(List("value", "value2")))
-    assertEquals(Vector(Output("value"), Output("value2")).sequence.getData.unsafeRunSync(), OutputData(Vector("value", "value2")))
+    assertEquals(
+      Vector(Output("value"), Output("value2")).sequence.getData.unsafeRunSync(),
+      OutputData(Vector("value", "value2"))
+    )
     assertEquals(Set(Output("value"), Output("value2")).sequence.getData.unsafeRunSync(), OutputData(Set("value", "value2")))
     assertEquals(
       Array("value", "value2").toList.traverse(x => Output(x)).getData.unsafeRunSync(),
@@ -234,7 +249,7 @@ class OutputTest extends munit.FunSuite:
          import besom.internal.RunOutput.{*, given}
          given besom.internal.Context = DummyContext().unsafeRunSync()
 
-         val out: Output[Int] = Output(1).flatMap(x => Output(x + 1))"""
+         val out: Output[Int] = Output.pure(1).flatMap(x => Output.pure(x + 1))"""
     )
 
     assert(shouldCompile.isEmpty)
@@ -245,7 +260,7 @@ class OutputTest extends munit.FunSuite:
          import besom.internal.RunOutput.{*, given}
          given besom.internal.Context = DummyContext().unsafeRunSync()
 
-         val out: Output[Int] = Output(1).flatMap(x => Option(x + 1))"""
+         val out: Output[Int] = Output.pure(1).flatMap(x => Option(x + 1))"""
     )
 
     assert(shouldNotCompile.size == 1)
@@ -265,7 +280,7 @@ class OutputTest extends munit.FunSuite:
          import besom.internal.RunOutput.{*, given}
          given besom.internal.Context = DummyContext().unsafeRunSync()
 
-         val out: Output[Int] = Output(1).flatMap(_ => 1)"""
+         val out: Output[Int] = Output.pure(1).flatMap(_ => 1)"""
     )
 
     assert(shouldNotCompileFlatMapRawValue.size == 1)
@@ -287,10 +302,10 @@ class OutputTest extends munit.FunSuite:
       optVal  <- Vector(true, false)
       outVal  <- Vector(true, false)
     do
-      val c = if outCond then Output(cond) else cond
+      val c = if outCond then Output.pure(cond) else cond
       val v = (outVal, optVal) match
-        case (true, true)   => Output(Option(value))
-        case (true, false)  => Output(value)
+        case (true, true)   => Output.pure(Option(value))
+        case (true, false)  => Output.pure(value)
         case (false, true)  => Some(value)
         case (false, false) => value
 
@@ -306,7 +321,7 @@ class OutputTest extends munit.FunSuite:
     import besom.OutputOptionOps
     given Context = DummyContext().unsafeRunSync()
 
-    val result = Output(Some("value")).getOrFail(Exception("error"))
+    val result = Output.pure(Some("value")).getOrFail(Exception("error"))
     assertEquals(result.getData.unsafeRunSync(), OutputData("value"))
   }
 
@@ -314,7 +329,7 @@ class OutputTest extends munit.FunSuite:
     import besom.OutputOptionOps
     given Context = DummyContext().unsafeRunSync()
 
-    val result = Output(None).getOrFail(Exception("error"))
+    val result = Output.pure(None).getOrFail(Exception("error"))
     interceptMessage[Exception]("error")(result.getData.unsafeRunSync())
   }
 
@@ -328,11 +343,11 @@ class OutputTest extends munit.FunSuite:
     for outVal <- Vector(true, false)
     do
       val d = outVal match
-        case true  => Output(default)
+        case true  => Output.pure(default)
         case false => default
 
       test(s"Option.getOrElse ${value} or ${default} (outVal: ${outVal})") {
-        val result = Output(value).getOrElse(d)
+        val result = Output.pure(value).getOrElse(d)
         assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
       }
   }
@@ -349,11 +364,11 @@ class OutputTest extends munit.FunSuite:
     for outVal <- Vector(true, false)
     do
       val d = outVal match
-        case true  => Output(default)
+        case true  => Output.pure(default)
         case false => default
 
       test(s"Option.orElse ${value} orElse ${default} (outVal: ${outVal})") {
-        val result = Output(value).orElse(d)
+        val result = Output.pure(value).orElse(d)
         assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
       }
   }
@@ -369,8 +384,8 @@ class OutputTest extends munit.FunSuite:
     do
       test(s"Option.mapInner ${value} (outVal: ${outVal})") {
         val result: Output[Option[String]] = // FIXME: the inference is not working without the explicit type
-          if outVal then Output(value).mapInner(f.andThen(Output(_)))
-          else Output(value).mapInner(f)
+          if outVal then Output.pure(value).mapInner(f.andThen(Output.pure(_)))
+          else Output.pure(value).mapInner(f)
         assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
       }
   }
@@ -386,8 +401,8 @@ class OutputTest extends munit.FunSuite:
     do
       test(s"Option.flatMapInner ${value} (outVal: ${outVal})") {
         val result =
-          if outVal then Output(value).flatMapInner(f.andThen(Output(_)))
-          else Output(value).flatMapInner(f)
+          if outVal then Output.pure(value).flatMapInner(f.andThen(Output.pure(_)))
+          else Output.pure(value).flatMapInner(f)
         assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
       }
   }
@@ -401,7 +416,7 @@ class OutputTest extends munit.FunSuite:
     given Context = DummyContext().unsafeRunSync()
 
     test(s"List.headOption ${value}") {
-      val result = Output(value).headOption
+      val result = Output.pure(value).headOption
       assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
     }
   }
@@ -415,7 +430,7 @@ class OutputTest extends munit.FunSuite:
     given Context = DummyContext().unsafeRunSync()
 
     test(s"List.lastOption ${value}") {
-      val result = Output(value).lastOption
+      val result = Output.pure(value).lastOption
       assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
     }
   }
@@ -430,7 +445,7 @@ class OutputTest extends munit.FunSuite:
     given Context = DummyContext().unsafeRunSync()
 
     test(s"List.tailOrEmpty ${value}") {
-      val result = Output(value).tailOrEmpty
+      val result = Output.pure(value).tailOrEmpty
       assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
     }
   }
@@ -445,7 +460,7 @@ class OutputTest extends munit.FunSuite:
     given Context = DummyContext().unsafeRunSync()
 
     test(s"List.initOrEmpty ${value}") {
-      val result = Output(value).initOrEmpty
+      val result = Output.pure(value).initOrEmpty
       assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
     }
   }
@@ -462,8 +477,8 @@ class OutputTest extends munit.FunSuite:
     do
       test(s"List.mapInner ${value}") {
         val result =
-          if outVal then Output(value).mapInner(f.andThen(Output(_)))
-          else Output(value).mapInner(f)
+          if outVal then Output.pure(value).mapInner(f.andThen(Output.pure(_)))
+          else Output.pure(value).mapInner(f)
         assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
       }
   }
@@ -484,8 +499,8 @@ class OutputTest extends munit.FunSuite:
     do
       test(s"List.flatMapInner ${value}") {
         val result =
-          if outVal then Output(value).flatMapInner(f.andThen(Output(_)))
-          else Output(value).flatMapInner(f)
+          if outVal then Output.pure(value).flatMapInner(f.andThen(Output.pure(_)))
+          else Output.pure(value).flatMapInner(f)
         assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
       }
   }
@@ -500,7 +515,7 @@ class OutputTest extends munit.FunSuite:
     given Context = DummyContext().unsafeRunSync()
 
     test(s"Option[List].headOption ${value}") {
-      val result = Output(value).headOption
+      val result = Output.pure(value).headOption
       assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
     }
   }
@@ -515,7 +530,7 @@ class OutputTest extends munit.FunSuite:
     given Context = DummyContext().unsafeRunSync()
 
     test(s"Option[List].lastOption ${value}") {
-      val result = Output(value).lastOption
+      val result = Output.pure(value).lastOption
       assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
     }
   }
@@ -531,7 +546,7 @@ class OutputTest extends munit.FunSuite:
     given Context = DummyContext().unsafeRunSync()
 
     test(s"Option[List].tailOrEmpty ${value}") {
-      val result = Output(value).tailOrEmpty
+      val result = Output.pure(value).tailOrEmpty
       assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
     }
   }
@@ -547,7 +562,7 @@ class OutputTest extends munit.FunSuite:
     given Context = DummyContext().unsafeRunSync()
 
     test(s"Option[List].initOrEmpty ${value}") {
-      val result = Output(value).initOrEmpty
+      val result = Output.pure(value).initOrEmpty
       assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
     }
   }
@@ -577,8 +592,8 @@ class OutputTest extends munit.FunSuite:
     do
       test(s"Option[List].mapInner ${value}") {
         val result =
-          if outVal then Output(value).mapInner(f.andThen(Output(_)))
-          else Output(value).mapInner(f)
+          if outVal then Output.pure(value).mapInner(f.andThen(Output.pure(_)))
+          else Output.pure(value).mapInner(f)
         assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
       }
   }
@@ -608,8 +623,8 @@ class OutputTest extends munit.FunSuite:
     do
       test(s"Option[List].flatMapInner ${value}") {
         val result =
-          if outVal then Output(value).flatMapInner(f.andThen(Output(_)))
-          else Output(value).flatMapInner(f)
+          if outVal then Output.pure(value).flatMapInner(f.andThen(Output.pure(_)))
+          else Output.pure(value).flatMapInner(f)
         assertEquals(result.getData.unsafeRunSync(), OutputData(expected))
       }
   }
@@ -620,7 +635,7 @@ class OutputTest extends munit.FunSuite:
 
     given Context = DummyContext().unsafeRunSync()
 
-    val o3 = Output(("string", 23, true))
+    val o3 = Output.pure(("string", 23, true))
 
     val (str, int, bool) = o3.unzip
 
@@ -631,7 +646,7 @@ class OutputTest extends munit.FunSuite:
     // explicitly tuple of 20 elements
     val tupleOf22Elems = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22)
 
-    val o22 = Output(tupleOf22Elems)
+    val o22 = Output.pure(tupleOf22Elems)
 
     val tupleOf22Outputs = o22.unzip
 
@@ -640,7 +655,7 @@ class OutputTest extends munit.FunSuite:
     // explicitly tuple of 23 elements, testing tuple xxl
     val tupleOf23Elems = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, "23")
 
-    val o23 = Output(tupleOf23Elems)
+    val o23 = Output.pure(tupleOf23Elems)
 
     val tupleOf23Outputs = o23.unzip
 
@@ -670,7 +685,7 @@ class OutputTest extends munit.FunSuite:
     val failedOutput: Output[Int] = Output.fail(Exception("error"))
 
     val recoveredOutput = failedOutput.recoverWith { case _: Exception =>
-      Output(42)
+      Output.pure(42)
     }
 
     assertEquals(recoveredOutput.getData.unsafeRunSync(), OutputData(42))
@@ -731,16 +746,17 @@ class OutputTest extends munit.FunSuite:
     var tappedValue            = 0
     var tappedError: Throwable = new RuntimeException("everything is fine")
 
-    val output = Output(42).tapBoth(
-      value => {
-        tappedValue = value
-        Output.unit
-      },
-      error => {
-        tappedError = error
-        Output.unit
-      }
-    )
+    val output = Output(42)
+      .tapBoth(
+        value => {
+          tappedValue = value
+          Output.unit
+        },
+        error => {
+          tappedError = error
+          Output.unit
+        }
+      )
 
     assertEquals(output.getData.unsafeRunSync(), OutputData(42))
     assertEquals(tappedValue, 42)

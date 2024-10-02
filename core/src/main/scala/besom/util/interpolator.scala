@@ -9,14 +9,14 @@ object interpolator:
     case (x :: xs, y :: ys) => x :: y :: interleave(xs, ys)
 
   implicit final class PulumiInterpolationOps(sc: StringContext):
-    def pulumi(args: Any*)(using Context): Output[String] =
-      interleave(sc.parts.toList, args.toList).foldLeft(Output("")) { case (acc, e) =>
+    def pulumi(args: Any*): Output[String] =
+      interleave(sc.parts.toList, args.toList).foldLeft(Output.pure("")) { case (acc, e) =>
         e match
           case o: Output[?] => acc.flatMap(s => o.map(s + _.toString))
           case s: Any       => acc.map(_ + s.toString)
       }
 
-    def p(args: Any*)(using Context): Output[String] = pulumi(args*)
+    def p(args: Any*): Output[String] = pulumi(args*)
 
   implicit final class OutputStringStripMarginOps(output: Output[String]):
     def stripMargin: Output[String] = output.map(_.stripMargin)

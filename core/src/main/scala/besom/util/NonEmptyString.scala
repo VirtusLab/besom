@@ -30,7 +30,7 @@ object NonEmptyString:
       inline def asString: String = nes
 
   object OutputOps:
-    import besom.internal.{Output, Context}
+    import besom.internal.Output
     import besom.util.interpolator.*
     inline def fromStringOutput(inline s: Output[String]): Output[NonEmptyString] = ${ fromStringOutputImpl('s) }
 
@@ -47,9 +47,9 @@ object NonEmptyString:
         else report.errorAndAbort("This interpolated string is possibly empty, empty strings are not allowed here!")
 
       expr match
-        case '{ scala.StringContext.apply(${ Varargs(parts) }: _*).p(${ Varargs(_) }: _*)(using ${ xd }: Context) } =>
+        case '{ scala.StringContext.apply(${ Varargs(parts) }: _*).p(${ Varargs(_) }: _*) } =>
           handleParts(parts)
-        case '{ scala.StringContext.apply(${ Varargs(parts) }: _*).pulumi(${ Varargs(_) }: _*)(using ${ xd }: Context) } =>
+        case '{ scala.StringContext.apply(${ Varargs(parts) }: _*).pulumi(${ Varargs(_) }: _*) } =>
           handleParts(parts)
         case _ =>
           report.errorAndAbort(
@@ -170,8 +170,8 @@ object NonEmptyString:
 
   implicit inline def str2NonEmptyString(inline s: String): NonEmptyString = NonEmptyString.from(s)
 
-  import besom.internal.{Output, Context}
-  implicit inline def outputStr2OutputNonEmptyString(inline s: Output[String])(using Context): Output[NonEmptyString] =
+  import besom.internal.Output
+  implicit inline def outputStr2OutputNonEmptyString(inline s: Output[String]): Output[NonEmptyString] =
     OutputOps.fromStringOutput(s)
 
 end NonEmptyString

@@ -47,8 +47,6 @@ trait CatsEffectModule extends BesomModule:
   implicit val toFutureCatsEffectIO: Result.ToFuture[Eff] = new Result.ToFuture[IO]:
     def eval[A](fa: => IO[A]): () => Future[A] = () => fa.uncancelable.unsafeToFuture()(using ioRuntime)
 
-  // override def run(program: Context ?=> Output[Exports]): Future[Unit] = ???
-
 object Pulumi extends CatsEffectModule
 export Pulumi.{component => _, *, given}
 
@@ -70,10 +68,10 @@ import scala.reflect.Typeable
   * @return
   *   The component resource.
   */
-def component[A <: ComponentResource & Product: RegistersOutputs: Typeable](using ctx: Context)(
+def component[A <: ComponentResource & Product: RegistersOutputs: Typeable](
   name: NonEmptyString,
   typ: ResourceType,
   opts: ComponentResourceOptions = ComponentResourceOptions()
 )(
-  f: Context ?=> ComponentBase ?=> A
+  f: ComponentBase ?=> A
 ): Output[A] = Pulumi.component(name, typ, opts)(f)

@@ -4,6 +4,7 @@ import besom.internal.logging.{LocalBesomLogger => logger}
 import besom.util.NonEmptyString
 import scala.util.Try
 import besom.util.*
+import besom.internal.logging.BesomMDC
 
 case class RunInfo(
   organization: Option[NonEmptyString],
@@ -35,9 +36,11 @@ object RunInfo:
       })
       .transformM {
         case Left(error) =>
+          given BesomMDC[_] = BesomMDC.empty
           logger.error(s"Error during initial run configuration resolution: ${error.getMessage}") *>
             Result.pure(Left(error))
         case Right(runInfo) =>
+          given BesomMDC[_] = BesomMDC.empty
           logger.debug(s"Run configuration resolved successfully!") *> logger.trace(s"${printer.render(runInfo)}") *>
             Result.pure(Right(runInfo))
       }

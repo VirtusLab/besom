@@ -3,7 +3,7 @@ package besom.internal
 import RunResult.{*, given}
 
 import scala.collection.mutable
-import besom.types.*
+import besom.types.{ResourceId, URN}
 
 import java.time.LocalDateTime
 
@@ -22,8 +22,10 @@ class LoggingTest extends munit.FunSuite:
   test("plain logging works") {
     val urn      = URN("urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource")
     val logger   = BesomLogger.local().unsafeRunSync()
-    val res      = TestResource(Output(urn), Output("bar"), Output("url"))
+    val res      = TestResource(Output.pure(urn), Output.pure("bar"), Output.pure("url"))
     val messages = mutable.ArrayBuffer.empty[LogRecord]
+
+    given logging.BesomMDC[_] = logging.BesomMDC.empty
 
     scribe.Logger.root
       .clearHandlers()

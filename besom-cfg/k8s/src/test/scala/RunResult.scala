@@ -8,7 +8,7 @@ trait RunResult[F[+_]]:
 object RunResult:
   given RunResult[Future] = new RunResult[Future]:
     given ExecutionContext = ExecutionContext.fromExecutorService(
-      null, // FJP does seem to swallow fatals
+      null, // global Future EC reports fatals and uncaught exceptions to stderr, we want to quit on fatals
       (t: Throwable) =>
         // TODO this has to contain a link to github issue tracker to allow user to easily create a bug report, this is EXTREMELY IMPORTANT
         scribe.error("Uncaught fatal error in Future Runtime", t)

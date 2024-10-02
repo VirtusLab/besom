@@ -226,8 +226,8 @@ object types:
       else throw IllegalArgumentException(s"URN $s is not valid")
     }
 
-    def parse(value: String)(using besom.internal.Context): Output[URN] =
-      besom.internal.Output(besom.internal.Result.evalTry(besom.types.URN.from(value)))
+    def parse(value: String): Output[URN] =
+      besom.internal.Output.ofResult(besom.internal.Result.evalTry(besom.types.URN.from(value)))
 
     extension (urn: URN)
       /** @return

@@ -22,7 +22,7 @@ object ProtobufUtil:
     extension (i: Int) def asValue: Value = Value(Kind.NumberValue(i))
 
   given ToValue[Long] with
-    extension (l: Long) def asValue: Value = Value(Kind.NumberValue(l))
+    extension (l: Long) def asValue: Value = Value(Kind.NumberValue(l.toDouble))
 
   given ToValue[String] with
     extension (s: String) def asValue: Value = Value(Kind.StringValue(s))

@@ -4,4 +4,4 @@
 //> using dep org.virtuslab::besom-json:0.4.0-SNAPSHOT
 //> using dep io.github.classgraph:classgraph:4.8.165
 
-//> using repository sonatype:snapshots
+

@@ -4,7 +4,7 @@ import scala.language.dynamics
 import scala.quoted.*
 import scala.collection.immutable.ListMap
 import besom.cfg.internal.MetaUtils
-import besom.types.{Output, Context}
+import besom.types.Output
 import scala.util.chaining.*
 
 // possible types under `Any`:
@@ -18,7 +18,7 @@ class Struct private (val _values: ListMap[String, Any]) extends Selectable:
     onStruct: Map[String, Output[B]] => Output[B],
     onList: List[B] => Output[B],
     onValue: Any => Output[B]
-  )(using Context): Output[B] =
+  ): Output[B] =
     val onOutput: Output[_] => Output[B] = _.flatMap {
       case s: Struct => s.fold(onStruct, onList, onValue)
       case a         => onValue(a)
@@ -91,7 +91,7 @@ object Struct extends Dynamic:
         )
 
   extension (s: Struct)
-    def foldToEnv(using Context): Output[List[(String, String)]] = s.fold[List[(String, String)]](
+    def foldToEnv: Output[List[(String, String)]] = s.fold[List[(String, String)]](
       onStruct = { mapB =>
         mapB.foldLeft(Output(List.empty[(String, String)])) { case (acc, (k, v)) =>
           acc.flatMap { accList =>

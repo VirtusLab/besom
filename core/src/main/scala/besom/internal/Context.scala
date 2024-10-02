@@ -8,13 +8,14 @@ import scala.annotation.implicitNotFound
 
 case class InvokeOptions(parent: Option[Resource] = None, provider: Option[ProviderResource] = None, version: Option[String] = None)
 
-@implicitNotFound(s"""|Pulumi code has to be written with a Context in scope.
+@implicitNotFound(s"""|Some of the Pulumi functions require access to the Context.
                       |
-                      |Context is available by default in your main pulumi function, inside of `Pulumi.run`.
-                      |NOTE: Every pulumi program should only have ONE `Pulumi.run` call.
+                      |Context is available as a given (implicitly) in your main pulumi function, inside of `Pulumi.run` block.
+                      |NOTE: Every pulumi program should have only ONE `Pulumi.run` call.
                       |
-                      |If you are writing code outside of `Pulumi.run`, you can pass a Context explicitly.
-                      |This can be done by just adding a `(using Context)` clause to your function.""".stripMargin)
+                      |If you are writing code outside of `Pulumi.run` and need to call, for example, `isDryRun`, 
+                      |you can pass the Context explicitly. This can be done by just adding a `(using Context)` clause 
+                      |to your function.""".stripMargin)
 trait Context extends TaskTracker:
   private[besom] def initializeStack: Result[Unit]
   private[besom] def featureSupport: FeatureSupport
@@ -22,6 +23,7 @@ trait Context extends TaskTracker:
   private[besom] def runInfo: RunInfo
   private[besom] def monitor: Monitor
   private[besom] def memo: Memo
+  private[besom] def getStackURN: Result[URN]
   private[besom] def getParentURN: Result[URN]
   private[besom] def getParent: Option[Resource]
   private[besom] def config: Config
@@ -129,10 +131,12 @@ class ContextImpl(
   override private[besom] def pulumiStack: NonEmptyString                = runInfo.stack
 
   override private[besom] def getParentURN: Result[URN] =
-    stackPromise.get.flatMap(_.urn.getData).map(_.getValue).flatMap {
+    stackPromise.get.flatMap(_.urn.getData(using this)).map(_.getValue).flatMap {
       case Some(urn) => Result.pure(urn)
       case None      => Result.fail(Exception("Stack urn is not available. This should not happen."))
     }
+
+  override private[besom] def getStackURN: Result[URN] = getParentURN
 
   // top level Context does not return a parent (stack is the top level resource and it's providers are default provider instances)
   override private[besom] def getParent: Option[Resource] = None
