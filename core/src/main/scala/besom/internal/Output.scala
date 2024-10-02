@@ -2,10 +2,30 @@ package besom.internal
 
 import scala.collection.BuildFrom
 
+/** Output is a wrapper for a monadic effect used to model async execution that allows Pulumi to track information about dependencies
+  * between resources and properties of data (whether it's known or a secret for instance). Outputs are lazy, meaning that they are not
+  * evaluated until their value is needed.
+  */
 class Output[+A](private val inner: Context => Result[OutputData[A]]):
 
+  /** Maps the value of the Output using the given function.
+    * @param f
+    *   the function to apply to the value
+    * @return
+    *   an Output with the mapped value
+    */
   def map[B](f: A => B): Output[B] = new Output[B](ctx => inner(ctx).map(_.map(f)))
 
+  /** Flat-maps the value of the Output using the given function.
+    * @tparam B
+    *   the type of the value
+    * @param f
+    *   the function to apply to the value
+    * @return
+    *   an Output with the flat-mapped value
+    * @see
+    *   `flatMap(A => F[B])` for flat-mapping with an effectful function
+    */
   def flatMap[B](f: A => Output[B]): Output[B] = new Output(ctx =>
     for
       outputData: OutputData[A]         <- inner(ctx)
@@ -13,6 +33,18 @@ class Output[+A](private val inner: Context => Result[OutputData[A]]):
     yield nested.flatten
   )
 
+  /** Flat-maps the value of the Output using the given effectful function.
+    * @tparam F
+    *   the effect type
+    * @tparam B
+    *   the type of the value
+    * @param f
+    *   the effectful function to apply to the value
+    * @return
+    *   an Output with the flat-mapped value
+    * @see
+    *   `flatMap(A => Output[B])` for flat-mapping with Output-returning function
+    */
   def flatMap[F[_]: Result.ToFuture, B](f: A => F[B]): Output[B] = new Output(ctx =>
     for
       outputData: OutputData[A]         <- inner(ctx)
@@ -20,32 +52,82 @@ class Output[+A](private val inner: Context => Result[OutputData[A]]):
     yield nested.flatten
   )
 
+  /** Mock variant of flatMap that will fail at compile time if used with a function that returns a value instead of an Output.
+    *
+    * @param f
+    *   function to apply to the value of the Output
+    */
   inline def flatMap[B](f: A => B): Nothing = scala.compiletime.error(
     """Output#flatMap can only be used with functions that return an Output or a structure like scala.concurrent.Future, cats.effect.IO or zio.Task.
 If you want to map over the value of an Output, use the map method instead."""
   )
 
+  /** Creates an un-nested [[Output]] from an [[Output]] of an [[Output]].
+    * @tparam B
+    *   the type of the inner [[Output]]
+    * @param ev
+    *   evidence that the type of the inner [[Output]] is the same as the type of the outer [[Output]]
+    * @return
+    *   an [[Output]] with the value of the inner [[Output]]
+    */
   def flatten[B](using ev: A <:< Output[B]): Output[B] = flatMap(a => ev(a))
 
+  /** Recovers from a failed Output by applying the given function to the [[Throwable]].
+    * @param f
+    *   the function to apply to the [[Throwable]]
+    * @return
+    *   an Output with the recovered value
+    */
   def recover[B >: A](f: Throwable => B): Output[B] = new Output[B](ctx => inner(ctx).recover { t => Result.pure(OutputData(f(t))) })
 
+  /** Recovers from a failed Output by applying the given effectful function to the [[Throwable]]. Function has to return a new Output.
+    * @tparam B
+    *   the type of the recovered value
+    * @param f
+    *   the effectful function returning an Output of B to apply to the [[Throwable]]
+    * @return
+    *   an Output with the recovered value
+    */
   def recoverWith[B >: A](f: Throwable => Output[B]): Output[B] = new Output(ctx =>
     inner(ctx).recover { t =>
       f(t).inner(ctx)
     }
   )
 
+  /** Recovers from a failed Output by applying the given effectful function to the [[Throwable]]. Can be used to recover with an effect of
+    * a different type.
+    * @tparam B
+    *   the type of the recovered value
+    * @tparam F
+    *   the effect type
+    * @param f
+    *   the effectful function to apply to the [[Throwable]]
+    * @return
+    *   an Output with the recovered value
+    */
   def recoverWith[B >: A, F[_]: Result.ToFuture](f: Throwable => F[B]): Output[B] = new Output(ctx =>
     inner(ctx).recover { t =>
       Result.eval(f(t)).map(OutputData(_))
     }
   )
 
+  /** Applies the given function to the value of the Output and discards the result. Useful for logging or other side effects.
+    * @param f
+    *   the function to apply to the value
+    * @return
+    *   an Output with the original value
+    */
   def tap(f: A => Output[Unit]): Output[A] =
     flatMap { a =>
       f(a).map(_ => a)
     }
 
+  /** Applies the given function to the error of the Output and discards the result. Useful for logging or other side effects.
+    * @param f
+    *   the function to apply to the error
+    * @return
+    *   an Output with the original value
+    */
   def tapError(f: Throwable => Output[Unit]): Output[A] = new Output(ctx =>
     inner(ctx).tapBoth {
       case Left(t) => f(t).inner(ctx).void
@@ -53,6 +135,15 @@ If you want to map over the value of an Output, use the map method instead."""
     }
   )
 
+  /** Applies the given functions to the value and error of the Output and discards the results. Useful for logging or other side effects.
+    * Only one of the functions will be called, depending on whether the Output is a success or a failure.
+    * @param f
+    *   the function to apply to the value
+    * @param onError
+    *   the function to apply to the error
+    * @return
+    *   an Output with the original value
+    */
   def tapBoth(f: A => Output[Unit], onError: Throwable => Output[Unit]): Output[A] = new Output(ctx =>
     inner(ctx).tapBoth {
       case Left(t)                                => onError(t).inner(ctx).void
@@ -61,13 +152,42 @@ If you want to map over the value of an Output, use the map method instead."""
     }
   )
 
+  /** Combines [[Output]] with the given [[Output]] returning a new [[Output]] with a tuple of the two values. Subsequent zips flatten the
+    * resulting tuple: `Output[(A, B)].zip(Output[C]).zip(Output[D])` will result in `Output[(A, B, C, D)]`.
+    *
+    * @tparam B
+    *   the type of the other [[Output]]
+    * @param that
+    *   the other [[Output]] to combine with this one
+    * @param z
+    *   the [[Zippable]] instance that determines the behavior and the result type of the zip operation
+    * @return
+    *   an [[Output]] with the zipped value, by default a [[Tuple]]
+    */
   def zip[B](that: => Output[B])(using z: Zippable[A, B]): Output[z.Out] = new Output(ctx =>
     inner(ctx).zip(that.inner(ctx)).map((a, b) => a.zip(b))
   )
 
+  /** Turns a secret into a plaintext! Only use if you know what you're doing.
+    *
+    * THIS IS UNSAFE AND SHOULD BE USED WITH EXTREME CAUTION.
+    *
+    * @return
+    *   a plaintext [[Output]], the value is no longer a secret
+    */
   def asPlaintext: Output[A] = withIsSecret(Result.pure(false))
-  def asSecret: Output[A]    = withIsSecret(Result.pure(true))
 
+  /** Turns a plaintext Output into a secret.
+    *
+    * @return
+    *   a secret [[Output]]
+    */
+  def asSecret: Output[A] = withIsSecret(Result.pure(true))
+
+  /** Discards the value of the Output.
+    * @return
+    *   an [[Output]] with the unit value
+    */
   def void: Output[Unit] = map(_ => ())
 
   private[besom] def flatMapOption[B, C](using ev: A <:< Option[B])(f: B => Output[C] | Output[Option[C]]): Output[Option[C]] =
