@@ -8,6 +8,9 @@ import scala.util.control.NoStackTrace
 
 final val Version = "0.4.0-SNAPSHOT"
 
+implicit val envDefault: Default[Map[String, String]] = new Default[Map[String, String]]:
+  def default: Map[String, String] = sys.env
+
 // trait Constraint[A]:
 //   def validate(a: A): Boolean
 //   def &(other: Constraint[A]): Constraint[A] =
@@ -42,15 +45,17 @@ object ConfigurationError:
 trait Default[A]:
   def default: A
 
-trait Configured[A, INPUT]:
+trait Configured[A]:
+  type INPUT
   def schema: Schema
   def newInstance(input: INPUT): A
 
 object Configured:
 
-  trait FromEnv[A] extends Configured[A, Map[String, String]]:
+  trait FromEnv[A] extends Configured[A]:
+    type INPUT = Map[String, String]
     def schema: Schema
-    def newInstance(input: Map[String, String]): A
+    def newInstance(input: INPUT): A
 
   object FromEnv:
     val MediumIdentifier = "env"
@@ -78,36 +83,37 @@ object Configured:
       }
 
       val fromEnvExpr = Expr.summon[from.env.ReadFromEnvVars[A]].getOrElse {
-        report.error(s"Cannot find FromEnv for type ${tpe.show}")
-        throw new Exception("Cannot find FromEnv")
+        report.errorAndAbort(s"Cannot find FromEnv for type ${tpe.show}")
       }
 
       val schemaExpr = '{ Schema(${ Expr.ofList(fields) }.toList, ${ Expr(Version) }, ${ Expr(FromEnv.MediumIdentifier) }) }
 
       '{
         new Configured.FromEnv[A] {
+
           def schema = $schemaExpr
           def newInstance(input: Map[String, String]): A =
             $fromEnvExpr.decode(input, from.env.EnvPath.Root) match
               case Validated.Valid(a)        => a
               case Validated.Invalid(errors) => throw ConfigurationError(errors.toVector)
 
+          def default(using Default[INPUT]): INPUT = summon[Default[INPUT]].default
         }
       }
     end derivedImpl
   end FromEnv
 end Configured
 
-def resolveConfiguration[A, INPUT: Default](using c: Configured[A, INPUT]): A =
-  c.newInstance(summon[Default[INPUT]].default)
+def resolveConfiguration[A](using c: Configured[A], d: Default[c.INPUT]): A =
+  c.newInstance(d.default)
 
-def resolveConfiguration[A, INPUT](input: INPUT)(using c: Configured[A, INPUT]): A =
+def resolveConfiguration[A](using c: Configured[A])(input: c.INPUT): A =
   c.newInstance(input)
 
-def resolveConfigurationEither[A, INPUT: Default](using c: Configured[A, INPUT]): Either[ConfigurationError, A] =
-  try Right(resolveConfiguration[A, INPUT])
+def resolveConfigurationEither[A](using c: Configured[A], d: Default[c.INPUT]): Either[ConfigurationError, A] =
+  try Right(resolveConfiguration[A])
   catch case e: ConfigurationError => Left(e)
 
-def resolveConfigurationEither[A, INPUT](input: INPUT)(using c: Configured[A, INPUT]): Either[ConfigurationError, A] =
-  try Right(resolveConfiguration[A, INPUT](input))
+def resolveConfigurationEither[A](using c: Configured[A])(input: c.INPUT): Either[ConfigurationError, A] =
+  try Right(resolveConfiguration[A](input))
   catch case e: ConfigurationError => Left(e)

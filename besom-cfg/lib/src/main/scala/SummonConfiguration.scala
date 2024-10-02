@@ -23,7 +23,7 @@ object SummonConfiguration:
 
     Using(classPath) { scanResult =>
       val classes = scanResult
-        .getClassesImplementing(classOf[Configured[_, _]])
+        .getClassesImplementing(classOf[Configured[_]])
         .loadClasses()
         .asScala
         .toSet
@@ -51,7 +51,7 @@ object SummonConfiguration:
         .headOption
 
       val instance = maybeNoArgConst
-        .map(_.newInstance().asInstanceOf[Configured[_, _]])
+        .map(_.newInstance().asInstanceOf[Configured[_]])
         .getOrElse {
           // this works with the assumption that user used `derives` to create the instance
           // and therefore the class is placed in the companion object
@@ -63,7 +63,7 @@ object SummonConfiguration:
 
               val outer = moduleField.get(null)
 
-              ctor.newInstance(outer).asInstanceOf[Configured[_, _]]
+              ctor.newInstance(outer).asInstanceOf[Configured[_]]
             }
             .getOrElse {
               throw Exception(

@@ -97,4 +97,48 @@ class ConfiguredTest extends munit.FunSuite:
   * Missing value for key: struct.e (env var: `BESOM_CFG_struct.e`)"""
     )
   }
+
+  val env = Map("los.0" -> "test", "los.1" -> "test2").withBesomCfgPrefix
+
+  test("resolve configuration - use default") {
+    given Default[Map[String, String]] = new Default[Map[String, String]]:
+      def default: Map[String, String] = env
+
+    try
+      resolveConfiguration[Test1] match
+        case Test1(los) =>
+          assertEquals(los, List("test", "test2"))
+    catch
+      case e: ConfigurationError =>
+        fail(e.getMessage())
+  }
+
+  test("resolve configuration - use direct argument") {
+    try
+      resolveConfiguration[Test1](env) match
+        case Test1(los) =>
+          assertEquals(los, List("test", "test2"))
+    catch
+      case e: ConfigurationError =>
+        fail(e.getMessage())
+  }
+
+  test("resolve configuration - use default and either variant") {
+    given Default[Map[String, String]] = new Default[Map[String, String]]:
+      def default: Map[String, String] = env
+
+      resolveConfigurationEither[Test1] match
+        case Right(Test1(los)) =>
+          assertEquals(los, List("test", "test2"))
+        case Left(cfgError) =>
+          fail(cfgError.getMessage())
+  }
+
+  test("resolve configuration - use direct argument and either variant") {
+    resolveConfigurationEither[Test1](env) match
+      case Right(Test1(los)) =>
+        assertEquals(los, List("test", "test2"))
+      case Left(cfgError) =>
+        fail(cfgError.getMessage())
+  }
 end ConfiguredTest
