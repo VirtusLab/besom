@@ -8,9 +8,6 @@ import scala.util.control.NoStackTrace
 
 final val Version = "0.4.0-SNAPSHOT"
 
-implicit val envDefault: Default[Map[String, String]] = new Default[Map[String, String]]:
-  def default: Map[String, String] = sys.env
-
 // trait Constraint[A]:
 //   def validate(a: A): Boolean
 //   def &(other: Constraint[A]): Constraint[A] =
@@ -53,12 +50,16 @@ trait Configured[A]:
 object Configured:
 
   trait FromEnv[A] extends Configured[A]:
-    type INPUT = Map[String, String]
-    def schema: Schema
-    def newInstance(input: INPUT): A
+    type INPUT = FromEnv.EnvData
 
   object FromEnv:
     val MediumIdentifier = "env"
+
+    opaque type EnvData >: Map[String, String] = Map[String, String]
+    extension (env: EnvData) def unwrap: Map[String, String] = env
+    object EnvData:
+      given Default[EnvData] = new Default[EnvData]:
+        def default: EnvData = sys.env
 
     inline def derived[A <: Product]: Configured.FromEnv[A] = ${ derivedImpl[A] }
 
@@ -92,12 +93,10 @@ object Configured:
         new Configured.FromEnv[A] {
 
           def schema = $schemaExpr
-          def newInstance(input: Map[String, String]): A =
-            $fromEnvExpr.decode(input, from.env.EnvPath.Root) match
+          def newInstance(input: INPUT): A =
+            $fromEnvExpr.decode(input.unwrap, from.env.EnvPath.Root) match
               case Validated.Valid(a)        => a
               case Validated.Invalid(errors) => throw ConfigurationError(errors.toVector)
-
-          def default(using Default[INPUT]): INPUT = summon[Default[INPUT]].default
         }
       }
     end derivedImpl

@@ -1,5 +1,7 @@
 package besom.cfg
 
+import besom.cfg.Configured.FromEnv
+
 case class Test1(los: List[String]) derives Configured.FromEnv
 
 case class Test2(name: String, int: Int, struct: First, list: List[Double]) derives Configured.FromEnv
@@ -101,8 +103,8 @@ class ConfiguredTest extends munit.FunSuite:
   val env = Map("los.0" -> "test", "los.1" -> "test2").withBesomCfgPrefix
 
   test("resolve configuration - use default") {
-    given Default[Map[String, String]] = new Default[Map[String, String]]:
-      def default: Map[String, String] = env
+    given Default[FromEnv.EnvData] = new Default[FromEnv.EnvData]:
+      def default: FromEnv.EnvData = env
 
     try
       resolveConfiguration[Test1] match
@@ -124,8 +126,8 @@ class ConfiguredTest extends munit.FunSuite:
   }
 
   test("resolve configuration - use default and either variant") {
-    given Default[Map[String, String]] = new Default[Map[String, String]]:
-      def default: Map[String, String] = env
+    given Default[FromEnv.EnvData] = new Default[FromEnv.EnvData]:
+      def default: FromEnv.EnvData = env
 
       resolveConfigurationEither[Test1] match
         case Right(Test1(los)) =>
