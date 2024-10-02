@@ -25,7 +25,6 @@ class OutputDataTest extends munit.FunSuite:
   }
 
   test("unknown values propagate dependent resources") {
-    // given Context = DummyContext().unsafeRunSync()
     val urn = URN(
       "urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource"
     )
@@ -44,7 +43,6 @@ class OutputDataTest extends munit.FunSuite:
   }
 
   test("known values propagate dependent resources") {
-    // given Context = DummyContext().unsafeRunSync()
     val urn = URN(
       "urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource"
     )
@@ -56,7 +54,6 @@ class OutputDataTest extends munit.FunSuite:
   }
 
   test("zip operator propagates properties and dependencies") {
-    // given Context = DummyContext().unsafeRunSync()
     val urn = URN(
       "urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource"
     )
@@ -71,7 +68,6 @@ class OutputDataTest extends munit.FunSuite:
   }
 
   test("map operator propagates properties and dependencies") {
-    // given Context = DummyContext().unsafeRunSync()
     val urn = URN(
       "urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource"
     )
@@ -84,7 +80,6 @@ class OutputDataTest extends munit.FunSuite:
   }
 
   test("flatMap operator propagates properties and dependencies") {
-    // given Context = DummyContext().unsafeRunSync()
     val urn = URN(
       "urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::my-test-resource"
     )
