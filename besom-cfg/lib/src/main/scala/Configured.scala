@@ -3,6 +3,10 @@ package besom.cfg
 import scala.quoted.*
 import besom.json.*
 import besom.cfg.internal.*
+import besom.util.Validated
+import scala.util.control.NoStackTrace
+
+final val Version = "0.4.0-SNAPSHOT"
 
 // trait Constraint[A]:
 //   def validate(a: A): Boolean
@@ -26,75 +30,89 @@ import besom.cfg.internal.*
 // object NonBlank extends Constraint[String]:
 //   def validate(a: String): Boolean = a.trim.nonEmpty
 
-// trait FromEnv[A]:
-//   def fromEnv(parentKey: String, selected: Map[String, String]): A
+case class ConfigurationError(errors: Iterable[Throwable]) extends Exception(ConfigurationError.render(errors)) with NoStackTrace:
+  override def toString(): String = getMessage()
 
-// object StringFromEnv extends FromEnv[String]:
-//   def fromEnv(parentKey: String, selected: Map[String, String]): String =
-//     selected.getOrElse(parentKey, throw new Exception(s"Key $parentKey not found in env"))
+object ConfigurationError:
+  def render(errors: Iterable[Throwable]): String =
+    s"""Start of the application was impossible due to the following configuration errors:
+         |${errors.map(_.getMessage).mkString("  * ", "\n  * ", "")}
+         |""".stripMargin
 
-// given ListFromEnv[A](using FromEnv[A]): FromEnv[List[A]] with
-//   def fromEnv(parentKey: String, selected: Map[String, String]): List[A] =
-//     val prefix = s"$parentKey."
-//     val subselected = selected.filter(_._1.startsWith(prefix))
-//     subselected.keys
-//       .map { k =>
-//         val index = k.stripPrefix(prefix)
-//         val value = summon[FromEnv[A]].fromEnv(k, selected)
-//         index.toInt -> value
-//       }
-//       .toList
-//       .sortBy(_._1)
-//       .map(_._2)
+trait Default[A]:
+  def default: A
 
 trait Configured[A]:
+  type INPUT
   def schema: Schema
-  def newInstanceFromEnv(env: Map[String, String] = sys.env): A
+  def newInstance(input: INPUT): A
 
 object Configured:
-  val Version = "0.1.0"
 
-  inline def derived[A <: Product]: Configured[A] = ${ derivedImpl[A] }
+  trait FromEnv[A] extends Configured[A]:
+    type INPUT = FromEnv.EnvData
 
-  def derivedImpl[A <: Product: Type](using ctx: Quotes): Expr[Configured[A]] =
-    import ctx.reflect.*
+  object FromEnv:
+    val MediumIdentifier = "env"
 
-    val tpe = TypeRepr.of[A]
-    val fields = tpe.typeSymbol.caseFields.map { case sym =>
-      val name = Expr(sym.name)
-      val ftpe: Expr[ConfiguredType[_]] =
-        tpe.memberType(sym).dealias.asType match
-          case '[t] =>
-            Expr.summon[ConfiguredType[t]].getOrElse {
-              report.error(
-                s"Cannot find ConfiguredType for type ${tpe.memberType(sym).dealias.show}"
-              )
-              throw new Exception("Cannot find ConfiguredType")
-            }
-          case _ =>
-            report.error("Unsupported type")
-            throw new Exception("Unsupported type")
+    opaque type EnvData >: Map[String, String] = Map[String, String]
+    extension (env: EnvData) def unwrap: Map[String, String] = env
+    object EnvData:
+      given Default[EnvData] = new Default[EnvData]:
+        def default: EnvData = sys.env
 
-      '{ Field(${ name }, ${ ftpe }.toFieldType) }
-    }
+    inline def derived[A <: Product]: Configured.FromEnv[A] = ${ derivedImpl[A] }
 
-    val fromEnvExpr = Expr.summon[FromEnv[A]].getOrElse {
-      report.error(s"Cannot find FromEnv for type ${tpe.show}")
-      throw new Exception("Cannot find FromEnv")
-    }
+    def derivedImpl[A <: Product: Type](using ctx: Quotes): Expr[Configured.FromEnv[A]] =
+      import ctx.reflect.*
 
-    val schemaExpr = '{ Schema(${ Expr.ofList(fields) }.toList, ${ Expr(Version) }) }
+      val tpe = TypeRepr.of[A]
+      val fields = tpe.typeSymbol.caseFields.map { case sym =>
+        val name = Expr(sym.name)
+        val ftpe: Expr[ConfiguredType[_]] =
+          tpe.memberType(sym).dealias.asType match
+            case '[t] =>
+              Expr.summon[ConfiguredType[t]].getOrElse {
+                report.errorAndAbort(
+                  s"Cannot find ConfiguredType for type ${tpe.memberType(sym).dealias.show}"
+                )
+              }
 
-    '{
-      new Configured[A] {
-        def schema = $schemaExpr
-        def newInstanceFromEnv(env: Map[String, String] = sys.env): A =
-          $fromEnvExpr.decode(env, "").getOrElse {
-            throw new Exception("Failed to decode")
-          }
+            case _ => report.errorAndAbort("Unsupported type")
+
+        '{ Field(${ name }, ${ ftpe }.toFieldType) }
       }
-    }
+
+      val fromEnvExpr = Expr.summon[from.env.ReadFromEnvVars[A]].getOrElse {
+        report.errorAndAbort(s"Cannot find FromEnv for type ${tpe.show}")
+      }
+
+      val schemaExpr = '{ Schema(${ Expr.ofList(fields) }.toList, ${ Expr(Version) }, ${ Expr(FromEnv.MediumIdentifier) }) }
+
+      '{
+        new Configured.FromEnv[A] {
+
+          def schema = $schemaExpr
+          def newInstance(input: INPUT): A =
+            $fromEnvExpr.decode(input.unwrap, from.env.EnvPath.Root) match
+              case Validated.Valid(a)        => a
+              case Validated.Invalid(errors) => throw ConfigurationError(errors.toVector)
+        }
+      }
+    end derivedImpl
+  end FromEnv
 end Configured
 
-def resolveConfiguration[A](using c: Configured[A]): A =
-  c.newInstanceFromEnv()
+def resolveConfiguration[A](using c: Configured[A], d: Default[c.INPUT]): A =
+  c.newInstance(d.default)
+
+def resolveConfiguration[A](using c: Configured[A])(input: c.INPUT): A =
+  c.newInstance(input)
+
+def resolveConfigurationEither[A](using c: Configured[A], d: Default[c.INPUT]): Either[ConfigurationError, A] =
+  try Right(resolveConfiguration[A])
+  catch case e: ConfigurationError => Left(e)
+
+def resolveConfigurationEither[A](using c: Configured[A])(input: c.INPUT): Either[ConfigurationError, A] =
+  try Right(resolveConfiguration[A](input))
+  catch case e: ConfigurationError => Left(e)

@@ -1,8 +1,10 @@
 package besom.cfg
 
-case class Test1(los: List[String]) derives Configured
+import besom.cfg.Configured.FromEnv
 
-case class Test2(name: String, int: Int, struct: First, list: List[Double]) derives Configured
+case class Test1(los: List[String]) derives Configured.FromEnv
+
+case class Test2(name: String, int: Int, struct: First, list: List[Double]) derives Configured.FromEnv
 case class First(d: Int, e: String)
 
 case class Test3(
@@ -14,17 +16,21 @@ case class Test3(
   lo: List[String],
   ol: List[String],
   os: Third
-) derives Configured
+) derives Configured.FromEnv
 case class Second(f1: List[Fourth], f2: String)
 case class Third(oh: String, it: String)
 case class Fourth(deep: String)
 
 class ConfiguredTest extends munit.FunSuite:
 
-  test("very simple case class") {
-    val env = Map("los.0" -> "test", "los.1" -> "test2")
+  extension (m: Map[String, String])
+    def withBesomCfgPrefix: Map[String, String] =
+      m.map { case (k, v) => s"${from.env.ReadFromEnvVars.Prefix}_$k" -> v }
 
-    summon[Configured[Test1]].newInstanceFromEnv(env) match
+  test("very simple case class") {
+    val env = Map("los.0" -> "test", "los.1" -> "test2").withBesomCfgPrefix
+
+    summon[Configured.FromEnv[Test1]].newInstance(env) match
       case Test1(los) =>
         assertEquals(los, List("test", "test2"))
   }
@@ -38,9 +44,9 @@ class ConfiguredTest extends munit.FunSuite:
       "list.0" -> "1.2",
       "list.1" -> "2.3",
       "list.2" -> "3.4"
-    )
+    ).withBesomCfgPrefix
 
-    summon[Configured[Test2]].newInstanceFromEnv(env) match
+    summon[Configured.FromEnv[Test2]].newInstance(env) match
       case Test2(name, int, s, l) =>
         assertEquals(name, "test")
         assertEquals(int, 23)
@@ -67,9 +73,9 @@ class ConfiguredTest extends munit.FunSuite:
       "ol.2" -> "z",
       "os.oh" -> "yeah",
       "os.it" -> "works!"
-    )
+    ).withBesomCfgPrefix
 
-    summon[Configured[Test3]].newInstanceFromEnv(env) match
+    summon[Configured.FromEnv[Test3]].newInstance(env) match
       case Test3(name, int, s, l, ls, lo, ol, os) =>
         assertEquals(name, "test")
         assertEquals(int, 23)
@@ -79,5 +85,62 @@ class ConfiguredTest extends munit.FunSuite:
         assertEquals(lo, List("a", "b", "c"))
         assertEquals(ol, List("x", "y", "z"))
         assertEquals(os, Third("yeah", "works!"))
+  }
+
+  test("proper error messages") {
+    val confErr = intercept[ConfigurationError](summon[Configured.FromEnv[Test2]].newInstance(Map.empty))
+    assertEquals(confErr.errors.size, 4)
+    assertNoDiff(
+      confErr.getMessage(),
+      """Start of the application was impossible due to the following configuration errors:
+  * Missing value for key: name (env var: `BESOM_CFG_name`)
+  * Missing value for key: int (env var: `BESOM_CFG_int`)
+  * Missing value for key: struct.d (env var: `BESOM_CFG_struct.d`)
+  * Missing value for key: struct.e (env var: `BESOM_CFG_struct.e`)"""
+    )
+  }
+
+  val env = Map("los.0" -> "test", "los.1" -> "test2").withBesomCfgPrefix
+
+  test("resolve configuration - use default") {
+    given Default[FromEnv.EnvData] = new Default[FromEnv.EnvData]:
+      def default: FromEnv.EnvData = env
+
+    try
+      resolveConfiguration[Test1] match
+        case Test1(los) =>
+          assertEquals(los, List("test", "test2"))
+    catch
+      case e: ConfigurationError =>
+        fail(e.getMessage())
+  }
+
+  test("resolve configuration - use direct argument") {
+    try
+      resolveConfiguration[Test1](env) match
+        case Test1(los) =>
+          assertEquals(los, List("test", "test2"))
+    catch
+      case e: ConfigurationError =>
+        fail(e.getMessage())
+  }
+
+  test("resolve configuration - use default and either variant") {
+    given Default[FromEnv.EnvData] = new Default[FromEnv.EnvData]:
+      def default: FromEnv.EnvData = env
+
+    resolveConfigurationEither[Test1] match
+      case Right(Test1(los)) =>
+        assertEquals(los, List("test", "test2"))
+      case Left(cfgError) =>
+        fail(cfgError.getMessage())
+  }
+
+  test("resolve configuration - use direct argument and either variant") {
+    resolveConfigurationEither[Test1](env) match
+      case Right(Test1(los)) =>
+        assertEquals(los, List("test", "test2"))
+      case Left(cfgError) =>
+        fail(cfgError.getMessage())
   }
 end ConfiguredTest
