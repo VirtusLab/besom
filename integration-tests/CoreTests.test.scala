@@ -7,14 +7,34 @@ import besom.scripts.Version
 import os.*
 
 import scala.concurrent.duration.*
+import scala.meta.internal.javacp.BaseType.S
+
+class Lazy[A](private val get: () => A):
+  lazy val value: A = get()
 
 //noinspection ScalaWeakerAccess,TypeAnnotation,ScalaFileName
-class CoreTests extends munit.FunSuite {
+class CoreTests extends munit.FunSuite:
   override val munitTimeout = 5.minutes
 
   given config: Config = Config()
 
   val wd = os.pwd / "integration-tests"
+
+  // lists ALL schemas used in tests to deduplicate generation and compilation
+  val Schemas = Set("random", "tls", "purrl", "kubernetes")
+
+  // done this way because fixtures are executed during CoreTests constructor evaluation
+  // without laziness all schemas would be generated on test suite init
+  val SchemasWithLatestVersion: Map[String, Lazy[String]] = Schemas.map { schemaName =>
+    val latestVersion = Lazy(() => {
+      val latestVersion = Version.latestPackageVersion(schemaName)
+      val result        = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
+      scalaCli.publishLocal(result.outputDir).call()
+      latestVersion
+    })
+
+    schemaName -> latestVersion
+  }.toMap
 
   FunFixture[pulumi.FixtureContext](
     setup = pulumi.fixture.setup(
@@ -74,14 +94,12 @@ class CoreTests extends munit.FunSuite {
   FunFixture[pulumi.FixtureContext](
     setup = {
       val schemaName    = "random"
-      val latestVersion = Version.latestPackageVersion(schemaName)
-      val result        = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
-      scalaCli.publishLocal(result.outputDir).call()
+      val latestVersion = SchemasWithLatestVersion(schemaName)
       pulumi.fixture.setup(
         wd / "resources" / "random-example",
         projectFiles = Map(
           "project.scala" ->
-            (defaultProjectFile + CodeGen.packageDependency(schemaName, latestVersion))
+            (defaultProjectFile + CodeGen.packageDependency(schemaName, latestVersion.value))
         )
       )
     },
@@ -99,14 +117,12 @@ class CoreTests extends munit.FunSuite {
   FunFixture[pulumi.FixtureContext](
     setup = {
       val schemaName    = "tls"
-      val latestVersion = Version.latestPackageVersion(schemaName)
-      val result        = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
-      scalaCli.publishLocal(result.outputDir).call()
+      val latestVersion = SchemasWithLatestVersion(schemaName)
       pulumi.fixture.setup(
         wd / "resources" / "tls-example",
         projectFiles = Map(
           "project.scala" ->
-            (defaultProjectFile + CodeGen.packageDependency(schemaName, latestVersion))
+            (defaultProjectFile + CodeGen.packageDependency(schemaName, latestVersion.value))
         )
       )
     },
@@ -118,16 +134,14 @@ class CoreTests extends munit.FunSuite {
   FunFixture[pulumi.FixtureMultiContext](
     setup = {
       val schemaName    = "tls"
-      val latestVersion = Version.latestPackageVersion(schemaName)
-      val result        = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
-      scalaCli.publishLocal(result.outputDir).call()
+      val latestVersion = SchemasWithLatestVersion(schemaName)
       pulumi.fixture.setup(
         FixtureOpts(),
         FixtureArgs(
           wd / "resources" / "memoization" / "source-stack",
           projectFiles = Map(
             "project.scala" ->
-              (defaultProjectFile + CodeGen.packageDependency(schemaName, latestVersion))
+              (defaultProjectFile + CodeGen.packageDependency(schemaName, latestVersion.value))
           )
         ),
         FixtureArgs(
@@ -160,16 +174,14 @@ class CoreTests extends munit.FunSuite {
   FunFixture[pulumi.FixtureMultiContext](
     setup = {
       val schemaName    = "tls"
-      val latestVersion = Version.latestPackageVersion(schemaName)
-      val result        = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
-      scalaCli.publishLocal(result.outputDir).call()
+      val latestVersion = SchemasWithLatestVersion(schemaName)
       pulumi.fixture.setup(
         FixtureOpts(),
         FixtureArgs(
           wd / "resources" / "references" / "source-stack",
           projectFiles = Map(
             "project.scala" ->
-              (defaultProjectFile + CodeGen.packageDependency(schemaName, latestVersion))
+              (defaultProjectFile + CodeGen.packageDependency(schemaName, latestVersion.value))
           )
         ),
         FixtureArgs(
@@ -202,16 +214,14 @@ class CoreTests extends munit.FunSuite {
   FunFixture[pulumi.FixtureContext](
     setup = {
       val schemaName    = "tls"
-      val latestVersion = Version.latestPackageVersion(schemaName)
-      val result        = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
-      scalaCli.publishLocal(result.outputDir).call()
+      val latestVersion = SchemasWithLatestVersion(schemaName)
       pulumi.fixture.setup(
         wd / "resources" / "zio-tls-example",
         projectFiles = Map(
           "project.scala" ->
             (defaultProjectFile
               + s"""//> using dep org.virtuslab::besom-zio:$coreVersion\n"""
-              + CodeGen.packageDependency(schemaName, latestVersion))
+              + CodeGen.packageDependency(schemaName, latestVersion.value))
         )
       )
     },
@@ -223,16 +233,14 @@ class CoreTests extends munit.FunSuite {
   FunFixture[pulumi.FixtureContext](
     setup = {
       val schemaName    = "purrl"
-      val latestVersion = Version.latestPackageVersion(schemaName)
-      val result        = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
-      scalaCli.publishLocal(result.outputDir).call()
+      val latestVersion = SchemasWithLatestVersion(schemaName)
       pulumi.fixture.setup(
         wd / "resources" / "cats-purrl-example",
         projectFiles = Map(
           "project.scala" ->
             (defaultProjectFile
               + s"""//> using dep org.virtuslab::besom-cats:$coreVersion\n"""
-              + CodeGen.packageDependency(schemaName, latestVersion))
+              + CodeGen.packageDependency(schemaName, latestVersion.value))
         )
       )
     },
@@ -244,14 +252,12 @@ class CoreTests extends munit.FunSuite {
   FunFixture[pulumi.FixtureContext](
     setup = {
       val schemaName    = "kubernetes"
-      val latestVersion = Version.latestPackageVersion(schemaName)
-      val result        = codegen.generatePackage(PackageMetadata(schemaName, latestVersion))
-      scalaCli.publishLocal(result.outputDir).call()
+      val latestVersion = SchemasWithLatestVersion(schemaName)
       pulumi.fixture.setup(
         wd / "resources" / "kubernetes-secrets",
         projectFiles = Map(
           "project.scala" ->
-            (defaultProjectFile + CodeGen.packageDependency(schemaName, latestVersion))
+            (defaultProjectFile + CodeGen.packageDependency(schemaName, latestVersion.value))
         )
       )
     },
@@ -290,4 +296,5 @@ class CoreTests extends munit.FunSuite {
           |""".stripMargin
     )
   }
-}
+
+end CoreTests
