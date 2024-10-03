@@ -7,7 +7,6 @@ import besom.scripts.Version
 import os.*
 
 import scala.concurrent.duration.*
-import scala.meta.internal.javacp.BaseType.S
 
 class Lazy[A](private val get: () => A):
   lazy val value: A = get()
