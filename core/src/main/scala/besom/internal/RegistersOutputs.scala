@@ -3,6 +3,8 @@ package besom.internal
 import com.google.protobuf.struct.*
 import scala.quoted.*
 
+// this is a class instead of a trait because inline given derived below
+// instances that blow up metaspace, this is a warning in 3.3.4
 class RegistersOutputs[A <: ComponentResource & Product](func: Context ?=> A => Result[Struct]):
   def serializeOutputs(a: A)(using Context): Result[Struct] = func(a)
 
