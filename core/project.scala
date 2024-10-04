@@ -1,8 +1,6 @@
 //> using scala "3.3.1"
 //> using options "-java-output-version:11", "-Ysafe-init", "-Xmax-inlines:64"
 //> using options "-Werror", "-Wunused:all", "-deprecation", "-feature"
-// deprecation:i can be removed on 3.3.4
-//> using options "-Wconf:cat=deprecation:i", "-Wconf:cat=deprecation&src=src/main/scala/besom/rpc:s"
 // -language:noAutoTupling // after https://github.com/VirtusLab/scala-cli/issues/2708
 
 //> using dep "org.virtuslab::besom-json:0.4.0-SNAPSHOT"
@@ -31,4 +29,3 @@
 //> using publish.developer "prolativ|Michał Pałka|https://github.com/prolativ"
 //> using publish.developer "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban"
 //> using publish.developer "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
-
