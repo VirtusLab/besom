@@ -47,6 +47,12 @@ trait LanguageRuntimeService extends LanguageRuntime:
   def pack(request: PackRequest): Future[PackResponse] =
     unimplementedUnaryCall(LanguageRuntimeGrpc.METHOD_PACK)
 
+  def runtimeOptionsPrompts(request: RuntimeOptionsRequest): Future[RuntimeOptionsResponse] =
+    unimplementedUnaryCall(LanguageRuntimeGrpc.METHOD_RUNTIME_OPTIONS_PROMPTS)
+
+  def about(request: AboutRequest): Future[AboutResponse] =
+    unimplementedUnaryCall(LanguageRuntimeGrpc.METHOD_ABOUT)
+
   private def unimplementedUnaryCall[A, B](methodDescriptor: MethodDescriptor[A, B]): Future[B] =
     Future.failed(
       Status.UNIMPLEMENTED.withDescription(s"Method ${methodDescriptor.getFullMethodName} is unimplemented").asRuntimeException()
