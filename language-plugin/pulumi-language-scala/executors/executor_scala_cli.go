@@ -21,17 +21,18 @@ func (s scalacli) NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, e
 	if err != nil {
 		return nil, err
 	}
-	return s.newScalaCliExecutor(cmd, opts.BootstrapLibJarPath)
+	pluginDiscovererOutputPath := PluginDiscovererOutputFilePath(opts.WD)
+	return s.newScalaCliExecutor(cmd, opts.BootstrapLibJarPath, pluginDiscovererOutputPath)
 }
 
-func (scalacli) newScalaCliExecutor(cmd string, bootstrapLibJarPath string) (*ScalaExecutor, error) {
+func (scalacli) newScalaCliExecutor(cmd string, bootstrapLibJarPath string, pluginDiscovererOutputPath string) (*ScalaExecutor, error) {
 	scalaCliOpts := os.Getenv("BESOM_LANGHOST_SCALA_CLI_OPTS")
 	return &ScalaExecutor{
 		Name:        "scala-cli",
 		Cmd:         cmd,
 		BuildArgs:   []string{"compile", ".", scalaCliOpts},
 		RunArgs:     []string{"run", ".", scalaCliOpts},
-		PluginArgs:  []string{"run", ".", scalaCliOpts, "--jar", bootstrapLibJarPath, "--main-class", "besom.bootstrap.PulumiPluginsDiscoverer"},
+		PluginArgs:  []string{"run", ".", scalaCliOpts, "--jar", bootstrapLibJarPath, "--main-class", "besom.bootstrap.PulumiPluginsDiscoverer", "--", "--output-file", pluginDiscovererOutputPath},
 		VersionArgs: []string{"version", "--cli", "--offline"},
 	}, nil
 }

@@ -283,7 +283,7 @@ class LanguagePluginTest extends munit.FunSuite {
       projectFiles = Map("build.sbt" -> sbtBuildFile)
     ),
     teardown = pulumi.fixture.teardown
-  ).test("sbt".tag(LocalOnly)) { ctx =>
+  ).test("sbt") { ctx =>
     testExecutor(ctx)
   }
 

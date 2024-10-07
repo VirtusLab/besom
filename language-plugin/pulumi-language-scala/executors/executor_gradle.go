@@ -35,7 +35,8 @@ func (g gradle) NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, err
 	if err != nil {
 		return nil, err
 	}
-	executor, err := g.newGradleExecutor(gradleRoot, cmd, subproject, opts.BootstrapLibJarPath)
+	pluginDiscovererOutputPath := PluginDiscovererOutputFilePath(opts.WD)
+	executor, err := g.newGradleExecutor(gradleRoot, cmd, subproject, opts.BootstrapLibJarPath, pluginDiscovererOutputPath)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +105,7 @@ func (gradle) isGradleProject(dir fs.FS, opts ScalaExecutorOptions) (bool, error
 	return false, nil
 }
 
-func (g gradle) newGradleExecutor(gradleRoot fsys.ParentFS, cmd, subproject string, bootstrapLibJarPath string) (*ScalaExecutor, error) {
+func (g gradle) newGradleExecutor(gradleRoot fsys.ParentFS, cmd, subproject string, bootstrapLibJarPath string, pluginDiscovererOutputPath string) (*ScalaExecutor, error) {
 	se := &ScalaExecutor{
 		Name:      "gradle",
 		Cmd:       cmd,
@@ -112,13 +113,10 @@ func (g gradle) newGradleExecutor(gradleRoot fsys.ParentFS, cmd, subproject stri
 		BuildArgs: []string{g.prefix(subproject, "build"), "--console=plain"},
 		RunArgs:   []string{g.prefix(subproject, "run"), "--console=plain"},
 		PluginArgs: []string{
-			/* STDOUT needs to be clean of gradle output,
-			   because we expect a JSON with plugin
-			   results */
-			"-q", // must go first due to a bug https://github.com/gradle/gradle/issues/5098
 			g.prefix(subproject, "run"), "--console=plain",
 			"-PbesomBootstrapJar=" + bootstrapLibJarPath,
 			"-PmainClass=besom.bootstrap.PulumiPluginsDiscoverer",
+			"--args=--output-file " + pluginDiscovererOutputPath,
 		},
 		VersionArgs: []string{"--version"},
 	}

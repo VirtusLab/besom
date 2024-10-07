@@ -412,7 +412,7 @@ compile-codegen: publish-local-model
 	scala-cli --power compile {{no-bloop}} codegen --suppress-experimental-feature-warning
 
 # Runs tests for Besom codegen
-test-codegen: compile-codegen
+test-codegen:
 	scala-cli --power test {{no-bloop}} codegen --suppress-experimental-feature-warning
 
 # Cleans codegen build

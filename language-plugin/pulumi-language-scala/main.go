@@ -210,10 +210,22 @@ func (host *scalaLanguageHost) determinePulumiPackages(
 		return []plugin.PulumiPluginJSON{}, nil
 	}
 
-	logging.V(5).Infof("GetRequiredPlugins: bootstrap raw output=%v", output)
+	projectRoot := host.execOptions.WD
+	outputFilePath := executors.PluginDiscovererOutputFilePath(projectRoot)
+	defer os.Remove(outputFilePath)
+
+	outputFileBytes, err := os.ReadFile(outputFilePath)
+
+	if err != nil {
+		logging.V(3).Infof("language host failed to read project's plugins from file, "+
+			"returning empty plugins; cause: %s", err)
+		return []plugin.PulumiPluginJSON{}, nil
+	}
+
+	logging.V(5).Infof("GetRequiredPlugins: bootstrap raw output=%v", string(outputFileBytes))
 
 	var plugins []plugin.PulumiPluginJSON
-	err = json.Unmarshal([]byte(output.stdout), &plugins)
+	err = json.Unmarshal(outputFileBytes, &plugins)
 	if err != nil {
 		if e, ok := err.(*json.SyntaxError); ok {
 			logging.V(5).Infof("JSON syntax error at byte offset %d", e.Offset)

@@ -29,7 +29,8 @@ func (m maven) NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, erro
 	if err != nil {
 		return nil, err
 	}
-	executor, err := m.newMavenExecutor(cmd, opts.BootstrapLibJarPath)
+	pluginDiscovererOutputPath := PluginDiscovererOutputFilePath(opts.WD)
+	executor, err := m.newMavenExecutor(cmd, opts.BootstrapLibJarPath, pluginDiscovererOutputPath)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +59,7 @@ func (maven) isMavenProject(opts ScalaExecutorOptions) (bool, error) {
 	return fsys.FileExists(opts.WD, "pom.xml")
 }
 
-func (maven) newMavenExecutor(cmd string, bootstrapLibJarPath string) (*ScalaExecutor, error) {
+func (maven) newMavenExecutor(cmd string, bootstrapLibJarPath string, pluginDiscovererOutputPath string) (*ScalaExecutor, error) {
 	return &ScalaExecutor{
 		Name: "maven",
 		Cmd:  cmd,
@@ -75,12 +76,11 @@ func (maven) newMavenExecutor(cmd string, bootstrapLibJarPath string) (*ScalaExe
 			"scala:run",
 		},
 		PluginArgs: []string{
-			/* move normal output to STDERR, because we need STDOUT for JSON with plugin results */
-			"-Dorg.slf4j.simpleLogger.logFile=System.err",
 			"--no-transfer-progress",
 			"-DbesomBootstrapJar=" + bootstrapLibJarPath,
 			"-DmainClass=besom.bootstrap.PulumiPluginsDiscoverer",
 			"scala:run",
+			"-DaddArgs=--output-file|" + pluginDiscovererOutputPath,
 		},
 		VersionArgs: []string{"--version"},
 	}, nil

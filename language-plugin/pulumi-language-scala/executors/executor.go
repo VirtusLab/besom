@@ -4,6 +4,7 @@ package executors
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/virtuslab/besom/language-host/fsys"
 )
@@ -93,4 +94,10 @@ func (c combinedScalaExecutorFactory) NewScalaExecutor(opts ScalaExecutorOptions
 
 func combineScalaExecutorFactories(variations ...scalaExecutorFactory) scalaExecutorFactory {
 	return combinedScalaExecutorFactory(variations)
+}
+
+const PluginDiscovererOutputFileName = ".besom-pulumi-plugins.json"
+
+func PluginDiscovererOutputFilePath(projectRoot fsys.ParentFS) string {
+	return path.Join(projectRoot.Path(), PluginDiscovererOutputFileName)
 }
