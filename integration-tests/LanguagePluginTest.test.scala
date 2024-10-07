@@ -199,12 +199,10 @@ class LanguagePluginTest extends munit.FunSuite {
         clue(actual) == clue(expectedBootstrapPluginsJson)
       }
 
-    val pulumiUpEnv = ctx.env + ("PULUMI_DISABLE_AUTOMATIC_PLUGIN_ACQUISITION" -> "false")
-
     val pulumiUpOutput =
       pulumi
         .up(ctx.stackName, "--skip-preview")
-        .call(cwd = ctx.programDir, env = pulumiUpEnv)
+        .call(cwd = ctx.programDir, env = ctx.env)
         .out
         .text()
 
