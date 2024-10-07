@@ -1,0 +1,3 @@
+name: besom-aws-lambdas
+runtime: scala
+description: Simple AWS infrastructure with lambdas
