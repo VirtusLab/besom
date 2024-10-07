@@ -1,7 +1,6 @@
 package besom.internal
 
 import besom.internal.logging.{LocalBesomLogger => logger}
-import besom.util.NonEmptyString
 import scala.util.Try
 import besom.util.*
 import besom.internal.logging.BesomMDC

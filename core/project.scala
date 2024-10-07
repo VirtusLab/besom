@@ -1,6 +1,6 @@
 //> using scala "3.3.1"
 //> using options "-java-output-version:11", "-Ysafe-init", "-Xmax-inlines:64"
-//> using options "-Werror", "-Wunused:all", "-deprecation", "-feature", "-Wconf:cat=deprecation:i"
+//> using options "-Werror", "-Wunused:all", "-deprecation", "-feature"
 // -language:noAutoTupling // after https://github.com/VirtusLab/scala-cli/issues/2708
 
 //> using dep "org.virtuslab::besom-json:0.4.0-SNAPSHOT"
@@ -29,4 +29,3 @@
 //> using publish.developer "prolativ|Michał Pałka|https://github.com/prolativ"
 //> using publish.developer "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban"
 //> using publish.developer "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
-

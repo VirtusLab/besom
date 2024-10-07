@@ -3,15 +3,16 @@ package besom.internal
 import com.google.protobuf.struct.*
 import scala.quoted.*
 
-trait RegistersOutputs[A <: ComponentResource & Product]:
-  def serializeOutputs(a: A)(using Context): Result[Struct]
+// this is a class instead of a trait because inline given derived below generated
+// anonymous instances that blow up metaspace, this is a warning in 3.3.4
+class RegistersOutputs[A <: ComponentResource & Product](func: Context ?=> A => Result[Struct]):
+  def serializeOutputs(a: A)(using Context): Result[Struct] = func(a)
 
 object RegistersOutputs:
   def apply[A <: ComponentResource & Product](using ro: RegistersOutputs[A]): RegistersOutputs[A] = ro
 
-  inline given derived[A <: ComponentResource & Product]: RegistersOutputs[A] = new RegistersOutputs[A] {
-    def serializeOutputs(a: A)(using Context): Result[Struct] = derivedImpl[A](a)
-  }
+  inline given derived[A <: ComponentResource & Product]: RegistersOutputs[A] =
+    new RegistersOutputs[A](a => derivedImpl[A](a))
 
   // noinspection ScalaUnusedSymbol
   private inline def derivedImpl[A](a: A)(using ctx: Context): Result[Struct] = ${ serializeOutputsImpl[A]('ctx, 'a) }
