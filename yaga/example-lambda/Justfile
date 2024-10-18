@@ -1,0 +1,67 @@
+set fallback := true
+
+output-dir := justfile_directory() / ".out"
+lambdas-output-dir := output-dir / "lambdas"
+
+make-output-dirs:
+  mkdir -p {{output-dir}}
+  mkdir -p {{lambdas-output-dir}}
+
+compile-child-lambda:
+  scala-cli compile child-lambda
+
+package-child-lambda: make-output-dirs
+  #!/usr/bin/env bash
+  jarPath={{lambdas-output-dir}}/child-lambda.jar
+  rm -f "$jarPath"
+  scala-cli package -f child-lambda --assembly --preamble=false -o "$jarPath"
+
+prepare-parent-lambda:
+  #!/usr/bin/env bash
+  # TODO: Should generate sources from derived child schema
+  rm -rf parent-lambda/generated
+  mkdir parent-lambda/generated
+  cp child-lambda-derived/src/ChildLambdaShapes.scala parent-lambda/generated/
+
+compile-parent-lambda:
+  scala-cli compile parent-lambda
+
+package-parent-lambda: make-output-dirs
+  #!/usr/bin/env bash
+  jarPath={{lambdas-output-dir}}/parent-lambda.jar
+  rm -f "$jarPath"
+  scala-cli package -f parent-lambda --assembly --preamble=false -o "$jarPath"
+
+prepare-infra:
+  #!/usr/bin/env bash
+  # TODO: Should generate sources from derived child and parent schemas
+  rm -rf infra/generated
+  mkdir infra/generated
+  cp child-lambda-derived/src/* infra/generated/
+  cp parent-lambda-derived/src/* infra/generated/
+
+compile-infra:
+  scala-cli compile infra
+
+build-example:
+  #!/usr/bin/env bash
+  just package-child-lambda
+  just prepare-parent-lambda
+  just package-parent-lambda
+  just prepare-infra
+  just compile-infra
+
+infra-up:
+  #!/usr/bin/env bash
+  cd infra
+  PULUMI_CONFIG_PASSPHRASE="" pulumi up --stack dev
+
+infra-down:
+  #!/usr/bin/env bash
+  cd infra
+  PULUMI_CONFIG_PASSPHRASE="" pulumi down --stack dev
+
+infra-output:
+  #!/usr/bin/env bash
+  cd infra
+  PULUMI_CONFIG_PASSPHRASE="" pulumi stack output --stack dev

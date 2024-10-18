@@ -3,6 +3,9 @@ import besom.api.aws
 import besom.api.aws.lambda.{Function, FunctionArgs}
 import besom.json.*
 
+import yaga.extensions.aws.lambda.ShapedFunction
+import yaga.generated.lambdatest.child.{Bar, Baz} // TODO use packages with version?
+import yaga.generated.lambdatest.parent.{ParentLambdaConfig}
 
 @main def main = Pulumi.run {
   val basicFunctionRole = aws.iam.Role(
@@ -22,16 +25,25 @@ import besom.json.*
     )
   )
 
-  val lambda1Code = Archive.FileArchive("../.out/lambdas/lambda1.jar")
-  val lambda2Code = Archive.FileArchive("../.out/lambdas/lambda2.jar")
+  val childHandlerMeta = ShapedFunction.lambdaHandlerMetadataFromLocalJar[Unit, Bar, Baz](
+    jarPath = "../../.out/lambdas/child-lambda.jar",
+    handlerClassName = "lambdatest.child.ChildLambda"
+  )
 
-  val lambda2 = Function("lambda2", FunctionArgs(
-    name = "lambda2",
-    code = lambda2Code,
-    handler = "lambdatest.Lambda2",
+  val childLambdaArgs = FunctionArgs(
+    name = "childLambda",
     runtime = "java21",
     role = basicFunctionRole.arn
-  ))
+  )
+
+  val childLambda = ShapedFunction(
+    "childLambda",
+    childHandlerMeta,
+    config = (),
+    childLambdaArgs
+  )
+
+  val childLambdaArn = childLambda.unshapedFunction.arn
 
   val invokeOtherLambdaPolicy = aws.iam.Policy("invokeOtherLambdaPolicy", aws.iam.PolicyArgs(
     name = "invokeOtherLambdaPolicy",
@@ -45,7 +57,7 @@ import besom.json.*
                 "lambda:InvokeFunction",
                 "lambda:InvokeAsync"
             ],
-            "Resource": ${lambda2.arn}
+            "Resource": ${childLambdaArn}
         }
       ]
     }""".map(_.prettyPrint)
@@ -68,19 +80,34 @@ import besom.json.*
     )
   ))
 
-  val lambda1 = Function("lambda1", FunctionArgs(
-    name = "lambda1",
-    code = lambda1Code,
-    handler = "lambdatest.Lambda1",
+  val parentHandlerMeta = ShapedFunction.lambdaHandlerMetadataFromLocalJar[ParentLambdaConfig, Unit, Unit](
+    jarPath = "../../.out/lambdas/parent-lambda.jar",
+    handlerClassName = "lambdatest.parent.ParentLambda"
+  )
+
+  val parentLambdaArgs = FunctionArgs(
+    name = "parentLambda",
     runtime = "java21",
     role = invokeOtherLambdaRole.arn,
     timeout = 30
-  ))
+  )
 
+  val parentLambda = ShapedFunction(
+    "parentLambda",
+    parentHandlerMeta,
+    config = childLambda.map { cl =>
+       ParentLambdaConfig(
+        childLambdaHandle = cl.functionHandle
+      )
+    },
+    parentLambdaArgs
+  )
+
+  val parentLambdaArn = parentLambda.arn
 
   Stack()
     .exports(
-      lambda1Name = lambda1.arn,
-      lambda2Name = lambda2.arn
+      // parentLambdaName = parentLambdaArn,
+      // childLambdaName = childLambdaArn
     )
 }
