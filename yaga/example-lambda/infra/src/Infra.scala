@@ -11,6 +11,7 @@ import yaga.generated.lambdatest.parent.{ParentLambdaConfig}
   val basicFunctionRole = aws.iam.Role(
     name = "basicFunctionRole",
     aws.iam.RoleArgs(
+      // TODO Add some helpers so that users don't have to use copy-pasted code
       assumeRolePolicy = json"""{
           "Version": "2012-10-17",
           "Statement": [{
@@ -26,6 +27,7 @@ import yaga.generated.lambdatest.parent.{ParentLambdaConfig}
   )
 
   val childHandlerMeta = ShapedFunction.lambdaHandlerMetadataFromLocalJar[Unit, Bar, Baz](
+    // TODO Path relative to the directory containing this file while a FileArchive(...) would treat this as relative to the directory containing Pulumi.yaml. Which semantics should we use?
     jarPath = "../../.out/lambdas/child-lambda.jar",
     handlerClassName = "lambdatest.child.ChildLambda"
   )
@@ -33,13 +35,13 @@ import yaga.generated.lambdatest.parent.{ParentLambdaConfig}
   val childLambdaArgs = FunctionArgs(
     name = "childLambda",
     runtime = "java21",
-    role = basicFunctionRole.arn
+    role = basicFunctionRole.arn // TODO Could we somehow check IAM permissions at compile time? 
   )
 
   val childLambda = ShapedFunction(
     "childLambda",
     childHandlerMeta,
-    config = (),
+    config = (), // TODO don't require config if it's empty
     childLambdaArgs
   )
 
@@ -107,7 +109,7 @@ import yaga.generated.lambdatest.parent.{ParentLambdaConfig}
 
   Stack()
     .exports(
-      // parentLambdaName = parentLambdaArn,
-      // childLambdaName = childLambdaArn
+      parentLambdaName = parentLambdaArn,
+      childLambdaName = childLambdaArn
     )
 }

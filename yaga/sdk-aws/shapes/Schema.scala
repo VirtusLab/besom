@@ -21,7 +21,7 @@ object Schema:
       case '[Int] => FieldType.Int
       case '[String] => FieldType.String
       case '[Unit] => FieldType.Struct()
-      case '[ShapedFunctionHandle[?, ?]] =>
+      case '[ShapedFunctionHandle[?, ?]] => // TODO Don't special-case this here?
         FieldType.Struct(
           "functionName" -> FieldType.String,
           "inputSchema" -> FieldType.String,
@@ -29,7 +29,6 @@ object Schema:
         )
       // TODO other primitive types
       case _ =>
-        // TODO relying on symbol might lose type information for generics
         val caseClassSymbol = tpe.typeSymbol
 
         // Ensure it's a case class

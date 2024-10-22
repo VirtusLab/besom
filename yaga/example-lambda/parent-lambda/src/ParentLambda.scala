@@ -1,6 +1,4 @@
 //> using scala 3.3.3
-//> using dep com.amazonaws:aws-lambda-java-core:1.2.3
-//> using dep software.amazon.awssdk:lambda:2.28.25
 //> using dep ch.qos.logback:logback-classic:1.5.11
 //> using dep org.virtuslab::yaga-aws:0.4.0-SNAPSHOT
 //> using resourceDir ../resources
