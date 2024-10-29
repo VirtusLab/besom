@@ -14,7 +14,7 @@ import software.amazon.awssdk.core.SdkBytes
 
 import besom.json.*
 
-import yaga.extensions.aws.lambda.{EnvWriter, EnvReader, ShapedLambdaClient, ShapedRequestHandler, ShapedFunctionHandle}
+import yaga.extensions.aws.lambda.{LambdaHandler, LambdaShape, ShapedLambdaClient, ShapedFunctionHandle}
 
 import yaga.generated.lambdatest.child.{Foo, Bar, Baz}
 
@@ -22,23 +22,17 @@ case class ParentLambdaConfig(
   childLambdaHandle: ShapedFunctionHandle[Bar, Baz]
 ) derives JsonFormat
 
-@yaga.extensions.aws.lambda.annotations.ConfigSchema("""Struct(List((childLambdaHandle,Struct(ArraySeq((functionName,String), (inputSchema,String), (outputSchema,String))))))""")
-@yaga.extensions.aws.lambda.annotations.InputSchema("""Struct(ArraySeq())""")
-@yaga.extensions.aws.lambda.annotations.OutputSchema("""Struct(ArraySeq())""")
-class ParentLambda extends ShapedRequestHandler[ParentLambdaConfig, Unit, Unit]:
-  val lambdaClient = LambdaClient.builder().build()
+case class Qux(
+  str: String = "abcb"
+) derives JsonFormat
+
+class ParentLambda extends LambdaHandler[ParentLambdaConfig, Qux, Unit] derives LambdaShape:
   val shapedLambdaClient = ShapedLambdaClient()
   println("Parent lambda initialized")
 
-  override def handleInput(input: Unit, context: Context): Unit =
-    invokeChildLambda()
-
-  def invokeChildLambda() =
-    val input = Bar(Foo(str = "abcb"))
+  override def handleInput(input: Qux) =
+    val childInput = Bar(Foo(str = input.str))
     val lambdaHandle = config.childLambdaHandle
-    println(s"Invoking child lambda with input: $input")
-    val output = shapedLambdaClient.invokeSync(lambdaHandle, input)
+    println(s"Invoking child lambda with input: $childInput")
+    val output = shapedLambdaClient.invokeSync(lambdaHandle, childInput)
     println(s"Child lambda output: $output")
-
-@main def runLambda(lambdaName: String) =
-  ParentLambda().invokeChildLambda()

@@ -5,7 +5,7 @@ import besom.json.*
 
 import yaga.extensions.aws.lambda.ShapedFunction
 import yaga.generated.lambdatest.child.{Bar, Baz} // TODO use packages with version?
-import yaga.generated.lambdatest.parent.{ParentLambdaConfig}
+import yaga.generated.lambdatest.parent.{ParentLambdaConfig, Qux}
 
 @main def main = Pulumi.run {
   val basicFunctionRole = aws.iam.Role(
@@ -82,7 +82,7 @@ import yaga.generated.lambdatest.parent.{ParentLambdaConfig}
     )
   ))
 
-  val parentHandlerMeta = ShapedFunction.lambdaHandlerMetadataFromLocalJar[ParentLambdaConfig, Unit, Unit](
+  val parentHandlerMeta = ShapedFunction.lambdaHandlerMetadataFromLocalJar[ParentLambdaConfig, Qux, Unit](
     jarPath = "../../.out/lambdas/parent-lambda.jar",
     handlerClassName = "lambdatest.parent.ParentLambda"
   )
@@ -98,7 +98,7 @@ import yaga.generated.lambdatest.parent.{ParentLambdaConfig}
     "parentLambda",
     parentHandlerMeta,
     config = childLambda.map { cl =>
-       ParentLambdaConfig(
+      ParentLambdaConfig(
         childLambdaHandle = cl.functionHandle
       )
     },

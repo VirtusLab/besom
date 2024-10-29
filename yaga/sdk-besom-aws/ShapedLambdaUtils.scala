@@ -4,6 +4,7 @@ import scala.util.Try
 import scala.reflect.ClassTag
 import scala.quoted.*
 import java.nio.file.{Files, Paths}
+import java.lang.reflect.Modifier
 
 import yaga.shapes.Schema
 
@@ -16,7 +17,8 @@ object ShapedLambdaUtils:
   ): LambdaHandlerMetadata[Config, Input, Output] = ${ lambdaHandlerMetadataFromLocalJarImpl[Config, Input, Output]('jarPath, 'handlerClassName) }
 
   private def lambdaHandlerMetadataFromLocalJarImpl[C : Type, I : Type, O : Type](
-    jarPathExpr: Expr[String], handlerClassNameExpr: Expr[String]
+    jarPathExpr: Expr[String],
+    handlerClassNameExpr: Expr[String]
   )(using Quotes): Expr[LambdaHandlerMetadata[C, I, O]] =
     import quotes.reflect.*
     
@@ -32,42 +34,46 @@ object ShapedLambdaUtils:
     val jarUrlString = s"file://${jarAbsolutePath}"
     val classLoader = new java.net.URLClassLoader(Array(java.net.URL(jarUrlString)))
 
-    val clazz = classLoader.loadClass(handlerClassName)
-    val className = clazz.getName
-    val superClassName = clazz.getSuperclass.getName
-    val expectedSuperClassName = classOf[ShapedRequestHandler[?, ?, ?]].getName
-    assert(superClassName == expectedSuperClassName, s"The handler class $className does not inherit directly from $expectedSuperClassName")
+    val handlerClass = classLoader.loadClass(handlerClassName)
+    val handlerSuperClassName = handlerClass.getSuperclass.getName
+    val expectedSuperClassName = classOf[LambdaHandler[?, ?, ?]].getName
+    assert(handlerSuperClassName == expectedSuperClassName, s"The handler class $handlerClassName does not inherit directly from $expectedSuperClassName")
+
+    val shapeInstanceMethod =
+      val lambdaShapeClassName = classOf[LambdaShape[?]].getName
+      val methodsByType = handlerClass.getMethods.filter(_.getReturnType.getName == lambdaShapeClassName).toList
+      val instanceMethod = methodsByType match
+        case meth :: Nil =>
+          meth
+        case _ =>
+          throw new Exception(s"Expected exactly one instance of ${lambdaShapeClassName} for ${handlerClassName} but found ${methodsByType.length}")
+      assert(Modifier.isStatic(instanceMethod.getModifiers), s"Method ${instanceMethod.getName} in class ${handlerClass.getName} must but static")
+      instanceMethod
+
+    val shapeInstance = shapeInstanceMethod.invoke(null)
+
+    val shapeClass = shapeInstance.getClass
+    val configSchema = shapeClass.getMethod("configSchema").invoke(shapeInstance).asInstanceOf[String]
+    val inputSchema = shapeClass.getMethod("inputSchema").invoke(shapeInstance).asInstanceOf[String]
+    val outputSchema = shapeClass.getMethod("outputSchema").invoke(shapeInstance).asInstanceOf[String]
 
     val expectedConfigSchema = Schema.getSchemaStr[C]
     val expectedInputSchema = Schema.getSchemaStr[I]
     val expectedOutputSchema = Schema.getSchemaStr[O]
 
-    def getAnnotationValue(annotationClass: Class[?]): String =
-      // clazz.getAnnotation[T] doesn't seem to work when getting a class via an external classloader
-      val annotationClassName = annotationClass.getName
-      val annotation = clazz.getAnnotations.find(_.annotationType.getName == annotationClassName).getOrElse(throw new Exception(s"Annotation $annotationClassName not found on class $handlerClassName"))
-      val valueMethod = classLoader.loadClass(annotationClassName).getMethod("value")
-      valueMethod.invoke(annotation).asInstanceOf[String]
-
-    import yaga.extensions.aws.lambda.annotations.{ConfigSchema, InputSchema, OutputSchema}
-
-    val providedConfigSchema = getAnnotationValue(classOf[ConfigSchema])
-    val providedInputSchema = getAnnotationValue(classOf[InputSchema])
-    val providedOutputSchema = getAnnotationValue(classOf[OutputSchema])
-
     assert(
-      areSchemasCompatible(expectedSchema = expectedConfigSchema, providedSchema = providedConfigSchema),
-      s"Lambda handler config schema mismatch; Expected: $expectedConfigSchema; Declared in classfile: $providedConfigSchema"
+      areSchemasCompatible(expectedSchema = expectedConfigSchema, actualSchema = configSchema),
+      s"Lambda handler config schema mismatch; Expected: $expectedConfigSchema; Declared in classfile: $configSchema"
     )
 
     assert(
-      areSchemasCompatible(expectedSchema = expectedInputSchema, providedSchema = providedInputSchema),
-      s"Lambda handler input schema mismatch; Expected: $expectedInputSchema; Declared in classfile: $providedInputSchema"
+      areSchemasCompatible(expectedSchema = expectedInputSchema, actualSchema = inputSchema),
+      s"Lambda handler input schema mismatch; Expected: $expectedInputSchema; Declared in classfile: $inputSchema"
     )
 
     assert(
-      areSchemasCompatible(expectedSchema = expectedOutputSchema, providedSchema = providedOutputSchema),
-      s"Lambda handler output schema mismatch; Expected: $expectedOutputSchema; Declared in classfile: $providedOutputSchema"
+      areSchemasCompatible(expectedSchema = expectedOutputSchema, actualSchema = outputSchema),
+      s"Lambda handler output schema mismatch; Expected: $expectedOutputSchema; Declared in classfile: $outputSchema"
     )
 
     val jarAbsolutePathExpr = Expr(jarAbsolutePath.toString)
@@ -79,7 +85,7 @@ object ShapedLambdaUtils:
       )
     }
 
-  private def areSchemasCompatible(expectedSchema: String, providedSchema: String) =
+  private def areSchemasCompatible(expectedSchema: String, actualSchema: String) =
     // TODO 1: Parse schemas and compare structurally
     // TODO 2: Compare semantically, e.g. optional fields, default values?
-    expectedSchema == providedSchema
+    expectedSchema == actualSchema

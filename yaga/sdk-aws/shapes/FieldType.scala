@@ -21,7 +21,7 @@ object FieldType:
         case FieldType.String             => '{ FieldType.String }
         case FieldType.Boolean            => '{ FieldType.Boolean }
         case FieldType.Array(inner)       => '{ FieldType.Array(${ Expr(inner) }) }
-        case FieldType.Struct(fields: _*) => '{ FieldType.Struct(${ Expr(fields) }: _*) }
+        case FieldType.Struct(fields*)    => '{ FieldType.Struct(${ Expr(fields) }*) }
         case FieldType.Optional(inner)    => '{ FieldType.Optional(${ Expr(inner) }) }
 
   given FromExpr[FieldType] with
@@ -35,7 +35,7 @@ object FieldType:
         case '{ FieldType.String }              => Some(FieldType.String)
         case '{ FieldType.Boolean }             => Some(FieldType.Boolean)
         case '{ FieldType.Array($inner) }       => Some(FieldType.Array(inner.valueOrAbort))
-        case '{ FieldType.Struct($fields: _*) } => Some(FieldType.Struct(fields.valueOrAbort: _*))
+        case '{ FieldType.Struct($fields*) }    => Some(FieldType.Struct(fields.valueOrAbort*))
         case '{ FieldType.Optional($inner) }    => Some(FieldType.Optional(inner.valueOrAbort))
         case _                                  => println("didn't match in FieldType"); None
 
@@ -48,7 +48,7 @@ object FieldType:
       case FieldType.String       => JsObject("type" -> JsString("string"))
       case FieldType.Boolean      => JsObject("type" -> JsString("boolean"))
       case FieldType.Array(inner) => JsObject("type" -> JsString("array"), "inner" -> write(inner))
-      case FieldType.Struct(fields: _*) =>
+      case FieldType.Struct(fields*) =>
         JsObject(
           "type" -> JsString("struct"),
           "fields" -> JsObject(fields.map { case (k, v) => k -> write(v) }.toMap)
@@ -72,7 +72,7 @@ object FieldType:
             fields.get("fields") match
               case Some(JsObject(innerFields)) =>
                 val structFields = innerFields.map { case (k, v) => k -> read(v) }
-                FieldType.Struct(structFields.toVector: _*)
+                FieldType.Struct(structFields.toVector*)
               case None => throw new Exception("Invalid JSON: struct.fields must be present")
               case _    => throw new Exception("Invalid JSON: struct.fields must be an object")
           case Some(JsString("optional")) =>

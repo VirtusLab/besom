@@ -19,5 +19,5 @@ publish-local-sdk-aws:
 compile-sdk-besom-aws:
   scala-cli compile sdk-besom-aws
 
-publish-local-sdk-besom-aws:
+publish-local-sdk-besom-aws: publish-local-sdk-aws
   scala-cli publish local sdk-besom-aws
