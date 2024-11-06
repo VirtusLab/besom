@@ -1,4 +1,4 @@
-package yaga.extensions.aws.lambda
+package yaga.extensions.aws.lambda.internal
 
 import software.amazon.awssdk.core.SdkBytes
 

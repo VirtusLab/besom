@@ -1,11 +1,10 @@
 import besom.*
 import besom.api.aws
-import besom.api.aws.lambda.{Function, FunctionArgs}
+import besom.api.aws.lambda.FunctionArgs
 import besom.json.*
 
-import yaga.extensions.aws.lambda.ShapedFunction
-import yaga.generated.lambdatest.child.{Bar, Baz} // TODO use packages with version?
-import yaga.generated.lambdatest.parent.{ParentLambdaConfig, Qux}
+import yaga.generated.lambdatest.child.{Lambda as ChildLambda} // TODO use packages with version?
+import yaga.generated.lambdatest.parent.{Lambda as ParentLambda, Config as ParentLambdaConfig}
 
 @main def main = Pulumi.run {
   val basicFunctionRole = aws.iam.Role(
@@ -26,26 +25,12 @@ import yaga.generated.lambdatest.parent.{ParentLambdaConfig, Qux}
     )
   )
 
-  val childHandlerMeta = ShapedFunction.lambdaHandlerMetadataFromLocalJar[Unit, Bar, Baz](
-    // TODO Path relative to the directory containing this file while a FileArchive(...) would treat this as relative to the directory containing Pulumi.yaml. Which semantics should we use?
-    jarPath = "../../.out/lambdas/child-lambda.jar",
-    handlerClassName = "lambdatest.child.ChildLambda"
-  )
-
-  val childLambdaArgs = FunctionArgs(
-    name = "childLambda",
-    runtime = "java21",
-    role = basicFunctionRole.arn // TODO Could we somehow check IAM permissions at compile time? 
-  )
-
-  val childLambda = ShapedFunction(
+  val childLambda = ChildLambda(
     "childLambda",
-    childHandlerMeta,
-    config = (), // TODO don't require config if it's empty
-    childLambdaArgs
+    FunctionArgs(
+      role = basicFunctionRole.arn
+    )
   )
-
-  val childLambdaArn = childLambda.unshapedFunction.arn
 
   val invokeOtherLambdaPolicy = aws.iam.Policy("invokeOtherLambdaPolicy", aws.iam.PolicyArgs(
     name = "invokeOtherLambdaPolicy",
@@ -59,7 +44,7 @@ import yaga.generated.lambdatest.parent.{ParentLambdaConfig, Qux}
                 "lambda:InvokeFunction",
                 "lambda:InvokeAsync"
             ],
-            "Resource": ${childLambdaArn}
+            "Resource": ${childLambda.arn}
         }
       ]
     }""".map(_.prettyPrint)
@@ -82,34 +67,22 @@ import yaga.generated.lambdatest.parent.{ParentLambdaConfig, Qux}
     )
   ))
 
-  val parentHandlerMeta = ShapedFunction.lambdaHandlerMetadataFromLocalJar[ParentLambdaConfig, Qux, Unit](
-    jarPath = "../../.out/lambdas/parent-lambda.jar",
-    handlerClassName = "lambdatest.parent.ParentLambda"
-  )
-
-  val parentLambdaArgs = FunctionArgs(
-    name = "parentLambda",
-    runtime = "java21",
-    role = invokeOtherLambdaRole.arn,
-    timeout = 30
-  )
-
-  val parentLambda = ShapedFunction(
+  val parentLambda = ParentLambda(
     "parentLambda",
-    parentHandlerMeta,
-    config = childLambda.map { cl =>
+    FunctionArgs(
+      role = invokeOtherLambdaRole.arn,
+      timeout = 30
+    ),
+    config = childLambda.map { child =>
       ParentLambdaConfig(
-        childLambdaHandle = cl.functionHandle
+        childLambdaHandle = child.lambdaHandle
       )
-    },
-    parentLambdaArgs
+    }
   )
-
-  val parentLambdaArn = parentLambda.arn
 
   Stack()
     .exports(
-      parentLambdaName = parentLambdaArn,
-      childLambdaName = childLambdaArn
+      parentLambdaName = parentLambda.arn,
+      childLambdaName = childLambda.arn
     )
 }

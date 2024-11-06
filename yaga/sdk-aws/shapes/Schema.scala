@@ -1,7 +1,7 @@
 package yaga.shapes
 
 import scala.quoted.*
-import yaga.extensions.aws.lambda.ShapedFunctionHandle
+import yaga.extensions.aws.lambda.LambdaHandle
 
 object Schema:
   inline def deriveSchemaStr[A] = ${ deriveSchemaStrImpl[A] }
@@ -21,7 +21,7 @@ object Schema:
       case '[Int] => FieldType.Int
       case '[String] => FieldType.String
       case '[Unit] => FieldType.Struct()
-      case '[ShapedFunctionHandle[?, ?]] => // TODO Don't special-case this here?
+      case '[LambdaHandle[?, ?]] => // TODO Don't special-case this here?
         FieldType.Struct(
           "functionName" -> FieldType.String,
           "inputSchema" -> FieldType.String,
@@ -29,7 +29,7 @@ object Schema:
         )
       // TODO other primitive types
       case _ =>
-        val caseClassSymbol = tpe.typeSymbol
+        val caseClassSymbol = tpe.dealias.typeSymbol // TODO should be `.dealiasKeepOpaques` but it's not available in LTS
 
         // Ensure it's a case class
         val caseClassFields = if (!caseClassSymbol.flags.is(Flags.Case)) {

@@ -1,4 +1,4 @@
-package yaga.extensions.aws.lambda
+package yaga.extensions.aws.lambda.internal
 
 import scala.util.Try
 import besom.json.{JsonParser, JsonReader}
@@ -14,4 +14,3 @@ object InputStreamReader:
         val json = JsonParser(str)
         jsonReader.read(json)
       }.toEither
-

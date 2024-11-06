@@ -3,7 +3,7 @@ package yaga.extensions.aws.lambda
 import scala.util.Try
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import com.amazonaws.services.lambda.runtime.Context
-
+import yaga.extensions.aws.lambda.internal.{EnvReader, InputStreamReader, OutputStreamWriter}
 
 abstract class LambdaHandler[C, I, O](using configReader: EnvReader[C], inputReader: InputStreamReader[I], outputWriter: OutputStreamWriter[O]) extends RequestStreamHandler:
   protected type RequestContext = Context
@@ -32,4 +32,3 @@ abstract class LambdaHandler[C, I, O](using configReader: EnvReader[C], inputRea
         throw e
       case Right(_) =>
         {}
-

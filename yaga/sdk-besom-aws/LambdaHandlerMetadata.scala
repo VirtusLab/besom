@@ -1,8 +1,9 @@
-package yaga.extensions.aws.lambda
+package yaga.extensions.aws.lambda.internal
 
-import besom.types.Archive
-
-class LambdaHandlerMetadata[C, I, O](
-  val codeArchive: Archive,
-  val handlerClassName: String
+case class LambdaHandlerMetadata(
+  handlerClassName: String,
+  artifactAbsolutePath: String,
+  configSchema: String,
+  inputSchema: String,
+  outputSchema: String
 )

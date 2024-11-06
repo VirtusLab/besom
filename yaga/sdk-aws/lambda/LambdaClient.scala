@@ -1,12 +1,14 @@
 package yaga.extensions.aws.lambda
 
-import software.amazon.awssdk.services.lambda.LambdaClient
+import software.amazon.awssdk.services.lambda.{LambdaClient as UnshapedLambdaClient}
 import software.amazon.awssdk.services.lambda.model.InvokeRequest
+import yaga.extensions.aws.lambda.internal.{LambdaInputSerializer, LambdaOutputDeserializer}
 
-class ShapedLambdaClient(
-  val unshapedClient: LambdaClient = LambdaClient.builder().build()
+class LambdaClient(
+  val unshapedClient: UnshapedLambdaClient = UnshapedLambdaClient.builder().build()
 ):
-  def invokeSync[I, O](function: ShapedFunctionHandle[I, O], input: I)(using 
+  def invokeSync[I, O](function: LambdaHandle[I, O], input: I)(using
+    // TODO Remove serde typeclasses from the signature by bundling them in the function handle?
     inputSerializer: LambdaInputSerializer[I],
     outputDeserializer: LambdaOutputDeserializer[O]
   ): O = // TODO Wrap O in some error monad?; Expose other elements of InvokeResponse

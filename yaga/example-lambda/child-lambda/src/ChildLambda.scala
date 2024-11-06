@@ -5,7 +5,6 @@
 package lambdatest.child
 
 import yaga.extensions.aws.lambda.{LambdaHandler, LambdaShape}
-
 import besom.json.* // TODO Simplify? We need only defaultProtocol and formats for primitive types
 
 case class Foo(str: String) derives JsonFormat
@@ -14,4 +13,4 @@ case class Baz(str: String) derives JsonFormat
 
 class ChildLambda extends LambdaHandler[Unit, Bar, Baz] derives LambdaShape:
   override def handleInput(event: Bar) =
-    Baz(s"Got nested input: ${event.foo.str.reverse}")
+    Baz(event.foo.str.reverse)

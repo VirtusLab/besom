@@ -1,13 +1,13 @@
 package yaga.extensions.aws.lambda
 
 object Codecs:
-  private case class ShapedFunctionHandleSerdeModel(
+  private case class LambdaHandleSerdeModel(
     functionName: String
     // TODO include stringified schema here?
   )
 
-  given shapedFunctionHandleEncoder[I, O]: besom.types.Encoder[ShapedFunctionHandle[I, O]] =
-    besom.internal.Encoder.derived[ShapedFunctionHandleSerdeModel].contramap: handle =>
-      ShapedFunctionHandleSerdeModel(
+  given lambdaHandleEncoder[I, O]: besom.types.Encoder[LambdaHandle[I, O]] =
+    besom.internal.Encoder.derived[LambdaHandleSerdeModel].contramap: handle =>
+      LambdaHandleSerdeModel(
         functionName = handle.functionName
       )

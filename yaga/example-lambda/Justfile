@@ -1,53 +1,79 @@
 set fallback := true
 
 output-dir := justfile_directory() / ".out"
-lambdas-output-dir := output-dir / "lambdas"
+# lambdas-output-dir := output-dir / "lambdas"
 
-make-output-dirs:
+make-output-dir:
   mkdir -p {{output-dir}}
-  mkdir -p {{lambdas-output-dir}}
 
 compile-child-lambda:
   scala-cli compile child-lambda
 
-package-child-lambda: make-output-dirs
+publish-local-assembled-child-lambda: make-output-dir
   #!/usr/bin/env bash
-  jarPath={{lambdas-output-dir}}/child-lambda.jar
-  rm -f "$jarPath"
+  outputDir="{{output-dir}}/child"
+  jarName="child-lambda.jar"
+  rm -rf "$outputDir"
+  mkdir -p "$outputDir"
+  jarPath="${outputDir}/${jarName}"
   scala-cli package -f child-lambda --assembly --preamble=false -o "$jarPath"
+  unpackedDir="${outputDir}/unpacked"
+  mkdir "$unpackedDir"
+
+  cd "$unpackedDir"
+  jar xf "../${jarName}"
+  rm -r META-INF/MANIFEST.MF
+  cd -
+
+  scala-cli publish local child-lambda/publish -S 3.3.4 --resource-dirs "$unpackedDir" --organization org.virtuslab --name child-lambda --project-version 0.0.1-SNAPSHOT --doc=false
 
 prepare-parent-lambda:
   #!/usr/bin/env bash
   # TODO: Should generate sources from derived child schema
   rm -rf parent-lambda/generated
-  mkdir parent-lambda/generated
-  cp child-lambda-derived/src/ChildLambdaShapes.scala parent-lambda/generated/
+  mkdir -p parent-lambda/generated/child-lambda
+  cp -r child-lambda-derived/model parent-lambda/generated/child-lambda/
 
 compile-parent-lambda:
   scala-cli compile parent-lambda
 
-package-parent-lambda: make-output-dirs
+publish-local-assembled-parent-lambda: make-output-dir
   #!/usr/bin/env bash
-  jarPath={{lambdas-output-dir}}/parent-lambda.jar
-  rm -f "$jarPath"
+  outputDir="{{output-dir}}/parent"
+  jarName="parent-lambda.jar"
+  rm -rf "$outputDir"
+  mkdir -p "$outputDir"
+  jarPath="${outputDir}/${jarName}"
   scala-cli package -f parent-lambda --assembly --preamble=false -o "$jarPath"
+  unpackedDir="${outputDir}/unpacked"
+  mkdir "$unpackedDir"
+
+  cd "$unpackedDir"
+  jar xf "../${jarName}"
+  rm -r META-INF/MANIFEST.MF
+  cd -
+
+  scala-cli publish local parent-lambda/publish -S 3.3.4 --resource-dirs "$unpackedDir" --organization org.virtuslab --name parent-lambda --project-version 0.0.1-SNAPSHOT --doc=false
 
 prepare-infra:
   #!/usr/bin/env bash
   # TODO: Should generate sources from derived child and parent schemas
   rm -rf infra/generated
-  mkdir infra/generated
-  cp child-lambda-derived/src/* infra/generated/
-  cp parent-lambda-derived/src/* infra/generated/
+  mkdir -p infra/generated/child-lambda
+  cp -r child-lambda-derived/model infra/generated/child-lambda/
+  cp -r child-lambda-derived/infra infra/generated/child-lambda/
+  mkdir -p infra/generated/parent-lambda
+  cp -r parent-lambda-derived/model infra/generated/parent-lambda/
+  cp -r parent-lambda-derived/infra infra/generated/parent-lambda/
 
 compile-infra:
   scala-cli compile infra
 
 build-example:
   #!/usr/bin/env bash
-  just package-child-lambda
+  just publish-local-assembled-child-lambda
   just prepare-parent-lambda
-  just package-parent-lambda
+  just publish-local-assembled-parent-lambda
   just prepare-infra
   just compile-infra
 
