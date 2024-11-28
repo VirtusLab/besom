@@ -13,4 +13,6 @@ case class Baz(str: String) derives JsonFormat
 
 class ChildLambda extends LambdaHandler[Unit, Bar, Baz] derives LambdaShape:
   override def handleInput(event: Bar) =
+    println(s"Received input: $event")
+
     Baz(event.foo.str.reverse)

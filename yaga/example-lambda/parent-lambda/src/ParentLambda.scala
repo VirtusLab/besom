@@ -22,8 +22,14 @@ class ParentLambda extends LambdaHandler[Config, Qux, Unit] derives LambdaShape:
   println("Parent lambda initialized")
 
   override def handleInput(input: Qux) =
-    val childInput = Bar(Foo(str = input.str))
     val childLambdaHandle = config.childLambdaHandle
-    println(s"Invoking child lambda with input: $childInput")
-    val output = lambdaClient.invokeSync(childLambdaHandle, childInput)
+
+    val childAsyncInput = Bar(Foo(str = input.str))
+    println(s"Invoking child lambda asynchronously with input: $childAsyncInput")
+    lambdaClient.invokeAsyncUnsafe(childLambdaHandle, childAsyncInput)
+    println("Triggered child lambda")
+    
+    val childSyncInput = Bar(Foo(str = input.str.toUpperCase))
+    println(s"Invoking child lambda synchronously with input: $childSyncInput")
+    val output = lambdaClient.invokeSyncUnsafe(childLambdaHandle, childSyncInput)
     println(s"Child lambda output: $output")
