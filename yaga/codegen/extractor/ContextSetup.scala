@@ -5,7 +5,7 @@ import tastyquery.Types.*
 import tastyquery.Traversers.TreeTraverser
 import tastyquery.Symbols.*
 import tastyquery.Definitions
-import tastyquery.Names
+import tastyquery.Classpaths.*
 
 object ContextSetup:
   def contextFromJar(jarPath: String): Context =
@@ -21,11 +21,11 @@ object ContextSetup:
     Context.initialize(classpath)
 
   def contextFromMavenCoordinates(orgName: String, moduleName: String , version: String): Context =
-    val jarPath = getJarPathFromMavenCoordinates(orgName, moduleName, version)
+    val jarPath = jarPathFromMavenCoordinates(orgName, moduleName, version)
     contextFromJar(jarPath)
 
   // TODO copy-pasted from LambdaHandlerUtils
-  private def getJarPathFromMavenCoordinates(orgName: String, moduleName: String , version: String): java.nio.file.Path =
+  def jarPathFromMavenCoordinates(orgName: String, moduleName: String , version: String): java.nio.file.Path =
     import coursier._
 
     // TODO Verify performance and try to speed up compilation
@@ -64,8 +64,11 @@ object ContextSetup:
     urlClassLoader.getURLs().toSeq.collect:
       case url if url.toString.contains("besom/yaga") => java.nio.file.Paths.get(url.toURI)
 
-  def testReplContext(): Context =
+  def testReplClasspath(): Classpath =
     val currentPaths = getReplClasspathUrls()
     val cp = getReplClasspathUrls().toList
-    val classpath = tastyquery.jdk.ClasspathLoaders.read(cp)
+    tastyquery.jdk.ClasspathLoaders.read(cp)
+
+  def testReplContext(): Context =
+    val classpath = testReplClasspath()
     Context.initialize(classpath)

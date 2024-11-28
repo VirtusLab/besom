@@ -3,6 +3,8 @@
 //> using dep org.virtuslab::yaga-codegen:0.4.0-SNAPSHOT
 //> using dep org.virtuslab::yaga-aws:0.4.0-SNAPSHOT
 
+//> using dep io.github.classgraph:classgraph:4.8.177
+
 //> using publish.organization "org.virtuslab"
 //> using publish.name "yaga-codegen-aws"
 //> using publish.version "0.4.0-SNAPSHOT"

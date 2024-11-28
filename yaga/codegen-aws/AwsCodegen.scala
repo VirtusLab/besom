@@ -12,17 +12,18 @@ import tastyquery.Symbols.*
 object AwsCodegen:
   case class CodegenArgs(
     artifactMavenCoordinates: String,
-    handlerClassName: String,
+    handlerClassName: Option[String],
     packagePrefix: String,
     outputDir: String,
     generateInfra: Boolean
   )
 
+  // TODO: Better parsing
   def parseArgs(args: Seq[String]): CodegenArgs =
     args.toList match
       case
         "--maven-artifact" :: artifactMavenCoordinates ::
-        "--handler-class" :: handlerClassName ::
+        //"--handler-class" :: handlerClassName ::
         "--package-prefix" :: packagePrefix ::
         "--output-dir" :: outputDir ::
         rest =>
@@ -36,7 +37,7 @@ object AwsCodegen:
           
           CodegenArgs(
             artifactMavenCoordinates = artifactMavenCoordinates,
-            handlerClassName = handlerClassName,
+            handlerClassName = None, // = Some(handlerClassName),
             packagePrefix = packagePrefix,
             outputDir = outputDir,
             generateInfra = generateInfra
@@ -50,19 +51,23 @@ object AwsCodegen:
 
     val List(artifactOrgName, artifactModuleName, artifactVersion) = codegenArgs.artifactMavenCoordinates.split(":").toList
 
-    given Context = ContextSetup.contextFromMavenCoordinates(
+    val artifactJarPath = ContextSetup.jarPathFromMavenCoordinates(
       orgName = artifactOrgName,
       moduleName = artifactModuleName,
       version = artifactVersion
     )
 
+    given Context = ContextSetup.contextFromJar(artifactJarPath)
+
     val packagePrefixParts = codegenArgs.packagePrefix.split('.').toSeq.filter(_.nonEmpty)
 
     val outputDirPath = os.Path(codegenArgs.outputDir)
 
-    val extractedApi = LambdaApiExtractor().extractLambdaApi(
-      handlerClassName = codegenArgs.handlerClassName
-    )
+    val extractedApi = codegenArgs.handlerClassName.map { handlerClassName =>
+      LambdaApiExtractor().extractLambdaApi(handlerClassName = handlerClassName)
+    }.getOrElse {
+      LambdaApiExtractor().extractLambdaApi(artifactJarPath = artifactJarPath)
+    }
 
     val generator = AwsGenerator(packagePrefixParts, extractedApi)
     
