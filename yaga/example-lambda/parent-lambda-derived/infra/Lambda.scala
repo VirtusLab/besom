@@ -1,4 +1,4 @@
-package yaga.generated.lambdatest.child
+package yaga.generated.parentlambda.lambdatest.parent
 
 class Lambda private(
   underlyingFunction: besom.api.aws.lambda.Function,
@@ -9,25 +9,23 @@ class Lambda private(
 )
 
 object Lambda:
-  type Config = scala.Unit
-  type Input = yaga.generated.lambdatest.child.Bar
-  type Output = yaga.generated.lambdatest.child.Baz
+  type Config = yaga.generated.lambdatest.parent.Config
+  type Input = yaga.generated.lambdatest.parent.Qux
+  type Output = scala.Unit
 
   def apply(
     name: besom.util.NonEmptyString,
     args: besom.api.aws.lambda.FunctionArgs,
-    // config: besom.types.Input[Config], // Special casing Unit as Config
+    config: besom.types.Input[Config],
     opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
   ): besom.types.Output[Lambda] =
     val metadata = yaga.extensions.aws.lambda.internal.LambdaHandlerUtils.lambdaHandlerMetadataFromMavenCoordinates[Config, Input, Output](
       // TODO?: Expose maven coordinates as a part of the generated API
       orgName = "org.virtuslab",
-      moduleName = "child-lambda_3", // TODO don't require scala major prefix?
+      moduleName = "parent-lambda_3",
       version = "0.0.1-SNAPSHOT"
     )
     val javaRuntime = "java21"
-
-    val config = ()
 
     import besom.json.DefaultJsonProtocol.given
 

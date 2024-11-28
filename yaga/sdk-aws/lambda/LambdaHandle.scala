@@ -1,6 +1,6 @@
 package yaga.extensions.aws.lambda
 
-import yaga.shapes.SchemaProvider
+import yaga.extensions.aws.model.SchemaProvider
 import besom.json.*
 
 class LambdaHandle[I, O](

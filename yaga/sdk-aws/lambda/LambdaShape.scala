@@ -1,7 +1,7 @@
 package yaga.extensions.aws.lambda
 
 import scala.quoted.*
-import yaga.shapes.Schema
+import yaga.extensions.aws.model.Schema
 import yaga.extensions.aws.lambda.LambdaHandler
 
 trait LambdaShape[T]:

@@ -1,10 +1,10 @@
-package yaga.shapes
+package yaga.model
 
 import scala.quoted.*
 import besom.json.*
 
 enum FieldType:
-  case Int, Long, Float, Double, String, Boolean
+  case Boolean, Byte, Short, Int, Long, Float, Double, String
   case Array(inner: FieldType)
   case Struct(fields: (String, FieldType)*)
   case Optional(inner: FieldType)
@@ -14,12 +14,14 @@ object FieldType:
     def apply(fieldType: FieldType)(using Quotes): Expr[FieldType] =
       import quotes.reflect.*
       fieldType match
+        case FieldType.Boolean            => '{ FieldType.Boolean }
+        case FieldType.Byte               => '{ FieldType.Byte }
+        case FieldType.Short              => '{ FieldType.Short }
         case FieldType.Int                => '{ FieldType.Int }
         case FieldType.Long               => '{ FieldType.Long }
         case FieldType.Float              => '{ FieldType.Float }
         case FieldType.Double             => '{ FieldType.Double }
         case FieldType.String             => '{ FieldType.String }
-        case FieldType.Boolean            => '{ FieldType.Boolean }
         case FieldType.Array(inner)       => '{ FieldType.Array(${ Expr(inner) }) }
         case FieldType.Struct(fields*)    => '{ FieldType.Struct(${ Expr(fields) }*) }
         case FieldType.Optional(inner)    => '{ FieldType.Optional(${ Expr(inner) }) }
@@ -28,12 +30,14 @@ object FieldType:
     def unapply(expr: Expr[FieldType])(using Quotes): Option[FieldType] =
       import quotes.reflect.*
       expr match
+        case '{ FieldType.Boolean }             => Some(FieldType.Boolean)
+        case '{ FieldType.Byte }                => Some(FieldType.Byte)
+        case '{ FieldType.Short }               => Some(FieldType.Short)
         case '{ FieldType.Int }                 => Some(FieldType.Int)
         case '{ FieldType.Long }                => Some(FieldType.Long)
         case '{ FieldType.Float }               => Some(FieldType.Float)
         case '{ FieldType.Double }              => Some(FieldType.Double)
         case '{ FieldType.String }              => Some(FieldType.String)
-        case '{ FieldType.Boolean }             => Some(FieldType.Boolean)
         case '{ FieldType.Array($inner) }       => Some(FieldType.Array(inner.valueOrAbort))
         case '{ FieldType.Struct($fields*) }    => Some(FieldType.Struct(fields.valueOrAbort*))
         case '{ FieldType.Optional($inner) }    => Some(FieldType.Optional(inner.valueOrAbort))
@@ -41,12 +45,14 @@ object FieldType:
 
   given JsonFormat[FieldType] with
     def write(fieldType: FieldType): JsValue = fieldType match
+      case FieldType.Boolean      => JsObject("type" -> JsString("boolean"))
+      case FieldType.Byte         => JsObject("type" -> JsString("byte"))
+      case FieldType.Short        => JsObject("type" -> JsString("short"))
       case FieldType.Int          => JsObject("type" -> JsString("int"))
       case FieldType.Long         => JsObject("type" -> JsString("long"))
       case FieldType.Float        => JsObject("type" -> JsString("float"))
       case FieldType.Double       => JsObject("type" -> JsString("double"))
       case FieldType.String       => JsObject("type" -> JsString("string"))
-      case FieldType.Boolean      => JsObject("type" -> JsString("boolean"))
       case FieldType.Array(inner) => JsObject("type" -> JsString("array"), "inner" -> write(inner))
       case FieldType.Struct(fields*) =>
         JsObject(

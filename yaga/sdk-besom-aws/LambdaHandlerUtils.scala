@@ -6,7 +6,7 @@ import scala.quoted.*
 import java.nio.file.{Files, Path, Paths}
 import java.lang.reflect.Modifier
 import besom.types.Archive
-import yaga.shapes.Schema
+import yaga.extensions.aws.model.Schema
 import yaga.extensions.aws.lambda.{LambdaHandler, LambdaShape}
 
 object LambdaHandlerUtils:

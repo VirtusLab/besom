@@ -1,7 +1,6 @@
 set fallback := true
 
 output-dir := justfile_directory() / ".out"
-# lambdas-output-dir := output-dir / "lambdas"
 
 make-output-dir:
   mkdir -p {{output-dir}}
@@ -32,7 +31,14 @@ prepare-parent-lambda:
   # TODO: Should generate sources from derived child schema
   rm -rf parent-lambda/generated
   mkdir -p parent-lambda/generated/child-lambda
-  cp -r child-lambda-derived/model parent-lambda/generated/child-lambda/
+  scala-cli run \
+    --dep org.virtuslab::yaga-codegen-aws:0.4.0-SNAPSHOT \
+    --main-class yaga.codegen.aws.runCodegen \
+    -- \
+    --maven-artifact org.virtuslab:child-lambda_3:0.0.1-SNAPSHOT \
+    --handler-class lambdatest.child.ChildLambda \
+    --package-prefix childlambda \
+    --output-dir $(pwd)/parent-lambda/generated/child-lambda/
 
 compile-parent-lambda:
   scala-cli compile parent-lambda
@@ -63,8 +69,26 @@ prepare-infra:
   cp -r child-lambda-derived/model infra/generated/child-lambda/
   cp -r child-lambda-derived/infra infra/generated/child-lambda/
   mkdir -p infra/generated/parent-lambda
-  cp -r parent-lambda-derived/model infra/generated/parent-lambda/
-  cp -r parent-lambda-derived/infra infra/generated/parent-lambda/
+
+  scala-cli run \
+    --dep org.virtuslab::yaga-codegen-aws:0.4.0-SNAPSHOT \
+    --main-class yaga.codegen.aws.runCodegen \
+    -- \
+    --maven-artifact org.virtuslab:child-lambda_3:0.0.1-SNAPSHOT \
+    --handler-class lambdatest.child.ChildLambda \
+    --package-prefix childlambda \
+    --output-dir $(pwd)/infra/generated/child-lambda/ \
+    --with-infra
+
+  scala-cli run \
+    --dep org.virtuslab::yaga-codegen-aws:0.4.0-SNAPSHOT \
+    --main-class yaga.codegen.aws.runCodegen \
+    -- \
+    --maven-artifact org.virtuslab:parent-lambda_3:0.0.1-SNAPSHOT \
+    --handler-class lambdatest.parent.ParentLambda \
+    --package-prefix parentlambda \
+    --output-dir $(pwd)/infra/generated/parent-lambda/ \
+    --with-infra
 
 compile-infra:
   scala-cli compile infra
