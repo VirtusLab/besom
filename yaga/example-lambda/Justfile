@@ -24,7 +24,14 @@ publish-local-assembled-child-lambda: make-output-dir
   rm -r META-INF/MANIFEST.MF
   cd -
 
-  scala-cli publish local child-lambda/publish -S 3.3.4 --resource-dirs "$unpackedDir" --organization org.virtuslab --name child-lambda --project-version 0.0.1-SNAPSHOT --doc=false
+  fakePublishSource=/tmp/fakeScalaSource.scala
+  rm -rf "${fakePublishSource}"
+  touch "${fakePublishSource}"
+
+  scala-cli publish local "${fakePublishSource}" -S 3.3.4 --resource-dirs "$unpackedDir" --organization org.virtuslab --name child-lambda --project-version 0.0.1-SNAPSHOT --doc=false
+
+clean-child-lambda:
+  scala-cli clean child-lambda
 
 prepare-parent-lambda:
   #!/usr/bin/env bash
@@ -58,16 +65,20 @@ publish-local-assembled-parent-lambda: make-output-dir
   rm -r META-INF/MANIFEST.MF
   cd -
 
-  scala-cli publish local parent-lambda/publish -S 3.3.4 --resource-dirs "$unpackedDir" --organization org.virtuslab --name parent-lambda --project-version 0.0.1-SNAPSHOT --doc=false
+  fakePublishSource=/tmp/fakeScalaSource.scala
+  rm -rf "${fakePublishSource}"
+  touch "${fakePublishSource}"
+
+  scala-cli publish local "${fakePublishSource}" -S 3.3.4 --resource-dirs "$unpackedDir" --organization org.virtuslab --name parent-lambda --project-version 0.0.1-SNAPSHOT --doc=false
+
+clean-parent-lambda:
+  scala-cli clean parent-lambda
+  rm -rf parent-lambda/generated
 
 prepare-infra:
   #!/usr/bin/env bash
   # TODO: Should generate sources from derived child and parent schemas
   rm -rf infra/generated
-  mkdir -p infra/generated/child-lambda
-  cp -r child-lambda-derived/model infra/generated/child-lambda/
-  cp -r child-lambda-derived/infra infra/generated/child-lambda/
-  mkdir -p infra/generated/parent-lambda
 
   scala-cli run \
     --dep org.virtuslab::yaga-codegen-aws:0.4.0-SNAPSHOT \
@@ -90,6 +101,10 @@ prepare-infra:
 compile-infra:
   scala-cli compile infra
 
+clean-infra:
+  scala-cli clean infra
+  rm -rf infra/generated
+
 build-example:
   #!/usr/bin/env bash
   just publish-local-assembled-child-lambda
@@ -97,6 +112,9 @@ build-example:
   just publish-local-assembled-parent-lambda
   just prepare-infra
   just compile-infra
+
+clean-example: clean-child-lambda clean-parent-lambda clean-infra
+  rm -rf .out
 
 infra-up:
   #!/usr/bin/env bash

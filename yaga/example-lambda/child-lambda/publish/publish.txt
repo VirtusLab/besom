@@ -1,1 +1,0 @@
-Dummy file to satisfy scala-cli's requirement of passing sources to the publish command
