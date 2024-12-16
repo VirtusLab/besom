@@ -1,14 +1,12 @@
 package yaga.codegen.aws.generator
 
+import java.nio.file.Path
 import tastyquery.Contexts.*
 import tastyquery.Symbols.*
 import yaga.codegen.core.generator.{ScalaMetaUtils, SourceFile, FilePath, TypeRenderer}
+import yaga.codegen.core.generator.scalameta.interpolator.*
 import yaga.codegen.core.extractor.ModelExtractor
 import yaga.codegen.aws.extractor.ExtractedLambdaApi
-
-import yaga.codegen.core.generator.scalameta
-
-import scalameta.interpolator.*
 import scala.meta.XtensionSyntax
 
 class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaApi):
@@ -41,7 +39,11 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
         throw Exception(s"Cannot generate code for class: ${sym} - only case classes with a single parameter list are supported")
 
     val sourceCode =
-      m"""|package ${packageRef}
+      m"""|/*
+          | * This file was generated. Do not modify it manually!
+          | */
+          |
+          |package ${packageRef}
           |
           |import besom.json.defaultProtocol
           |import besom.json.defaultProtocol.given
@@ -55,7 +57,9 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
       sourceCode
     )
 
-  def generateLambda(artifactOrgName: String, artifactModuleName: String, artifactVersion: String)(using Context): SourceFile =
+  // TODO Re-enable referring to published artifacts
+  // def generateLambda(artifactOrgName: String, artifactModuleName: String, artifactVersion: String)(using Context): SourceFile =
+  def generateLambda(jarPath: Path)(using Context): SourceFile =
     val packageParts = generatedPackagePrefixParts
     val packageRef = ScalaMetaUtils.packageRefFromParts(packageParts)
 
@@ -69,8 +73,17 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
       case "scala.Unit" => " = ()"
       case _ => ""
 
+    val javaRuntime = "java21"
+
+    // val handlerMetadataSnippet = m"""yaga.extensions.aws.lambda.internal.LambdaHandlerUtils.lambdaHandlerMetadataFromMavenCoordinates[Config, Input, Output](orgName = "${artifactOrgName}", moduleName = "${artifactModuleName}",version = "${artifactVersion}")"""
+    val handlerMetadataSnippet = m"""yaga.extensions.aws.lambda.internal.LambdaHandlerUtils.lambdaHandlerMetadataFromLocalFatJar[Config, Input, Output](filePath = "${jarPath.toAbsolutePath.toString}")"""
+
     val sourceCode =
-      m"""|package ${packageRef}
+      m"""|/*
+          | * This file was generated. Do not modify it manually!
+          | */
+          |
+          |package ${packageRef}
           |
           |class Lambda private(
           |  underlyingFunction: besom.api.aws.lambda.Function,
@@ -91,12 +104,8 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
           |    config: besom.types.Input[Config]${defaultConfigValueCode},
           |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
           |  ): besom.types.Output[Lambda] =
-          |    val metadata = yaga.extensions.aws.lambda.internal.LambdaHandlerUtils.lambdaHandlerMetadataFromMavenCoordinates[Config, Input, Output](
-          |      orgName = "${artifactOrgName}",
-          |      moduleName = "${artifactModuleName}",
-          |      version = "${artifactVersion}"
-          |    )
-          |    val javaRuntime = "java21"
+          |    val metadata = ${handlerMetadataSnippet}
+          |    val javaRuntime = "$javaRuntime"
           |
           |    import besom.json.DefaultJsonProtocol.given
           |

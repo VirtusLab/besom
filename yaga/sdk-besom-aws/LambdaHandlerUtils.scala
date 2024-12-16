@@ -10,22 +10,15 @@ import yaga.extensions.aws.model.Schema
 import yaga.extensions.aws.lambda.{LambdaHandler, LambdaShape}
 
 object LambdaHandlerUtils:
-  inline def lambdaHandlerMetadataFromMavenCoordinates[Config, Input, Output](
-    inline orgName: String,
-    inline moduleName: String,
-    inline version: String
-  ): LambdaHandlerMetadata = ${ lambdaHandlerMetadataFromMavenCoordinatesImpl[Config, Input, Output]('orgName, 'moduleName, 'version) }
+  inline def lambdaHandlerMetadataFromLocalFatJar[Config, Input, Output](
+    inline filePath: String,
+  ): LambdaHandlerMetadata = ${ lambdaHandlerMetadataFromLocalFatJarImpl[Config, Input, Output]('filePath) }
 
-  private def lambdaHandlerMetadataFromMavenCoordinatesImpl[C : Type, I : Type, O : Type](
-    orgNameExpr: Expr[String],
-    moduleNameExpr: Expr[String],
-    versionExpr: Expr[String]
+  private def lambdaHandlerMetadataFromLocalFatJarImpl[C : Type, I : Type, O : Type](
+    filePath: Expr[String]
   )(using Quotes): Expr[LambdaHandlerMetadata] =
-    val orgName = orgNameExpr.valueOrAbort
-    val moduleName = moduleNameExpr.valueOrAbort
-    val version = versionExpr.valueOrAbort
-
-    val allHandlersMetadata = extractLambdaHandlersMetadataFromMavenCoordinates(orgName = orgName, moduleName = moduleName, version = version)
+    val absoluteJarPath = Paths.get(filePath.valueOrAbort) // TODO check if is absolute path and file exists
+    val allHandlersMetadata = extractLambdaHandlersMetadataFromLocalJar(absoluteJarPath = absoluteJarPath)
     val matchingHandlerMetadata = findMatchingHandlerMetadata[C, I, O](allHandlersMetadata)
 
     '{
@@ -76,78 +69,98 @@ object LambdaHandlerUtils:
       case _ =>
         throw new Exception(s"Multiple matching lambda handlers found") // TODO
 
-
-  private def extractLambdaHandlersMetadataFromMavenCoordinates(
-    orgName: String, moduleName: String, version: String
-  ): Seq[LambdaHandlerMetadata] =
-    val jatPath = getJarPathFromMavenCoordinates(orgName = orgName, moduleName = moduleName, version = version)
-    val metadata = extractLambdaHandlersMetadataFromLocalJar(jatPath)
-    metadata
-
   private def extractLambdaHandlersMetadataFromLocalJar(
     absoluteJarPath: Path
   ): Seq[LambdaHandlerMetadata] =
-    import io.github.classgraph.ClassGraph
     import scala.jdk.CollectionConverters.*
+    import io.github.classgraph.ClassGraph
 
     val jarUrlString = s"file://${absoluteJarPath}"
     val jarClassLoader = new java.net.URLClassLoader(Array(java.net.URL(jarUrlString)))
+    val classGraph = ClassGraph().overrideClassLoaders(jarClassLoader).enableClassInfo.enableMethodInfo().enableAnnotationInfo().scan()
+    val lambdaShapeInstances = classGraph.getClassesImplementing("yaga.extensions.aws.lambda.LambdaShape").iterator.asScala.toList
 
-    val lambdaHandlerClassFullName = classOf[LambdaHandler[?, ?, ?]].getName
-
-     // TODO filter out classes from transitive dependencies?
-    val lambdaHandlerSubclasses = new ClassGraph().overrideClassLoaders(jarClassLoader).enableClassInfo.scan().getSubclasses(lambdaHandlerClassFullName).iterator.asScala.toList
-
-    lambdaHandlerSubclasses.map: classInfo =>
-      val handlerClass = classInfo.loadClass()
-      val handlerClassName = handlerClass.getName
-
-      val shapeInstanceMethod =
-        val lambdaShapeClassName = classOf[LambdaShape[?]].getName
-        val methodsByType = handlerClass.getMethods.filter(_.getReturnType.getName == lambdaShapeClassName).toList
-        val instanceMethod = methodsByType match
-          case meth :: Nil =>
-            meth
-          case _ =>
-            throw new Exception(s"Expected exactly one instance of ${lambdaShapeClassName} for ${handlerClassName} but found ${methodsByType.length}")
-        assert(Modifier.isStatic(instanceMethod.getModifiers), s"Method ${instanceMethod.getName} in class ${handlerClass.getName} must but static")
-        instanceMethod
-
-      val shapeInstance = shapeInstanceMethod.invoke(null)
-
-      val shapeClass = shapeInstance.getClass
-      val configSchema = shapeClass.getMethod("configSchema").invoke(shapeInstance).asInstanceOf[String]
-      val inputSchema = shapeClass.getMethod("inputSchema").invoke(shapeInstance).asInstanceOf[String]
-      val outputSchema = shapeClass.getMethod("outputSchema").invoke(shapeInstance).asInstanceOf[String]
+    lambdaShapeInstances.map: lambdaShapeClass =>
+      val List(schemaPlaceholderClass) = lambdaShapeClass.getInnerClasses.iterator.asScala.toList
+      val schemaAnnotations = schemaPlaceholderClass.getAnnotationInfo.asMap
+      val configSchema = schemaAnnotations.get("yaga.extensions.aws.model.annotations.ConfigSchema").getParameterValues.asMap.get("value").getValue.asInstanceOf[String]
+      val inputSchema = schemaAnnotations.get("yaga.extensions.aws.model.annotations.InputSchema").getParameterValues.asMap.get("value").getValue.asInstanceOf[String]
+      val outputSchema = schemaAnnotations.get("yaga.extensions.aws.model.annotations.OutputSchema").getParameterValues.asMap.get("value").getValue.asInstanceOf[String]
+      val handlerClass = lambdaShapeClass.getOuterClasses.iterator.asScala.toList.head // TODO check that this is a handler class fulfiling requirements for RequestStreamHandler subtypes
 
       LambdaHandlerMetadata(
-        handlerClassName = classInfo.getName,
+        handlerClassName = handlerClass.getName,
         artifactAbsolutePath = absoluteJarPath.toString,
         configSchema = configSchema,
         inputSchema = inputSchema,
         outputSchema = outputSchema
       )
 
-  private def getJarPathFromMavenCoordinates(orgName: String, moduleName: String , version: String): java.nio.file.Path =
-    import coursier._
+  ///////////////////////
 
-    // TODO Verify performance and try to speed up compilation
-    val fetchedFiles = Fetch()
-      .withRepositories(Seq(
-        // TODO allow customization of repositories
-        LocalRepositories.ivy2Local,
-        Repositories.central
-      ))
-      .addDependencies(
-        Dependency(Module(Organization(orgName), ModuleName(moduleName)), version)
-      )
-      .run()
 
-    val expectedJarFileName= s"${moduleName}.jar"
+  /*
+   * TODO
+   * The possibility to refer to artifacts from maven was temporarily removed because dependency on coursier messes up the classpath
+   * by adding a transtive dependency to org.scala-lang.modules:scala-collection-compat_2.13, which clashes with org.scala-lang.modules:scala-collection-compat_3
+   * added by scribe and scalapb that are relied on by besom-core.
+   */
 
-    fetchedFiles.filter(_.getName == expectedJarFileName) match
-      case Nil =>
-        throw new Exception(s"No file with name $expectedJarFileName found when getting paths of resolved dependencies. All paths:\n ${fetchedFiles.mkString("\n")}.")
-      case file :: Nil => file.toPath
-      case files =>
-        throw new Exception(s"Expected exactly one file with name $expectedJarFileName when getting paths of resolved dependencies. Instead found: ${files.mkString(", ")}.")
+  // inline def lambdaHandlerMetadataFromMavenCoordinates[Config, Input, Output](
+  //   inline orgName: String,
+  //   inline moduleName: String,
+  //   inline version: String
+  // ): LambdaHandlerMetadata = ${ lambdaHandlerMetadataFromMavenCoordinatesImpl[Config, Input, Output]('orgName, 'moduleName, 'version) }
+
+  // private def lambdaHandlerMetadataFromMavenCoordinatesImpl[C : Type, I : Type, O : Type](
+  //   orgNameExpr: Expr[String],
+  //   moduleNameExpr: Expr[String],
+  //   versionExpr: Expr[String]
+  // )(using Quotes): Expr[LambdaHandlerMetadata] =
+  //   val orgName = orgNameExpr.valueOrAbort
+  //   val moduleName = moduleNameExpr.valueOrAbort
+  //   val version = versionExpr.valueOrAbort
+
+  //   val allHandlersMetadata = extractLambdaHandlersMetadataFromMavenCoordinates(orgName = orgName, moduleName = moduleName, version = version)
+  //   val matchingHandlerMetadata = findMatchingHandlerMetadata[C, I, O](allHandlersMetadata)
+
+  //   '{
+  //     LambdaHandlerMetadata(
+  //       handlerClassName = ${ Expr(matchingHandlerMetadata.handlerClassName) },
+  //       artifactAbsolutePath = ${ Expr(matchingHandlerMetadata.artifactAbsolutePath) },
+  //       configSchema = ${ Expr(matchingHandlerMetadata.configSchema) },
+  //       inputSchema = ${ Expr(matchingHandlerMetadata.inputSchema) },
+  //       outputSchema = ${ Expr(matchingHandlerMetadata.outputSchema) }
+  //     )
+  //   }
+
+  // private def extractLambdaHandlersMetadataFromMavenCoordinates(
+  //   orgName: String, moduleName: String, version: String
+  // ): Seq[LambdaHandlerMetadata] =
+  //   val jatPath = getJarPathFromMavenCoordinates(orgName = orgName, moduleName = moduleName, version = version)
+  //   val metadata = extractLambdaHandlersMetadataFromLocalJar(jatPath)
+  //   metadata
+
+  // private def getJarPathFromMavenCoordinates(orgName: String, moduleName: String , version: String): java.nio.file.Path =
+  //   import coursier._
+
+  //   // TODO Verify performance and try to speed up compilation
+  //   val fetchedFiles = Fetch()
+  //     .withRepositories(Seq(
+  //       // TODO allow customization of repositories
+  //       LocalRepositories.ivy2Local,
+  //       Repositories.central
+  //     ))
+  //     .addDependencies(
+  //       Dependency(Module(Organization(orgName), ModuleName(moduleName)), version)
+  //     )
+  //     .run()
+
+  //   val expectedJarFileName= s"${moduleName}.jar"
+
+  //   fetchedFiles.filter(_.getName == expectedJarFileName) match
+  //     case Nil =>
+  //       throw new Exception(s"No file with name $expectedJarFileName found when getting paths of resolved dependencies. All paths:\n ${fetchedFiles.mkString("\n")}.")
+  //     case file :: Nil => file.toPath
+  //     case files =>
+  //       throw new Exception(s"Expected exactly one file with name $expectedJarFileName when getting paths of resolved dependencies. Instead found: ${files.mkString(", ")}.")

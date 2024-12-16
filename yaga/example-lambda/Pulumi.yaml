@@ -1,5 +1,5 @@
-# Pulumi project file for the scala-cli based build
-# Keep in sync with ../Pulumi.yaml
+# Pulumi project file for the sbt based build
+# Keep in sync with infra/Pulumi.yaml
 name: besom-aws-lambdas
 runtime: scala
 description: Simple AWS infrastructure with lambdas

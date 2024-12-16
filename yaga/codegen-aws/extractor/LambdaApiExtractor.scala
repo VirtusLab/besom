@@ -4,7 +4,8 @@ import tastyquery.Contexts.*
 import tastyquery.Symbols.*
 import tastyquery.Types.*
 import io.github.classgraph.ClassGraph
-import scala.collection.JavaConverters.asScalaIteratorConverter
+import scala.jdk.CollectionConverters.*
+import yaga.codegen.core.extractor.{CodegenSource, ContextSetup}
 
 class LambdaApiExtractor():
   // TODO
@@ -35,18 +36,22 @@ class LambdaApiExtractor():
     val modelExtractor = AwsModelExtractor()
     modelExtractor.collect(rootTypes)
 
-  def extractLambdaApi(artifactJarPath: java.nio.file.Path)(using Context): ExtractedLambdaApi =
+  def extractLambdaApi(codegenSources: Seq[CodegenSource])(using Context): ExtractedLambdaApi =
     // TODO remove duplication with LambdaHandlerUtils.scala
 
-    val jarClassLoader = new java.net.URLClassLoader(Array(artifactJarPath.toUri.toURL))
+    val jarUrls = ContextSetup.getSourcesClasspath(codegenSources).map { path =>
+      path.toUri.toURL
+    }.toArray
+
+    val jarClassLoader = new java.net.URLClassLoader(jarUrls)
 
     // TODO filter out classes from transitive dependencies?
-    val lambdaHandlerSubclasses = new ClassGraph().overrideClassLoaders(jarClassLoader).enableClassInfo.scan().getSubclasses(lambdaHandlerBaseClassFullName).iterator.asScala.toList
+    val lambdaHandlerSubclasses = new ClassGraph().overrideClassLoaders(jarClassLoader).enableClassInfo.scan().getSubclasses(lambdaHandlerBaseClassFullName).asScala.toList
     lambdaHandlerSubclasses match
       case Nil =>
-        throw Exception(s"No lambda handler found in $artifactJarPath")
+        throw Exception(s"No lambda handler found in codegen sources $codegenSources")
       case handler :: Nil =>
         extractLambdaApi(handlerClassName = handler.getName)
       case handlers =>
         val handlerNames = handlers.map(_.getName).mkString(", ")
-        throw Exception(s"Multiple lambda handlers found in $artifactJarPath: ${handlerNames}")
+        throw Exception(s"Multiple lambda handlers found in codegen sources $codegenSources: ${handlerNames}")

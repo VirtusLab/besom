@@ -1,0 +1,1 @@
+addSbtPlugin("org.virtuslab" % "sbt-yaga-codegen-aws" % "0.4.0-SNAPSHOT")

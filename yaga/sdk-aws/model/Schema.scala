@@ -19,8 +19,6 @@ object Schema extends SchemaHelpers:
   override def getFieldType(using Quotes)(tpe: quotes.reflect.TypeRepr): FieldType =
     import quotes.reflect.*
 
-    println("tpe")
-
     tpe.asType match
       case '[LambdaHandle[?, ?]] =>
         FieldType.Struct(

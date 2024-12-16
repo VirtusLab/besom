@@ -3,22 +3,20 @@ package yaga.codegen.core.generator
 class SourcesWriter:
   def writeSources(
     outputDir: os.Path,
-    sources: Seq[SourceFile]
+    sources: Seq[SourceFile],
+    summaryFile: Option[os.Path],
+    cleanUpOutputDir: Boolean
   ): Unit =
-    os.remove.all(outputDir)
+    if cleanUpOutputDir then
+      os.remove.all(outputDir)
     os.makeDir.all(outputDir)
 
-    sources.foreach: sourceFile =>
+    val writtenPaths = sources.map: sourceFile =>
       val filePath = outputDir / sourceFile.filePath.osSubPath
       os.makeDir.all(filePath / os.up)
-      scribe.debug(s"Writing source file: '${filePath.relativeTo(os.pwd)}'")
-      try {
-        os.write(filePath, sourceFile.sourceCode, createFolders = true)
-      } catch {
-        case e: java.nio.file.FileAlreadyExistsException =>
-          // write the duplicate class for debugging purposes
-          val fileDuplicate = filePath / os.up / s"${filePath.last}.duplicate"
-          os.write(fileDuplicate, sourceFile.sourceCode, createFolders = true)
-          val message = s"Duplicate file in codegen: ${fileDuplicate.relativeTo(os.pwd)} - \n${e.getMessage}"
-          scribe.warn(message)
-      }
+      os.write(filePath, sourceFile.sourceCode, createFolders = true)
+      filePath
+
+    summaryFile.foreach { summaryFilePath =>
+      os.write.over(summaryFilePath, writtenPaths.map(_.toString).mkString("\n"))
+    }

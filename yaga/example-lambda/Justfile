@@ -116,17 +116,30 @@ build-example:
 clean-example: clean-child-lambda clean-parent-lambda clean-infra
   rm -rf .out
 
+
 infra-up:
   #!/usr/bin/env bash
   cd infra
   PULUMI_CONFIG_PASSPHRASE="" pulumi up --stack dev
+
+infra-up-sbt:
+  #!/usr/bin/env bash
+  PULUMI_CONFIG_PASSPHRASE="" BESOM_SBT_MODULE=infra pulumi up --stack dev
 
 infra-down:
   #!/usr/bin/env bash
   cd infra
   PULUMI_CONFIG_PASSPHRASE="" pulumi down --stack dev
 
+infra-down-sbt:
+  #!/usr/bin/env bash
+  PULUMI_CONFIG_PASSPHRASE="" BESOM_SBT_MODULE=infra pulumi down --stack dev
+
 infra-output:
   #!/usr/bin/env bash
   cd infra
   PULUMI_CONFIG_PASSPHRASE="" pulumi stack output --stack dev
+
+infra-output-sbt:
+  #!/usr/bin/env bash
+  PULUMI_CONFIG_PASSPHRASE="" BESOM_SBT_MODULE=infra pulumi stack output --stack dev

@@ -5,7 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import com.amazonaws.services.lambda.runtime.Context
 import yaga.extensions.aws.lambda.internal.{EnvReader, InputStreamReader, OutputStreamWriter}
 
-abstract class LambdaHandler[C, I, O](using configReader: EnvReader[C], inputReader: InputStreamReader[I], outputWriter: OutputStreamWriter[O]) extends RequestStreamHandler:
+abstract class LambdaHandler[C, I, O](using configReader: EnvReader[C], inputReader: InputStreamReader[I], outputWriter: OutputStreamWriter[O], lambdaShape: LambdaShape[C, I, O]) extends RequestStreamHandler:
   protected type RequestContext = Context
 
   protected lazy val config: C = configReader.read(sys.env) match

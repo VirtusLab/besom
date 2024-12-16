@@ -1,12 +1,7 @@
-//> using scala 3.3.3
-//> using dep ch.qos.logback:logback-classic:1.5.12
-//> using dep org.virtuslab::yaga-aws:0.4.0-SNAPSHOT
-//> using resourceDir ../resources
-
 package lambdatest.parent
 
 import besom.json.*
-import yaga.extensions.aws.lambda.{LambdaHandler, LambdaShape, LambdaClient, LambdaHandle}
+import yaga.extensions.aws.lambda.{LambdaHandler, LambdaClient, LambdaHandle}
 import yaga.generated.childlambda.lambdatest.child.{Foo, Bar, Baz}
 
 case class Config(
@@ -17,7 +12,7 @@ case class Qux(
   str: String = "abcb"
 ) derives JsonFormat
 
-class ParentLambda extends LambdaHandler[Config, Qux, Unit] derives LambdaShape:
+class ParentLambda extends LambdaHandler[Config, Qux, Unit]:
   val lambdaClient = LambdaClient()
   println("Parent lambda initialized")
 

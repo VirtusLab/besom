@@ -1,4 +1,4 @@
-package yaga.codegen.core
+package yaga.codegen.core.extractor
 
 import tastyquery.Contexts.*
 import tastyquery.Types.*
@@ -8,28 +8,11 @@ import tastyquery.Definitions
 import tastyquery.Classpaths.*
 
 object ContextSetup:
-  def contextFromJar(jarPath: String): Context =
-    contextFromJar(java.nio.file.Paths.get(jarPath))
-
-  def contextFromJar(jarPath: java.nio.file.Path): Context =
-    val basePath = java.nio.file.FileSystems.getFileSystem(java.net.URI.create("jrt:/")).getPath("modules", "java.base")
-    val cp = List(
-      basePath,
-      jarPath
-    )
-    val classpath = tastyquery.jdk.ClasspathLoaders.read(cp)
-    Context.initialize(classpath)
-
-  def contextFromMavenCoordinates(orgName: String, moduleName: String , version: String): Context =
-    val jarPath = jarPathFromMavenCoordinates(orgName, moduleName, version)
-    contextFromJar(jarPath)
-
-  // TODO copy-pasted from LambdaHandlerUtils
-  def jarPathFromMavenCoordinates(orgName: String, moduleName: String , version: String): java.nio.file.Path =
+  def jarPathsFromMavenCoordinates(orgName: String, moduleName: String , version: String): List[java.nio.file.Path] =
     import coursier._
 
     // TODO Verify performance and try to speed up compilation
-    val fetchedFiles = Fetch()
+    Fetch()
       .withRepositories(Seq(
         // TODO allow customization of repositories
         LocalRepositories.ivy2Local,
@@ -39,16 +22,22 @@ object ContextSetup:
         Dependency(Module(Organization(orgName), ModuleName(moduleName)), version)
       )
       .run()
+      .map(_.toPath)
+      .toList
 
-    val expectedJarFileName= s"${moduleName}.jar"
+  def contextFromCodegenSources(codegenSources: List[CodegenSource]): Context =
+    val basePath = java.nio.file.FileSystems.getFileSystem(java.net.URI.create("jrt:/")).getPath("modules", "java.base")
+    val cp = basePath +: getSourcesClasspath(codegenSources)
+    val classpath = tastyquery.jdk.ClasspathLoaders.read(cp)
+    Context.initialize(classpath)
 
-    fetchedFiles.filter(_.getName == expectedJarFileName) match
-      case Nil =>
-        throw new Exception(s"No file with name $expectedJarFileName found when getting paths of resolved dependencies. All paths:\n ${fetchedFiles.mkString("\n")}.")
-      case file :: Nil => file.toPath
-      case files =>
-        throw new Exception(s"Expected exactly one file with name $expectedJarFileName when getting paths of resolved dependencies. Instead found: ${files.mkString(", ")}.")
-
+  def getSourcesClasspath(codegenSources: Seq[CodegenSource]): List[java.nio.file.Path] =
+    codegenSources.flatMap {
+      case CodegenSource.MavenArtifact(org, module, version) =>
+        jarPathsFromMavenCoordinates(org, module, version)
+      case CodegenSource.LocalJar(path) =>
+        List(path)
+    }.toList
 
   //////////////////
   // For debug purposes:

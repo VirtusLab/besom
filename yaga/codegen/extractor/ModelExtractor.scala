@@ -14,7 +14,6 @@ class ModelExtractor():
   protected val typesToVisit = collection.mutable.Queue.empty[Type]
 
   def enqueueType(tpe: Type) =
-    scribe.debug(s"  Enquing type: ${tpe.showBasic}")
     typesToVisit.enqueue(tpe)
 
   def collect(rootTypes: Seq[Type])(using Context) =
@@ -34,9 +33,6 @@ class ModelExtractor():
 
 
   def traverseType(tpe: Type)(using Context) =
-    scribe.debug(s"Traversing type: ${tpe.showBasic}")
-    scribe.debug(s"  ${tpe}")
-
     tpe match
       case t: TypeRef =>
         visitTypeRef(t)
@@ -96,8 +92,6 @@ class ModelExtractor():
 
 
   def visitTypeRef(ref: TypeRef)(using Context): Unit =
-    scribe.debug(s"Traversing type ref: ${ref}")
-
     if isBuiltinClass(ref) then
       return
 
@@ -138,9 +132,6 @@ class ModelExtractor():
             throw Exception(s"Unsupported constructor type ${poly}")
       case t =>
         throw Exception(s"Unsupported constructor type ${t}")
-
-    scribe.debug("Constructor tpe:")
-    scribe.debug(constructor.declaredType.toString)
 
     cls.parents.foreach(enqueueType)
 
