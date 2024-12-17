@@ -4,8 +4,7 @@ lazy val child = project.in(file("child-lambda"))
   .settings(
     scalaVersion := "3.3.3",
     libraryDependencies ++= Seq(
-      "org.virtuslab" %% "yaga-aws" % "0.4.0-SNAPSHOT",
-      "org.virtuslab" %% "yaga-aws" % "0.0.1-SNAPSHOT"
+      "org.virtuslab" %% "yaga-aws" % "0.4.0-SNAPSHOT"
     ),
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", xs @ _*) => MergeStrategy.discard

@@ -1,6 +1,7 @@
 package yaga.extensions.aws.lambda
 
-import yaga.extensions.aws.model.SchemaProvider
+import scala.language.implicitConversions
+import yaga.extensions.aws.model.{SchemaProvider, TypeSchemasCompatibility}
 import besom.json.*
 
 class LambdaHandle[I, O](
@@ -32,3 +33,8 @@ object LambdaHandle:
       LambdaHandle[I, O](
         functionName = struct.functionName
       )
+
+  implicit def compatibleSchemaConvertion[I1, O1, I2, O2](
+    handle: LambdaHandle[I1, O1]
+  )(using TypeSchemasCompatibility[I1, I2], TypeSchemasCompatibility[O1, O2]): LambdaHandle[I2, O2] =
+    LambdaHandle[I2, O2](functionName = handle.functionName)

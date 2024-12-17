@@ -45,21 +45,19 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
           |
           |package ${packageRef}
           |
-          |import besom.json.defaultProtocol
-          |import besom.json.defaultProtocol.given
+          |import _root_.besom.json.defaultProtocol
+          |import _root_.besom.json.defaultProtocol.given
           |
           |case class ${className} (
           |${fieldLines.mkString(",\n")}
-          |) derives besom.json.JsonFormat
+          |) derives _root_.besom.json.JsonFormat
           |""".stripMargin
     SourceFile(
       FilePath(packageParts :+ s"${sym.name}.scala"),
       sourceCode
     )
 
-  // TODO Re-enable referring to published artifacts
-  // def generateLambda(artifactOrgName: String, artifactModuleName: String, artifactVersion: String)(using Context): SourceFile =
-  def generateLambda(jarPath: Path)(using Context): SourceFile =
+  def generateLambdaFromLocalJar(jarPath: Path)(using Context): SourceFile =
     val packageParts = generatedPackagePrefixParts
     val packageRef = ScalaMetaUtils.packageRefFromParts(packageParts)
 
@@ -75,8 +73,7 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
 
     val javaRuntime = "java21"
 
-    // val handlerMetadataSnippet = m"""yaga.extensions.aws.lambda.internal.LambdaHandlerUtils.lambdaHandlerMetadataFromMavenCoordinates[Config, Input, Output](orgName = "${artifactOrgName}", moduleName = "${artifactModuleName}",version = "${artifactVersion}")"""
-    val handlerMetadataSnippet = m"""yaga.extensions.aws.lambda.internal.LambdaHandlerUtils.lambdaHandlerMetadataFromLocalFatJar[Config, Input, Output](filePath = "${jarPath.toAbsolutePath.toString}")"""
+    val handlerMetadataSnippet = m"""_root_.yaga.extensions.aws.lambda.internal.LambdaHandlerUtils.lambdaHandlerMetadataFromLocalFatJar[Config, Input, Output](filePath = "${jarPath.toAbsolutePath.toString}")"""
 
     val sourceCode =
       m"""|/*
@@ -86,9 +83,9 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
           |package ${packageRef}
           |
           |class Lambda private(
-          |  underlyingFunction: besom.api.aws.lambda.Function,
-          |  lambdaHandle: yaga.extensions.aws.lambda.LambdaHandle[Lambda.Input, Lambda.Output]
-          |) extends yaga.extensions.aws.lambda.internal.Lambda[Lambda.Input, Lambda.Output](
+          |  underlyingFunction: _root_.besom.api.aws.lambda.Function,
+          |  lambdaHandle: _root_.yaga.extensions.aws.lambda.LambdaHandle[Lambda.Input, Lambda.Output]
+          |) extends _root_.yaga.extensions.aws.lambda.internal.Lambda[Lambda.Input, Lambda.Output](
           |  underlyingFunction = underlyingFunction,
           |  lambdaHandle = lambdaHandle
           |)
@@ -99,20 +96,20 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
           |  type Output = ${outputTypeCode}
           |
           |  def apply(
-          |    name: besom.util.NonEmptyString,
-          |    args: besom.api.aws.lambda.FunctionArgs,
-          |    config: besom.types.Input[Config]${defaultConfigValueCode},
-          |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
-          |  ): besom.types.Output[Lambda] =
+          |    name: _root_.besom.util.NonEmptyString,
+          |    args: _root_.besom.api.aws.lambda.FunctionArgs,
+          |    config: _root_.besom.types.Input[Config]${defaultConfigValueCode},
+          |    opts: _root_.besom.ResourceOptsVariant.Custom ?=> _root_.besom.CustomResourceOptions = _root_.besom.CustomResourceOptions()
+          |  ): _root_.besom.types.Output[Lambda] =
           |    val metadata = ${handlerMetadataSnippet}
           |    val javaRuntime = "$javaRuntime"
           |
-          |    import besom.json.DefaultJsonProtocol.given
+          |    import _root_.besom.json.DefaultJsonProtocol.given
           |
           |    for
-          |      lambda <- yaga.extensions.aws.lambda.internal.Lambda[Config, Input, Output](
+          |      lambda <- _root_.yaga.extensions.aws.lambda.internal.Lambda[Config, Input, Output](
           |        name = name,
-          |        codeArchive = besom.types.Archive.FileArchive(metadata.artifactAbsolutePath),
+          |        codeArchive = _root_.besom.types.Archive.FileArchive(metadata.artifactAbsolutePath),
           |        handlerClassName = metadata.handlerClassName,
           |        runtime = javaRuntime,
           |        config = config,

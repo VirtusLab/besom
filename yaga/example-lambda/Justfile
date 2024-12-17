@@ -1,6 +1,7 @@
 set fallback := true
 
 output-dir := justfile_directory() / ".out"
+yaga-version := "0.4.0-SNAPSHOT"
 
 make-output-dir:
   mkdir -p {{output-dir}}
@@ -24,11 +25,12 @@ publish-local-assembled-child-lambda: make-output-dir
   rm -r META-INF/MANIFEST.MF
   cd -
 
-  fakePublishSource=/tmp/fakeScalaSource.scala
+  # Using a java file prevents from adding scala stdlib as declared dependency
+  fakePublishSource=/tmp/fakeSource.java
   rm -rf "${fakePublishSource}"
   touch "${fakePublishSource}"
 
-  scala-cli publish local "${fakePublishSource}" -S 3.3.4 --resource-dirs "$unpackedDir" --organization org.virtuslab --name child-lambda --project-version 0.0.1-SNAPSHOT --doc=false
+  scala-cli publish local "${fakePublishSource}" --resource-dirs "$unpackedDir" --organization org.virtuslab --name child-lambda_3 --project-version 0.0.1-SNAPSHOT --doc=false
 
 clean-child-lambda:
   scala-cli clean child-lambda
@@ -39,7 +41,7 @@ prepare-parent-lambda:
   rm -rf parent-lambda/generated
   mkdir -p parent-lambda/generated/child-lambda
   scala-cli run \
-    --dep org.virtuslab::yaga-codegen-aws:0.4.0-SNAPSHOT \
+    --dep org.virtuslab::yaga-codegen-aws:{{yaga-version}}\
     --main-class yaga.codegen.aws.runCodegen \
     -- \
     --maven-artifact org.virtuslab:child-lambda_3:0.0.1-SNAPSHOT \
@@ -65,11 +67,12 @@ publish-local-assembled-parent-lambda: make-output-dir
   rm -r META-INF/MANIFEST.MF
   cd -
 
-  fakePublishSource=/tmp/fakeScalaSource.scala
+  # Using a java file prevents from adding scala stdlib as declared dependency
+  fakePublishSource=/tmp/fakeSource.java
   rm -rf "${fakePublishSource}"
   touch "${fakePublishSource}"
 
-  scala-cli publish local "${fakePublishSource}" -S 3.3.4 --resource-dirs "$unpackedDir" --organization org.virtuslab --name parent-lambda --project-version 0.0.1-SNAPSHOT --doc=false
+  scala-cli publish local "${fakePublishSource}" --resource-dirs "$unpackedDir" --organization org.virtuslab --name parent-lambda_3 --project-version 0.0.1-SNAPSHOT --doc=false
 
 clean-parent-lambda:
   scala-cli clean parent-lambda
@@ -81,7 +84,7 @@ prepare-infra:
   rm -rf infra/generated
 
   scala-cli run \
-    --dep org.virtuslab::yaga-codegen-aws:0.4.0-SNAPSHOT \
+    --dep org.virtuslab::yaga-codegen-aws:{{yaga-version}} \
     --main-class yaga.codegen.aws.runCodegen \
     -- \
     --maven-artifact org.virtuslab:child-lambda_3:0.0.1-SNAPSHOT \
@@ -90,7 +93,7 @@ prepare-infra:
     --with-infra
 
   scala-cli run \
-    --dep org.virtuslab::yaga-codegen-aws:0.4.0-SNAPSHOT \
+    --dep org.virtuslab::yaga-codegen-aws:{{yaga-version}} \
     --main-class yaga.codegen.aws.runCodegen \
     -- \
     --maven-artifact org.virtuslab:parent-lambda_3:0.0.1-SNAPSHOT \

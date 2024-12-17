@@ -137,8 +137,7 @@ class ModelExtractor():
 
   def isBuiltinClass(ref: TypeRef) =
     val fullRefName = ref.showBasic
-    fullRefName.startsWith("scala.") || fullRefName.startsWith("java.") || fullRefName.startsWith(generatedPackagePrefix)
-
+    fullRefName.startsWith("scala.") || fullRefName.startsWith("java.")
 
 object ModelExtractor:
   val generatedPackagePrefix = "yaga.generated."

@@ -1,7 +1,6 @@
 package yaga.codegen.aws
 
-import yaga.codegen.core.extractor.CodegenSource
-import yaga.codegen.core.extractor.ContextSetup
+import yaga.codegen.core.extractor.{CodegenSource, ContextSetup, CoursierHelpers}
 import yaga.codegen.core.generator.SourcesWriter
 import yaga.codegen.core.generator.SourceFile
 import yaga.codegen.aws.extractor.LambdaApiExtractor
@@ -31,16 +30,28 @@ object AwsCodegen:
     
     val modelSources = generator.generateModelSources()
 
-    if generateInfra then
-      codegenSources match
-        case List(CodegenSource.LocalJar(absoluteJarPath)) =>
-          modelSources :+ generator.generateLambda(
-            jarPath = absoluteJarPath,
-          )
-        case sources =>
-          throw Exception(s"Only codegen from a single local artifact is supported for infra generation, but got the following sources: $sources")
-    else
-      modelSources
+    val infraSources = 
+      if generateInfra then
+        codegenSources match
+          case List(CodegenSource.LocalJar(absoluteJarPath)) =>
+            Seq(
+              generator.generateLambdaFromLocalJar(absoluteJarPath),
+            )
+          case List(CodegenSource.MavenArtifact(orgName, moduleName, version)) =>
+            val jarPaths = CoursierHelpers.jarPathsFromMavenCoordinates(orgName, moduleName, version)
+            jarPaths match
+              case List(absoluteJarPath) =>
+                Seq(
+                  generator.generateLambdaFromLocalJar(absoluteJarPath),
+                )
+              case _ =>
+                throw Exception(s"Expected a single jar path for artifact: $orgName:$moduleName:$version, but got: $jarPaths")
+          case sources =>
+            throw Exception(s"Only codegen from a single local jar or published artifact is supported for infra generation, but got the following sources: $sources")
+      else
+        Seq.empty
+
+    modelSources ++ infraSources
 
 
   @main

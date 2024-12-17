@@ -49,7 +49,7 @@ object YagaAwsCodeGenPlugin extends AutoPlugin {
     val mainArgs = codegenMainArgs(localJarSources, packagePrefix, outputDir, summaryFile, withInfra)
 
     MavenArtifactsHelpers.runMavenArtifactMainWithArgs(
-      "org.virtuslab", "yaga-codegen-aws_3", "0.4.0-SNAPSHOT",
+      "org.virtuslab", "yaga-codegen-aws_3", pluginVersion,
       "yaga.codegen.aws.runCodegen",
       mainArgs
     )
