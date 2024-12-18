@@ -3,7 +3,7 @@
 //> using dep ch.epfl.scala::tasty-query:1.4.0
 //> using dep org.scalameta:scalameta_2.13:4.12.0
 //> using dep com.lihaoyi::os-lib:0.11.3
-//> using dep io.get-coursier:coursier_2.13:2.1.20
+//> using dep io.get-coursier:coursier_2.13:2.1.22
 
 //> using publish.organization "org.virtuslab"
 //> using publish.name "yaga-codegen"

@@ -3,9 +3,9 @@ import besom.api.aws
 import besom.api.aws.lambda.FunctionArgs
 import besom.json.*
 
-import yaga.generated.childlambda.{Lambda as ChildLambda} // TODO use packages with version?
-import yaga.generated.parentlambda.{Lambda as ParentLambda}
-import yaga.generated.parentlambda.lambdatest.parent.{Config as ParentLambdaConfig}
+import childlambda.{Lambda as ChildLambda} // TODO use packages with version?
+import parentlambda.{Lambda as ParentLambda}
+import parentlambda.lambdatest.parent.{Config as ParentLambdaConfig}
 
 @main def main = Pulumi.run {
   val basicFunctionRole = aws.iam.Role(

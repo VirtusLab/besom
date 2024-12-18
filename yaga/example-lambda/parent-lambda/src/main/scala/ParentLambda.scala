@@ -2,7 +2,7 @@ package lambdatest.parent
 
 import besom.json.*
 import yaga.extensions.aws.lambda.{LambdaHandler, LambdaClient, LambdaHandle}
-import yaga.generated.childlambda.lambdatest.child.{Foo, Bar, Baz}
+import lambdatest.child.{Foo, Bar, Baz}
 
 case class Config(
   childLambdaHandle: LambdaHandle[Bar, Baz]

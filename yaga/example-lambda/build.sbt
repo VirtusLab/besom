@@ -28,7 +28,7 @@ lazy val parent = project.in(file("parent-lambda"))
       CodegenItem.ModelFromLocalJars(
         absoluteJarsPaths = (child / Compile / fullClasspathAsJars).value.map(_.data.toPath),
         outputSubdirName = "child-lambda",
-        packagePrefix = "childlambda"
+        packagePrefix = ""
       )
     ),
   )

@@ -10,9 +10,8 @@ import yaga.codegen.aws.extractor.ExtractedLambdaApi
 import scala.meta.XtensionSyntax
 
 class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaApi):
-  val generatedPackagePrefixParts = ModelExtractor.generatedPackagePrefixParts ++ packagePrefixParts
   val apiSymbolSet = lambdaApi.modelSymbols.toSet
-  val typeRenderer = TypeRenderer(generatedPackagePrefixParts, apiSymbolSet)
+  val typeRenderer = TypeRenderer(packagePrefixParts, apiSymbolSet)
 
   def generateModelSources()(using Context): Seq[SourceFile] =
     lambdaApi.modelSymbols.flatMap:
@@ -24,7 +23,7 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
 
   def sourceForCaseClass(sym: ClassSymbol)(using Context): SourceFile =
     val packagesSuffixParts = ModelExtractor.ownerPackageNamesChain(sym.owner)
-    val packageParts = generatedPackagePrefixParts ++ packagesSuffixParts
+    val packageParts = packagePrefixParts ++ packagesSuffixParts
     val packageRef = ScalaMetaUtils.packageRefFromParts(packageParts)
 
     val className = scala.meta.Type.Name(sym.name.toString)
@@ -58,7 +57,7 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
     )
 
   def generateLambdaFromLocalJar(jarPath: Path)(using Context): SourceFile =
-    val packageParts = generatedPackagePrefixParts
+    val packageParts = packagePrefixParts
     val packageRef = ScalaMetaUtils.packageRefFromParts(packageParts)
 
     val configType = typeRenderer.typeToCode(lambdaApi.handlerConfigType)

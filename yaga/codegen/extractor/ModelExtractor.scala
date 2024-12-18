@@ -140,9 +140,6 @@ class ModelExtractor():
     fullRefName.startsWith("scala.") || fullRefName.startsWith("java.")
 
 object ModelExtractor:
-  val generatedPackagePrefix = "yaga.generated."
-  val generatedPackagePrefixParts = generatedPackagePrefix.split('.').toList.filter(_.nonEmpty)
-
   def ownerPackageNamesChain(sym: Symbol | Null): Seq[String] =
     sym match
       case pkg: PackageSymbol =>

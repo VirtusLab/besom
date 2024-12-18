@@ -38,3 +38,8 @@ compile-codegen-aws:
 
 publish-local-codegen-aws: publish-local-codegen
   scala-cli publish local codegen-aws
+
+publish-local-sbt-aws:
+  #!/usr/bin/env bash
+  cd sbt-aws
+  sbt publishLocal
