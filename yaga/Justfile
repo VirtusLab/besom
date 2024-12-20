@@ -39,7 +39,7 @@ compile-codegen-aws:
 publish-local-codegen-aws: publish-local-codegen
   scala-cli publish local codegen-aws
 
-publish-local-sbt-aws:
+publish-local-sbt-aws-lambda:
   #!/usr/bin/env bash
-  cd sbt-aws
+  cd sbt-plugin
   sbt publishLocal

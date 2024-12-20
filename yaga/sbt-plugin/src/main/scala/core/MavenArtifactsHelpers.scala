@@ -1,9 +1,9 @@
-package yaga.sbt.aws
+package yaga.sbt
 
-import sbt._
-import sbt.Keys._
+import _root_.sbt._
+import _root_.sbt.Keys._
 
-private[aws] object MavenArtifactsHelpers {
+private[sbt] object MavenArtifactsHelpers {
   // TODO Deduplicate with ContextSetup.scala and LambdaHandlerUtils.scala?
   def jarPathsFromMavenCoordinates(orgName: String, moduleName: String , version: String): List[java.nio.file.Path] = {
     import coursier._
