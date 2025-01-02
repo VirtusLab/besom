@@ -5,7 +5,7 @@ import _root_.sbt.Keys._
 
 private[sbt] object MavenArtifactsHelpers {
   // TODO Deduplicate with ContextSetup.scala and LambdaHandlerUtils.scala?
-  def jarPathsFromMavenCoordinates(orgName: String, moduleName: String , version: String): List[java.nio.file.Path] = {
+  def jarPathsFromMavenCoordinates(orgName: String, moduleName: String, version: String): List[java.nio.file.Path] = {
     import coursier._
 
     // TODO Verify performance and try to speed up compilation
