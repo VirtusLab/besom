@@ -1,7 +1,5 @@
 besom-core-version-suffix := "0.4"
 
-mod example-lambda
-
 publish-local-aws-mini aws-version="6.53.0":
   #!/usr/bin/env bash
   cd ..

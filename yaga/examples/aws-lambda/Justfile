@@ -45,7 +45,7 @@ prepare-parent-lambda:
     --main-class yaga.codegen.aws.runCodegen \
     -- \
     --maven-artifact org.virtuslab:child-lambda_3:0.0.1-SNAPSHOT \
-    --package-prefix childlambda \
+    --package-prefix "" \
     --output-dir $(pwd)/parent-lambda/generated/child-lambda/
 
 compile-parent-lambda:
