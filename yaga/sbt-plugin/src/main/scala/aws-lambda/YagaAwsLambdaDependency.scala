@@ -13,14 +13,13 @@ trait YagaAwsLambdaDependency extends yaga.sbt.YagaDependency
 case class YagaAwsLambdaProjectDependency(
   project: Project,
   outputSubdirName: Option[String],
-  packagePrefix: Option[String],
+  packagePrefix: String,
   withInfra: Boolean
 ) extends YagaAwsLambdaDependency {
   override def addSelfToProject(baseProject: Project): Project = {
     val codegenTask = Def.task {
       val outputSubdirectoryName = outputSubdirName.getOrElse((project / name).value)
       val codegenOutputDir = (baseProject / Compile / sourceManaged).value / "yaga-aws-codegen" / outputSubdirectoryName
-      val pkgPrefix = packagePrefix.getOrElse("")
 
       val sources: Seq[Path] = Seq(
         (project / yagaAwsLambdaAssembly).value
@@ -29,7 +28,7 @@ case class YagaAwsLambdaProjectDependency(
       val log = streams.value.log
 
       if (dependencyJarChanged || !Files.exists(codegenOutputDir.toPath)) {
-        CodegenHelpers.runCodegen(localJarSources = sources, packagePrefix = pkgPrefix, outputDir = codegenOutputDir.toPath, withInfra = withInfra, log = log)
+        CodegenHelpers.runCodegen(localJarSources = sources, packagePrefix = packagePrefix, outputDir = codegenOutputDir.toPath, withInfra = withInfra, log = log)
       }
 
       (codegenOutputDir ** "*.scala").get
@@ -47,4 +46,3 @@ case class YagaAwsLambdaProjectDependency(
     )
   }
 }
-

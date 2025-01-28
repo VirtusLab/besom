@@ -25,6 +25,7 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
     val packagesSuffixParts = ModelExtractor.ownerPackageNamesChain(sym.owner)
     val packageParts = packagePrefixParts ++ packagesSuffixParts
     val packageRef = ScalaMetaUtils.packageRefFromParts(packageParts)
+    val packageClause = Option.when(packageParts.nonEmpty)(m"package ${packageRef}")
 
     val className = scala.meta.Type.Name(sym.name.toString)
     val fieldLines = sym.tree.get.rhs.constr.paramLists match
@@ -57,8 +58,12 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
     )
 
   def generateLambdaFromLocalJar(jarPath: Path)(using Context): SourceFile =
-    val packageParts = packagePrefixParts
+    val packagesSuffixParts = lambdaApi.handlerClassPackageParts
+    val packageParts = packagePrefixParts ++ packagesSuffixParts
     val packageRef = ScalaMetaUtils.packageRefFromParts(packageParts)
+    val packageClause = Option.when(packageParts.nonEmpty)(m"package ${packageRef}")
+
+    val lambdaClassName = scala.meta.Type.Name(lambdaApi.handlerClassName)
 
     val configType = typeRenderer.typeToCode(lambdaApi.handlerConfigType)
     val inputTypeCode = typeRenderer.typeToCode(lambdaApi.handlerInputType)
@@ -79,17 +84,17 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
           | * This file was generated. Do not modify it manually!
           | */
           |
-          |package ${packageRef}
+          |${packageClause}
           |
-          |class Lambda private(
+          |class ${lambdaClassName} private(
           |  underlyingFunction: _root_.besom.api.aws.lambda.Function,
-          |  lambdaHandle: _root_.yaga.extensions.aws.lambda.LambdaHandle[Lambda.Input, Lambda.Output]
-          |) extends _root_.yaga.extensions.aws.lambda.internal.Lambda[Lambda.Input, Lambda.Output](
+          |  lambdaHandle: _root_.yaga.extensions.aws.lambda.LambdaHandle[${lambdaClassName}.Input, ${lambdaClassName}.Output]
+          |) extends _root_.yaga.extensions.aws.lambda.internal.Lambda[${lambdaClassName}.Input, ${lambdaClassName}.Output](
           |  underlyingFunction = underlyingFunction,
           |  lambdaHandle = lambdaHandle
           |)
           |
-          |object Lambda:
+          |object ${lambdaClassName}:
           |  type Config = ${configType}
           |  type Input = ${inputTypeCode}
           |  type Output = ${outputTypeCode}
@@ -99,7 +104,7 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
           |    args: _root_.besom.api.aws.lambda.FunctionArgs,
           |    config: _root_.besom.types.Input[Config]${defaultConfigValueCode},
           |    opts: _root_.besom.ResourceOptsVariant.Custom ?=> _root_.besom.CustomResourceOptions = _root_.besom.CustomResourceOptions()
-          |  ): _root_.besom.types.Output[Lambda] =
+          |  ): _root_.besom.types.Output[${lambdaClassName}] =
           |    val metadata = ${handlerMetadataSnippet}
           |    val javaRuntime = "$javaRuntime"
           |
@@ -115,7 +120,7 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
           |        args = args,
           |        opts = opts
           |      )
-          |    yield new Lambda(
+          |    yield new ${lambdaClassName}(
           |      underlyingFunction = lambda.underlyingFunction,
           |      lambdaHandle = lambda.lambdaHandle
           |    )
@@ -123,6 +128,6 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
           |""".stripMargin
 
     SourceFile(
-      FilePath(packageParts :+ "Lambda.scala"),
+      FilePath(packageParts :+ s"${lambdaClassName}.scala"),
       sourceCode
     )

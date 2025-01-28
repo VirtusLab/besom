@@ -1,4 +1,4 @@
-//> using scala 3.5.2
+//> using scala 3.6.3
 
 //> using dep org.virtuslab::yaga-codegen:0.4.0-SNAPSHOT
 

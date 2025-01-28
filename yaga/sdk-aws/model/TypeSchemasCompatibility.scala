@@ -21,4 +21,4 @@ object TypeSchemasCompatibility:
     else
       val type1Name = Type.show[T1]
       val type2Name = Type.show[T2]
-      report.errorAndAbort(s"Schemas of type ${type1Name} and ${type2Name} are not compatible.\nSchema of $type1Name:\n${fieldType1}\n\nSchema of $type2Name:\n${fieldType2}")
+      report.errorAndAbort(s"Schemas of type:\n  ${type1Name}\n  ${type2Name}\nare not compatible.\nSchema of $type1Name:\n${fieldType1}\n\nSchema of $type2Name:\n${fieldType2}")

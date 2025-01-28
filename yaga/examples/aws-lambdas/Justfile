@@ -1,0 +1,13 @@
+set fallback := true
+
+infra-up:
+  #!/usr/bin/env bash
+  PULUMI_CONFIG_PASSPHRASE="" BESOM_SBT_MODULE=infra pulumi up --stack dev
+
+infra-down:
+  #!/usr/bin/env bash
+  PULUMI_CONFIG_PASSPHRASE="" BESOM_SBT_MODULE=infra pulumi down --stack dev
+
+infra-output:
+  #!/usr/bin/env bash
+  PULUMI_CONFIG_PASSPHRASE="" BESOM_SBT_MODULE=infra pulumi stack output --stack dev

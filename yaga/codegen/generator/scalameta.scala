@@ -26,14 +26,6 @@ object scalameta:
   private def numberedLines(code: String): String =
     code.linesIterator.zipWithIndex.map { case (line, i) => f"${i + 1}%04d" + s"| $line" }.mkString("\n")
 
-  def given_(decltpe: Type)(body: Term): Defn.GivenAlias = Defn.GivenAlias(
-    mods = Nil,
-    name = Name.Anonymous(),
-    paramClauseGroup = scala.None,
-    decltpe = decltpe,
-    body = body
-  )
-
   def apply_(qualType: Type.Name): Term.Ref             = apply_(Term.Name(qualType.value))
   def apply_(qual: Term.Ref): Term.Ref                  = Term.Select(qual, Term.Name("apply"))
   def method(qual: Term.Ref, name: String): Term.Ref    = method(qual, Term.Name(name))
@@ -139,8 +131,11 @@ object scalameta:
       def meta(args: Any*): String =
         interleave(sc.parts.toList, args.toList).foldLeft("") { case (acc, e) =>
           e match
-            case t: scala.meta.Tree => acc + t.syntax
-            case s: String          => acc + s
+            case t: scala.meta.Tree       => acc + t.syntax
+            case scala.Some(t: scala.meta.Tree) => acc + t.syntax
+            case s: String                => acc + s
+            case scala.Some(s: String)          => acc + s
+            case scala.None                     => acc
             case o =>
               throw GeneralCodegenException(s"Unexpected type '${o.getClass.getTypeName}' passed to Besom Scala Meta interpolator: '${o}'")
         }

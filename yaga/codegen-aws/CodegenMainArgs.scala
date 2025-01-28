@@ -4,7 +4,7 @@ import yaga.codegen.core.extractor.CodegenSource
 
 case class CodegenMainArgs(
   codegenSources: List[CodegenSource],
-  handlerClassName: Option[String],
+  handlerClassFullName: Option[String],
   packagePrefix: String,
   generateInfra: Boolean,
   outputDir: String,

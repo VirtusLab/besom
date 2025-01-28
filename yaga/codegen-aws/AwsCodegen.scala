@@ -12,7 +12,7 @@ import tastyquery.Symbols.*
 object AwsCodegen:
   def doCodegen(
     codegenSources: List[CodegenSource],
-    handlerClassName: Option[String],
+    handlerClassFullName: Option[String],
     packagePrefix: String,
     generateInfra: Boolean,
   ): Seq[SourceFile] =
@@ -20,8 +20,8 @@ object AwsCodegen:
 
     val packagePrefixParts = packagePrefix.split('.').toSeq.filter(_.nonEmpty)
 
-    val extractedApi = handlerClassName.map { handlerClassName =>
-      LambdaApiExtractor().extractLambdaApi(handlerClassName = handlerClassName)
+    val extractedApi = handlerClassFullName.map { handlerClassName =>
+      LambdaApiExtractor().extractLambdaApi(handlerClassFullName = handlerClassName)
     }.getOrElse {
       LambdaApiExtractor().extractLambdaApi(codegenSources = codegenSources)
     }
@@ -60,7 +60,7 @@ object AwsCodegen:
 
     val sources = doCodegen(
       codegenSources = codegenMainArgs.codegenSources,
-      handlerClassName = codegenMainArgs.handlerClassName,
+      handlerClassFullName = codegenMainArgs.handlerClassFullName,
       packagePrefix = codegenMainArgs.packagePrefix,
       generateInfra = codegenMainArgs.generateInfra
     )

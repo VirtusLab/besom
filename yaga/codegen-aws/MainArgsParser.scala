@@ -5,7 +5,7 @@ import java.nio.file.Paths
 
 private[aws] case class MainArgsParser(
   codegenSources: List[CodegenSource],
-  handlerClassName: Option[String],
+  handlerClassFullName: Option[String],
   packagePrefix: Option[String],
   generateInfra: Option[Boolean],
   outputDir: Option[String],
@@ -27,9 +27,9 @@ private[aws] case class MainArgsParser(
         this.copy(
           codegenSources = codegenSources :+ localSource
         ).parseArgs(rest)
-      case "--handler-class" :: handlerClassName :: rest =>
+      case "--handler-class" :: handlerClassFullName :: rest =>
         this.copy(
-          handlerClassName = Some(handlerClassName)
+          handlerClassFullName = Some(handlerClassFullName)
         ).parseArgs(rest)
       case "--package-prefix" :: packagePrefix :: rest =>
         this.copy(
@@ -55,7 +55,7 @@ private[aws] case class MainArgsParser(
         assert(codegenSources.nonEmpty, "Missing codegen sources")
         CodegenMainArgs(
           codegenSources = codegenSources,
-          handlerClassName = handlerClassName,
+          handlerClassFullName = handlerClassFullName,
           packagePrefix = packagePrefix.getOrElse(throw Exception("Missing package prefix")),
           generateInfra = generateInfra.getOrElse(false),
           outputDir = outputDir.getOrElse(throw Exception("Missing output dir")),
@@ -70,7 +70,7 @@ object MainArgsParser:
   def parse(args: Seq[String]): CodegenMainArgs =
     val emptyParser = MainArgsParser(
       codegenSources = Nil,
-      handlerClassName = None,
+      handlerClassFullName = None,
       packagePrefix = None,
       generateInfra = None,
       outputDir = None,

@@ -5,18 +5,20 @@ import tastyquery.Symbols.*
 import tastyquery.Types.*
 import io.github.classgraph.ClassGraph
 import scala.jdk.CollectionConverters.*
-import yaga.codegen.core.extractor.{CodegenSource, ContextSetup}
+import yaga.codegen.core.extractor.{CodegenSource, ContextSetup, ModelExtractor}
 
 class LambdaApiExtractor():
   // TODO
   // val lambdaHandlerBaseClassFullName = classOf[yaga.extensions.aws.lambda.LambdaHandler[?, ?, ?]].getName
   private val lambdaHandlerBaseClassFullName = "yaga.extensions.aws.lambda.LambdaHandler"
 
-  def extractLambdaApi(handlerClassName: String)(using Context): ExtractedLambdaApi =
+  def extractLambdaApi(handlerClassFullName: String)(using Context): ExtractedLambdaApi =
+    val handlerClass = ctx.findTopLevelClass(handlerClassFullName)
 
-    val cls = ctx.findTopLevelClass(handlerClassName)
+    val handlerClassPackageParts = ModelExtractor.ownerPackageNamesChain(handlerClass.owner)
+    val handlerClassName = handlerClass.name.toString
 
-    val rootTypes = cls.parents.collectFirst:
+    val rootTypes = handlerClass.parents.collectFirst:
       case at: AppliedType if at.tycon.showBasic == lambdaHandlerBaseClassFullName /* TODO don't rely on showBasic? */  =>
         at.args.collect { case tpe: Type => tpe }
     .getOrElse(throw Exception(s"Class $handlerClassName does not extend $lambdaHandlerBaseClassFullName"))
@@ -26,6 +28,8 @@ class LambdaApiExtractor():
     val modelSymbols = extractReferencedSymbols(rootTypes).toSeq
 
     ExtractedLambdaApi(
+      handlerClassPackageParts = handlerClassPackageParts,
+      handlerClassName = handlerClassName,
       handlerConfigType = handlerConfigType,
       handlerInputType = handlerInputType,
       handlerOutputType = handlerOutputType,
@@ -51,7 +55,7 @@ class LambdaApiExtractor():
       case Nil =>
         throw Exception(s"No lambda handler found in codegen sources $codegenSources")
       case handler :: Nil =>
-        extractLambdaApi(handlerClassName = handler.getName)
+        extractLambdaApi(handlerClassFullName = handler.getName)
       case handlers =>
         val handlerNames = handlers.map(_.getName).mkString(", ")
         throw Exception(s"Multiple lambda handlers found in codegen sources $codegenSources: ${handlerNames}")

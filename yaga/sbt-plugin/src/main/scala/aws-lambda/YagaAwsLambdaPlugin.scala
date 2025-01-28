@@ -31,7 +31,7 @@ object YagaAwsLambdaPlugin extends AutoPlugin {
         )
       }
 
-      def awsLambdaModel(outputSubdirName: Option[String] = None, packagePrefix: Option[String] = None): YagaAwsLambdaProjectDependency = {
+      def awsLambdaModel(outputSubdirName: Option[String] = None, packagePrefix: String = ""): YagaAwsLambdaProjectDependency = {
         YagaAwsLambdaProjectDependency(
           project = project,
           outputSubdirName = outputSubdirName,
@@ -40,7 +40,7 @@ object YagaAwsLambdaPlugin extends AutoPlugin {
         )
       }
 
-      def awsLambdaInfra(outputSubdirName: Option[String] = None, packagePrefix: Option[String] = None): YagaAwsLambdaProjectDependency = {
+      def awsLambdaInfra(outputSubdirName: Option[String] = None, packagePrefix: String = ""): YagaAwsLambdaProjectDependency = {
         YagaAwsLambdaProjectDependency(
           project = project,
           outputSubdirName = outputSubdirName,
