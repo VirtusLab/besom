@@ -632,7 +632,13 @@ object Packages:
     metadata
   }
 
-  private case class PackageYAML(name: String, repo_url: String, schema_file_url: String, version: String) derives YamlCodec
+  private case class PackageYAML(
+    name: String,
+    repo_url: String,
+    schema_file_url: Option[String],
+    schema_file_path: Option[String],
+    version: String
+  ) derives YamlCodec
 
   // downloads latest package metadata and schemas using Pulumi packages repository
   def downloadPackagesMetadataAndSchema(targetPath: os.Path, selected: List[String])(using config: Config): Unit =
@@ -751,16 +757,23 @@ object Packages:
       downloaded.foreach(p => {
         Progress.report(label = p.name)
         try
-          val ext        = if p.schema_file_url.endsWith(".yaml") || p.schema_file_url.endsWith(".yml") then "yaml" else "json"
+          val schemaFileUrl = (p.schema_file_url, p.schema_file_path) match
+            case (Some(url), _) =>
+              url
+            case (None, Some(path)) =>
+              val rawUrlPrefix = p.repo_url.replace("https://github.com/", "https://raw.githubusercontent.com/")
+              s"$rawUrlPrefix/${p.version}/${path}"
+            case _ =>
+              throw Exception("Cannot extract schema file URL from the package metadata")
+          val ext        = if schemaFileUrl.endsWith(".yaml") || schemaFileUrl.endsWith(".yml") then "yaml" else "json"
           val schemaPath = config.schemasDir / p.name / PackageVersion(p.version).get / s"schema.$ext"
           if !os.exists(schemaPath) then
-            val url            = p.schema_file_url
-            val schemaResponse = requests.get(url)
+            val schemaResponse = requests.get(schemaFileUrl)
             if schemaResponse.statusCode == 200
             then os.write.over(schemaPath, schemaResponse.text(), createFolders = true)
             else
               Progress.fail(
-                s"Failed to download schema for package: '${p.name}' from: '$url', " +
+                s"Failed to download schema for package: '${p.name}' from: '$schemaFileUrl', " +
                   s"error[${schemaResponse.statusCode}]: ${schemaResponse.statusMessage}"
               )
         catch
