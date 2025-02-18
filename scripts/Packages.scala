@@ -632,7 +632,7 @@ object Packages:
     metadata
   }
 
-  private case class PackageYAML(name: String, repo_url: String, schema_file_path: String, version: String) derives YamlCodec
+  private case class PackageYAML(name: String, repo_url: String, schema_file_url: String, version: String) derives YamlCodec
 
   // downloads latest package metadata and schemas using Pulumi packages repository
   def downloadPackagesMetadataAndSchema(targetPath: os.Path, selected: List[String])(using config: Config): Unit =
@@ -751,11 +751,10 @@ object Packages:
       downloaded.foreach(p => {
         Progress.report(label = p.name)
         try
-          val ext        = if p.schema_file_path.endsWith(".yaml") || p.schema_file_path.endsWith(".yml") then "yaml" else "json"
+          val ext        = if p.schema_file_url.endsWith(".yaml") || p.schema_file_url.endsWith(".yml") then "yaml" else "json"
           val schemaPath = config.schemasDir / p.name / PackageVersion(p.version).get / s"schema.$ext"
           if !os.exists(schemaPath) then
-            val rawUrlPrefix   = p.repo_url.replace("https://github.com/", "https://raw.githubusercontent.com/")
-            val url            = s"$rawUrlPrefix/${p.version}/${p.schema_file_path}"
+            val url            = p.schema_file_url
             val schemaResponse = requests.get(url)
             if schemaResponse.statusCode == 200
             then os.write.over(schemaPath, schemaResponse.text(), createFolders = true)
