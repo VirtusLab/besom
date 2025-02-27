@@ -129,9 +129,10 @@ object generator {
     logger.info {
       val relOutputDir = outputDir.relativeTo(os.pwd)
       s"""|Generating package '${packageInfo.name}:${packageInfo.version}' into '$relOutputDir'
-          | - Besom version   : ${config.besomVersion}
-          | - Scala version   : ${config.scalaVersion}
-          | - Java version    : ${config.javaVersion}
+          | - Besom version          : ${config.besomVersion}
+          | - Scala version          : ${config.scalaVersion}
+          | - Java version           : ${config.javaVersion}
+          | - Java target version    : ${config.javaTargetVersion}
           |
           | - Resources: ${packageInfo.pulumiPackage.resources.size}
           | - Types    : ${packageInfo.pulumiPackage.types.size}

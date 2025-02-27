@@ -6,6 +6,7 @@ case class Config(
   logLevel: Logger.Level = Logger.Level.Info,
   besomVersion: String = Config.DefaultBesomVersion,
   javaVersion: String = Config.DefaultJavaVersion,
+  javaTargetVersion: String = Config.DefaultJavaTargetVersion,
   scalaVersion: String = Config.DefaultScalaVersion,
   schemasDir: os.Path = Config.DefaultSchemasDir,
   codegenDir: os.Path = Config.DefaultCodegenDir,
@@ -30,8 +31,9 @@ end Config
 // noinspection ScalaWeakerAccess
 object Config {
 
-  val DefaultJavaVersion  = "11"
-  val DefaultScalaVersion = "3.3.1"
+  val DefaultJavaVersion       = "23"
+  val DefaultJavaTargetVersion = "11"
+  val DefaultScalaVersion      = "3.3.5"
 
   val DefaultBesomVersion: String = {
     try {

@@ -24,7 +24,7 @@ class LanguagePluginTest extends munit.FunSuite {
 
   val projectFile =
     s"""|//> using scala $scalaVersion
-        |//> using options -java-output-version:$javaVersion
+        |//> using options -java-output-version:$javaTargetVersion
         |//> using plugin "org.virtuslab::besom-compiler-plugin:$coreVersion"
         |//> using dep "org.virtuslab::besom-core:$coreVersion"
         |//> using dep "org.virtuslab::besom-fake-standard-resource:1.2.3-TEST"
@@ -36,8 +36,8 @@ class LanguagePluginTest extends munit.FunSuite {
         |  .in(file("."))
         |  .settings(
         |    scalaVersion := "$scalaVersion",
-        |    scalacOptions ++= Seq("-java-output-version", "$javaVersion"),
-        |    javacOptions in (Compile, compile) ++= Seq("-source", "$javaVersion", "-target", "$javaVersion"),
+        |    scalacOptions ++= Seq("-java-output-version", "$javaTargetVersion"),
+        |    javacOptions in (Compile, compile) ++= Seq("-source", "$javaVersion", "-target", "$javaTargetVersion"),
         |    libraryDependencies ++= Seq(
         |      "org.virtuslab" %% "besom-core" % "$coreVersion",
         |      "org.virtuslab" %% "besom-fake-standard-resource" % "1.2.3-TEST",
@@ -87,8 +87,8 @@ class LanguagePluginTest extends munit.FunSuite {
         |
         |    <properties>
         |        <encoding>UTF-8</encoding>
-        |        <maven.compiler.target>$javaVersion</maven.compiler.target>
-        |        <maven.compiler.release>$javaVersion</maven.compiler.release>
+        |        <maven.compiler.target>$javaTargetVersion</maven.compiler.target>
+        |        <maven.compiler.release>$javaTargetVersion</maven.compiler.release>
         |        <mainClass>$${project.groupId}.$${project.artifactId}.run</mainClass>
         |    </properties>
         |
