@@ -1,19 +1,25 @@
+//> using target.platform jvm
+
 package yaga.extensions.aws.lambda
+
+import yaga.json.{JsonReader, JsonWriter}
 
 import software.amazon.awssdk.services.lambda.{LambdaClient as UnshapedLambdaClient}
 import software.amazon.awssdk.services.lambda.model.{InvokeRequest, InvocationType}
-import yaga.extensions.aws.lambda.internal.{LambdaInputSerializer, LambdaOutputDeserializer}
+import software.amazon.awssdk.core.SdkBytes
+// import yaga.extensions.aws.lambda.internal.{LambdaInputSerializer, LambdaOutputDeserializer}
 
 class LambdaClient(
   val unshapedClient: UnshapedLambdaClient = UnshapedLambdaClient.builder().build()
-):
+) extends LambdaClientApi:
   // TODO Wrap the result type O in some error monad?; Expose other elements of InvokeResponse?
-  def invokeSyncUnsafe[I, O](function: LambdaHandle[I, O], input: I)(using
+
+  override def invokeSyncUnsafe[I, O](function: LambdaHandle[I, O], input: I)(using
     // TODO Remove serde typeclasses from the signature by bundling them in the function handle?
-    inputSerializer: LambdaInputSerializer[I],
-    outputDeserializer: LambdaOutputDeserializer[O]
+    inputWriter: JsonWriter[I],
+    outputReader: JsonReader[O]
   ): O =
-    val inputBytes = inputSerializer.serialize(input)
+    val inputBytes = SdkBytes.fromUtf8String(inputWriter.write(input))
 
     val invokeRequest = InvokeRequest.builder()
       .functionName(function.functionName)
@@ -29,14 +35,15 @@ class LambdaClient(
     )
 
     val outputBytes = invokeResponse.payload()
-    val result = outputDeserializer.deserialize(outputBytes)
+    val result = outputReader.read(outputBytes.asUtf8String())
+
     result
 
-  def invokeAsyncUnsafe[I, O](function: LambdaHandle[I, ?], input: I)(using
+  override def invokeAsyncUnsafe[I, O](function: LambdaHandle[I, ?], input: I)(using
     // TODO Remove serde typeclasses from the signature by bundling them in the function handle?
-    inputSerializer: LambdaInputSerializer[I]
+    inputWriter: JsonWriter[I]
   ): Unit =
-    val inputBytes = inputSerializer.serialize(input)
+    val inputBytes = SdkBytes.fromUtf8String(inputWriter.write(input))
 
     val invokeRequest = InvokeRequest.builder()
       .functionName(function.functionName)

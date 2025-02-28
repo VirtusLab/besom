@@ -2,6 +2,7 @@ package yaga.extensions.aws.lambda.internal
 
 import besom.util.NonEmptyString
 import besom.types.Archive
+import yaga.json.JsonWriter
 import besom.api.aws.lambda.{Function, FunctionArgs}
 import besom.api.aws.lambda.inputs.FunctionEnvironmentArgs
 import yaga.extensions.aws.lambda.LambdaHandle
@@ -13,10 +14,10 @@ class Lambda[I, O](
   export underlyingFunction.*
 
 object Lambda:
-  def apply[C : EnvWriter, I, O](
+  def apply[C : JsonWriter, I, O](
     name: NonEmptyString,
     codeArchive: Archive,
-    handlerClassName: String,
+    handlerName: String,
     runtime: String,
     config: besom.types.Input[C],
     args: FunctionArgs,
@@ -27,10 +28,10 @@ object Lambda:
       modifiedArgs = args.withArgs(
         name = name, // TODO preserve name if defined explicitly in the args?
         code = codeArchive,
-        handler = handlerClassName,
+        handler = handlerName,
         runtime = runtime,
         environment = FunctionEnvironmentArgs(
-          variables = summon[EnvWriter[C]].write(conf).getOrElse(throw new Exception("Cannot serialize config to environment variables")) // TODO handle error better
+          variables = EnvWriter.write(conf).getOrElse(throw new Exception("Cannot serialize config to environment variables")) // TODO handle error better
         )
         // TODO clear properties conflicting with the ones from above (for env vars extending rather than overriding?)
         // TODO get and set default (minimal) java version from the jar (via the metadata) ???

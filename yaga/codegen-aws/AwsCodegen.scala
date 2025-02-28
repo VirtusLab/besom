@@ -8,6 +8,7 @@ import yaga.codegen.aws.generator.AwsGenerator
 
 import tastyquery.Contexts.*
 import tastyquery.Symbols.*
+import java.nio.file.Path
 
 object AwsCodegen:
   def doCodegen(
@@ -15,6 +16,8 @@ object AwsCodegen:
     handlerClassFullName: Option[String],
     packagePrefix: String,
     generateInfra: Boolean,
+    lambdaArtifactAbsolutePath: Option[Path],
+    lambdaRuntime: Option[String]
   ): Seq[SourceFile] =
     given Context = ContextSetup.contextFromCodegenSources(codegenSources)
 
@@ -30,24 +33,22 @@ object AwsCodegen:
     
     val modelSources = generator.generateModelSources()
 
-    val infraSources = 
+    val infraSources: Seq[SourceFile] = 
       if generateInfra then
-        codegenSources match
-          case List(CodegenSource.LocalJar(absoluteJarPath)) =>
+        lambdaRuntime match
+          case Some(runtime @ "java21") =>
             Seq(
-              generator.generateLambdaFromLocalJar(absoluteJarPath),
+              generator.generateJvmLambda(jarPath = lambdaArtifactAbsolutePath.get),
             )
-          case List(CodegenSource.MavenArtifact(orgName, moduleName, version)) =>
-            val jarPaths = CoursierHelpers.jarPathsFromMavenCoordinates(orgName, moduleName, version)
-            jarPaths match
-              case List(absoluteJarPath) =>
-                Seq(
-                  generator.generateLambdaFromLocalJar(absoluteJarPath),
-                )
-              case _ =>
-                throw Exception(s"Expected a single jar path for artifact: $orgName:$moduleName:$version, but got: $jarPaths")
-          case sources =>
-            throw Exception(s"Only codegen from a single local jar or published artifact is supported for infra generation, but got the following sources: $sources")
+          case Some(runtime @ "nodejs22.x") =>
+            Seq(
+              generator.generateNodejsLambda(deployableArchivePath = lambdaArtifactAbsolutePath.get)
+            )
+          case Some(runtime) =>
+            throw Exception(s"Unsupported lambda runtime: $runtime. Should be java21 or nodejs22.x")
+
+          case None =>
+            throw Exception("Lambda runtime must be specified for infra generation")
       else
         Seq.empty
 
@@ -62,7 +63,9 @@ object AwsCodegen:
       codegenSources = codegenMainArgs.codegenSources,
       handlerClassFullName = codegenMainArgs.handlerClassFullName,
       packagePrefix = codegenMainArgs.packagePrefix,
-      generateInfra = codegenMainArgs.generateInfra
+      generateInfra = codegenMainArgs.generateInfra,
+      lambdaArtifactAbsolutePath = codegenMainArgs.lambdaArtifactAbsolutePath,
+      lambdaRuntime = codegenMainArgs.lambdaRuntime
     )
     val outputDirPath = os.Path(codegenMainArgs.outputDir)
     val summaryFilePath = codegenMainArgs.summaryFile.map(os.Path(_))

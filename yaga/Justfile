@@ -1,4 +1,45 @@
+mod besom '..'
+
 besom-core-version-suffix := "0.4"
+
+default:
+	@just --list
+
+################################################################################
+# Besom
+################################################################################
+
+publish-local-json-jvm:
+  scala-cli publish local json
+
+publish-local-json-js:
+  scala-cli publish local json --js
+
+################################################################################
+# Core
+################################################################################
+
+publish-local-model-jvm:
+  scala-cli publish local model
+
+publish-local-model-js:
+  scala-cli publish local model --js
+
+publish-local-model: publish-local-model-jvm publish-local-model-js
+
+publish-local-codegen:
+  scala-cli publish local codegen
+
+publish-local-sbt:
+  #!/usr/bin/env bash
+  cd sbt-plugin
+  sbt publishLocal
+
+publish-local-core: publish-local-model publish-local-codegen publish-local-sbt
+
+################################################################################
+# AWS lambdas
+################################################################################
 
 publish-local-aws-mini aws-version="6.53.0":
   #!/usr/bin/env bash
@@ -7,29 +48,18 @@ publish-local-aws-mini aws-version="6.53.0":
   cd .out/codegen/aws/{{aws-version}}
   scala-cli publish local --project-version {{aws-version}}-mini-core.{{besom-core-version-suffix}}-SNAPSHOT project.scala src/index src/iam src/lambda
 
-compile-model:
-  scala-cli compile model
-
-publish-local-model:
-  scala-cli publish local model
-
-compile-codegen:
-  scala-cli compile codegen
-
-publish-local-codegen:
-  scala-cli publish local codegen
-
-compile-sdk-aws:
-  scala-cli compile sdk-aws
-
-publish-local-sdk-aws: publish-local-model
+publish-local-sdk-aws-jvm: publish-local-model
   scala-cli publish local sdk-aws
+
+publish-local-sdk-aws-js: publish-local-model
+  scala-cli publish local sdk-aws --js
 
 compile-sdk-besom-aws:
   scala-cli compile sdk-besom-aws
 
-publish-local-sdk-besom-aws: publish-local-sdk-aws
+publish-local-sdk-besom-aws:
   scala-cli publish local sdk-besom-aws
+
 
 compile-codegen-aws:
   scala-cli compile codegen-aws
@@ -37,7 +67,48 @@ compile-codegen-aws:
 publish-local-codegen-aws: publish-local-codegen
   scala-cli publish local codegen-aws
 
+# TODO separate the build of sbt plugin core and extensions
 publish-local-sbt-aws-lambda:
+
+publish-local-aws-lambda: publish-local-sdk-aws-jvm publish-local-sdk-aws-js publish-local-aws-mini publish-local-sdk-besom-aws publish-local-codegen-aws publish-local-sbt-aws-lambda
+
+################################################################################
+# Aggregated
+################################################################################
+
+publish-local-all: publish-local-core publish-local-aws-lambda
+
+
+
+################################################################################
+# Misc
+################################################################################
+
+deployable-wasm source-dir dest-dir:
   #!/usr/bin/env bash
-  cd sbt-plugin
-  sbt publishLocal
+  rm -rf {{dest-dir}}
+  mkdir -p {{dest-dir}}
+  cp {{source-dir}}/__loader.js {{dest-dir}}/__loader.mjs
+  sed -e 's/__loader.js/__loader.mjs/g' {{source-dir}}/main.js > {{dest-dir}}/main.mjs
+  cp {{source-dir}}/main.wasm {{dest-dir}}/main.wasm
+  cp {{source-dir}}/main.wasm.map {{dest-dir}}/main.wasm.map
+  cp /Users/mpalka/Projects/besom9/besom/yaga/examples/aws-lambdas-js/js-snippets/node-wrapper {{dest-dir}}/
+  cp /Users/mpalka/Projects/besom9/besom/yaga/examples/aws-lambdas-js/js-snippets/index.mjs {{dest-dir}}/
+  (cd {{dest-dir}} && zip {{dest-dir}}.zip *)
+
+deployable-aaa:
+  just deployable-wasm /Users/mpalka/Projects/besom9/besom/yaga/examples/aws-lambdas-js/aaa/target/scala-3.3.4/aaa-opt /tmp/lambda-aaa
+
+# deployable-aaa: (deployable-wasm /Users/mpalka/Projects/besom9/besom/yaga/examples/aws-lambdas-js/aaa/target/scala-3.3.4/aaa-opt /tmp/lambda-aaa.zip)
+#   #!/usr/bin/env bash
+#   rm -rf /tmp/lambda-aaa
+#   mkdir -p /tmp/lambda-aaa
+#   cp /Users/mpalka/Projects/besom9/besom/yaga/examples/aws-lambdas-js/aaa/target/scala-3.3.4/aaa-opt/__loader.js /tmp/lambda-aaa/__loader.mjs
+#   cp /Users/mpalka/Projects/besom9/besom/yaga/examples/aws-lambdas-js/aaa/target/scala-3.3.4/aaa-opt/main.js /tmp/lambda-aaa/main.mjs
+#   cp /Users/mpalka/Projects/besom9/besom/yaga/examples/aws-lambdas-js/aaa/target/scala-3.3.4/aaa-opt/main.wasm /tmp/lambda-aaa/main.wasm
+#   cp /Users/mpalka/Projects/besom9/besom/yaga/examples/aws-lambdas-js/aaa/target/scala-3.3.4/aaa-opt/main.wasm.map /tmp/lambda-aaa/main.wasm.map
+#   sed -i -e 's/__loader.js/__loader.mjs/g' /tmp/lambda-aaa/main.mjs
+#   (cd /tmp/lambda-aaa && zip /tmp/lambda-aaa.zip *)
+
+
+# AWS_LAMBDA_EXEC_WRAPPER=/var/task/node-wrapper

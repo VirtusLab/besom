@@ -2,16 +2,14 @@ package yaga.extensions.aws.lambda.internal
 
 import scala.util.Try
 
-import besom.json.{JsonParser, JsonReader}
-
-trait EnvReader[A]:
-  def read(env: Map[String, String]): Either[Throwable, A]
+import yaga.json.JsonReader
 
 object EnvReader:
-  given fromBesomJsonReader[A](using jsonReader: JsonReader[A]): EnvReader[A] with
-    override def read(env: Map[String, String]): Either[Throwable, A] =
-      Try {
-        val str = env(EnvWriter.defaultEnvVariableName)
-        val json = JsonParser(str)
-        jsonReader.read(json)
+  inline def read[A : JsonReader](env: Map[String, String]): Either[Throwable, A] =
+    Try {
+        val jsonStr = env(EnvWriter.defaultEnvVariableName)
+        summon[JsonReader[A]].read(jsonStr)
       }.toEither
+
+  def configJson(env: Map[String, String]): String =
+    env(EnvWriter.defaultEnvVariableName)

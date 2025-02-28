@@ -1,5 +1,6 @@
 package com.virtuslab.parent_lambda
 
+//import besom.json.*
 import yaga.extensions.aws.lambda.{LambdaClient, LambdaHandle, LambdaHandler}
 import com.virtuslab.child_lambda_a
 import com.virtuslab.child_lambda_b
