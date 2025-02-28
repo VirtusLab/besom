@@ -11,6 +11,7 @@ import scala.util.{Failure, Success, Try}
 case object LocalOnly extends munit.Tag("LocalOnly")
 
 val javaVersion        = Config.DefaultJavaVersion
+val javaTargetVersion  = Config.DefaultJavaTargetVersion
 val scalaVersion       = Config.DefaultScalaVersion
 val coreVersion        = Config.DefaultBesomVersion
 val scalaPluginVersion = coreVersion
@@ -19,7 +20,8 @@ val languagePluginDir = os.pwd / ".out" / "language-plugin"
 
 val defaultProjectFile =
   s"""|//> using scala $scalaVersion
-      |//> using options -java-output-version:$javaVersion -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
+      |//> using jvm $javaVersion
+      |//> using options -java-output-version:$javaTargetVersion -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
       |//> using plugin org.virtuslab::besom-compiler-plugin:$coreVersion
       |//> using dep org.virtuslab::besom-core:$coreVersion
       |""".stripMargin

@@ -44,16 +44,17 @@ class CodeGen(using
   }
 
   def projectConfigFile(schemaName: String, packageVersion: PackageVersion): SourceFile = {
-    val besomVersion     = config.besomVersion
-    val scalaVersion     = config.scalaVersion
-    val javaVersion      = config.javaVersion
-    val coreShortVersion = config.coreShortVersion
-    val organization     = config.organization
-    val url              = config.url
-    val vcs              = config.vcs
-    val license          = config.license
-    val repository       = config.repository
-    val developers       = config.developers
+    val besomVersion      = config.besomVersion
+    val scalaVersion      = config.scalaVersion
+    val javaVersion       = config.javaVersion
+    val javaTargetVersion = config.javaTargetVersion
+    val coreShortVersion  = config.coreShortVersion
+    val organization      = config.organization
+    val url               = config.url
+    val vcs               = config.vcs
+    val license           = config.license
+    val repository        = config.repository
+    val developers        = config.developers
 
     val developersBlock = developers.map(developer => s"//> using publish.developer \"$developer\"").mkString("\n")
 
@@ -61,7 +62,8 @@ class CodeGen(using
 
     val fileContent =
       s"""|//> using scala "$scalaVersion"
-          |//> using options "-java-output-version:$javaVersion"
+          |//> using jvm "$javaVersion"
+          |//> using options "-java-output-version:$javaTargetVersion"
           |//> using options "-skip-by-regex:.*"
           |
           |//> using dep "org.virtuslab::besom-core:${besomVersion}"
