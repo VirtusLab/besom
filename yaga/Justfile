@@ -2,6 +2,7 @@ besom-core-version-suffix := "0.4"
 
 publish-local-aws-mini aws-version="6.53.0":
   #!/usr/bin/env bash
+  export GITHUB_TOKEN=$(gh auth token); \
   cd ..
   just cli packages generate aws:{{aws-version}}
   cd .out/codegen/aws/{{aws-version}}
@@ -41,3 +42,5 @@ publish-local-sbt-aws-lambda:
   #!/usr/bin/env bash
   cd sbt-plugin
   sbt publishLocal
+
+publish-local-all: publish-local-aws-mini publish-local-model publish-local-codegen publish-local-sdk-aws publish-local-sdk-besom-aws publish-local-codegen-aws publish-local-sbt-aws-lambda
