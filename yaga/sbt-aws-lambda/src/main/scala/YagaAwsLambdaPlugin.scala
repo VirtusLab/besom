@@ -14,8 +14,8 @@ import yaga.sbt.{MavenArtifactsHelpers, YagaDependency}
 
 object YagaAwsLambdaPlugin extends AutoPlugin {
   val yagaVersion = "0.4.0-SNAPSHOT"
-  val yagaAwsSdkDep = "org.virtuslab" %% "yaga-aws" % yagaVersion
-  val yagaBesomAwsSdkDep = "org.virtuslab" %% "yaga-besom-aws" % yagaVersion
+  val yagaAwsSdkDep = "org.virtuslab" %% "yaga-aws-lambda" % yagaVersion
+  val yagaBesomAwsSdkDep = "org.virtuslab" %% "yaga-besom-aws-lambda" % yagaVersion
 
   override def requires = sbtassembly.AssemblyPlugin && yaga.sbt.YagaPlugin
   override def trigger = allRequirements

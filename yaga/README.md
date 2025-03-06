@@ -6,6 +6,7 @@
   - [just](https://github.com/casey/just)
   - [pulumi](https://www.pulumi.com/docs/iac/download-install/)
   - [go](https://go.dev)
+  - besom v0.4.0-SNAPSHOT (built locally)
 
 ### Publish local by running:
 ```bash

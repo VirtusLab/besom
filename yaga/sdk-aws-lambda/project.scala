@@ -6,7 +6,7 @@
 //> using dep software.amazon.awssdk:lambda:2.26.9
 
 //> using publish.organization "org.virtuslab"
-//> using publish.name "yaga-aws"
+//> using publish.name "yaga-aws-lambda"
 //> using publish.version "0.4.0-SNAPSHOT"
 
 //> using publish.license "Apache-2.0"

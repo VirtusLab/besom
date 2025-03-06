@@ -28,14 +28,16 @@ import parent.com.virtuslab.parent_lambda.{ParentLambda, Config as ParentLambdaC
   val childLambdaA = ChildLambdaA(
     "childLambdaA",
     FunctionArgs(
-      role = lambdaAssumeRole.arn
+      role = lambdaAssumeRole.arn,
+      timeout = 30
     )
   )
 
   val childLambdaB = ChildLambdaB(
     "childLambdaB",
     FunctionArgs(
-      role = lambdaAssumeRole.arn
+      role = lambdaAssumeRole.arn,
+      timeout = 30
     )
   )
 
