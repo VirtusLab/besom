@@ -111,10 +111,110 @@ def loadEnvParams(envParams: Vector[Parameter.Env]): Map[String, LoadedEnvParame
   envParams.map { envParam =>
     val envKey = normalizeEnvKey(envParam.name)
     val value = sys.env.getOrElse(envKey, sys.error(s"Missing required env variable '$envKey'"))
-    envParam.name -> LoadedEnvParameter(value, envParam)
+    envKey -> LoadedEnvParameter(value, envParam)
   }.toMap
 
-def 
+def runExample(project: String, params: Vector[Parameter], loadedEnvParams: Map[String, LoadedEnvParameter]): Unit =
+  println(s"\n========== Project $project ==========")
+  
+  val projectPath = os.pwd / project
+  if (!os.exists(projectPath)) {
+    println(s"Project directory not found: $project")
+    return
+  }
+
+  // Collect parameters by their target (env or config)
+  val toEnvParams = params.collect[Parameter.Const | Parameter.Generate | Parameter.Env] {
+    case p: Parameter.Env if p.to == "env"      => p
+    case c: Parameter.Const if c.to == "env"    => c
+    case g: Parameter.Generate if g.to == "env" => g
+  }
+
+  val toConfigParams = params.collect[Parameter.Const | Parameter.Generate | Parameter.Env] {
+    case p: Parameter.Env if p.to == "config"      => p
+    case c: Parameter.Const if c.to == "config"    => c
+    case g: Parameter.Generate if g.to == "config" => g
+  }
+
+  // Prepare environment parameters
+  val preparedEnvParams = toEnvParams.map {
+    case p: Parameter.Env      => p.name -> loadedEnvParams(normalizeEnvKey(p.name)).value
+    case p: Parameter.Const    => p.name -> p.value
+    case p: Parameter.Generate => p.name -> generatePasswordString
+  }
+
+    // Prepare config parameters with their secret status
+    val preparedConfigParams = toConfigParams.map {
+      case p: Parameter.Env      => (p.name, loadedEnvParams(normalizeEnvKey(p.name)).value, p.secret)
+      case p: Parameter.Const    => (p.name, p.value, false)
+      case p: Parameter.Generate => (p.name, generatePasswordString, p.secret)
+    }
+
+  println("Setting up project environment...")
+  
+  // Create environment map
+  val envMap = sys.env ++ preparedEnvParams.toMap
+
+  try {
+    // Initialize and select Pulumi stack
+    println("Initializing Pulumi stack...")
+    val stackName = s"testing-$project"
+    
+    // Clean up any existing stack first
+    try {
+      os.proc("pulumi", "stack", "rm", "--yes", "--force", stackName, "--cwd", projectPath)
+        .call(check = false, env = envMap)
+    } catch {
+      case _: Exception => // Ignore errors if stack doesn't exist
+    }
+    
+    os.proc("pulumi", "stack", "init", stackName, "--cwd", projectPath)
+      .call(check = false, env = envMap)
+    os.proc("pulumi", "stack", "select", stackName, "--cwd", projectPath)
+      .call(check = false, env = envMap)
+
+    // Set up Pulumi config
+    if (preparedConfigParams.nonEmpty) {
+      println("Setting up Pulumi configuration...")
+      preparedConfigParams.foreach { case (name, value, isSecret) =>
+        println(s"  Setting config: $name${if (isSecret) " (secret)" else ""}")
+        val cmd = if (isSecret) 
+          os.proc("pulumi", "config", "set", "--secret", name, value, "--cwd", projectPath)
+        else 
+          os.proc("pulumi", "config", "set", name, value, "--cwd", projectPath)
+        cmd.call(check = false, env = envMap)
+      }
+    }
+
+    // Deploy the stack
+    println(s"Deploying example...")
+    os.proc("pulumi", "up", "--yes", "--cwd", projectPath)
+      .call(env = envMap)
+    println(s"Successfully deployed example: $project")
+
+  } catch {
+    case e: os.SubprocessException =>
+      println(s"Failed to deploy example $project: Process failed with output:\n${e.toString()}")
+      throw e
+    case e: Exception =>
+      println(s"Failed to deploy example $project: ${e.getMessage}")
+      throw e
+  } finally {
+    println(s"Cleaning up example: $project")
+    try {
+      // Destroy the stack
+      os.proc("pulumi", "destroy", "--yes", "--cwd", projectPath)
+        .call(env = envMap)
+      // Remove the stack
+      os.proc("pulumi", "stack", "rm", "--yes", "--cwd", projectPath)
+        .call(env = envMap)
+    } catch {
+      case e: os.SubprocessException =>
+        println(s"Failed to clean up example $project: Process failed with output:\n${e.toString()}")
+      case e: Exception =>
+        println(s"Failed to clean up example $project: ${e.getMessage}")
+    }
+  }
 
 def main() =
   val parsedParamsPerProject = readParameterData(os.pwd / "required_secrets.json")
@@ -127,33 +227,15 @@ def main() =
   val envParams = parsedParamsPerProject.values.flatten.collect { case p: Parameter.Env => p }.toVector
   val loadedEnvParams = loadEnvParams(envParams)
 
+  // Process each project
   parsedParamsPerProject.foreach { case (project, params) =>
-    val toEnvParams = params.collect[Parameter.Const | Parameter.Generate | Parameter.Env] {
-      case p: Parameter.Env if p.to == "env"      => p
-      case c: Parameter.Const if c.to == "env"    => c
-      case g: Parameter.Generate if g.to == "env" => g
+    try {
+      runExample(project, params, loadedEnvParams)
+    } catch {
+      case e: Exception =>
+        println(s"Failed to process example $project: ${e.getMessage}")
+        sys.exit(1)
     }
-
-    val toConfigParams = params.collect[Parameter.Const | Parameter.Generate | Parameter.Env] {
-      case p: Parameter.Env if p.to == "config"      => p
-      case c: Parameter.Const if c.to == "config"    => c
-      case g: Parameter.Generate if g.to == "config" => g
-    }
-
-    val preparedEnvParams = toEnvParams.map {
-      case p: Parameter.Env      => p.name -> loadedEnvParams(normalizeEnvKey(p.name)).value
-      case p: Parameter.Const    => p.name -> p.value
-      case p: Parameter.Generate => p.name -> generatePasswordString
-    }
-
-    val preparedConfigParams = toConfigParams.map {
-      case p: Parameter.Env      => p.name -> loadedEnvParams(normalizeEnvKey(p.name)).value
-      case p: Parameter.Const    => p.name -> p.value
-      case p: Parameter.Generate => p.name -> generatePasswordString
-    }
-
-
-
   }
 
 main()
