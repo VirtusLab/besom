@@ -1,0 +1,8 @@
+{
+  "fieldRemovals": [
+    {
+      "name": "urn",
+      "fix": "https://github.com/dirien/pulumi-vultr/pull/494"
+    }
+  ]
+}

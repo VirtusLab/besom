@@ -93,6 +93,8 @@ object Packages:
     println(s"Compiling with max heap size: ${heapMaxGb}G")
     Vector(
       "--server=false",
+      "--jvm",
+      "graalvm-java23:23.0.2",
       "--javac-opt=-verbose",
       s"--javac-opt=-J-XX:MaxHeapSize=${heapMaxGb}G",
       "--javac-opt=-J-XX:NewRatio=1", // increase young vs old gen size, default is 2
@@ -158,7 +160,8 @@ object Packages:
   private val compileProblemPackages = blockedPackages ++ Vector(
     "aws-iam", // id parameter, schema error - https://github.com/pulumi/pulumi-aws-iam/issues/18
     "nuage", // id parameter, schema error - https://github.com/nuage-studio/pulumi-nuage/issues/50
-    "ovh", // urn parameter, schema error - https://github.com/ovh/pulumi-ovh/issues/139
+    // addressed with a hotfix, also now it's iam.PermissionsGroup
+    // "ovh", // urn parameter, schema error - https://github.com/ovh/pulumi-ovh/issues/139
     "fortios" // method collision - https://github.com/VirtusLab/besom/issues/458
   )
 

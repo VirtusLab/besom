@@ -4,6 +4,7 @@ import besom.codegen.PackageVersion.PackageVersionOps
 import besom.codegen.Utils.PulumiPackageOps
 import besom.codegen.metaschema.*
 import besom.codegen.{PackageVersion, SchemaFile, SchemaName}
+import besom.model.SemanticVersion
 
 type SchemaFile = os.Path
 
@@ -90,11 +91,27 @@ class DownloadingSchemaProvider(using logger: Logger, config: Config) extends Sc
     packageInfos.keys.filterNot { case (name, _) => name == schemaName }.toList
 
   def packageInfo(metadata: PackageMetadata, schema: Option[SchemaFile] = None): PulumiPackageInfo = {
-    val (pulumiPackage, packageMetadata) = (metadata, schema) match {
+    val (initialPackage, packageMetadata) = (metadata, schema) match {
       case (m, Some(schema))          => this.pulumiPackage(m, schema)
       case (m: PackageMetadata, None) => this.pulumiPackage(m)
     }
-    packageInfo(packageMetadata, pulumiPackage)
+
+    // Apply hotfixes to the package
+    val pulumiPackage = Hotfix.applyToPackage(
+      initialPackage,
+      packageMetadata.name,
+      SemanticVersion
+        .parseTolerant(packageMetadata.version.orDefault.asString)
+        .fold(
+          e => throw GeneralCodegenException(s"Invalid version: ${packageMetadata.version.orDefault.asString}", e),
+          identity
+        )
+    )
+
+    packageInfos.getOrElseUpdate(
+      (packageMetadata.name, packageMetadata.version.orDefault),
+      reconcilePackageInfo(pulumiPackage, packageMetadata)
+    )
   }
 
   def packageInfo(
