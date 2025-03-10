@@ -95,17 +95,19 @@ class DownloadingSchemaProvider(using logger: Logger, config: Config) extends Sc
       case (m, Some(schema))          => this.pulumiPackage(m, schema)
       case (m: PackageMetadata, None) => this.pulumiPackage(m)
     }
-    
+
     // Apply hotfixes to the package
     val pulumiPackage = Hotfix.applyToPackage(
       initialPackage,
       packageMetadata.name,
-      SemanticVersion.parseTolerant(packageMetadata.version.orDefault.asString).fold(
-        e => throw GeneralCodegenException(s"Invalid version: ${packageMetadata.version.orDefault.asString}", e),
-        identity
-      )
+      SemanticVersion
+        .parseTolerant(packageMetadata.version.orDefault.asString)
+        .fold(
+          e => throw GeneralCodegenException(s"Invalid version: ${packageMetadata.version.orDefault.asString}", e),
+          identity
+        )
     )
-    
+
     packageInfos.getOrElseUpdate(
       (packageMetadata.name, packageMetadata.version.orDefault),
       reconcilePackageInfo(pulumiPackage, packageMetadata)

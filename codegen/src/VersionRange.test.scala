@@ -104,3 +104,4 @@ class VersionRangeTests extends munit.FunSuite:
       }
     )
   }
+end VersionRangeTests

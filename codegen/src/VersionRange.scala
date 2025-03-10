@@ -9,26 +9,25 @@ case class SingleVersion(version: SemanticVersion) extends VersionRange:
   def matches(version: SemanticVersion): Boolean = this.version == version
 
 case class ExactRange(from: SemanticVersion, to: SemanticVersion) extends VersionRange:
-  def matches(version: SemanticVersion): Boolean = 
+  def matches(version: SemanticVersion): Boolean =
     version >= from && version <= to
 
 case class WildcardVersion(major: Int, minorPattern: Option[Int], patchPattern: Option[Int]) extends VersionRange:
   def matches(version: SemanticVersion): Boolean =
-    version.major == major && 
-    minorPattern.forall(_ == version.minor) &&
-    patchPattern.forall(_ == version.patch)
+    version.major == major &&
+      minorPattern.forall(_ == version.minor) &&
+      patchPattern.forall(_ == version.patch)
 
 object VersionRange:
   def parse(range: String): Either[Exception, VersionRange] =
     if range.contains(":") then
       // Handle range with colon e.g. "1.0.0:1.0.2"
       val parts = range.split(":")
-      if parts.length != 2 then
-        Left(Exception(s"Invalid version range format: $range. Expected format: version:version"))
+      if parts.length != 2 then Left(Exception(s"Invalid version range format: $range. Expected format: version:version"))
       else
         for
           from <- SemanticVersion.parseTolerant(parts(0))
-          to <- SemanticVersion.parseTolerant(parts(1))
+          to   <- SemanticVersion.parseTolerant(parts(1))
         yield ExactRange(from, to)
     else if range.contains("x") || range.contains("X") then
       // Handle wildcard version e.g. "1.x.x" or "1.2.x"
