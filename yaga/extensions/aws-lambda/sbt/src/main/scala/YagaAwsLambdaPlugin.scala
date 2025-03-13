@@ -13,9 +13,9 @@ import sbtassembly.MergeStrategy
 import yaga.sbt.{MavenArtifactsHelpers, YagaDependency}
 
 object YagaAwsLambdaPlugin extends AutoPlugin {
-  val yagaVersion = "0.4.0-SNAPSHOT"
-  val yagaAwsSdkDep = "org.virtuslab" %% "yaga-aws-lambda" % yagaVersion
-  val yagaBesomAwsSdkDep = "org.virtuslab" %% "yaga-besom-aws-lambda" % yagaVersion
+  val yagaVersion = "0.4.0-SNAPSHOT" // TODO Extract from root build definition
+  val yagaAwsSdkDep = "org.virtuslab" %% "yaga-aws-lambda-sdk" % yagaVersion
+  val yagaBesomAwsSdkDep = "org.virtuslab" %% "yaga-aws-lambda-besom" % yagaVersion // TODO should be suffixed with besom core minor version?
 
   override def requires = sbtassembly.AssemblyPlugin && yaga.sbt.YagaPlugin
   override def trigger = allRequirements
