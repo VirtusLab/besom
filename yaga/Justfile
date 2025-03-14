@@ -1,13 +1,25 @@
 besom-core-version-suffix := "0.4"
+besom-version := "0.4.0-SNAPSHOT"
 
 default:
 	@just --list
+
+
+################################################################################
+# Besom Json JS
+################################################################################
+
+publish-local-besom-json-js:
+  #!/usr/bin/env bash
+  cd ..
+  scala-cli publish local besom-json --project-version {{besom-version}} --js
+
 
 ################################################################################
 # Besom AWS lambdas
 ################################################################################
 
-publish-local-aws-mini aws-version="6.53.0":
+publish-local-aws-mini aws-version="6.70.0":
   #!/usr/bin/env bash
   export GITHUB_TOKEN=$(gh auth token); \
   cd ..

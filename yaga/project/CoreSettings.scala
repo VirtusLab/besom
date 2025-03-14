@@ -1,14 +1,25 @@
 import sbt._
 import sbt.Keys._
+import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
 
 object CoreSettings {
-  val modelSettings = Seq(
+  private val modelSharedSettings = Seq(
     name := "yaga-core-model",
     libraryDependencies ++= Seq(
-      "org.virtuslab" %% "besom-json" % "0.4.0-SNAPSHOT",
+      // "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.33.2",
+      // "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.33.2" % "compile-internal"
+    )
+  )
 
-      // "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.33.2",
-      // "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.33.2" % "compile-internal"
+  val modelJvmSettings = modelSharedSettings ++ Seq(
+    libraryDependencies ++= Seq(
+      "org.virtuslab" %% "besom-json" % "0.4.0-SNAPSHOT",
+    )
+  )
+
+  val modelJsSettings = modelSharedSettings ++ Seq(
+    libraryDependencies ++= Seq(
+      "org.virtuslab" %% "besom-json_sjs1" % "0.4.0-SNAPSHOT",
     )
   )
 

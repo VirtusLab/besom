@@ -47,10 +47,12 @@ val sbtPluginModuleSettings = Seq(
 // Core
 ////////////////////////////////////////////////////////////
 
-lazy val `core-model` = project
+lazy val `core-model` = crossProject(JVMPlatform, JSPlatform)
+  .crossType(CrossType.Pure)
   .in(file("core/model"))
   .settings(sdkModuleSettings)
-  .settings(CoreSettings.modelSettings)
+  .jvmSettings(CoreSettings.modelJvmSettings)
+  .jsSettings(CoreSettings.modelJsSettings)
 
 lazy val `core-codegen` = project
   .in(file("core/codegen"))
@@ -64,24 +66,26 @@ lazy val `core-sbt` = project
 
 lazy val `core` = project
   .in(file("core"))
-  .aggregate(`core-model`, `core-codegen`, `core-sbt`)
+  .aggregate(`core-model`.jvm, `core-model`.js, `core-codegen`, `core-sbt`)
 
 
 ////////////////////////////////////////////////////////////
 // AWS Lambda
 ////////////////////////////////////////////////////////////
 
-lazy val `aws-lambda-sdk` = project
+lazy val `aws-lambda-sdk` = crossProject(JVMPlatform, JSPlatform)
+  .crossType(CrossType.Full)
   .in(file("extensions/aws-lambda/sdk"))
   .settings(sdkModuleSettings)
-  .settings(AwsLambdaSettings.sdkSettings)
+  .jvmSettings(AwsLambdaSettings.sdkJvmSettings)
+  .jsSettings(AwsLambdaSettings.sdkJsSettings)
   .dependsOn(`core-model`)
 
 lazy val `aws-lambda-besom` = project
   .in(file("extensions/aws-lambda/besom"))
   .settings(besomModuleSettings)
   .settings(AwsLambdaSettings.besomSettings)
-  .dependsOn(`aws-lambda-sdk`)
+  .dependsOn(`aws-lambda-sdk`.jvm) // Needs dependency only on the model part od the SDK - split modules?
 
 lazy val `aws-lambda-codegen` = project
   .in(file("extensions/aws-lambda/codegen"))
@@ -97,4 +101,4 @@ lazy val `aws-lambda-sbt` = project
 
 lazy val `aws-lambda` = project
   .in(file("extensions/aws-lambda"))
-  .aggregate(`aws-lambda-sdk`, `aws-lambda-besom`, `aws-lambda-codegen`, `aws-lambda-sbt`)
+  .aggregate(`aws-lambda-sdk`.jvm, `aws-lambda-sdk`.js, `aws-lambda-besom`, `aws-lambda-codegen`, `aws-lambda-sbt`)

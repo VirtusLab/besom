@@ -17,7 +17,7 @@ object Lambda:
   def apply[C : JsonWriter, I, O](
     name: NonEmptyString,
     codeArchive: Archive,
-    handlerClassName: String,
+    handlerName: String,
     runtime: String,
     config: besom.types.Input[C],
     args: FunctionArgs,
@@ -28,7 +28,7 @@ object Lambda:
       modifiedArgs = args.withArgs(
         name = name, // TODO preserve name if defined explicitly in the args?
         code = codeArchive,
-        handler = handlerClassName,
+        handler = handlerName,
         runtime = runtime,
         environment = FunctionEnvironmentArgs(
           variables = EnvWriter.write(conf).getOrElse(throw new Exception("Cannot serialize config to environment variables")) // TODO handle error better
