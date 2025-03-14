@@ -11,7 +11,7 @@
   
 ### Publish local patches for besom 0.4.0-SNAPSHOT
 ```bash
-just publishpublish-local-aws-mini
+just publish-local-aws-mini
 ```
 
 ### Publish local by running:

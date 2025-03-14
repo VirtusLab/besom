@@ -24,11 +24,16 @@ case class YagaAwsLambdaProjectDependency(
       val sources: Seq[Path] = Seq(
         (project / yagaAwsLambdaAssembly).value
       )
+
+      val lambdaArtifactPath = (project / yagaAwsDeployableLambdaArtifact).value // TODO retrigger codegen if changed
+
       val dependencyJarChanged = (project / yagaAwsLambdaAssembly).outputFileChanges.hasChanges
       val log = streams.value.log
 
+      // TODO track changes of codegen parameters
       if (dependencyJarChanged || !Files.exists(codegenOutputDir.toPath)) {
-        CodegenHelpers.runCodegen(localJarSources = sources, packagePrefix = packagePrefix, outputDir = codegenOutputDir.toPath, withInfra = withInfra, log = log)
+        val runtime = (project / yagaAwsLambdaRuntime).value
+        CodegenHelpers.runCodegen(localJarSources = sources, packagePrefix = packagePrefix, outputDir = codegenOutputDir.toPath, withInfra = withInfra, lambdaArtifactAbsolutePath = Some(lambdaArtifactPath), lambdaRuntime = Some(runtime), log = log)
       }
 
       (codegenOutputDir ** "*.scala").get
@@ -38,10 +43,9 @@ case class YagaAwsLambdaProjectDependency(
       yaga.sbt.YagaPlugin.autoImport.yagaGeneratedSources ++= codegenTask.value,
 
       libraryDependencies ++= {
-        if (withInfra)
-          Seq(YagaAwsLambdaPlugin.yagaBesomAwsSdkDep)
-        else
-          Seq.empty
+        val jsoniterDeps = Seq(YagaAwsLambdaPlugin.jsoniterMacrosDep)
+        val infraDeps = if (withInfra) Seq(YagaAwsLambdaPlugin.yagaBesomAwsSdkDep) else Seq.empty
+        jsoniterDeps ++ infraDeps
       }
     )
   }

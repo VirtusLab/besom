@@ -11,6 +11,7 @@ class LambdaApiExtractor():
   // TODO
   // val lambdaHandlerBaseClassFullName = classOf[yaga.extensions.aws.lambda.LambdaHandler[?, ?, ?]].getName
   private val lambdaHandlerBaseClassFullName = "yaga.extensions.aws.lambda.LambdaHandler"
+  private val lambdaAsyncHandlerBaseClassFullName = "yaga.extensions.aws.lambda.LambdaAsyncHandler"
 
   def extractLambdaApi(handlerClassFullName: String)(using Context): ExtractedLambdaApi =
     val handlerClass = ctx.findTopLevelClass(handlerClassFullName)
@@ -19,9 +20,9 @@ class LambdaApiExtractor():
     val handlerClassName = handlerClass.name.toString
 
     val rootTypes = handlerClass.parents.collectFirst:
-      case at: AppliedType if at.tycon.showBasic == lambdaHandlerBaseClassFullName /* TODO don't rely on showBasic? */  =>
+      case at: AppliedType if at.tycon.showBasic == lambdaHandlerBaseClassFullName || at.tycon.showBasic == lambdaAsyncHandlerBaseClassFullName /* TODO don't rely on showBasic? */  =>
         at.args.collect { case tpe: Type => tpe }
-    .getOrElse(throw Exception(s"Class $handlerClassName does not extend $lambdaHandlerBaseClassFullName"))
+    .getOrElse(throw Exception(s"Class $handlerClassName does not directly extend $lambdaHandlerBaseClassFullName or $lambdaAsyncHandlerBaseClassFullName"))
 
     val List(handlerConfigType, handlerInputType, handlerOutputType) = rootTypes
 
@@ -50,7 +51,10 @@ class LambdaApiExtractor():
     val jarClassLoader = new java.net.URLClassLoader(jarUrls)
 
     // TODO filter out classes from transitive dependencies?
-    val lambdaHandlerSubclasses = new ClassGraph().overrideClassLoaders(jarClassLoader).enableClassInfo.scan().getSubclasses(lambdaHandlerBaseClassFullName).asScala.toList
+    val lambdaSyncHandlerSubclasses = new ClassGraph().overrideClassLoaders(jarClassLoader).enableClassInfo.scan().getSubclasses(lambdaHandlerBaseClassFullName).asScala.toList
+    val lambdaAsyncHandlerSubclasses = new ClassGraph().overrideClassLoaders(jarClassLoader).enableClassInfo.scan().getSubclasses(lambdaAsyncHandlerBaseClassFullName).asScala.toList
+
+    val lambdaHandlerSubclasses = lambdaSyncHandlerSubclasses ++ lambdaAsyncHandlerSubclasses
     lambdaHandlerSubclasses match
       case Nil =>
         throw Exception(s"No lambda handler found in codegen sources $codegenSources")

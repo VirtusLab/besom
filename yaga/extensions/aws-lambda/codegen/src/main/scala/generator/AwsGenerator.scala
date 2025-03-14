@@ -57,7 +57,26 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
       sourceCode
     )
 
-  def generateLambdaFromLocalJar(jarPath: Path)(using Context): SourceFile =
+  def generateJvmLambda(jarPath: Path)(using Context): SourceFile =
+    val lamdaHandler = (lambdaApi.handlerClassPackageParts :+ lambdaApi.handlerClassName).mkString(".") // TODO don't handle this logic here
+    generateLambda(
+      lambdaHandler = lamdaHandler,
+      runtime = "java21",
+      codeArchivePath = jarPath
+    )
+
+  def generateNodejsLambda(deployableArchivePath: Path)(using Context): SourceFile =
+    generateLambda(
+      lambdaHandler = "index.handler",
+      runtime = "nodejs22.x",
+      codeArchivePath = deployableArchivePath
+    )
+
+  def generateLambda(
+    lambdaHandler: String,
+    runtime: String,
+    codeArchivePath: Path
+  )(using Context): SourceFile =
     val packagesSuffixParts = lambdaApi.handlerClassPackageParts
     val packageParts = packagePrefixParts ++ packagesSuffixParts
     val packageRef = ScalaMetaUtils.packageRefFromParts(packageParts)
@@ -65,19 +84,15 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
 
     val lambdaClassName = scala.meta.Type.Name(lambdaApi.handlerClassName)
 
-    val configType = typeRenderer.typeToCode(lambdaApi.handlerConfigType)
+    val configTypeCode = typeRenderer.typeToCode(lambdaApi.handlerConfigType)
     val inputTypeCode = typeRenderer.typeToCode(lambdaApi.handlerInputType)
     val outputTypeCode = typeRenderer.typeToCode(lambdaApi.handlerOutputType)
 
     val UnitClass = ctx.defn.UnitClass
 
-    val defaultConfigValueCode = lambdaApi.handlerConfigType.showBasic match // TODO handle other types in an extensible / more generic way
+    val defaultConfigValueSnippet = lambdaApi.handlerConfigType.showBasic match // TODO handle other types in an extensible / more generic way
       case "scala.Unit" => " = ()"
       case _ => ""
-
-    val javaRuntime = "java21"
-
-    val handlerMetadataSnippet = m"""_root_.yaga.extensions.aws.lambda.internal.LambdaHandlerUtils.lambdaHandlerMetadataFromLocalFatJar[Config, Input, Output](filePath = "${jarPath.toAbsolutePath.toString}")"""
 
     val sourceCode =
       m"""|/*
@@ -95,27 +110,26 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
           |)
           |
           |object ${lambdaClassName}:
-          |  type Config = ${configType}
+          |  type Config = ${configTypeCode}
           |  type Input = ${inputTypeCode}
           |  type Output = ${outputTypeCode}
           |
           |  def apply(
           |    name: _root_.besom.util.NonEmptyString,
           |    args: _root_.besom.api.aws.lambda.FunctionArgs,
-          |    config: _root_.besom.types.Input[Config]${defaultConfigValueCode},
+          |    config: _root_.besom.types.Input[Config]${defaultConfigValueSnippet},
           |    opts: _root_.besom.ResourceOptsVariant.Custom ?=> _root_.besom.CustomResourceOptions = _root_.besom.CustomResourceOptions()
           |  ): _root_.besom.types.Output[${lambdaClassName}] =
-          |    val metadata = ${handlerMetadataSnippet}
-          |    val javaRuntime = "$javaRuntime"
-          |
-          |    import _root_.besom.json.DefaultJsonProtocol.given
+          |    val runtime = "$runtime"
+          |    val handlerName = "${lambdaHandler}"
+          |    val codeArchivePath = "${codeArchivePath.toAbsolutePath.toString}"
           |
           |    for
           |      lambda <- _root_.yaga.extensions.aws.lambda.internal.Lambda[Config, Input, Output](
           |        name = name,
-          |        codeArchive = _root_.besom.types.Archive.FileArchive(metadata.artifactAbsolutePath),
-          |        handlerClassName = metadata.handlerClassName,
-          |        runtime = javaRuntime,
+          |        codeArchive = _root_.besom.types.Archive.FileArchive(codeArchivePath),
+          |        handlerName = handlerName,
+          |        runtime = runtime,
           |        config = config,
           |        args = args,
           |        opts = opts

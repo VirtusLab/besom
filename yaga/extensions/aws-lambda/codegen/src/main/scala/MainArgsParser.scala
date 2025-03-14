@@ -1,13 +1,15 @@
 package yaga.codegen.aws
 
 import yaga.codegen.core.extractor.CodegenSource
-import java.nio.file.Paths
+import java.nio.file.{Path, Paths}
 
 private[aws] case class MainArgsParser(
   codegenSources: List[CodegenSource],
   handlerClassFullName: Option[String],
   packagePrefix: Option[String],
   generateInfra: Option[Boolean],
+  lambdaArtifactAbsolutePath: Option[Path],
+  lambdaRuntime: Option[String],
   outputDir: Option[String],
   summaryFile: Option[String],
   noCleanup: Option[Boolean]
@@ -20,7 +22,7 @@ private[aws] case class MainArgsParser(
         this.copy(
           codegenSources = codegenSources :+ mavenSource
         ).parseArgs(rest)
-      case "--local-jar" :: filePath :: rest =>
+      case "--local-classpath-jar" :: filePath :: rest =>
         val path = Paths.get(filePath)
         assert(path.isAbsolute, s"Path ${filePath} is not absolute")
         val localSource = CodegenSource.LocalJar(absolutePath = path)
@@ -38,6 +40,16 @@ private[aws] case class MainArgsParser(
       case "--with-infra" :: rest =>
         this.copy(
           generateInfra = Some(true)
+        ).parseArgs(rest)
+      case "--lambda-artifact-absolute-path" :: filePath :: rest =>
+        val path = Paths.get(filePath)
+        assert(path.isAbsolute, s"Path ${filePath} is not absolute")
+        this.copy(
+          lambdaArtifactAbsolutePath = Some(path)
+        ).parseArgs(rest)
+      case "--lambda-runtime" :: lambdaRuntime :: rest =>
+        this.copy(
+          lambdaRuntime = Some(lambdaRuntime)
         ).parseArgs(rest)
       case "--output-dir" :: outputDir :: rest =>
         this.copy(
@@ -58,6 +70,8 @@ private[aws] case class MainArgsParser(
           handlerClassFullName = handlerClassFullName,
           packagePrefix = packagePrefix.getOrElse(throw Exception("Missing package prefix")),
           generateInfra = generateInfra.getOrElse(false),
+          lambdaArtifactAbsolutePath = lambdaArtifactAbsolutePath,
+          lambdaRuntime = lambdaRuntime,
           outputDir = outputDir.getOrElse(throw Exception("Missing output dir")),
           summaryFile = summaryFile,
           noCleanup = noCleanup.getOrElse(false)
@@ -73,6 +87,8 @@ object MainArgsParser:
       handlerClassFullName = None,
       packagePrefix = None,
       generateInfra = None,
+      lambdaArtifactAbsolutePath = None,
+      lambdaRuntime = None,
       outputDir = None,
       summaryFile = None,
       noCleanup = None
