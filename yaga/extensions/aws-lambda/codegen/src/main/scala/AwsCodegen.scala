@@ -44,8 +44,12 @@ object AwsCodegen:
             Seq(
               generator.generateNodejsLambda(deployableArchivePath = lambdaArtifactAbsolutePath.get)
             )
+          case Some(runtime @ "graal") =>
+            Seq(
+              generator.generateGraalLambda(deployableArchivePath = lambdaArtifactAbsolutePath.get)
+            )
           case Some(runtime) =>
-            throw Exception(s"Unsupported lambda runtime: $runtime. Should be java21 or nodejs22.x")
+            throw Exception(s"Unsupported lambda runtime: $runtime. Should be java21 or nodejs22.x or graal")
 
           case None =>
             throw Exception("Lambda runtime must be specified for infra generation")

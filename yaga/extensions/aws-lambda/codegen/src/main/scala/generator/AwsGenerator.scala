@@ -72,6 +72,14 @@ class AwsGenerator(packagePrefixParts: Seq[String], lambdaApi: ExtractedLambdaAp
       codeArchivePath = deployableArchivePath
     )
 
+  def generateGraalLambda(deployableArchivePath: Path)(using Context): SourceFile =
+    val lamdaHandler = (lambdaApi.handlerClassPackageParts :+ lambdaApi.handlerClassName).mkString(".") // TODO don't handle this logic here
+    generateLambda(
+      lambdaHandler = lamdaHandler,
+      runtime = "provided.al2023",
+      codeArchivePath = deployableArchivePath
+    )
+
   def generateLambda(
     lambdaHandler: String,
     runtime: String,

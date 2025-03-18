@@ -21,28 +21,15 @@ class ParentLambda extends LambdaAsyncHandler[Config, Qux, String]:
 
   override def handleInput(input: Qux) =
     val childLambdaAInput = child_lambda_a.Bar(child_lambda_a.Foo(str = input.str))
-
     val childLambdaBInput = child_lambda_b.Bar(child_lambda_b.Foo(str = input.str))
 
-    // println("Triggering child-lambda-a")
-    println("Invoking child-lambda-b")
+    println("Triggering child-lambda-a")
     for {
-      // _ <- lambdaClient.triggerEvent(config.childLambdaA, childLambdaAInput)
-      // _ = println("Triggered child-lambda-a")
+      _ <- lambdaClient.triggerEvent(config.childLambdaA, childLambdaAInput)
+      _ = println("Triggered child-lambda-a")
+      _ = println("Invoking child-lambda-b")
       baz <- lambdaClient.invokeWithResponse(config.childLambdaB, childLambdaBInput)
     } yield {
       println(s"Response from child-lambda-b: ${baz}")
       "Processing completed"
     }
-
-  // override def handleInput(input: Qux) =
-  //   // Async call to child-lambda-a
-  //   val childLambdaAInput = child_lambda_a.Bar(child_lambda_a.Foo(str = input.str))
-  //   lambdaClient.invokeAsyncUnsafe(config.childLambdaA, childLambdaAInput)
-
-  //   // Sync call to child-lambda-b
-  //   val childLambdaBInput = child_lambda_b.Bar(child_lambda_b.Foo(str = input.str))
-  //   val baz = lambdaClient.invokeSyncUnsafe(config.childLambdaB, childLambdaBInput)
-  //   println(s"Response from child-lambda-b: ${baz}")
-
-  //   "Processing completed"

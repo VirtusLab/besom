@@ -1,0 +1,11 @@
+[
+  {
+    "name": "com.virtuslab.child_lambda_a.ChildLambdaA",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredClasses": true,
+    "allPublicClasses": true
+  }
+]
