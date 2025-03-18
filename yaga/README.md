@@ -12,9 +12,26 @@
 ### Publish local patches for besom 0.4.0-SNAPSHOT
 ```bash
 just publish-local-aws-mini
+just publish-local-besom-json-js
 ```
 
 ### Publish local by running:
 ```bash
 sbt publishLocal
+```
+
+### Running examples:
+```bash
+cd examples/<EXAMPLE_NAME>
+
+#####
+# Set up the infrastructure
+
+sbt "clean; compile"
+just infra-up -y
+
+######
+# Clean up
+
+just infra-down
 ```

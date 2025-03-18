@@ -2,7 +2,11 @@ set fallback := true
 
 infra-up:
   #!/usr/bin/env bash
-  PULUMI_CONFIG_PASSPHRASE="" BESOM_SBT_MODULE=infra pulumi up --stack dev
+  PULUMI_CONFIG_PASSPHRASE="" BESOM_SBT_MODULE=infra pulumi up --stack dev -y
+
+infra-preview:
+  #!/usr/bin/env bash
+  PULUMI_CONFIG_PASSPHRASE="" BESOM_SBT_MODULE=infra pulumi preview --stack dev
 
 infra-down:
   #!/usr/bin/env bash
