@@ -297,8 +297,17 @@ object Application:
       )
 
       val fqdn         = serviceFqdn(service, namespace)
-      val maybeIngress = service.status.loadBalancer.ingress.headOption
-      val hostnameOrIp = maybeIngress.hostname.orElse(maybeIngress.ip)
+      val hostnameOrIp = service.status.loadBalancer.ingress.getOrElse(Iterable.empty).flatMap { ingresses => 
+        ingresses.headOption match
+          case Some(ingress) => 
+            for 
+              maybeHostname <- ingress.hostname
+              maybeIp <- ingress.ip
+            yield maybeHostname.orElse(maybeIp)
+          case None => 
+            Output(None)
+      }
+      
       val url          = p"http://${hostnameOrIp.getOrElse(fqdn)}:$appPortNumber"
 
       new Application(

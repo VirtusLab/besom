@@ -98,22 +98,24 @@ object WebService:
       val task = awsx.ecs.FargateTaskDefinition(
         name = s"$name-app-task",
         awsx.ecs.FargateTaskDefinitionArgs(
-          container = awsx.ecs.inputs.TaskDefinitionContainerDefinitionArgs(
-            name = s"$name-app-container",
-            image = "wordpress",
-            cpu = 256,
-            memory = 512,
-            environment = List(
-              envValue(name = "WORDPRESS_DB_HOST", value = p"${args.dbHost}:${args.dbPort}"),
-              envValue(name = "WORDPRESS_DB_NAME", value = args.dbName),
-              envValue(name = "WORDPRESS_DB_USER", value = args.dbUser),
-              envValue(name = "WORDPRESS_DB_PASSWORD", value = args.dbPassword)
-            ),
-            portMappings = List(
-              awsx.ecs.inputs.TaskDefinitionPortMappingArgs(
-                containerPort = 80,
-                hostPort = 80,
-                protocol = "tcp"
+          container = Some(
+            awsx.ecs.inputs.TaskDefinitionContainerDefinitionArgs(
+              name = s"$name-app-container",
+              image = "wordpress",
+              cpu = 256,
+              memory = 512,
+              environment = List(
+                envValue(name = "WORDPRESS_DB_HOST", value = p"${args.dbHost}:${args.dbPort}"),
+                envValue(name = "WORDPRESS_DB_NAME", value = args.dbName),
+                envValue(name = "WORDPRESS_DB_USER", value = args.dbUser),
+                envValue(name = "WORDPRESS_DB_PASSWORD", value = args.dbPassword)
+              ),
+              portMappings = List(
+                awsx.ecs.inputs.TaskDefinitionPortMappingArgs(
+                  containerPort = 80,
+                  hostPort = 80,
+                  protocol = "tcp"
+                )
               )
             )
           )

@@ -3,8 +3,8 @@
 //> using plugin "org.virtuslab::besom-compiler-plugin:0.4.0-SNAPSHOT"
 
 //> using dep "org.virtuslab::besom-core:0.4.0-SNAPSHOT"
-//> using dep "org.virtuslab::besom-azure-native:2.44.1-core.0.3"
-//> using dep "org.virtuslab::besom-tls:5.0.3-core.0.3"
+//> using dep "org.virtuslab::besom-azure-native:2.89.1-core.0.4-SNAPSHOT"
+//> using dep "org.virtuslab::besom-tls:5.0.9-core.0.4-SNAPSHOT"
 
 // TODO: remove after 0.4.0 release
 //> using repository sonatype:snapshots
