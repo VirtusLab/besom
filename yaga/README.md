@@ -35,3 +35,13 @@ just infra-up -y
 
 just infra-down
 ```
+
+Building the `aws-lambda-graal` example requires setting the following environment variables:
+  * `YAGA_AWS_LAMBDA_GRAAL_REMOTE_USER`
+  * `YAGA_AWS_LAMBDA_GRAAL_REMOTE_IP`
+describing a remote machine on which the native image is supposed to be built.
+
+The remote builder machine has the following requirements:
+  * has to run on Linux
+  * needs `native-image` command available on `PATH`
+  * is recommended to have a lot of memory and threads available (tested with AWS EC2 c7i.4xlarge image)
