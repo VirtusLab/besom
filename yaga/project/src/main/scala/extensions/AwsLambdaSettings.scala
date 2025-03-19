@@ -2,7 +2,7 @@ import sbt._
 import sbt.Keys._
 
 object AwsLambdaSettings {
-  val sdkSharedSettings = Seq(
+  val sdkSharedSettings = CommonSettings.sdkModuleSettings ++ Seq(
     name := "yaga-aws-lambda-sdk"
   )
 
@@ -18,7 +18,7 @@ object AwsLambdaSettings {
 
   )
 
-  val besomSettings = Seq(
+  val besomSettings = CommonSettings.besomModuleSettings ++ Seq(
     name := "yaga-aws-lambda-besom",
     libraryDependencies ++= Seq(
       "org.virtuslab" %% "besom-core" % "0.4.0-SNAPSHOT",
@@ -27,14 +27,14 @@ object AwsLambdaSettings {
     )
   )
 
-  val codegenSettings = Seq(
+  val codegenSettings = CommonSettings.codegenModuleSettings ++ Seq(
     name := "yaga-aws-lambda-codegen",
     libraryDependencies ++= Seq(
       classGraphDep,
     )
   )
 
-  val sbtPluginSettings = Seq(
+  val sbtPluginSettings = CommonSettings.sbtPluginModuleSettings ++ Seq(
     name := "sbt-yaga-aws-lambda",
     libraryDependencies ++= Seq(
 

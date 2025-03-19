@@ -3,7 +3,7 @@ import sbt.Keys._
 import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
 
 object CoreSettings {
-  private val modelSharedSettings = Seq(
+  private val modelSharedSettings = CommonSettings.sdkModuleSettings ++ Seq(
     name := "yaga-core-model",
     libraryDependencies ++= Seq(
       // "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.33.2",
@@ -23,7 +23,7 @@ object CoreSettings {
     )
   )
 
-  val codegenSettings = Seq(
+  val codegenSettings = CommonSettings.codegenModuleSettings ++ Seq(
     name := "yaga-core-codegen",
     libraryDependencies ++= Seq(
       "ch.epfl.scala" %% "tasty-query" % "1.5.0",
@@ -33,7 +33,7 @@ object CoreSettings {
     )
   )
 
-  val sbtPluginSettings = Seq(
+  val sbtPluginSettings = CommonSettings.sbtPluginModuleSettings ++ Seq(
     name := "sbt-yaga-core",
     libraryDependencies ++= Seq(
       "io.get-coursier" %% "coursier" % "2.1.24"
