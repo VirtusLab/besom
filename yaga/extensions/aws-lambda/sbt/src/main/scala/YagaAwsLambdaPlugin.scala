@@ -127,11 +127,12 @@ object YagaAwsLambdaPlugin extends AutoPlugin {
        |import scala.concurrent.ExecutionContext.Implicits.global
        |import yaga.extensions.aws.lambda.LambdaContext
        |
+       |@JSExportTopLevel("handlerInstance")
        |val handlerInstance = new $handlerClassName
        |
        |@JSExportTopLevel("handler")
-       |def handler(event: js.Any, context: LambdaContext.UnderlyingContext): js.Promise[Any] =
-       |  handlerInstance.handleRequest(event, context).toJSPromise
+       |def handler(event: js.Any, context: LambdaContext.UnderlyingContext): Any =
+       |  handlerInstance.handleRequest(event, context)
        |""".stripMargin
   }
 }
