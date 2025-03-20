@@ -23,4 +23,3 @@ trait LambdaHandlerBase[C, I, O] extends LambdaHandlerApi:
         throw e
       
   override protected def context(using ctx: LambdaContext): LambdaContext = ctx
-
