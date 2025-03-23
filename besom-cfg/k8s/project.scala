@@ -1,9 +1,10 @@
 //> using scala 3.3.3
 
 //> using dep com.lihaoyi::os-lib::0.9.3
-//> using dep org.virtuslab::besom-cfg:0.4.0-SNAPSHOT
-//> using dep org.virtuslab::besom-cfg-containers:0.4.0-SNAPSHOT
-//> using dep org.virtuslab::besom-kubernetes:4.22.1-core.0.4-SNAPSHOT
+//> using dep org.virtuslab::besom-cfg:0.4.0
+//> using dep org.virtuslab::besom-cfg-containers:0.4.0
+//> using dep org.virtuslab::besom-kubernetes:4.22.1-core.0.4
+
 //> using dep com.lihaoyi::fansi::0.5.0
 //> using dep com.lihaoyi::fastparse:3.1.0
 
