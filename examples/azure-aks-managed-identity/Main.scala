@@ -78,7 +78,7 @@ import besom.api.tls
   )
 
   val kubeconfig = adminCredentials.kubeconfigs
-    .map(_.head.value)
+    .flatMap(_.head.value)
 
   // export the kubeconfig
   Stack(assignment).exports(

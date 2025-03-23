@@ -83,7 +83,11 @@ import besom.api.{awsx, eks, kubernetes as k8s}
   )
 
   val serviceHostname =
-    service.status.loadBalancer.ingress.map(_.flatMap(_.head.hostname).get)
+    service.status.loadBalancer.ingress.getOrElse(Iterable.empty).flatMap {
+      _.headOption match
+        case None          => Output.fail(Exception("no ingress available for service"))
+        case Some(ingress) => ingress.hostname.getOrElse("unknown")
+    }
 
   // Export the cluster's kubeconfig and url
   Stack(cluster, service).exports(
