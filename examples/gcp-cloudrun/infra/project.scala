@@ -3,8 +3,8 @@
 ///> using plugin "org.virtuslab::besom-compiler-plugin:0.3.2"
 
 //> using dep "org.virtuslab::besom-core:0.4.0-SNAPSHOT"
-//> using dep "org.virtuslab::besom-gcp:7.26.0-core.0.3"
-//> using dep "org.virtuslab::besom-docker:4.5.4-core.0.3"
+//> using dep "org.virtuslab::besom-gcp:8.22.0-core.0.4-SNAPSHOT"
+//> using dep "org.virtuslab::besom-docker:4.6.2-core.0.4-SNAPSHOT"
 
 //> using exclude "app/*"
 
