@@ -57,7 +57,7 @@ object AwsVpc:
       val subnets = Output.sequence(
         (1 to 2)
           .map(i =>
-            val az = allZones.zoneIds.map(_.apply(i))
+            val az = allZones.zoneIds.map(_.toVector.apply(i))
             val vpcSubnet = aws.ec2.Subnet(
               name = s"$name-subnet-$i",
               aws.ec2.SubnetArgs(
