@@ -1,8 +1,8 @@
 //> using scala 3.3.3
 
 //> using dep com.lihaoyi::os-lib::0.9.3
-//> using dep org.virtuslab::besom-cfg:0.4.0-SNAPSHOT
-//> using dep org.virtuslab::besom-model:0.4.0-SNAPSHOT
+//> using dep org.virtuslab::besom-cfg:0.4.0
+//> using dep org.virtuslab::besom-model:0.4.0
 
 //> using test.dep org.scalameta::munit:1.0.0
 

@@ -3,8 +3,8 @@
 //> using options "-Werror", "-Wunused:all", "-deprecation", "-feature"
 // -language:noAutoTupling // after https://github.com/VirtusLab/scala-cli/issues/2708
 
-//> using dep "org.virtuslab::besom-json:0.4.0-SNAPSHOT"
-//> using dep "org.virtuslab::besom-rpc:0.4.0-SNAPSHOT"
+//> using dep "org.virtuslab::besom-json:0.4.0"
+//> using dep "org.virtuslab::besom-rpc:0.4.0"
 
 //> using dep "com.google.protobuf:protobuf-java-util:3.25.1"
 //> using dep "io.grpc:grpc-netty:1.64.0"
