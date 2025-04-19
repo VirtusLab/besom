@@ -82,5 +82,5 @@ def component[A <: ComponentResource & Product: RegistersOutputs: Typeable](
   typ: ResourceType,
   opts: ComponentResourceOptions = ComponentResourceOptions()
 )(
-  f: ComponentBase ?=> A
-): Output[A] = Pulumi.component(name, typ, opts)(f)
+  f: Context ?=> ComponentBase ?=> A
+)(using ctx: Context): Output[A] = Pulumi.component(name, typ, opts)(f)

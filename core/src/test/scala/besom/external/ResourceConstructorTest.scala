@@ -12,7 +12,7 @@ class ResourceConstructorTest extends munit.FunSuite {
 
   case class TestResourceArgs(property1: Output[Option[String]], property2: Output[Int]) derives ArgsEncoder
   object TestResourceArgs:
-    def apply(using Context)(property1: Input.Optional[String], property2: Input[Int]): TestResourceArgs =
+    def apply(property1: Input.Optional[String], property2: Input[Int])(using Context): TestResourceArgs =
       TestResourceArgs(property1.asOptionOutput(), property2.asOutput())
 
   case class TestResource(
@@ -25,13 +25,11 @@ class ResourceConstructorTest extends munit.FunSuite {
       derives ResourceDecoder
 
   object TestResource:
-    def apply(using
-      Context
-    )(
+    def apply(
       name: NonEmptyString,
       args: TestResourceArgs,
       opts: ResourceOptsVariant.Custom ?=> CustomResourceOptions = CustomResourceOptions()
-    ): Output[TestResource] =
+    )(using ctx: Context): Output[TestResource] =
       Output {
         val o = opts(using ResourceOptsVariant.Custom).resolve.unsafeRunSync()
         assert(o.protect, true) // just for testing that values are passed through
