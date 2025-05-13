@@ -644,9 +644,52 @@ object Packages:
   ) derives YamlCodec
 
   // downloads latest package metadata and schemas using Pulumi packages repository
-  def downloadPackagesMetadataAndSchema(targetPath: os.Path, selected: List[String])(using config: Config): Unit =
-    downloadPackagesSchema(downloadPackagesMetadata(targetPath, selected))
-  end downloadPackagesMetadataAndSchema
+  def downloadPackagesMetadataAndSchema(targetPath: os.Path, selected: List[String])(using config: Config): Unit = {
+    // First download metadata for all selected packages
+    val downloaded = downloadPackagesMetadata(targetPath, selected)
+
+    // Create separate PackageMetadata objects for each version
+    val selectedPackages = selected.map { p =>
+      val parsed = PackageId.parse(p)
+      parsed match {
+        case Right(name, Some(version)) => // explicit version, use it
+          downloaded
+            .find(_.name == name)
+            .map { packageYaml =>
+              PackageMetadata(name, PackageVersion(version)).withUrl(packageYaml.repo_url) -> packageYaml
+            }
+            .getOrElse(throw Exception(s"Package '$name' not found in downloaded packages metadata"))
+        case Right(name, None) => // no explicit version, use latest
+          downloaded
+            .find(_.name == name)
+            .map { packageYaml =>
+              PackageMetadata(name, None).withUrl(packageYaml.repo_url) -> packageYaml
+            }
+            .getOrElse(throw Exception(s"Package '$name' not found in downloaded packages metadata"))
+        case Left(e) => throw e
+      }
+    }.toVector
+
+    val packageYamls = selectedPackages.map { case (customizedMetadata, latestPackageYaml) =>
+      PackageYAML(
+        name = customizedMetadata.name,
+        repo_url = customizedMetadata.server.getOrElse(
+          "https://github.com/pulumi/pulumi-" + customizedMetadata.name
+        ), // TODO: optimistic assumption about the repo url
+        schema_file_url = customizedMetadata.version match {
+          case Some(version) =>
+            // replace the version in the schema file url with the selected version
+            latestPackageYaml.schema_file_url.map(_.replace(latestPackageYaml.version, s"v$version"))
+          case None => latestPackageYaml.schema_file_url
+        },
+        schema_file_path = latestPackageYaml.schema_file_path,
+        version = customizedMetadata.version.map(v => "v" + v.asString).getOrElse(latestPackageYaml.version)
+      )
+    }
+
+    // Download schemas for each version independently
+    downloadPackagesSchema(packageYamls)
+  }
 
   private def downloadPackagesMetadata(targetPath: os.Path, selected: List[String])(using config: Config): Vector[PackageYAML] =
     println("Downloading packages metadata...")
@@ -758,7 +801,7 @@ object Packages:
     // pre-fetch all available production schemas, if any are missing here code generation will use a fallback mechanism
     withProgress(s"Downloading ${downloaded.size} packages schemas", downloaded.size) {
       downloaded.foreach(p => {
-        Progress.report(label = p.name)
+        Progress.report(label = s"${p.name}:${p.version}")
         try
           val schemaFileUrl = (p.schema_file_url, p.schema_file_path) match
             case (Some(url), _) =>
@@ -767,22 +810,43 @@ object Packages:
               val rawUrlPrefix = p.repo_url.replace("https://github.com/", "https://raw.githubusercontent.com/")
               s"$rawUrlPrefix/${p.version}/${path}"
             case _ =>
-              throw Exception("Cannot extract schema file URL from the package metadata")
+              // Use Pulumi CLI to get schema for specific version
+              val schemaSource = s"${p.name}@${p.version}"
+              val installCmd = List(
+                "pulumi",
+                "--non-interactive",
+                "--logtostderr",
+                "plugin",
+                "install",
+                "resource",
+                p.name,
+                p.version
+              )
+              try {
+                os.proc(installCmd).call()
+                schemaSource
+              } catch {
+                case e: os.SubprocessException =>
+                  throw Exception(s"Failed to install plugin '${e.result.command.mkString(" ")}' using Pulumi CLI", e)
+              }
+
           val ext        = if schemaFileUrl.endsWith(".yaml") || schemaFileUrl.endsWith(".yml") then "yaml" else "json"
           val schemaPath = config.schemasDir / p.name / PackageVersion(p.version).get / s"schema.$ext"
           if !os.exists(schemaPath) then
+            println(s"Downloading schema for package: '${p.name}' version '${p.version}' from: '$schemaFileUrl'")
             val schemaResponse = requests.get(schemaFileUrl)
             if schemaResponse.statusCode == 200
             then os.write.over(schemaPath, schemaResponse.text(), createFolders = true)
             else
               Progress.fail(
-                s"Failed to download schema for package: '${p.name}' from: '$schemaFileUrl', " +
+                s"Failed to download schema for package: '${p.name}' version '${p.version}' from: '$schemaFileUrl', " +
                   s"error[${schemaResponse.statusCode}]: ${schemaResponse.statusMessage}"
               )
         catch
           case NonFatal(e) =>
-            Progress.fail(s"Failed to download schema for package: '${p.name}', error: ${e.getMessage}")
+            Progress.fail(s"Failed to download schema for package: '${p.name}' version '${p.version}', error: ${e.getMessage}")
         finally Progress.end
+        end try
       })
     }
 
