@@ -1,7 +1,7 @@
 //> using scala 3.3.3
 
-//> using dep org.virtuslab::besom-core:0.4.0
-//> using dep org.virtuslab::besom-json:0.4.0
+//> using dep org.virtuslab::besom-core:0.5.0-SNAPSHOT
+//> using dep org.virtuslab::besom-json:0.5.0-SNAPSHOT
 //> using dep io.github.classgraph:classgraph:4.8.172
 
 //> using test.dep org.scalameta::munit::1.0.0-M11
@@ -16,3 +16,4 @@
 //> using publish.developer "prolativ|Michał Pałka|https://github.com/prolativ"
 //> using publish.developer "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban"
 //> using publish.developer "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
+//> using repository sonatype:snapshots

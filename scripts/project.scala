@@ -10,8 +10,7 @@
 //> using dep org.scoverage::scalac-scoverage-serializer:2.0.11
 //> using dep org.virtuslab::scala-yaml:0.3.0
 //> using dep io.get-coursier:coursier_2.13:2.1.9
-//> using dep org.virtuslab::besom-codegen:0.4.0
-//> using dep com.lihaoyi::pprint:0.9.0
+//> using dep org.virtuslab::besom-codegen:0.5.0-SNAPSHOT
 //> using test.dep org.scalameta::munit::1.0.0-M10
 
 //> using publish.name "besom-scripts"
@@ -24,3 +23,5 @@
 //> using publish.developer "prolativ|Michał Pałka|https://github.com/prolativ"
 //> using publish.developer "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban"
 //> using publish.developer "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
+
+//> using repository sonatype:snapshots
