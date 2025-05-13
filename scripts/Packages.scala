@@ -810,25 +810,7 @@ object Packages:
               val rawUrlPrefix = p.repo_url.replace("https://github.com/", "https://raw.githubusercontent.com/")
               s"$rawUrlPrefix/${p.version}/${path}"
             case _ =>
-              // Use Pulumi CLI to get schema for specific version
-              val schemaSource = s"${p.name}@${p.version}"
-              val installCmd = List(
-                "pulumi",
-                "--non-interactive",
-                "--logtostderr",
-                "plugin",
-                "install",
-                "resource",
-                p.name,
-                p.version
-              )
-              try {
-                os.proc(installCmd).call()
-                schemaSource
-              } catch {
-                case e: os.SubprocessException =>
-                  throw Exception(s"Failed to install plugin '${e.result.command.mkString(" ")}' using Pulumi CLI", e)
-              }
+              throw Exception("Cannot extract schema file URL from the package metadata")
 
           val ext        = if schemaFileUrl.endsWith(".yaml") || schemaFileUrl.endsWith(".yml") then "yaml" else "json"
           val schemaPath = config.schemasDir / p.name / PackageVersion(p.version).get / s"schema.$ext"
