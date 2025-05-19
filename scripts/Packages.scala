@@ -670,25 +670,36 @@ object Packages:
       }
     }.toVector
 
-    val packageYamls = selectedPackages.map { case (customizedMetadata, latestPackageYaml) =>
-      PackageYAML(
-        name = customizedMetadata.name,
-        repo_url = customizedMetadata.server.getOrElse(
-          "https://github.com/pulumi/pulumi-" + customizedMetadata.name
-        ), // TODO: optimistic assumption about the repo url
-        schema_file_url = customizedMetadata.version match {
-          case Some(version) =>
-            // replace the version in the schema file url with the selected version
-            latestPackageYaml.schema_file_url.map(_.replace(latestPackageYaml.version, s"v$version"))
-          case None => latestPackageYaml.schema_file_url
-        },
-        schema_file_path = latestPackageYaml.schema_file_path,
-        version = customizedMetadata.version.map(v => "v" + v.asString).getOrElse(latestPackageYaml.version)
-      )
+    given logger: Logger = Logger()
+
+    val schemaProvider = DownloadingSchemaProvider()
+
+    selectedPackages.foreach { case (metadata, packageYaml) =>
+      schemaProvider.packageInfo(metadata, None)
     }
 
-    // Download schemas for each version independently
-    downloadPackagesSchema(packageYamls)
+    println(s"Writing log of downloaded packages to: '${targetPath / "downloaded-packages.log"}'")
+    logger.writeToFile(targetPath / "downloaded-packages.log")
+
+    // val packageYamls = selectedPackages.map { case (customizedMetadata, latestPackageYaml) =>
+    //   PackageYAML(
+    //     name = customizedMetadata.name,
+    //     repo_url = customizedMetadata.server.getOrElse(
+    //       "https://github.com/pulumi/pulumi-" + customizedMetadata.name
+    //     ), // TODO: optimistic assumption about the repo url
+    //     schema_file_url = customizedMetadata.version match {
+    //       case Some(version) =>
+    //         // replace the version in the schema file url with the selected version
+    //         latestPackageYaml.schema_file_url.map(_.replace(latestPackageYaml.version, s"v$version"))
+    //       case None => latestPackageYaml.schema_file_url
+    //     },
+    //     schema_file_path = latestPackageYaml.schema_file_path,
+    //     version = customizedMetadata.version.map(v => "v" + v.asString).getOrElse(latestPackageYaml.version)
+    //   )
+    // }
+
+    // // Download schemas for each version independently
+    // downloadPackagesSchema(packageYamls)
   }
 
   private def downloadPackagesMetadata(targetPath: os.Path, selected: List[String])(using config: Config): Vector[PackageYAML] =
