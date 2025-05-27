@@ -1,0 +1,3 @@
+name: gcp-cloudrun-scala-steward
+runtime: scala
+description: Scala Steward on Google Cloud Run
