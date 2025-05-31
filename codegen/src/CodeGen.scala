@@ -15,21 +15,14 @@ class CodeGen(using
   schemaProvider: SchemaProvider,
   logger: Logger
 ) {
-  import CodeGen.*
 
   def sourcesFromPulumiPackage(
     packageInfo: PulumiPackageInfo
   ): Seq[SourceFile] =
-    scalaFiles(packageInfo) ++ Seq(
-      projectConfigFile(
-        schemaName = packageInfo.name,
-        packageVersion = packageInfo.version
-      ),
-      resourcePluginMetadataFile(
-        pluginName = packageInfo.name,
-        pluginVersion = packageInfo.version,
-        pluginDownloadUrl = packageInfo.pulumiPackage.pluginDownloadURL
-      )
+    scalaFiles(packageInfo) ++ projectConfigFiles(
+      schemaName = packageInfo.name,
+      packageVersion = packageInfo.version,
+      pluginDownloadUrl = packageInfo.pulumiPackage.pluginDownloadURL
     )
 
   def scalaFiles(
@@ -43,69 +36,17 @@ class CodeGen(using
       sourceFilesForFunctions(packageInfo)
   }
 
-  def projectConfigFile(schemaName: String, packageVersion: PackageVersion): SourceFile = {
-    val besomVersion      = config.besomVersion
-    val scalaVersion      = config.scalaVersion
-    val javaVersion       = config.javaVersion
-    val javaTargetVersion = config.javaTargetVersion
-    val coreShortVersion  = config.coreShortVersion
-    val organization      = config.organization
-    val url               = config.url
-    val vcs               = config.vcs
-    val license           = config.license
-    val repository        = config.repository
-    val developers        = config.developers
-
-    val developersBlock = developers.map(developer => s"//> using publish.developer \"$developer\"").mkString("\n")
-
-    val dependencies = packageDependencies(schemaProvider.dependencies(schemaName, packageVersion))
-
-    val fileContent =
-      s"""|//> using scala "$scalaVersion"
-          |//> using jvm "$javaVersion"
-          |//> using options "-java-output-version:$javaTargetVersion"
-          |//> using options "-skip-by-regex:.*"
-          |
-          |//> using dep "org.virtuslab::besom-core:${besomVersion}"
-          |${dependencies}
-          |//> using resourceDir "resources"
-          |
-          |//> using publish.name "besom-${schemaName}"
-          |//> using publish.organization "$organization"
-          |//> using publish.version "${packageVersion}-core.${coreShortVersion}"
-          |//> using publish.url "$url"
-          |//> using publish.vcs "$vcs"
-          |//> using publish.license "$license"
-          |//> using publish.repository "$repository"
-          |${developersBlock}
-          |""".stripMargin
-
-    val filePath = FilePath(Seq("project.scala"))
-
-    SourceFile(filePath = filePath, sourceCode = fileContent)
-  }
-
-  def resourcePluginMetadataFile(
-    pluginName: String,
-    pluginVersion: PackageVersion,
+  def projectConfigFiles(
+    schemaName: String,
+    packageVersion: PackageVersion,
     pluginDownloadUrl: Option[String]
-  ): SourceFile = {
-    val pluginDownloadUrlJsonValue = pluginDownloadUrl match {
-      case Some(url) => s"\"${url}\""
-      case None      => "null"
+  ): Seq[SourceFile] = {
+    val packageType = if (config.sbtPackages.contains(schemaName)) SbtPackage else config.packageType
+    val dependencies = schemaProvider.dependencies(schemaName, packageVersion).map { case (name, version) =>
+      (name, version.asString)
     }
-    val fileContent =
-      s"""|{
-          |  "resource": true,
-          |  "name": "${pluginName}",
-          |  "version": "${pluginVersion}",
-          |  "server": ${pluginDownloadUrlJsonValue}
-          |}
-          |""".stripMargin
 
-    val filePath = FilePath(Seq("resources", "besom", "api", pluginName, "plugin.json"))
-
-    SourceFile(filePath = filePath, sourceCode = fileContent)
+    packageType.buildFileGenerator.generateBuildFiles(schemaName, packageVersion, dependencies, pluginDownloadUrl)
   }
 
   def sourceFilesForProviderResource(packageInfo: PulumiPackageInfo): Seq[SourceFile] = {
@@ -1098,17 +1039,6 @@ class CodeGen(using
       .toList // de-duplicate givens
   }
 }
-
-object CodeGen:
-  def packageDependency(name: SchemaName, version: SchemaVersion)(using Config): String =
-    packageDependencies(List((name, version)))
-  def packageDependencies(dependencies: List[(SchemaName, SchemaVersion)])(using config: Config): String =
-    dependencies
-      .map { case (name, version) =>
-        s"""|//> using dep "org.virtuslab::besom-${name}:${version}-core.${config.coreShortVersion}"
-            |""".stripMargin
-      }
-      .mkString("\n")
 
 case class FilePath(pathParts: Seq[String]) {
   require(
