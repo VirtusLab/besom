@@ -18,7 +18,9 @@ case class Config(
   vcs: String = Config.DefaultVcs,
   license: String = Config.DefaultLicense,
   repository: String = Config.DefaultRepository,
-  developers: List[String] = Config.DefaultDevelopersList
+  developers: List[String] = Config.DefaultDevelopersList,
+  packageType: PackageType = ScalaCliPackage,
+  sbtPackages: Set[String] = Config.SbtBasedPackages
 ):
   val coreShortVersion: String = SemanticVersion
     .parseTolerant(besomVersion)
@@ -31,9 +33,11 @@ end Config
 // noinspection ScalaWeakerAccess
 object Config {
 
+  val SbtBasedPackages: Set[String] = Set("azure-native")
+
   val DefaultJavaVersion       = "23"
   val DefaultJavaTargetVersion = "11"
-  val DefaultScalaVersion      = "3.3.5"
+  val DefaultScalaVersion      = "3.3.6"
 
   val DefaultBesomVersion: String = {
     try {
