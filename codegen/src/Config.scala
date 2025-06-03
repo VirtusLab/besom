@@ -20,6 +20,7 @@ case class Config(
   repository: String = Config.DefaultRepository,
   developers: List[String] = Config.DefaultDevelopersList,
   packageType: PackageType = ScalaCliPackage,
+  multiModuleSbtPackages: Set[String] = Config.MultiModuleSbtPackages,
   sbtPackages: Set[String] = Config.SbtBasedPackages
 ):
   val coreShortVersion: String = SemanticVersion
@@ -33,7 +34,9 @@ end Config
 // noinspection ScalaWeakerAccess
 object Config {
 
-  val SbtBasedPackages: Set[String] = Set("azure-native")
+  val SbtBasedPackages: Set[String]       = Set()
+  val MultiModuleSbtPackages: Set[String] = Set()
+  val LowerFidelitySchemas: Set[String]   = Set("azure-native")
 
   val DefaultJavaVersion       = "23"
   val DefaultJavaTargetVersion = "11"
@@ -62,7 +65,8 @@ object Config {
 
   case class Provider(
     nonCompiledModules: Seq[String] = Seq.empty,
-    moduleToPackages: Map[String, String] = Map.empty
+    moduleToPackages: Map[String, String] = Map.empty,
+    packageType: PackageType = ScalaCliPackage
   )
 
   val DefaultProvidersConfigs: Map[String, Provider] = Map().withDefault(_ => Config.Provider())

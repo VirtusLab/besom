@@ -162,6 +162,7 @@ object generator {
               os.write(fileDuplicate, sourceFile.sourceCode, createFolders = true)
               val message = s"Duplicate file '${fileDuplicate.relativeTo(os.pwd)}' while, " +
                 s"generating package '${packageInfo.name}:${packageInfo.version}', error: ${e.getMessage}"
+              // throw Exception(message, e)
               logger.warn(message)
           }
         }

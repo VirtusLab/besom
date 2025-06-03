@@ -7,6 +7,7 @@ import besom.codegen.scalameta.interpolator.*
 
 import scala.meta.*
 import scala.meta.dialects.Scala33
+import ox.mapPar
 
 //noinspection ScalaWeakerAccess,TypeAnnotation
 class CodeGen(using
@@ -22,7 +23,8 @@ class CodeGen(using
     scalaFiles(packageInfo) ++ projectConfigFiles(
       schemaName = packageInfo.name,
       packageVersion = packageInfo.version,
-      pluginDownloadUrl = packageInfo.pulumiPackage.pluginDownloadURL
+      pluginDownloadUrl = packageInfo.pulumiPackage.pluginDownloadURL,
+      packageInfo = packageInfo
     )
 
   def scalaFiles(
@@ -37,16 +39,22 @@ class CodeGen(using
   }
 
   def projectConfigFiles(
-    schemaName: String,
+    schemaName: SchemaName,
     packageVersion: PackageVersion,
-    pluginDownloadUrl: Option[String]
+    pluginDownloadUrl: Option[String],
+    packageInfo: PulumiPackageInfo
   ): Seq[SourceFile] = {
-    val packageType = if (config.sbtPackages.contains(schemaName)) SbtPackage else config.packageType
     val dependencies = schemaProvider.dependencies(schemaName, packageVersion).map { case (name, version) =>
       (name, version.asString)
     }
 
-    packageType.buildFileGenerator.generateBuildFiles(schemaName, packageVersion, dependencies, pluginDownloadUrl)
+    packageInfo.packageType.buildFileGenerator.generateBuildFiles(
+      schemaName,
+      packageVersion,
+      dependencies,
+      pluginDownloadUrl,
+      packageInfo
+    )
   }
 
   def sourceFilesForProviderResource(packageInfo: PulumiPackageInfo): Seq[SourceFile] = {
@@ -57,6 +65,7 @@ class CodeGen(using
       PulumiDefinitionCoordinates.fromRawToken(typeToken, moduleToPackageParts, providerToPackageParts)
 
     given Config.Provider = packageInfo.providerConfig
+
     sourceFilesForResource(
       typeCoordinates = typeCoordinates,
       resourceDefinition = packageInfo.pulumiPackage.provider,
@@ -222,7 +231,7 @@ class CodeGen(using
     given Config.Provider = packageInfo.providerConfig
 
     packageInfo.parsedResources
-      .map {
+      .mapPar(Runtime.getRuntime().availableProcessors) {
         case (coordinates, (resourceDefinition, false)) =>
           sourceFilesForResource(
             typeCoordinates = coordinates,
@@ -711,7 +720,14 @@ class CodeGen(using
     else {
       val _ = scalameta.parseSource(code)
 
-      val file    = FilePath(Seq("src", Utils.configModuleName, s"${Utils.configTypeName.toLowerCase}.scala"))
+      val file = packageInfo.packageType match
+        case ScalaCliPackage => FilePath(Seq("src", Utils.configModuleName, s"${Utils.configTypeName.toLowerCase}.scala"))
+        case SbtPackage      => FilePath(Seq("src", "main", "scala", Utils.configModuleName, s"${Utils.configTypeName.toLowerCase}.scala"))
+        case MultiModuleSbtPackage =>
+          FilePath(
+            Seq(Utils.configModuleName, "src", "main", "scala", Utils.configModuleName, s"${Utils.configTypeName.toLowerCase}.scala")
+          )
+
       val sources = Seq(SourceFile(file, code))
       val dependencies: Seq[ConfigDependency] = configVariables.flatMap { case (_, configDefinition) =>
         configDefinition.typeReference.asTokenAndDependency.flatMap {

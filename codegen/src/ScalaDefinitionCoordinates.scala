@@ -77,8 +77,12 @@ case class ScalaDefinitionCoordinates private (
         }
       case Nil => Utils.indexModuleName :: Nil
     }
-    val fileName = definitionName.getOrElse(definitionName.orElse(selectionName).getOrElse("package"))
-    FilePath(Seq("src") ++ moduleParts ++ Seq(s"${fileName}.scala"))
+    val topLevelModule =
+      if providerConfig.packageType == MultiModuleSbtPackage then Seq(moduleParts.head) else Seq.empty
+    val fileName  = definitionName.getOrElse(definitionName.orElse(selectionName).getOrElse("package"))
+    val sourceDir = if providerConfig.packageType.isSbt then Seq("src", "main", "scala") else Seq("src")
+
+    FilePath(topLevelModule ++ sourceDir ++ moduleParts ++ Seq(s"${fileName}.scala"))
   }
 }
 
