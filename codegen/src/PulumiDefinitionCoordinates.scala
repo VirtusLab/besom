@@ -8,6 +8,10 @@ case class PulumiDefinitionCoordinates private (
 ) {
   import PulumiDefinitionCoordinates.*
 
+  def topLevelPackage: String = modulePackageParts.headOption.getOrElse {
+    throw new RuntimeException(s"No top level package for $token")
+  }
+
   def className(asArgsType: Boolean)(implicit logger: Logger): String = {
     val classNameSuffix = if (asArgsType) "Args" else ""
     mangleTypeName(definitionName) ++ classNameSuffix

@@ -194,6 +194,7 @@ class TypeMapper(
       case unionType: UnionType =>
         unionType.oneOf.map(findTokenAndDependencies(_)).reduce(_ ++ _)
       case namedType: NamedType =>
+        // use packageInfo.typeMappingOverrides to check if the type has a hotfix Scala type name override
         unescape(namedType.typeUri) match {
           case "pulumi.json#/Archive" | "pulumi.json#/Asset" | "pulumi.json#/Any" | "pulumi.json#/Json" =>
             Vector((None, None))
