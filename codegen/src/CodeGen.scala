@@ -1082,6 +1082,18 @@ class CodeGen(using
   }
 }
 
+object CodeGen:
+  def packageDependency(name: SchemaName, version: SchemaVersion)(using Config): String =
+    packageDependencies(List((name, version)))
+    
+  def packageDependencies(dependencies: List[(SchemaName, SchemaVersion)])(using config: Config): String =
+    dependencies
+      .map { case (name, version) =>
+        s"""|//> using dep "org.virtuslab::besom-${name}:${version}-core.${config.coreShortVersion}"
+            |""".stripMargin
+      }
+      .mkString("\n")
+
 case class FilePath(pathParts: Seq[String]) {
   require(
     pathParts.forall(!_.contains('/')),
