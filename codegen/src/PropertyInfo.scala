@@ -2,6 +2,7 @@ package besom.codegen
 
 import besom.codegen.Utils.{ConstValueOps, TypeReferenceOps}
 import besom.codegen.metaschema.*
+import besom.model.NameMangler
 
 import scala.meta.*
 
@@ -15,7 +16,8 @@ case class PropertyInfo private (
   constValue: Option[Term],
   isSecret: Boolean,
   unionMappings: List[TypeMapper.UnionMapping],
-  plain: Boolean
+  plain: Boolean,
+  wireName: Option[String]
 )
 
 object PropertyInfo:
@@ -67,10 +69,14 @@ object PropertyInfo:
           if isPropertyRequired then None else Some(scalameta.None)
         }
     }
-    val constValue = propertyDefinition.const.map(_.asScala)
+    val constValue  = propertyDefinition.const.map(_.asScala)
+    val mangledName = NameMangler.manglePropertyName(propertyName)
+    if (mangledName != propertyName) {
+      logger.debug(s"Mangled property name '$propertyName' as '$mangledName'")
+    }
 
     PropertyInfo(
-      name = Name(manglePropertyName(propertyName)),
+      name = Name(mangledName),
       isOptional = !isRequired,
       baseType = baseType,
       argType = argType,
@@ -79,48 +85,9 @@ object PropertyInfo:
       constValue = constValue,
       isSecret = propertyDefinition.secret,
       unionMappings = unionMap,
-      plain = propertyDefinition.plain
+      plain = propertyDefinition.plain,
+      wireName = propertyDefinition.wireName
     )
   }
-
-  private val anyRefMethodNames = Set(
-    "eq",
-    "ne",
-    "notify",
-    "notifyAll",
-    "synchronized",
-    "wait",
-    "asInstanceOf",
-    "clone",
-    "equals",
-    "getClass",
-    "hashCode",
-    "isInstanceOf",
-    "toString",
-    "finalize"
-  )
-
-  private val reservedMethods = Set(
-    "pulumiResourceName",
-    "asString"
-  )
-
-  private val reservedPackages = Set(
-    "java",
-    "javax",
-    "scala",
-    "besom"
-  )
-
-  private val reserved = anyRefMethodNames ++ reservedMethods ++ reservedPackages
-
-  // This logic must be undone the same way in codecs
-  // Keep in sync with `unmanglePropertyName` in codecs.scala
-  private def manglePropertyName(name: String)(implicit logger: Logger): String =
-    if reserved.contains(name) then
-      val mangledName = name + "_"
-      logger.debug(s"Mangled property name '$name' as '$mangledName'")
-      mangledName
-    else name
 
 end PropertyInfo

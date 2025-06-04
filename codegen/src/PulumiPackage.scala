@@ -47,7 +47,9 @@ case class PulumiPackage(
   provider: ResourceDefinition = ResourceDefinition(),
   resources: Map[String, ResourceDefinition] = Map.empty,
   functions: Map[String, FunctionDefinition] = Map.empty,
-  language: Language = Language()
+  language: Language = Language(),
+  // these fields are not part of the Pulumi package schema, but are used to modify the generated code
+  typeRenames: Map[String, String] = Map.empty
 )
 object PulumiPackage {
   implicit val reader: Reader[PulumiPackage] = macroR
@@ -509,7 +511,8 @@ case class PropertyDefinition(
   replaceOnChanges: Boolean = false,
   willReplaceOnChanges: Boolean = false,
   secret: Boolean = false,
-  plain: Boolean = false
+  plain: Boolean = false,
+  wireName: Option[String] = None
 )
 object PropertyDefinition {
   implicit val reader: Reader[PropertyDefinition] = PropertyDefinitionProto.reader.map { proto =>

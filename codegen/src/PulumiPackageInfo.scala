@@ -26,7 +26,8 @@ case class PulumiPackageInfo(
   parsedFunctions: Map[PulumiDefinitionCoordinates, (FunctionDefinition, IsOverlay)],
   pulumiPackage: PulumiPackage,
   providerConfig: Config.Provider,
-  packageType: PackageType
+  packageType: PackageType,
+  typeRenames: Map[PulumiToken, String]
 ) {
   import PulumiPackageInfo.*
 
@@ -88,7 +89,8 @@ object PulumiPackageInfo {
     providerToPackageParts: String => Seq[String],
     pulumiPackage: PulumiPackage,
     providerConfig: Config.Provider,
-    packageType: PackageType
+    packageType: PackageType,
+    typeRenames: Map[PulumiToken, String]
   ):
     def parseResources: Map[PulumiDefinitionCoordinates, (ResourceDefinition, Boolean)] =
       pulumiPackage.resources.map { case (token, resource) =>
@@ -178,7 +180,8 @@ object PulumiPackageInfo {
         parsedFunctions = parseFunctions,
         pulumiPackage = pulumiPackage,
         providerConfig = providerConfig,
-        packageType = packageType
+        packageType = packageType,
+        typeRenames = typeRenames
       )
     end process
   end PreProcessed
@@ -223,6 +226,10 @@ object PulumiPackageInfo {
       val additionalKubernetesModule =
         Option.when(pulumiPackage.name == "kubernetes")("apiextensions.k8s.io", Seq("apiextensions"))
 
+      val typeRenames = pulumiPackage.typeRenames.map { case (token, renameScalaTypeTo) =>
+        (PulumiToken(token), renameScalaTypeTo)
+      }
+
       PreProcessed(
         name = reconciledMetadata.name,
         version = reconciledMetadata.version.orDefault,
@@ -230,7 +237,8 @@ object PulumiPackageInfo {
         providerToPackageParts = providerToPackageParts,
         pulumiPackage = pulumiPackage,
         providerConfig = updatedProviderConfig,
-        packageType = packageType
+        packageType = packageType,
+        typeRenames = typeRenames
       )
     }
 
