@@ -4,6 +4,7 @@ import besom.codegen.PackageVersion
 import besom.codegen.Utils.*
 import besom.codegen.metaschema.*
 import besom.codegen.scalameta.interpolator.*
+import besom.model.NameMangler
 
 import scala.meta.*
 import scala.meta.dialects.Scala33
@@ -16,26 +17,35 @@ class CodeGen(using
   schemaProvider: SchemaProvider,
   logger: Logger
 ) {
+  if config.tracing then Tracer.enable()
 
   def sourcesFromPulumiPackage(
     packageInfo: PulumiPackageInfo
   ): Seq[SourceFile] =
-    scalaFiles(packageInfo) ++ projectConfigFiles(
-      schemaName = packageInfo.name,
-      packageVersion = packageInfo.version,
-      pluginDownloadUrl = packageInfo.pulumiPackage.pluginDownloadURL,
-      packageInfo = packageInfo
-    )
+    try Tracer.time("generate-package"):
+      val generatedScalaFiles = Tracer.time("scala-files") {  scalaFiles(packageInfo) }
+
+      val projConfFiles = Tracer.time("project-config-files") { 
+        projectConfigFiles(
+          schemaName = packageInfo.name,
+          packageVersion = packageInfo.version,
+          pluginDownloadUrl = packageInfo.pulumiPackage.pluginDownloadURL,
+          packageInfo = packageInfo
+        )
+      }
+      generatedScalaFiles ++ projConfFiles
+    finally
+      Tracer.renderTree()
 
   def scalaFiles(
     packageInfo: PulumiPackageInfo
   ): Seq[SourceFile] = {
-    val (configFiles, configDependencies) = sourceFilesForConfig(packageInfo)
+    val (configFiles, configDependencies) = Tracer.time("config-files") { sourceFilesForConfig(packageInfo) }
     configFiles ++
-      sourceFilesForProviderResource(packageInfo) ++
-      sourceFilesForNonResourceTypes(packageInfo, configDependencies) ++
-      sourceFilesForResources(packageInfo) ++
-      sourceFilesForFunctions(packageInfo)
+      Tracer.time("provider-resource") { sourceFilesForProviderResource(packageInfo) } ++
+      Tracer.time("non-resource-types") { sourceFilesForNonResourceTypes(packageInfo, configDependencies) } ++
+      Tracer.time("resources") { sourceFilesForResources(packageInfo) } ++
+      Tracer.time("functions") { sourceFilesForFunctions(packageInfo) }
   }
 
   def projectConfigFiles(
@@ -80,36 +90,43 @@ class CodeGen(using
   ): Seq[SourceFile] = {
     given Config.Provider = packageInfo.providerConfig
 
-    packageInfo.parsedTypes.flatMap {
-      case (coordinates, (enumDef: EnumTypeDefinition, false)) =>
-        sourceFilesForEnum(
-          typeCoordinates = coordinates,
-          enumDefinition = enumDef
-        )
-      case (coordinates, (_: EnumTypeDefinition, true)) =>
-        Overlay.readFiles(
-          packageInfo,
-          coordinates.token,
-          Vector(
-            coordinates.asEnumClass
-          )
-        )
-      case (coordinates, (objectDef: ObjectTypeDefinition, false)) =>
-        sourceFilesForObjectType(
-          typeCoordinates = coordinates,
-          objectTypeDefinition = objectDef,
-          configDependencies = configDependencies
-        )
-      case (coordinates, (_: ObjectTypeDefinition, true)) =>
-        Overlay.readFiles(
-          packageInfo,
-          coordinates.token,
-          Vector(
-            coordinates.asObjectClass(asArgsType = false),
-            coordinates.asObjectClass(asArgsType = true)
-          )
-        )
-    }.toSeq
+    packageInfo.parsedTypes
+      .zipWithIndex
+      .grouped(500)
+      .flatMap { batch =>
+        Tracer.time(s"types-batch-${batch.head._2/500}"):
+          batch.mapPar(Config.MaxParallelism) {
+            case ((coordinates: PulumiDefinitionCoordinates, (enumDef: EnumTypeDefinition, false)), _) =>
+              sourceFilesForEnum(
+                typeCoordinates = coordinates,
+                enumDefinition = enumDef
+              )
+            case ((coordinates: PulumiDefinitionCoordinates, (_: EnumTypeDefinition, true)), _) =>
+              Overlay.readFiles(
+                packageInfo,
+                coordinates.token,
+                Vector(
+                  coordinates.asEnumClass
+                )
+              )
+            case ((coordinates: PulumiDefinitionCoordinates, (objectDef: ObjectTypeDefinition, false)), _) =>
+              sourceFilesForObjectType(
+                typeCoordinates = coordinates,
+                objectTypeDefinition = objectDef,
+                configDependencies = configDependencies
+              )
+            case ((coordinates: PulumiDefinitionCoordinates, (_: ObjectTypeDefinition, true)), _) =>
+              Overlay.readFiles(
+                packageInfo,
+                coordinates.token,
+                Vector(
+                  coordinates.asObjectClass(asArgsType = false),
+                  coordinates.asObjectClass(asArgsType = true)
+                )
+              )
+          }.flatten
+      }
+      .toSeq
   }
 
   def sourceFilesForEnum(
@@ -145,7 +162,7 @@ class CodeGen(using
           case const                   => throw GeneralCodegenException(s"The name of enum cannot be derived from value ${const}")
         }
       }
-      val caseName       = Term.Name(caseRawName)
+      val caseName       = if (NameMangler.isReserved(caseRawName)) Term.Name(s"`$caseRawName`") else Term.Name(caseRawName)
       val caseStringName = Lit.String(caseRawName)
       val caseValue      = valueDefinition.value.asScala
 
@@ -231,23 +248,28 @@ class CodeGen(using
     given Config.Provider = packageInfo.providerConfig
 
     packageInfo.parsedResources
-      .mapPar(Runtime.getRuntime().availableProcessors) {
-        case (coordinates, (resourceDefinition, false)) =>
-          sourceFilesForResource(
-            typeCoordinates = coordinates,
-            resourceDefinition = resourceDefinition,
-            methods = packageInfo.parseMethods(resourceDefinition),
-            isProvider = false
-          )
-        case (coordinates, (_, true)) =>
-          Overlay.readFiles(
-            packageInfo,
-            coordinates.token,
-            Vector(
-              coordinates.asResourceClass(asArgsType = false),
-              coordinates.asResourceClass(asArgsType = true)
-            )
-          )
+      .zipWithIndex
+      .grouped(500)
+      .flatMap { batch =>
+        Tracer.time(s"resource-batch-${batch.head._2/500}"):
+          batch.mapPar(Config.MaxParallelism) {
+            case ((coordinates: PulumiDefinitionCoordinates, (resourceDefinition: ResourceDefinition, false)), _) =>
+              sourceFilesForResource(
+                typeCoordinates = coordinates,
+                resourceDefinition = resourceDefinition,
+                methods = packageInfo.parseMethods(resourceDefinition),
+                isProvider = false
+              )
+            case ((coordinates: PulumiDefinitionCoordinates, (_, true)), _) =>
+              Overlay.readFiles(
+                packageInfo,
+                coordinates.token,
+                Vector(
+                  coordinates.asResourceClass(asArgsType = false),
+                  coordinates.asResourceClass(asArgsType = true)
+                )
+              )
+          }
       }
       .toSeq
       .flatten
@@ -531,25 +553,29 @@ class CodeGen(using
     given Config.Provider = packageInfo.providerConfig
     packageInfo.parsedFunctions
       .filterNot { case (_, (f, _)) => isMethod(f) }
-      .map {
-        case (coordinates, (functionDefinition, false)) =>
-          sourceFilesForFunction(
-            functionCoordinates = coordinates,
-            functionDefinition = functionDefinition
-          )
-        case (coordinates, (_, true)) =>
-          Overlay.readFiles(
-            packageInfo,
-            coordinates.token,
-            Vector(
-              coordinates.asFunctionClass,
-              coordinates.asFunctionArgsClass,
-              coordinates.asFunctionResultClass
-            )
-          )
+      .zipWithIndex
+      .grouped(500)
+      .flatMap { batch =>
+        Tracer.time(s"functions-batch-${batch.head._2/500}"):
+          batch.mapPar(Config.MaxParallelism) {
+            case ((coordinates: PulumiDefinitionCoordinates, (functionDefinition: FunctionDefinition, false)), _) =>
+              sourceFilesForFunction(
+                functionCoordinates = coordinates,
+                functionDefinition = functionDefinition
+              )
+            case ((coordinates: PulumiDefinitionCoordinates, (_, true)), _) =>
+              Overlay.readFiles(
+                packageInfo,
+                coordinates.token,
+                Vector(
+                  coordinates.asFunctionClass,
+                  coordinates.asFunctionArgsClass,
+                  coordinates.asFunctionResultClass
+                )
+              )
+          }.flatten
       }
       .toSeq
-      .flatten
   }
 
   private def functionSupport(

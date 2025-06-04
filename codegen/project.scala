@@ -8,7 +8,7 @@
 //> using dep com.lihaoyi::os-lib:0.9.3
 //> using dep com.lihaoyi::pprint:0.9.0
 //> using dep com.softwaremill.ox::core:0.6.0
-//> using dep com.softwaremill.sttp.client4::core::4.0.0
+//> using dep com.softwaremill.sttp.client4::core::4.0.8
 //> using test.dep org.scalameta::munit::1.0.0-M10
 
 //> using exclude "resources/*"

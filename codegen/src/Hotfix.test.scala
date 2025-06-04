@@ -18,7 +18,7 @@ class HotfixTests extends munit.FunSuite:
     os.makeDir.all(hotfixDir)
 
     val hotfixContent =
-      """{"fieldRemovals": [{"name": "urn", "fix": null}, {"name": "name", "fix": null}]}"""
+      """{"fieldRemovals": [{"name": "urn", "fix": null}, {"name": "name", "fix": null}],"typeRename":{"renameScalaTypeTo":"VM"}}"""
     os.write.over(hotfixDir / s"$resourceName.json", hotfixContent)
 
     // Create a test package
@@ -65,6 +65,11 @@ class HotfixTests extends munit.FunSuite:
 
     // Check required inputs
     assert(!modifiedResource.requiredInputs.contains("name"))
+
+    // Check type renames
+    assert(modifiedPackage.typeRenames.contains(s"$packageName:$resourcePath:$resourceName"))
+    assert(modifiedPackage.typeRenames(s"$packageName:$resourcePath:$resourceName") == "VM")
+    assert(modifiedPackage.typeRenames.size == 1)
 
     // Cleanup
     os.remove.all(Config.DefaultOverlaysDir / "hotfixes" / packageName)

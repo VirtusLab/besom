@@ -4,6 +4,7 @@ import besom.internal.logging.*
 import besom.types.{Label, ResourceId, URN}
 import besom.util.*
 import besom.util.Validated.ValidatedResult
+import besom.model.NameMangler
 import com.google.protobuf.struct.Value
 
 import scala.deriving.Mirror
@@ -34,7 +35,7 @@ object ResourceDecoder:
       val propertyLabel     = resourceLabel.withKey(propertyName)
 
       fields
-        .get(NameUnmangler.unmanglePropertyName(propertyName))
+        .get(NameMangler.unmanglePropertyName(propertyName))
         .map { value =>
           val decoded = decoder
             .decode(value, propertyLabel)
