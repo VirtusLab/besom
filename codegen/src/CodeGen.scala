@@ -506,52 +506,53 @@ class CodeGen(using
 
     val unionDecoders = unionDecoderGivens(resourceProperties)
 
+    val outputOps =
+      if hasOutputExtensions then m"""|  given outputOps: {} with
+          |    extension(output: besom.types.Output[$baseClassName])
+          |${baseOutputExtensionMethods.map(meth => s"      ${meth.syntax}").mkString("\n")}
+          |
+          |""".stripMargin.parse[Stat].get
+      else ""
+
     def argsDefaultMsg = if argsDefault.isEmpty then "" else "This resource has a default configuration."
 
     val baseCompanion =
-      if (hasOutputExtensions) {
-        m"""|object $baseClassName extends besom.ResourceCompanion[$baseClassName]:
-            |  /** Resource constructor for $baseClassName. 
-            |    * 
-            |    * @param name [[besom.util.NonEmptyString]] The unique (stack-wise) name of the resource in Pulumi state (not on provider's side).
-            |    *        NonEmptyString is inferred automatically from non-empty string literals, even when interpolated. If you encounter any
-            |    *        issues with this, please try using `: NonEmptyString` type annotation. If you need to convert a dynamically generated
-            |    *        string to NonEmptyString, use `NonEmptyString.apply` method - `NonEmptyString(str): Option[NonEmptyString]`.
-            |    *
-            |    * @param args [[${argsClassName}]] The configuration to use to create this resource. $argsDefaultMsg
-            |    *
-            |    * @param opts [[${resourceOptsClass}]] Resource options to use for this resource. 
-            |    *        Defaults to empty options. If you need to set some options, use [[besom.opts]] function to create them, for example:
-            |    *  
-            |    *        {{{
-            |    *        val res = $baseClassName(
-            |    *          "my-resource",
-            |    *          ${argsClassName}(...), // your args
-            |    *          opts(provider = myProvider)
-            |    *        )
-            |    *        }}}
-            |    */
-            |  def apply(
-            |    name: besom.util.NonEmptyString,
-            |    args: ${argsClassName}${argsDefault},
-            |    opts: besom.ResourceOptsVariant.$variant ?=> ${resourceOptsClass} = ${resourceOptsClass}()
-            |  ): besom.types.Output[$baseClassName] = besom.internal.Output.getContext.flatMap { implicit ctx =>
-            |    ctx.${resourceRegisterMethodName}[$baseClassName, $argsClassName](${tokenLit}, name, args, opts(using besom.ResourceOptsVariant.$variant))
-            |  }
-            |
-            |  private[besom] def typeToken: besom.types.ResourceType = ${tokenLit}
-            |
-            |$resourceDecoderInstance
-            |$decoderInstance
-            |${unionDecoders.mkString("\n")}
-            |  given outputOps: {} with
-            |    extension(output: besom.types.Output[$baseClassName])
-            |${baseOutputExtensionMethods.map(meth => s"      ${meth.syntax}").mkString("\n")}
-            |""".stripMargin.parse[Stat].get
-      } else {
-        m"""object $baseClassName:
-           |$resourceDecoderInstance""".stripMargin.parse[Stat].get
-      }
+      m"""|object $baseClassName extends besom.ResourceCompanion[$baseClassName, $argsClassName]:
+          |  /** Resource constructor for $baseClassName. 
+          |    * 
+          |    * @param name [[besom.util.NonEmptyString]] The unique (stack-wise) name of the resource in Pulumi state (not on provider's side).
+          |    *        NonEmptyString is inferred automatically from non-empty string literals, even when interpolated. If you encounter any
+          |    *        issues with this, please try using `: NonEmptyString` type annotation. If you need to convert a dynamically generated
+          |    *        string to NonEmptyString, use `NonEmptyString.apply` method - `NonEmptyString(str): Option[NonEmptyString]`.
+          |    *
+          |    * @param args [[${argsClassName}]] The configuration to use to create this resource. $argsDefaultMsg
+          |    *
+          |    * @param opts [[${resourceOptsClass}]] Resource options to use for this resource. 
+          |    *        Defaults to empty options. If you need to set some options, use [[besom.opts]] function to create them, for example:
+          |    *  
+          |    *        {{{
+          |    *        val res = $baseClassName(
+          |    *          "my-resource",
+          |    *          ${argsClassName}(...), // your args
+          |    *          opts(provider = myProvider)
+          |    *        )
+          |    *        }}}
+          |    */
+          |  def apply(
+          |    name: besom.util.NonEmptyString,
+          |    args: ${argsClassName}${argsDefault},
+          |    opts: besom.ResourceOptsVariant.$variant ?=> ${resourceOptsClass} = ${resourceOptsClass}()
+          |  ): besom.types.Output[$baseClassName] = besom.internal.Output.getContext.flatMap { implicit ctx =>
+          |    ctx.${resourceRegisterMethodName}[$baseClassName, $argsClassName](${tokenLit}, name, args, opts(using besom.ResourceOptsVariant.$variant))
+          |  }
+          |
+          |  private[besom] def typeToken: besom.types.ResourceType = ${tokenLit}
+          |
+          |$resourceDecoderInstance
+          |$decoderInstance
+          |${unionDecoders.mkString("\n")}
+          |${outputOps}
+          |""".stripMargin.parse[Stat].get
 
     val baseClassFileContent =
       m"""|package ${baseClassCoordinates.packageRef}

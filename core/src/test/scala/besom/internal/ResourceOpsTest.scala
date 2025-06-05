@@ -63,6 +63,7 @@ class ResourceOpsTest extends munit.FunSuite:
             pluginDownloadUrl = "",
             name = "cust1",
             typ = "custom:resources:TestCustomResource",
+            transformations = List.empty,
             keepDependency = false // custom resources never have keepDependency set to true
           ),
           Output(ResourceId("cust1"))
@@ -86,6 +87,7 @@ class ResourceOpsTest extends munit.FunSuite:
             pluginDownloadUrl = "",
             name = "cust3",
             typ = "custom:resources:TestCustomResource",
+            transformations = List.empty,
             keepDependency = false // custom resources never have keepDependency set to true
           ),
           Output(ResourceId("cust3"))
@@ -110,6 +112,7 @@ class ResourceOpsTest extends munit.FunSuite:
             pluginDownloadUrl = "",
             name = "cust4",
             typ = "custom:resources:TestCustomResource",
+            transformations = List.empty,
             keepDependency = false // custom resources never have keepDependency set to true
           ),
           Output(ResourceId("cust4"))
@@ -133,6 +136,7 @@ class ResourceOpsTest extends munit.FunSuite:
             pluginDownloadUrl = "",
             name = "cust2",
             typ = "custom:resources:TestCustomResource",
+            transformations = List.empty,
             keepDependency = false // custom resources never have keepDependency set to true
           ),
           Output(ResourceId("cust2"))
@@ -169,6 +173,7 @@ class ResourceOpsTest extends munit.FunSuite:
             pluginDownloadUrl = "",
             name = "comp3",
             typ = "component:resources:TestComponentResource",
+            transformations = List.empty,
             keepDependency = false // this is a user component, so it should not have keepDependency set to true
           )
         )
@@ -194,6 +199,7 @@ class ResourceOpsTest extends munit.FunSuite:
             pluginDownloadUrl = "",
             name = "comp4",
             typ = "component:resources:TestComponentResource",
+            transformations = List.empty,
             keepDependency = false // this is a user component, so it should not have keepDependency set to true
           )
         )
@@ -221,6 +227,7 @@ class ResourceOpsTest extends munit.FunSuite:
             pluginDownloadUrl = "",
             name = "remote1",
             typ = "component:resources:TestRemoteComponentResource",
+            transformations = List.empty,
             keepDependency = true // remote component resources always have keepDependency set to true
           )
         )
@@ -245,6 +252,7 @@ class ResourceOpsTest extends munit.FunSuite:
           pluginDownloadUrl = "",
           name = "comp2",
           typ = "component:resources:TestComponentResource",
+          transformations = List.empty,
           keepDependency = false // this is a user component, so it should not have keepDependency set to true
         )
       )
@@ -279,6 +287,7 @@ class ResourceOpsTest extends munit.FunSuite:
             pluginDownloadUrl = "",
             name = "comp1",
             typ = "component:resources:TestCustomResource",
+            transformations = List.empty,
             keepDependency = false // this is a user component, so it should not have keepDependency set to true
           )
         )
@@ -330,6 +339,7 @@ class ResourceOpsTest extends munit.FunSuite:
               pluginDownloadUrl = "",
               name = "provider",
               typ = "pulumi:providers:TestProviderResource",
+              transformations = List.empty,
               keepDependency = false // providers never have keepDependency set to true
             ),
             Output(ResourceId("provider"))
@@ -356,6 +366,7 @@ class ResourceOpsTest extends munit.FunSuite:
             pluginDownloadUrl = "",
             name = "cust1",
             typ = "custom:resources:TestCustomResource",
+            transformations = List.empty,
             keepDependency = false // custom resources never have keepDependency set to true
           ),
           Output(ResourceId("cust1"))
@@ -388,6 +399,7 @@ class ResourceOpsTest extends munit.FunSuite:
             pluginDownloadUrl = "",
             name = "comp1",
             typ = "component:resources:TestComponentResource",
+            transformations = List.empty,
             keepDependency = false
           )
         )
@@ -417,6 +429,7 @@ class ResourceOpsTest extends munit.FunSuite:
             pluginDownloadUrl = "",
             name = "remote1",
             typ = "component:resources:TestRemoteComponentResource",
+            transformations = List.empty,
             keepDependency = true
           )
         )

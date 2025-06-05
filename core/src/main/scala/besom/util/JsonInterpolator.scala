@@ -5,7 +5,6 @@ import besom.internal.Output
 import scala.util.{Failure, Success}
 import interpolator.interleave
 import java.util.Objects
-import besom.json.JsValue
 
 object JsonInterpolator:
   import scala.quoted.*

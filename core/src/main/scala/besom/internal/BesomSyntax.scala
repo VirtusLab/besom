@@ -147,12 +147,12 @@ trait BesomSyntax:
       }
     }
 
-  extension [A <: Resource: ResourceDecoder](companion: ResourceCompanion[A])
-    def get(name: Input[NonEmptyString], id: Input[ResourceId]): Output[A] = Output.getContext.flatMap { implicit ctx =>
+  extension [R <: Resource: ResourceDecoder](companion: ResourceCompanion[R, ?])
+    def get(name: Input[NonEmptyString], id: Input[ResourceId]): Output[R] = Output.getContext.flatMap { implicit ctx =>
       for
         name <- name.asOutput()
         id   <- id.asOutput()
-        res  <- ctx.readOrRegisterResource[A, EmptyArgs](companion.typeToken, name, EmptyArgs(), CustomResourceOptions(importId = id))
+        res  <- ctx.readOrRegisterResource[R, EmptyArgs](companion.typeToken, name, EmptyArgs(), CustomResourceOptions(importId = id))
       yield res
     }
 

@@ -59,17 +59,21 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         for
           (resource, resolver) <- ResourceDecoder.forResource[R].makeResourceAndResolver
           _                    <- log.debug(s"$mode resource ${mode.suffix}")
-          options              <- options.resolve
-          _                    <- log.debug(s"$mode resource, resolved options:\n${printer.render(options)}")
-          state                <- createResourceState(typ, name, resource, options, remote)
+          opts                 <- options.resolve
+          _                    <- log.debug(s"$mode resource, resolved options:\n${printer.render(opts)}")
+          state                <- createResourceState(typ, name, resource, opts, remote)
           _                    <- log.debug(s"Created resource state")
           _                    <- ctx.resources.add(resource, state)
           _                    <- log.debug(s"Added resource to resources")
-          inputs               <- prepareResourceInputs(resource, state, args, options)
-          _                    <- log.debug(s"Prepared inputs for resource")
-          _                    <- addChildToParentResource(resource, options.parent)
-          _                    <- log.debug(s"Added child to parent (isDefined: ${options.parent.isDefined})")
-          _                    <- registerReadOrGetResource(resource, state, resolver, inputs, options, remote)
+          transformedArgs <- applyArgsTransformations(
+            state,
+            args
+          ) // TODO https://github.com/VirtusLab/besom/issues/42 - handle transformations of opts too but that would have to happen before options other than parent and transformations are resolved
+          inputs <- prepareResourceInputs(resource, state, transformedArgs, opts)
+          _      <- log.debug(s"Prepared inputs for resource")
+          _      <- addChildToParentResource(resource, opts.parent)
+          _      <- log.debug(s"Added child to parent (isDefined: ${opts.parent.isDefined})")
+          _      <- registerReadOrGetResource(resource, state, resolver, inputs, opts, remote)
         yield resource
 
       /** see docs: [[Memo]]
@@ -547,16 +551,37 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
           yield Some(parentUrn)
 
   private[internal] def resolveParentTransformations(
-    @unused typ: ResourceType,
-    @unused resourceOptions: ResolvedResourceOptions
-  ): Result[List[Unit]] =
-    Result.pure(List.empty) // TODO parent transformations: https://github.com/VirtusLab/besom/issues/42
+    resourceOptions: ResolvedResourceOptions
+  ): Result[List[ResourceTransformation]] =
+    resourceOptions.parent match
+      case Some(parent) =>
+        ctx.resources.getStateFor(parent).map(_.transformations)
+      case None =>
+        Result.pure(List.empty)
 
-  private[internal] def applyTransformations(
+  private[internal] def applyOptsTransformations(
     resourceOptions: ResolvedResourceOptions,
     @unused parentTransformations: List[Unit] // TODO this needs transformations from ResourceState, not Resource
   ): Result[ResolvedResourceOptions] =
     Result.pure(resourceOptions) // TODO resource transformations: https://github.com/VirtusLab/besom/issues/42
+
+  private[internal] def applyArgsTransformations[A](
+    state: ResourceState,
+    args: A
+  ): Result[A] =
+    val resourceInfo = new TransformedResourceInfoImpl(
+      typ = state.typ,
+      name = state.name
+    )
+
+    Result {
+      state.transformations.foldLeft(args) { (acc, transformation) =>
+        transformation match
+          case transformation: ResourceArgsTransformation =>
+            transformation.transformArgs(acc)(using resourceInfo).asInstanceOf[A]
+          case _ => acc
+      }
+    }
 
   private[internal] def collapseAliases(@unused opts: ResolvedResourceOptions): Result[List[Output[String]]] =
     Result.pure(List.empty) // TODO aliases: https://github.com/VirtusLab/besom/issues/44
@@ -631,11 +656,11 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
   ): Result[ResourceState] =
     for
       _                     <- log.debug(s"createResourceState")
-      parentTransformations <- resolveParentTransformations(typ, resourceOptions)
-      opts                  <- applyTransformations(resourceOptions, parentTransformations) // todo add logging
-      aliases               <- collapseAliases(opts) // todo add logging
-      providers             <- mergeProviders(typ, opts, ctx.resources)
-      maybeProvider         <- getProvider(typ, providers, opts)
+      parentTransformations <- resolveParentTransformations(resourceOptions)
+      opts = resourceOptions // TODO apply opts transformations
+      aliases       <- collapseAliases(opts) // todo add logging
+      providers     <- mergeProviders(typ, opts, ctx.resources)
+      maybeProvider <- getProvider(typ, providers, opts)
     yield {
       val commonRS = CommonResourceState(
         children = Set.empty,
@@ -645,6 +670,8 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         pluginDownloadUrl = resourceOptions.pluginDownloadUrl.getOrElse(""),
         name = name,
         typ = typ,
+        transformations =
+          opts.transformations.toList ++ parentTransformations, // following the semantics in other languages, parent transformations are applied later
         // keepDependency is true for remote components rehydrated components
         keepDependency = !resource.isCustom && (remote || resourceOptions.urn.isDefined) // pulumi-go: context.go:819-822
       )
