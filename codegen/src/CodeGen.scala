@@ -162,7 +162,7 @@ class CodeGen(using
           case const                   => throw GeneralCodegenException(s"The name of enum cannot be derived from value ${const}")
         }
       }
-      val caseName       = if (NameMangler.isReserved(caseRawName)) Term.Name(s"`$caseRawName`") else Term.Name(caseRawName)
+      val caseName       = Term.Name(caseRawName)
       val caseStringName = Lit.String(caseRawName)
       val caseValue      = valueDefinition.value.asScala
 
@@ -1085,7 +1085,7 @@ class CodeGen(using
 object CodeGen:
   def packageDependency(name: SchemaName, version: SchemaVersion)(using Config): String =
     packageDependencies(List((name, version)))
-    
+
   def packageDependencies(dependencies: List[(SchemaName, SchemaVersion)])(using config: Config): String =
     dependencies
       .map { case (name, version) =>
