@@ -203,9 +203,13 @@ clean-json:
 # Publishes locally json module
 publish-local-json:
 	scala-cli --power publish local {{no-bloop}} besom-json --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 	scala-cli --power publish local {{no-bloop}} besom-json --js --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --js --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 	scala-cli --power publish local {{no-bloop}} besom-json --native --native-version 0.5.7 --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --native --native-version 0.5.7 --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 	scala-cli --power publish local {{no-bloop}} besom-json --native --native-version 0.4.17 --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --native --native-version 0.4.17 --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 
 # Publishes json module to Maven
 publish-maven-json:
@@ -403,6 +407,7 @@ clean-model:
 # Publishes locally model module
 publish-local-model: test-model
 	scala-cli --power publish local {{no-bloop}} model --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} model --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 
 # Publishes model module
 publish-maven-model: test-model
