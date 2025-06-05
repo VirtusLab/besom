@@ -4,7 +4,6 @@ import besom.codegen.PackageVersion
 import besom.codegen.Utils.*
 import besom.codegen.metaschema.*
 import besom.codegen.scalameta.interpolator.*
-import besom.model.NameMangler
 
 import scala.meta.*
 import scala.meta.dialects.Scala33
