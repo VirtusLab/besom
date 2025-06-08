@@ -21,9 +21,14 @@ case class Flags(
 //noinspection ScalaWeakerAccess,TypeAnnotation
 object Packages:
   def main(args: String*): Unit =
-    val (params, flags) = Args.parse(args, monoFlags = Vector("force", "f"))
+    val (params, flags) = Args.parse(args, monoFlags = Vector("force", "f", "trace"))
 
-    given Config = Config()
+    given Config = Config(
+      tracing = flags.get("trace").orElse(flags.get("t")) match
+        case Some(v: String) => v.toBoolean
+        case Some(v: Int)    => v > 0
+        case None            => false
+    )
     given Flags = Flags(
       force = flags.get("force").orElse(flags.get("f")) match
         case Some(v: String) => v.toBoolean
@@ -93,6 +98,8 @@ object Packages:
     println(s"Compiling with max heap size: ${heapMaxGb}G")
     Vector(
       "--server=false",
+      "--jvm",
+      "graalvm-java23:23.0.2",
       "--javac-opt=-verbose",
       s"--javac-opt=-J-XX:MaxHeapSize=${heapMaxGb}G",
       "--javac-opt=-J-XX:NewRatio=1", // increase young vs old gen size, default is 2
@@ -158,7 +165,8 @@ object Packages:
   private val compileProblemPackages = blockedPackages ++ Vector(
     "aws-iam", // id parameter, schema error - https://github.com/pulumi/pulumi-aws-iam/issues/18
     "nuage", // id parameter, schema error - https://github.com/nuage-studio/pulumi-nuage/issues/50
-    "ovh", // urn parameter, schema error - https://github.com/ovh/pulumi-ovh/issues/139
+    // addressed with a hotfix, also now it's iam.PermissionsGroup
+    // "ovh", // urn parameter, schema error - https://github.com/ovh/pulumi-ovh/issues/139
     "fortios" // method collision - https://github.com/VirtusLab/besom/issues/458
   )
 
@@ -357,7 +365,7 @@ object Packages:
       case _                      => Left(Exception(s"Invalid package format: '$value'"))
   end PackageId
 
-  def generate(metadata: Vector[PackageMetadata])(using Config): Vector[PackageMetadata] = {
+  def generate(metadata: Vector[PackageMetadata])(using Config, Flags): Vector[PackageMetadata] = {
     val seen = mutable.HashSet.empty[PackageId]
     val todo = mutable.Queue.empty[PackageMetadata]
     val done = mutable.ListBuffer.empty[PackageMetadata]
@@ -641,9 +649,63 @@ object Packages:
   ) derives YamlCodec
 
   // downloads latest package metadata and schemas using Pulumi packages repository
-  def downloadPackagesMetadataAndSchema(targetPath: os.Path, selected: List[String])(using config: Config): Unit =
-    downloadPackagesSchema(downloadPackagesMetadata(targetPath, selected))
-  end downloadPackagesMetadataAndSchema
+  def downloadPackagesMetadataAndSchema(targetPath: os.Path, selected: List[String])(using config: Config): Unit = {
+    // First download metadata for all selected packages
+    val downloaded = downloadPackagesMetadata(targetPath, selected)
+
+    // Create separate PackageMetadata objects for each version
+    val selectedPackages = selected.map { p =>
+      val parsed = PackageId.parse(p)
+      parsed match {
+        case Right(name, Some(version)) => // explicit version, use it
+          downloaded
+            .find(_.name == name)
+            .map { packageYaml =>
+              PackageMetadata(name, PackageVersion(version)).withUrl(packageYaml.repo_url) -> packageYaml
+            }
+            .getOrElse(throw Exception(s"Package '$name' not found in downloaded packages metadata"))
+        case Right(name, None) => // no explicit version, use latest
+          downloaded
+            .find(_.name == name)
+            .map { packageYaml =>
+              PackageMetadata(name, None).withUrl(packageYaml.repo_url) -> packageYaml
+            }
+            .getOrElse(throw Exception(s"Package '$name' not found in downloaded packages metadata"))
+        case Left(e) => throw e
+      }
+    }.toVector
+
+    given logger: Logger = Logger()
+
+    val schemaProvider = DownloadingSchemaProvider()
+
+    selectedPackages.foreach { case (metadata, packageYaml) =>
+      schemaProvider.packageInfo(metadata, None)
+    }
+
+    println(s"Writing log of downloaded packages to: '${targetPath / "downloaded-packages.log"}'")
+    logger.writeToFile(targetPath / "downloaded-packages.log")
+
+    // val packageYamls = selectedPackages.map { case (customizedMetadata, latestPackageYaml) =>
+    //   PackageYAML(
+    //     name = customizedMetadata.name,
+    //     repo_url = customizedMetadata.server.getOrElse(
+    //       "https://github.com/pulumi/pulumi-" + customizedMetadata.name
+    //     ), // TODO: optimistic assumption about the repo url
+    //     schema_file_url = customizedMetadata.version match {
+    //       case Some(version) =>
+    //         // replace the version in the schema file url with the selected version
+    //         latestPackageYaml.schema_file_url.map(_.replace(latestPackageYaml.version, s"v$version"))
+    //       case None => latestPackageYaml.schema_file_url
+    //     },
+    //     schema_file_path = latestPackageYaml.schema_file_path,
+    //     version = customizedMetadata.version.map(v => "v" + v.asString).getOrElse(latestPackageYaml.version)
+    //   )
+    // }
+
+    // // Download schemas for each version independently
+    // downloadPackagesSchema(packageYamls)
+  }
 
   private def downloadPackagesMetadata(targetPath: os.Path, selected: List[String])(using config: Config): Vector[PackageYAML] =
     println("Downloading packages metadata...")
@@ -755,7 +817,7 @@ object Packages:
     // pre-fetch all available production schemas, if any are missing here code generation will use a fallback mechanism
     withProgress(s"Downloading ${downloaded.size} packages schemas", downloaded.size) {
       downloaded.foreach(p => {
-        Progress.report(label = p.name)
+        Progress.report(label = s"${p.name}:${p.version}")
         try
           val schemaFileUrl = (p.schema_file_url, p.schema_file_path) match
             case (Some(url), _) =>
@@ -765,21 +827,24 @@ object Packages:
               s"$rawUrlPrefix/${p.version}/${path}"
             case _ =>
               throw Exception("Cannot extract schema file URL from the package metadata")
+
           val ext        = if schemaFileUrl.endsWith(".yaml") || schemaFileUrl.endsWith(".yml") then "yaml" else "json"
           val schemaPath = config.schemasDir / p.name / PackageVersion(p.version).get / s"schema.$ext"
           if !os.exists(schemaPath) then
+            println(s"Downloading schema for package: '${p.name}' version '${p.version}' from: '$schemaFileUrl'")
             val schemaResponse = requests.get(schemaFileUrl)
             if schemaResponse.statusCode == 200
             then os.write.over(schemaPath, schemaResponse.text(), createFolders = true)
             else
               Progress.fail(
-                s"Failed to download schema for package: '${p.name}' from: '$schemaFileUrl', " +
+                s"Failed to download schema for package: '${p.name}' version '${p.version}' from: '$schemaFileUrl', " +
                   s"error[${schemaResponse.statusCode}]: ${schemaResponse.statusMessage}"
               )
         catch
           case NonFatal(e) =>
-            Progress.fail(s"Failed to download schema for package: '${p.name}', error: ${e.getMessage}")
+            Progress.fail(s"Failed to download schema for package: '${p.name}' version '${p.version}', error: ${e.getMessage}")
         finally Progress.end
+        end try
       })
     }
 

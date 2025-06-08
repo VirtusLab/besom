@@ -91,8 +91,8 @@ trait BesomSyntax:
     typ: ResourceType,
     opts: ComponentResourceOptions = ComponentResourceOptions()
   )(
-    f: ComponentBase ?=> A
-  ): Output[A] = Output.getContext.flatMap { ctx =>
+    f: Context ?=> ComponentBase ?=> A
+  )(using ctx: Context): Output[A] =
     Output.ofData {
       ctx
         .registerComponentResource(name, typ, opts)(using ctx)
@@ -103,7 +103,7 @@ trait BesomSyntax:
 
           val componentContext = ComponentContext(ctx, urnRes, componentBase)
           val componentOutput =
-            try Output.pure(f(using componentBase))
+            try Output.pure(f(using componentContext)(using componentBase))
             catch case e: Exception => Output.fail(e)
 
           val componentResult = componentOutput.getValueOrFail {
@@ -117,7 +117,6 @@ trait BesomSyntax:
         }
         .map(OutputData(_))
     }
-  }
 
   extension [A <: ProviderResource](pr: A)
     def provider: Output[Option[ProviderResource]] = Output.getContext.flatMap { implicit ctx =>

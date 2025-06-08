@@ -1,0 +1,8 @@
+{
+  "fieldRemovals": [
+    {
+      "name": "urn",
+      "fix": "https://github.com/pulumi/pulumi-digitalocean/pull/995"
+    }
+  ]
+}

@@ -40,7 +40,7 @@ default:
 
 # TODO make this version-independent and SNAPSHOT-independent by computing short-version from version.txt
 build-packages-for-templates-and-examples:
-  grep -hr "0.3-SNAPSHOT" examples/**/*.scala templates/**/*.scala | sed -n 's/.*besom-\([^:]*:[^"]*\).*-core.0.3-SNAPSHOT.*/\1/p' | sort -u | tr '\n' ' ' | xargs -I {} just cli packages local {}
+  grep -hr "0.5-SNAPSHOT" examples/**/*.scala templates/**/*.scala | sed -n 's/.*besom-\([^:]*:[^"]*\).*-core.0.5-SNAPSHOT.*/\1/p' | sort -u | tr '\n' ' ' | xargs -I {} just cli packages local {}
 
 # Cleans everything
 clean-all: clean-json clean-model clean-rpc clean-sdk clean-auto clean-out clean-compiler-plugin clean-codegen clean-scripts clean-test-integration clean-cfg clean-test-templates clean-test-examples clean-test-markdown
@@ -55,8 +55,7 @@ test-all: test-json test-model test-sdk test-auto test-codegen test-scripts test
 publish-local-all: publish-local-json publish-local-model publish-local-rpc publish-local-sdk publish-local-auto publish-local-codegen publish-local-scripts install-language-plugin
 
 # Publishes everything to Maven
-# TODO add publish-maven-auto once stable
-publish-maven-all: publish-maven-json publish-maven-model publish-maven-rpc publish-maven-sdk publish-maven-codegen publish-maven-scripts
+publish-maven-all: publish-maven-json publish-maven-model publish-maven-rpc publish-maven-sdk publish-maven-auto publish-maven-codegen publish-maven-scripts
 
 # Runs all necessary checks before committing
 before-commit: compile-all test-all
@@ -204,10 +203,20 @@ clean-json:
 # Publishes locally json module
 publish-local-json:
 	scala-cli --power publish local {{no-bloop}} besom-json --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
+	scala-cli --power publish local {{no-bloop}} besom-json --js --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --js --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
+	scala-cli --power publish local {{no-bloop}} besom-json --native --native-version 0.5.7 --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --native --native-version 0.5.7 --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
+	scala-cli --power publish local {{no-bloop}} besom-json --native --native-version 0.4.17 --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --native --native-version 0.4.17 --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 
 # Publishes json module to Maven
 publish-maven-json:
 	scala-cli --power publish {{no-bloop}} besom-json --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --js --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --native --native-version 0.5.7 --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --native --native-version 0.4.17 --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 ####################
 # Auto
@@ -318,7 +327,7 @@ compile-cfg-containers: publish-local-cfg-lib publish-local-model
 
 # Compiles besom-cfg k8s module
 compile-cfg-k8s: publish-local-cfg-lib publish-local-cfg-containers
-	just cli packages local kubernetes:4.17.1
+	just cli packages local kubernetes:4.22.1
 	scala-cli --power compile besom-cfg/k8s --suppress-experimental-feature-warning
 
 # Publishes locally besom-cfg lib module
@@ -398,6 +407,7 @@ clean-model:
 # Publishes locally model module
 publish-local-model: test-model
 	scala-cli --power publish local {{no-bloop}} model --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} model --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 
 # Publishes model module
 publish-maven-model: test-model

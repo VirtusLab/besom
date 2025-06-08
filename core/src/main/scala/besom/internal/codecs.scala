@@ -6,6 +6,7 @@ import besom.types.Archive.*
 import besom.types.Asset.*
 import besom.util.Validated.*
 import besom.util.{NonEmptyString, *}
+import besom.model.NameMangler
 import com.google.protobuf.struct.*
 import com.google.protobuf.struct.Value.Kind
 
@@ -152,44 +153,6 @@ trait Decoder[A]:
       }
     override def mapping(value: Value, label: Label): Validated[DecodingError, B] = ???
 end Decoder
-
-object NameUnmangler:
-  private val anyRefMethodNames = Set(
-    "eq",
-    "ne",
-    "notify",
-    "notifyAll",
-    "synchronized",
-    "wait",
-    "asInstanceOf",
-    "clone",
-    "equals",
-    "getClass",
-    "hashCode",
-    "isInstanceOf",
-    "toString",
-    "finalize"
-  )
-
-  private val reservedMethods = Set(
-    "pulumiResourceName",
-    "asString"
-  )
-
-  private val reservedPackages = Set(
-    "java",
-    "javax",
-    "scala",
-    "besom"
-  )
-
-  private val reserved = (anyRefMethodNames ++ reservedMethods ++ reservedPackages).map(_ + "_")
-
-  // This logic must be undone the same way in codegen
-  // Keep in sync with `manglePropertyName` in CodeGen.scala
-  def unmanglePropertyName(name: String): String =
-    if reserved.contains(name) then name.dropRight(1) // drop the underscore
-    else name
 
 object Decoder extends DecoderInstancesLowPrio1:
   import besom.json.*
@@ -654,7 +617,7 @@ trait DecoderHelpers:
   inline def derived[A](using m: Mirror.Of[A]): Decoder[A] =
     lazy val labels           = CodecMacros.summonLabels[m.MirroredElemLabels]
     lazy val instances        = CodecMacros.summonDecoders[m.MirroredElemTypes]
-    lazy val nameDecoderPairs = labels.map(NameUnmangler.unmanglePropertyName).zip(instances)
+    lazy val nameDecoderPairs = labels.map(NameMangler.unmanglePropertyName).zip(instances)
 
     inline m match
       case s: Mirror.SumOf[A]     => decoderSum(s, nameDecoderPairs)
@@ -908,7 +871,7 @@ object Encoder:
   inline def derived[A](using m: Mirror.Of[A]): Encoder[A] =
     lazy val labels           = CodecMacros.summonLabels[m.MirroredElemLabels]
     lazy val instances        = CodecMacros.summonEncoders[m.MirroredElemTypes]
-    lazy val nameEncoderPairs = labels.map(NameUnmangler.unmanglePropertyName).zip(instances)
+    lazy val nameEncoderPairs = labels.map(NameMangler.unmanglePropertyName).zip(instances)
     inline m match
       case s: Mirror.SumOf[A]     => encoderSum(s, nameEncoderPairs)
       case _: Mirror.ProductOf[A] => encoderProduct(nameEncoderPairs)

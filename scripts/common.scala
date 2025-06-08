@@ -24,9 +24,9 @@ object Args:
   private def parseInner(args: Seq[String], monoFlags: Seq[String]): (Vector[String], Vector[(String, Int | String)]) =
     args match
       case Nil => (Vector.empty, Vector.empty)
-      case v +: tail if monoFlags.contains(s"--$v") || monoFlags.contains(s"-$v") =>
+      case v +: tail if monoFlags.contains(v.stripPrefix("-")) || monoFlags.contains(v.stripPrefix("--")) =>
         val (rest, flags) = parseInner(tail, monoFlags)
-        (rest, (v, 1) +: flags)
+        (rest, (v.stripPrefix("--").stripPrefix("-"), 1) +: flags)
       case s"--$name" +: value +: tail =>
         val (rest, flags) = parseInner(tail, monoFlags)
         (rest, (name, value) +: flags)
