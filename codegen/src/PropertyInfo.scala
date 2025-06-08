@@ -16,8 +16,7 @@ case class PropertyInfo private (
   constValue: Option[Term],
   isSecret: Boolean,
   unionMappings: List[TypeMapper.UnionMapping],
-  plain: Boolean,
-  wireName: Option[String]
+  plain: Boolean
 )
 
 object PropertyInfo:
@@ -85,8 +84,7 @@ object PropertyInfo:
       constValue = constValue,
       isSecret = propertyDefinition.secret,
       unionMappings = unionMap,
-      plain = propertyDefinition.plain,
-      wireName = propertyDefinition.wireName
+      plain = propertyDefinition.plain
     )
   }
 
