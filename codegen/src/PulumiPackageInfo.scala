@@ -92,32 +92,38 @@ object PulumiPackageInfo {
     packageType: PackageType,
     typeRenames: Map[PulumiToken, String]
   ):
-    def parseResources: Map[PulumiDefinitionCoordinates, (ResourceDefinition, Boolean)] =
+    def parseResources(using Logger): Map[PulumiDefinitionCoordinates, (ResourceDefinition, Boolean)] =
       pulumiPackage.resources.map { case (token, resource) =>
-        val coordinates = PulumiDefinitionCoordinates.fromRawToken(
-          typeToken = token,
+        val pulumiToken = PulumiToken(token)
+        val coordinates = PulumiDefinitionCoordinates.fromToken(
+          typeToken = pulumiToken,
           moduleToPackageParts = moduleToPackageParts,
-          providerToPackageParts = providerToPackageParts
+          providerToPackageParts = providerToPackageParts,
+          overrideDefinitionName = typeRenames.get(pulumiToken)
         )
         (coordinates, (resource, resource.isOverlay))
       }
 
     def parseTypes(using Logger): Map[PulumiDefinitionCoordinates, (TypeDefinition, Boolean)] =
       pulumiPackage.types.map { case (token, typeRef) =>
-        val coordinates = PulumiDefinitionCoordinates.fromRawToken(
-          typeToken = token,
+        val pulumiToken = PulumiToken(token)
+        val coordinates = PulumiDefinitionCoordinates.fromToken(
+          typeToken = pulumiToken,
           moduleToPackageParts = moduleToPackageParts,
-          providerToPackageParts = providerToPackageParts
+          providerToPackageParts = providerToPackageParts,
+          overrideDefinitionName = typeRenames.get(pulumiToken)
         )
         (coordinates, (typeRef, typeRef.isOverlay))
       }
 
     def parseFunctions(using Logger): Map[PulumiDefinitionCoordinates, (FunctionDefinition, Boolean)] =
       pulumiPackage.functions.map { case (token, function) =>
-        val coordinates = PulumiDefinitionCoordinates.fromRawToken(
-          typeToken = token,
+        val pulumiToken = PulumiToken(token)
+        val coordinates = PulumiDefinitionCoordinates.fromToken(
+          typeToken = pulumiToken,
           moduleToPackageParts = moduleToPackageParts,
-          providerToPackageParts = providerToPackageParts
+          providerToPackageParts = providerToPackageParts,
+          overrideDefinitionName = typeRenames.get(pulumiToken)
         )
         (coordinates, (function, function.isOverlay))
       }

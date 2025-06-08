@@ -65,11 +65,21 @@ class TypeMapper(
     asArgsType: Boolean
   ): Option[ScalaDefinitionCoordinates] = {
     val (typeToken, packageInfo, isFromTypeUri, isFromResourceUri) = preParseFromTypeUri(typeUri)
-    val typeCoordinates = PulumiDefinitionCoordinates.fromToken(
-      typeToken,
-      packageInfo.moduleToPackageParts,
-      packageInfo.providerToPackageParts
-    )
+    val typeCoordinates =
+      if defaultPackageInfo.typeRenames.contains(typeToken) then
+        logger.warn(s"Reference to type ${typeToken} is using a rename hotfix to ${defaultPackageInfo.typeRenames(typeToken)}")
+        PulumiDefinitionCoordinates.fromToken(
+          typeToken,
+          packageInfo.moduleToPackageParts,
+          packageInfo.providerToPackageParts,
+          Some(defaultPackageInfo.typeRenames(typeToken))
+        )
+      else
+        PulumiDefinitionCoordinates.fromToken(
+          typeToken,
+          packageInfo.moduleToPackageParts,
+          packageInfo.providerToPackageParts
+        )
 
     val uniformedTypeToken         = typeCoordinates.token.asLookupKey
     lazy val hasProviderDefinition = packageInfo.providerTypeToken == uniformedTypeToken

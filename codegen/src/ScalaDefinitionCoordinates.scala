@@ -6,7 +6,8 @@ case class ScalaDefinitionCoordinates private (
   private val providerPackageParts: Seq[String],
   private val modulePackageParts: Seq[String],
   definitionName: Option[String],
-  selectionName: Option[String]
+  selectionName: Option[String],
+  wireName: Option[String]
 ) {
   import ScalaDefinitionCoordinates.*
 
@@ -94,7 +95,8 @@ object ScalaDefinitionCoordinates {
     providerPackageParts: Seq[String],
     modulePackageParts: Seq[String],
     definitionName: Option[String],
-    selectionName: Option[String] = None
+    selectionName: Option[String] = None,
+    wireName: Option[String] = None
   ): ScalaDefinitionCoordinates = {
     if definitionName.map(_.isBlank).getOrElse(false)
     then throw ScalaDefinitionCoordinatesError(s"Cannot create ScalaDefinitionCoordinates with blank definitionName: $definitionName")
@@ -102,7 +104,8 @@ object ScalaDefinitionCoordinates {
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
       definitionName = definitionName,
-      selectionName = selectionName
+      selectionName = selectionName,
+      wireName = wireName
     )
   }
 }

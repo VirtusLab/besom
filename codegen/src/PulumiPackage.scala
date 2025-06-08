@@ -511,8 +511,7 @@ case class PropertyDefinition(
   replaceOnChanges: Boolean = false,
   willReplaceOnChanges: Boolean = false,
   secret: Boolean = false,
-  plain: Boolean = false,
-  wireName: Option[String] = None
+  plain: Boolean = false
 )
 object PropertyDefinition {
   implicit val reader: Reader[PropertyDefinition] = PropertyDefinitionProto.reader.map { proto =>

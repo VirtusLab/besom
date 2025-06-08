@@ -140,7 +140,7 @@ class CodeGen(using
         s"Class name for ${classCoordinates.typeRef} could not be found"
       )
     )
-    val enumClassStringName = classCoordinates.definitionName
+    val enumClassStringName = classCoordinates.wireName.orElse(classCoordinates.definitionName)
       .map(Lit.String(_))
       .getOrElse(
         throw GeneralCodegenException(
