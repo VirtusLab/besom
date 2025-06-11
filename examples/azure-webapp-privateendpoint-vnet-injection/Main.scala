@@ -56,9 +56,9 @@ import besom.api.azurenative
   ) // https://github.com/pulumi/pulumi-azure-nextgen/issues/103
 
   // Setup private DNS zone
-  val privateDnsZone = azurenative.network.PrivateZone(
+  val privateDnsZone = azurenative.privatedns.PrivateZone(
     "privateDnsZone",
-    azurenative.network.PrivateZoneArgs(
+    azurenative.privatedns.PrivateZoneArgs(
       location = "global",
       privateZoneName = "privatelink.azurewebsites.net",
       resourceGroupName = resourceGroup.name
@@ -112,14 +112,14 @@ import besom.api.azurenative
     )
   )
 
-  val virtualNetworkLink = azurenative.network.VirtualNetworkLink(
+  val virtualNetworkLink = azurenative.privatedns.VirtualNetworkLink(
     "virtualNetworkLink",
-    azurenative.network.VirtualNetworkLinkArgs(
+    azurenative.privatedns.VirtualNetworkLinkArgs(
       location = "global",
       privateZoneName = privateDnsZone.name,
       registrationEnabled = false,
       resourceGroupName = resourceGroup.name,
-      virtualNetwork = azurenative.network.inputs.SubResourceArgs(
+      virtualNetwork = azurenative.privatedns.inputs.SubResourceArgs(
         id = virtualNetwork.id
       )
     )

@@ -19,45 +19,45 @@ import besom.json.*
   )
 
   // Cosmos DB Account
-  val cosmosdbAccount = azurenative.documentdb.DatabaseAccount(
+  val cosmosdbAccount = azurenative.cosmosdb.DatabaseAccount(
     "logicappdemo-cdb",
-    azurenative.documentdb.DatabaseAccountArgs(
+    azurenative.cosmosdb.DatabaseAccountArgs(
       resourceGroupName = resourceGroup.name,
-      databaseAccountOfferType = azurenative.documentdb.enums.DatabaseAccountOfferType.Standard,
+      databaseAccountOfferType = azurenative.cosmosdb.enums.DatabaseAccountOfferType.Standard,
       locations = List(
-        azurenative.documentdb.inputs.LocationArgs(
+        azurenative.cosmosdb.inputs.LocationArgs(
           locationName = resourceGroup.location,
           failoverPriority = 0
         )
       ),
-      consistencyPolicy = azurenative.documentdb.inputs.ConsistencyPolicyArgs(
-        defaultConsistencyLevel = azurenative.documentdb.enums.DefaultConsistencyLevel.Session
+      consistencyPolicy = azurenative.cosmosdb.inputs.ConsistencyPolicyArgs(
+        defaultConsistencyLevel = azurenative.cosmosdb.enums.DefaultConsistencyLevel.Session
       )
     )
   )
 
   // Cosmos DB Database
-  val db = azurenative.documentdb.SqlResourceSqlDatabase(
+  val db = azurenative.cosmosdb.SqlResourceSqlDatabase(
     "sqldb",
-    azurenative.documentdb.SqlResourceSqlDatabaseArgs(
+    azurenative.cosmosdb.SqlResourceSqlDatabaseArgs(
       resourceGroupName = resourceGroup.name,
       accountName = cosmosdbAccount.name,
-      resource = azurenative.documentdb.inputs.SqlDatabaseResourceArgs(
+      resource = azurenative.cosmosdb.inputs.SqlDatabaseResourceArgs(
         id = "sqldb"
       )
     )
   )
 
 // Cosmos DB SQL Container
-  val dbContainer = azurenative.documentdb.SqlResourceSqlContainer(
+  val dbContainer = azurenative.cosmosdb.SqlResourceSqlContainer(
     "container",
-    azurenative.documentdb.SqlResourceSqlContainerArgs(
+    azurenative.cosmosdb.SqlResourceSqlContainerArgs(
       resourceGroupName = resourceGroup.name,
       accountName = cosmosdbAccount.name,
       databaseName = db.name,
-      resource = azurenative.documentdb.inputs.SqlContainerResourceArgs(
+      resource = azurenative.cosmosdb.inputs.SqlContainerResourceArgs(
         id = "container",
-        partitionKey = azurenative.documentdb.inputs.ContainerPartitionKeyArgs(
+        partitionKey = azurenative.cosmosdb.inputs.ContainerPartitionKeyArgs(
           paths = List("/myPartitionKey"),
           kind = "Hash"
         )
@@ -65,8 +65,8 @@ import besom.json.*
     )
   )
 
-  val accountKeys = azurenative.documentdb.listDatabaseAccountKeys(
-    azurenative.documentdb.ListDatabaseAccountKeysArgs(
+  val accountKeys = azurenative.cosmosdb.listDatabaseAccountKeys(
+    azurenative.cosmosdb.ListDatabaseAccountKeysArgs(
       accountName = cosmosdbAccount.name,
       resourceGroupName = resourceGroup.name
     )

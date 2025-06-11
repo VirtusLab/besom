@@ -1,9 +1,12 @@
 import besom.*
 import besom.api.gcp
 import besom.json.*
+import scala.util.Random
 
 @main def main = Pulumi.run {
   val projectId = config.requireString("gcp:project")
+
+  val randomSuffix = Random.alphanumeric.filter(_.isLetter).take(6).mkString
 
   val dataset = gcp.bigquery.Dataset(
     name = "my-dataset",
@@ -68,9 +71,9 @@ import besom.json.*
 
   // Create a BigQuery job to load the data from GCS into the BigQuery table
   val loadJob = gcp.bigquery.Job(
-    name = "load-data-job",
+    name = s"load-data-job-$randomSuffix",
     gcp.bigquery.JobArgs(
-      jobId = s"load_data_job",
+      jobId = s"load_data_job-$randomSuffix",
       load = gcp.bigquery.inputs.JobLoadArgs(
         sourceUris = List(p"gs://${bucketObject.bucket}/${bucketObject.name}"),
         destinationTable = gcp.bigquery.inputs.JobLoadDestinationTableArgs(
@@ -103,9 +106,9 @@ import besom.json.*
 
   // Create a BigQuery job to execute the query and write the results to the destination table
   val queryJob = gcp.bigquery.Job(
-    name = "query-data-job",
+    name = s"query-data-job-$randomSuffix",
     gcp.bigquery.JobArgs(
-      jobId = s"query_data_job",
+      jobId = s"query_data_job-$randomSuffix",
       query = gcp.bigquery.inputs.JobQueryArgs(
         // Define the SQL query to filter data and save to another table
         query = p"SELECT name FROM $projectId.${dataset.datasetId}.${sourceTable.tableId} WHERE age > 30",
