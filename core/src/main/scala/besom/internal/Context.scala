@@ -156,7 +156,7 @@ class ContextImpl(
         typ,
         name,
         EmptyArgs(),
-        options, // TODO pass initial ResourceTransformations here
+        options,
         remote = false // all user components are local components
       )
     }
@@ -176,7 +176,7 @@ class ContextImpl(
             typ,
             name,
             args,
-            options, // TODO pass initial ResourceTransformations here
+            options,
             remote = true // all codegened components are remote components
           )
           .map(OutputData(_))

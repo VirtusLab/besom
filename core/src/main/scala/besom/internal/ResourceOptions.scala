@@ -26,7 +26,7 @@ sealed trait ResolvedResourceOptions:
   def ignoreChanges: Iterable[String]
   def version: Option[String]
   def customTimeouts: Option[CustomTimeouts]
-  // def resourceTransformations: Iterable[ResourceTransformation], // TODO
+  def transformations: Iterable[ResourceTransformation]
   def aliases: Iterable[ResourceAlias]
   def urn: Option[URN]
   def replaceOnChanges: Iterable[String]
@@ -46,7 +46,7 @@ case class CommonResolvedResourceOptions(
   ignoreChanges: Iterable[String],
   version: Option[String],
   customTimeouts: Option[CustomTimeouts],
-  // resourceTransformations: Iterable[ResourceTransformation], // TODO
+  transformations: Iterable[ResourceTransformation],
   aliases: Iterable[ResourceAlias],
   urn: Option[URN],
   replaceOnChanges: Iterable[String],
@@ -83,7 +83,7 @@ trait CommonResourceOptions:
   def ignoreChanges: Output[Iterable[String]]
   def version: Output[Option[String]]
   def customTimeouts: Output[Option[CustomTimeouts]]
-  // def resourceTransformations: Iterable[ResourceTransformation], // TODO
+  def transformations: Output[Iterable[ResourceTransformation]]
   def aliases: Output[Iterable[ResourceAlias]]
   // TODO this is only necessary for Resource deserialization, dependency resources and multi-language remote components
   def urn: Output[Option[URN]]
@@ -103,6 +103,7 @@ extension (cro: CommonResourceOptions)
       ignoreChanges     <- cro.ignoreChanges.getData
       version           <- cro.version.getData
       customTimeouts    <- cro.customTimeouts.getData
+      transformations   <- cro.transformations.getData
       aliases           <- cro.aliases.getData
       urn               <- cro.urn.getData
       replaceOnChanges  <- cro.replaceOnChanges.getData
@@ -117,6 +118,7 @@ extension (cro: CommonResourceOptions)
       ignoreChanges = ignoreChanges.getValueOrElse(Iterable.empty),
       version = version.getValueOrElse(None),
       customTimeouts = customTimeouts.getValueOrElse(None),
+      transformations = transformations.getValueOrElse(Iterable.empty),
       aliases = aliases.getValueOrElse(Iterable.empty),
       urn = urn.getValueOrElse(None),
       replaceOnChanges = replaceOnChanges.getValueOrElse(Iterable.empty),
@@ -132,7 +134,7 @@ final case class CommonResourceOptionsImpl(
   ignoreChanges: Output[Iterable[String]],
   version: Output[Option[String]],
   customTimeouts: Output[Option[CustomTimeouts]],
-  // resourceTransformations: Iterable[ResourceTransformation], // TODO
+  transformations: Output[Iterable[ResourceTransformation]],
   aliases: Output[Iterable[ResourceAlias]],
   urn: Output[Option[URN]],
   replaceOnChanges: Output[Iterable[String]],
@@ -151,6 +153,7 @@ sealed trait ResourceOptions:
   def replaceOnChanges: Output[Iterable[String]]
   def retainOnDelete: Output[Boolean]
   def urn: Output[Option[URN]]
+  def transformations: Output[Iterable[ResourceTransformation]]
 
   private[besom] def resolve(using ctx: Context): Result[ResolvedResourceOptions] =
     val maybeComponentParent = ctx.getParent
@@ -241,7 +244,7 @@ trait CustomResourceOptionsFactory:
     version: Input.Optional[NonEmptyString] = None,
     provider: Input.Optional[ProviderResource] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
-    // resourceTransformations: Iterable[ResourceTransformation], // TODO
+    transformations: Input.OneOrIterable[ResourceTransformation] = Iterable.empty,
     aliases: Input.OneOrIterable[ResourceAlias] = Iterable.empty,
     urn: Input.Optional[URN] = None,
     replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
@@ -259,6 +262,7 @@ trait CustomResourceOptionsFactory:
     version = version.asOptionOutput(),
     provider = provider.asOptionOutput(),
     customTimeouts = customTimeouts.asOptionOutput(),
+    transformations = transformations.asManyOutput(),
     aliases = aliases.asManyOutput(),
     urn = urn.asOptionOutput(),
     replaceOnChanges = replaceOnChanges.asManyOutput(),
@@ -279,7 +283,7 @@ object CustomResourceOptions:
     version: Input.Optional[NonEmptyString] = None,
     provider: Input.Optional[ProviderResource] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
-    // resourceTransformations: Iterable[ResourceTransformation], // TODO
+    transformations: Input.OneOrIterable[ResourceTransformation] = Iterable.empty,
     aliases: Input.OneOrIterable[ResourceAlias] = Iterable.empty,
     urn: Input.Optional[URN] = None,
     replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
@@ -296,6 +300,7 @@ object CustomResourceOptions:
       ignoreChanges = ignoreChanges.asManyOutput(),
       version = version.asOptionOutput(),
       customTimeouts = customTimeouts.asOptionOutput(),
+      transformations = transformations.asManyOutput(),
       aliases = aliases.asManyOutput(),
       urn = urn.asOptionOutput(),
       replaceOnChanges = replaceOnChanges.asManyOutput(),
@@ -322,7 +327,7 @@ trait ComponentResourceOptionsFactory:
     ignoreChanges: Input.OneOrIterable[String] = Iterable.empty,
     version: Input.Optional[NonEmptyString] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
-    // resourceTransformations: Iterable[ResourceTransformation], // TODO
+    transformations: Input.OneOrIterable[ResourceTransformation] = Iterable.empty,
     aliases: Input.OneOrIterable[ResourceAlias] = Iterable.empty,
     urn: Input.Optional[URN] = None,
     replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
@@ -337,6 +342,7 @@ trait ComponentResourceOptionsFactory:
     ignoreChanges = ignoreChanges.asManyOutput(),
     version = version.asOptionOutput(),
     customTimeouts = customTimeouts.asOptionOutput(),
+    transformations = transformations.asManyOutput(),
     aliases = aliases.asManyOutput(),
     urn = urn.asOptionOutput(),
     replaceOnChanges = replaceOnChanges.asManyOutput(),
@@ -354,7 +360,7 @@ object ComponentResourceOptions:
     ignoreChanges: Input.OneOrIterable[String] = Iterable.empty,
     version: Input.Optional[NonEmptyString] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
-    // resourceTransformations: Iterable[ResourceTransformation], // TODO
+    transformations: Input.OneOrIterable[ResourceTransformation] = Iterable.empty,
     aliases: Input.OneOrIterable[ResourceAlias] = Iterable.empty,
     urn: Input.Optional[URN] = None,
     replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
@@ -369,6 +375,7 @@ object ComponentResourceOptions:
       ignoreChanges = ignoreChanges.asManyOutput(),
       version = version.asOptionOutput(),
       customTimeouts = customTimeouts.asOptionOutput(),
+      transformations = transformations.asManyOutput(),
       aliases = aliases.asManyOutput(),
       urn = urn.asOptionOutput(),
       replaceOnChanges = replaceOnChanges.asManyOutput(),
@@ -386,7 +393,7 @@ object StackReferenceResourceOptions:
     ignoreChanges: Input.OneOrIterable[String] = Iterable.empty,
     version: Input.Optional[NonEmptyString] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
-    // resourceTransformations: Iterable[ResourceTransformation], // TODO
+    transformations: Input.OneOrIterable[ResourceTransformation] = Iterable.empty,
     aliases: Input.OneOrIterable[ResourceAlias] = Iterable.empty,
     urn: Input.Optional[URN] = None,
     replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
@@ -402,6 +409,7 @@ object StackReferenceResourceOptions:
       ignoreChanges = ignoreChanges.asManyOutput(),
       version = version.asOptionOutput(),
       customTimeouts = customTimeouts.asOptionOutput(),
+      transformations = transformations.asManyOutput(),
       aliases = aliases.asManyOutput(),
       urn = urn.asOptionOutput(),
       replaceOnChanges = replaceOnChanges.asManyOutput(),
@@ -419,7 +427,7 @@ trait StackReferenceResourceOptionsFactory:
     ignoreChanges: Input.OneOrIterable[String] = Iterable.empty,
     version: Input.Optional[NonEmptyString] = None,
     customTimeouts: Input.Optional[CustomTimeouts] = None,
-    // resourceTransformations: Iterable[ResourceTransformation], // TODO
+    transformations: Input.OneOrIterable[ResourceTransformation] = Iterable.empty,
     aliases: Input.OneOrIterable[ResourceAlias] = Iterable.empty,
     urn: Input.Optional[URN] = None,
     replaceOnChanges: Input.OneOrIterable[String] = Iterable.empty,
@@ -435,6 +443,7 @@ trait StackReferenceResourceOptionsFactory:
       ignoreChanges = ignoreChanges.asManyOutput(),
       version = version.asOptionOutput(),
       customTimeouts = customTimeouts.asOptionOutput(),
+      transformations = transformations.asManyOutput(),
       aliases = aliases.asManyOutput(),
       urn = urn.asOptionOutput(),
       replaceOnChanges = replaceOnChanges.asManyOutput(),

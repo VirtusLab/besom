@@ -296,4 +296,30 @@ class CoreTests extends munit.FunSuite:
     )
   }
 
+  FunFixture[pulumi.FixtureContext](
+    setup = {
+      val schemaName    = "random"
+      val latestVersion = SchemasWithLatestVersion(schemaName)
+      pulumi.fixture.setup(
+        wd / "resources" / "transformations",
+        projectFiles = Map(
+          "project.scala" ->
+            (defaultProjectFile + CodeGen.packageDependency(schemaName, latestVersion.value))
+        )
+      )
+    },
+    teardown = pulumi.fixture.teardown
+  ).test("resource args transformations should work for generated resources") { ctx =>
+    val upResult = pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
+    println(upResult.out.text())
+
+    val outResult = pulumi.outputs(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
+
+    val output  = outResult.out.text()
+    val outputs = upickle.default.read[Map[String, ujson.Value]](output)
+
+    assertEquals(outputs("lionNameLength").num.toInt, 15, s"Output:\n$output\n")
+    assertEquals(outputs("rhinoNameLength").num.toInt, 20, s"Output:\n$output\n")
+  }
+
 end CoreTests

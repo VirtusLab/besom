@@ -73,7 +73,7 @@ class CodeGenTest extends munit.FunSuite {
               |  id: besom.types.Output[besom.types.ResourceId]
               |) extends besom.ProviderResource
               |
-              |object Provider extends besom.ResourceCompanion[Provider]:
+              |object Provider extends besom.ResourceCompanion[Provider, ProviderArgs]:
               |  /** Resource constructor for Provider. 
               |    * 
               |    * @param name [[besom.util.NonEmptyString]] The unique (stack-wise) name of the resource in Pulumi state (not on provider's side).
@@ -231,7 +231,7 @@ class CodeGenTest extends munit.FunSuite {
              |     ctx.call[besom.api.googlenative.container.v1.ClusterGetKubeconfigArgs, besom.api.googlenative.container.v1.ClusterGetKubeconfigResult, besom.api.googlenative.container.v1.Cluster]("google-native:container/v1:Cluster/getKubeconfig", args, this, opts)
              |  }
              |
-             |object Cluster extends besom.ResourceCompanion[Cluster]:
+             |object Cluster extends besom.ResourceCompanion[Cluster, ClusterArgs]:
              |  /** Resource constructor for Cluster. 
              |    * 
              |    * @param name [[besom.util.NonEmptyString]] The unique (stack-wise) name of the resource in Pulumi state (not on provider's side).
@@ -903,7 +903,7 @@ class CodeGenTest extends munit.FunSuite {
               |  id: besom.types.Output[besom.types.ResourceId]
               |) extends besom.ProviderResource
               |
-              |object Provider extends besom.ResourceCompanion[Provider]:
+              |object Provider extends besom.ResourceCompanion[Provider, ProviderArgs]:
               |  /** Resource constructor for Provider. 
               |    * 
               |    * @param name [[besom.util.NonEmptyString]] The unique (stack-wise) name of the resource in Pulumi state (not on provider's side).
@@ -1088,7 +1088,7 @@ class CodeGenTest extends munit.FunSuite {
              |  toString_ : besom.types.Output[scala.Option[String]]
              |) extends besom.CustomResource
              |
-             |object Mangled extends besom.ResourceCompanion[Mangled]:
+             |object Mangled extends besom.ResourceCompanion[Mangled, MangledArgs]:
              |  /** Resource constructor for Mangled. 
              |    * 
              |    * @param name [[besom.util.NonEmptyString]] The unique (stack-wise) name of the resource in Pulumi state (not on provider's side).

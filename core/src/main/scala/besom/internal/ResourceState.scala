@@ -12,7 +12,7 @@ sealed trait ResourceState:
   // def aliases: List[Output[String]]
   def name: NonEmptyString
   def typ: ResourceType
-  // def transformations: List[ResourceTransformation]
+  def transformations: List[ResourceTransformation]
   def keepDependency: Boolean
 
   def addChild(child: Resource): ResourceState = this match
@@ -34,7 +34,7 @@ case class CommonResourceState(
   // aliases: List[Output[String]],
   name: NonEmptyString,
   typ: ResourceType,
-  // transformations: List[ResourceTransformation],
+  transformations: List[ResourceTransformation],
   keepDependency: Boolean
 ):
   override def toString(): String = "CommonResourceState"

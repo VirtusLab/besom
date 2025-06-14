@@ -12,7 +12,7 @@ import besom.util.NonEmptyString
 class ContextPropagationTest extends munit.FunSuite:
 
   case class TestResource(urn: Output[URN], id: Output[ResourceId], url: Output[String]) extends CustomResource derives ResourceDecoder
-  object TestResource extends ResourceCompanion[TestResource]:
+  object TestResource extends ResourceCompanion[TestResource, EmptyArgs]:
     val typeToken: ResourceType = ResourceType.unsafeOf("test:resource:TestResource")
     def apply(name: NonEmptyString): Output[TestResource] = Output.getContext.flatMap { implicit ctx =>
       ctx.readOrRegisterResource[TestResource, EmptyArgs](
@@ -24,7 +24,7 @@ class ContextPropagationTest extends munit.FunSuite:
     }
 
   case class TestComponentResource(url: Output[String])(using ComponentBase) extends ComponentResource
-  object TestComponentResource extends ResourceCompanion[TestComponentResource]:
+  object TestComponentResource extends ResourceCompanion[TestComponentResource, EmptyArgs]:
     val typeToken: ResourceType = ResourceType.unsafeOf("test:component:TestComponentResource")
 
   test("context propagation - plain resource, no parent") {
