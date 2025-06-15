@@ -21,7 +21,7 @@ case class PulumiToken private (provider: String, module: String, name: String, 
     * @return
     *   the Pulumi definition coordinates for the given Pulumi type token
     */
-  def toCoordinates(packageInfo: PulumiPackageInfo): PulumiDefinitionCoordinates = {
+  def toCoordinates(packageInfo: PulumiPackageInfo)(using Logger): PulumiDefinitionCoordinates = {
     PulumiDefinitionCoordinates.fromToken(
       typeToken = this,
       moduleToPackageParts = packageInfo.moduleToPackageParts,

@@ -93,7 +93,7 @@ import besom.api.tls
     "web-server-www",
     ec2.InstanceArgs(
       ami = ami.id,
-      instanceType = ec2.enums.InstanceType.T2_Micro, // t2.micro is available in the AWS free tier
+      instanceType = ec2.enums.InstanceType.T3_Micro, // t3.micro is available in the AWS free tier
       vpcSecurityGroupIds = List(securityGroup.id), // reference the group object above
       keyName = keyPair.keyName,
       userData = userData,
