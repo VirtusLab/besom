@@ -15,7 +15,7 @@ import besom.api.{awsx, eks, kubernetes as k8s}
     eks.ClusterArgs(
       vpcId = vpc.vpcId,
       subnetIds = vpc.publicSubnetIds,
-      instanceType = "t2.medium",
+      instanceType = "t3.medium",
       desiredCapacity = 2,
       minSize = 1,
       maxSize = 3,

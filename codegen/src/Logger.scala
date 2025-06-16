@@ -32,7 +32,7 @@ class Logger(val printLevel: Logger.Level) {
   }
 
   def writeToFile(file: os.Path): Unit =
-    os.write(file, buffer, createFolders = true)
+    os.write.append(file, buffer, createFolders = true)
 
   def hasWarnings: Boolean = warnCount > 0
 
