@@ -514,9 +514,8 @@ class CodeGen(using
           |    name: besom.util.NonEmptyString,
           |    args: ${argsClassName}${argsDefault},
           |    opts: besom.ResourceOptsVariant.$variant ?=> ${resourceOptsClass} = ${resourceOptsClass}()
-          |  ): besom.types.Output[$baseClassName] = besom.internal.Output.getContext.flatMap { implicit ctx =>
+          |  )(using ctx: besom.internal.Context): besom.types.Output[$baseClassName] =
           |    ctx.${resourceRegisterMethodName}[$baseClassName, $argsClassName](${tokenLit}, name, args, opts(using besom.ResourceOptsVariant.$variant))
-          |  }
           |
           |  private[besom] def typeToken: besom.types.ResourceType = ${tokenLit}
           |
