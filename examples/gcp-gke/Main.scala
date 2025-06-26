@@ -18,8 +18,6 @@ import besom.api.gcp
     gcp.container.ClusterArgs(
       deletionProtection = false,
       initialNodeCount = 1,
-      minMasterVersion = "1.29.1-gke.1589018",
-      nodeVersion = "1.29.1-gke.1589018",
       nodeConfig = gcp.container.inputs.ClusterNodeConfigArgs(
         machineType = "n1-standard-1",
         oauthScopes = List(
