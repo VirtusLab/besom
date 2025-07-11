@@ -32,7 +32,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     urnResult: Result[URN],
     outputs: Result[Struct]
   ): Result[Unit] =
-    urnResult.flatMap { urn =>
+    urnResult.zip(ctx.getParentURN).flatMap { case (urn, parentURN) =>
       val runSideEffects = outputs.flatMap { struct =>
         val request = RegisterResourceOutputsRequest(
           urn = urn.asString,
@@ -44,7 +44,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
 
       /** see docs: [[Memo]]
         */
-      ctx.memo.memoize("registerResourceOutputs", urn.asString, runSideEffects)
+      ctx.memo.memoize("registerResourceOutputs", urn.asString, parentURN, runSideEffects)
     }
 
   private[besom] def readOrRegisterResourceInternal[R <: Resource: ResourceDecoder, A: ArgsEncoder](
@@ -54,7 +54,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     options: ResourceOptions,
     remote: Boolean
   ): Result[R] =
-    resolveMode(options).flatMap { mode =>
+    resolveMode(options).zip(ctx.getParentURN).flatMap { case (mode, parentURN) =>
       def runSideEffects =
         for
           (resource, resolver) <- ResourceDecoder.forResource[R].makeResourceAndResolver
@@ -83,7 +83,8 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         case Mode.GetWithUrn(_) => runSideEffects
         // DO memoize Register and Read, if we don't, they crash the engine on second invocation
         // and laziness means WE WILL evaluate them more than once usually
-        case Mode.Register | Mode.ReadWithId(_) => ctx.memo.memoize(typ, name, runSideEffects)
+        case Mode.Register | Mode.ReadWithId(_) =>
+          ctx.memo.memoize(typ, name, parentURN, runSideEffects)
     }
 
   // invoke is not memoized
