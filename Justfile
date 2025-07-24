@@ -4,6 +4,7 @@ besom-version := `cat version.txt`
 is-snapshot := if "{{besom-version}}" =~ '.*-SNAPSHOT' { "true" } else { "false" }
 no-bloop := if env_var_or_default('BESOM_BUILD_NO_BLOOP', "") == "true" { "--server=false" } else { "" }
 
+language-plugin-resources-dir := justfile_directory() + "/language-plugin/resources"
 language-plugin-output-dir := justfile_directory() + "/.out/language-plugin"
 codegen-output-dir := justfile_directory() + "/.out/codegen"
 schemas-output-dir := justfile_directory() + "/.out/schemas"
@@ -274,6 +275,7 @@ install-language-plugin: build-language-plugin
 	mkdir -p $output_dir
 	cp {{language-plugin-output-dir}}/bootstrap.jar $output_dir/
 	cp {{language-plugin-output-dir}}/pulumi-language-scala $output_dir/
+	cp {{language-plugin-resources-dir}}/* $output_dir/
 	pulumi --non-interactive --logtostderr plugin rm language scala -y
 	pulumi --non-interactive --logtostderr plugin install language scala {{besom-version}} --file {{language-plugin-output-dir}}/local
 
@@ -286,6 +288,7 @@ package-language-plugin $GOOS $GOARCH:
 	just build-language-plugin $GOOS $GOARCH
 	cp {{language-plugin-output-dir}}/bootstrap.jar $output_dir/
 	cp {{language-plugin-output-dir}}/pulumi-language-scala $output_dir/
+	cp {{language-plugin-resources-dir}}/* $output_dir/
 	cd $output_dir
 	tar czvf pulumi-language-scala-v{{besom-version}}-{{GOOS}}-{{GOARCH}}.tar.gz *
 

@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"strings"
 
-	"github.com/pulumi/pulumi/sdk/v3/go/common/util/logging"
 	"github.com/virtuslab/besom/language-host/fsys"
 )
 
@@ -35,26 +34,13 @@ func (g gradle) NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, err
 	if err != nil {
 		return nil, err
 	}
+	bootstrapLibJarPath := ResolveBootstrapLibJarPath(opts.LanguagePluginHomeDir)
 	pluginDiscovererOutputPath := PluginDiscovererOutputFilePath(opts.WD)
-	executor, err := g.newGradleExecutor(gradleRoot, cmd, subproject, opts.BootstrapLibJarPath, pluginDiscovererOutputPath)
+	executor, err := g.newGradleExecutor(gradleRoot, cmd, subproject, bootstrapLibJarPath, pluginDiscovererOutputPath)
 	if err != nil {
 		return nil, err
 	}
 
-	logging.V(3).Infof(`Detected Gradle executor:
-            Cmd:        %s
-            Dir:        %s
-            RunArgs:    %s
-            PluginArgs: %s
-            BuildArgs:  %s
-            VersionArgs %s`,
-		executor.Cmd,
-		executor.Dir,
-		strings.Join(executor.RunArgs, " "),
-		strings.Join(executor.PluginArgs, " "),
-		strings.Join(executor.BuildArgs, " "),
-		strings.Join(executor.VersionArgs, " "),
-	)
 	return executor, err
 }
 
@@ -119,6 +105,7 @@ func (g gradle) newGradleExecutor(gradleRoot fsys.ParentFS, cmd, subproject stri
 			"--args=--output-file " + pluginDiscovererOutputPath,
 		},
 		VersionArgs: []string{"--version"},
+		SetupProject: func() error { return nil }, // NOOP
 	}
 
 	return se, nil
