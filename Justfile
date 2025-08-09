@@ -66,7 +66,7 @@ before-commit: compile-all test-all
 ####################
 
 # Compiles core besom SDK
-compile-core: publish-local-json publish-local-rpc publish-local-model
+compile-core: publish-local-model publish-local-json publish-local-rpc 
 	scala-cli --power compile {{no-bloop}} core --suppress-experimental-feature-warning
 
 # Compiles besom cats-effect extension
@@ -109,7 +109,7 @@ publish-local-sdk: publish-local-core publish-local-cats publish-local-zio publi
 publish-maven-sdk: publish-maven-core publish-maven-cats publish-maven-zio publish-maven-compiler-plugin
 
 # Publishes locally core besom SDK
-publish-local-core: publish-local-json publish-local-rpc
+publish-local-core: publish-local-json publish-local-rpc publish-local-model
 	scala-cli --power publish local {{no-bloop}} core --project-version {{besom-version}} --suppress-experimental-feature-warning
 	scala-cli --power publish core --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 
