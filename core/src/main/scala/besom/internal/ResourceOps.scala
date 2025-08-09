@@ -32,7 +32,8 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     urnResult: Result[URN],
     outputs: Result[Struct]
   ): Result[Unit] =
-    urnResult.zip(ctx.getParentURN).flatMap { case (urn, parentURN) =>
+    val maybeParentUrnResult = if ctx.isStackContext then Result.pure(None) else ctx.getParentURN.map(Some(_))
+    urnResult.zip(maybeParentUrnResult).flatMap { case (urn, parentURN) =>
       val runSideEffects = outputs.flatMap { struct =>
         val request = RegisterResourceOutputsRequest(
           urn = urn.asString,
@@ -54,7 +55,8 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
     options: ResourceOptions,
     remote: Boolean
   ): Result[R] =
-    resolveMode(options).zip(ctx.getParentURN).flatMap { case (mode, parentURN) =>
+    val maybeParentUrnResult = if ctx.isStackContext then Result.pure(None) else ctx.getParentURN.map(Some(_))
+    resolveMode(options).zip(maybeParentUrnResult).flatMap { case (mode, parentURN) =>
       def runSideEffects =
         for
           (resource, resolver) <- ResourceDecoder.forResource[R].makeResourceAndResolver
@@ -86,6 +88,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         case Mode.Register | Mode.ReadWithId(_) =>
           ctx.memo.memoize(typ, name, parentURN, runSideEffects)
     }
+  end readOrRegisterResourceInternal
 
   // invoke is not memoized
   private[besom] def invokeInternal[A: ArgsEncoder, R: Decoder](tok: FunctionToken, args: A, opts: InvokeOptions): Output[R] =
