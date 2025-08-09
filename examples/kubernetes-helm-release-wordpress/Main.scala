@@ -12,7 +12,7 @@ import besom.json.{JsObject, JsString}
       repositoryOpts = k8s.helm.v3.inputs.RepositoryOptsArgs(
         repo = "https://charts.bitnami.com/bitnami"
       ),
-      version = "15.0.5",
+      version = "24.0.4",
       // Force to use ClusterIP so no assumptions on support for LBs etc. is required.
       values = Map(
         "service" ->

@@ -33,6 +33,8 @@ trait Context extends TaskTracker:
   private[besom] def pulumiProject: NonEmptyString
   private[besom] def pulumiStack: NonEmptyString
 
+  private[besom] def isStackContext: Boolean
+
   /** This is only called by user's component constructor functions. see [[BesomSyntax#component]].
     */
   private[besom] def registerComponentResource(
@@ -97,18 +99,22 @@ trait Context extends TaskTracker:
 end Context
 
 class ComponentContext(
-  private val globalContext: Context,
+  private val parentContext: Context,
   private val componentURN: Result[URN],
   private val componentBase: ComponentBase
 ) extends Context:
-  export globalContext.{getParentURN => _, getParent => _, *}
+  export parentContext.{getParentURN => _, getParent => _, isStackContext => _, *}
 
-  def getParentURN: Result[URN] = componentURN
+  override private[besom] def isStackContext: Boolean = false
+
+  override private[besom] def getParentURN: Result[URN] = componentURN
 
   // components provide themselves as the parent to facilitate provider inheritance
-  def getParent: Option[Resource] = Some(componentBase)
+  override private[besom] def getParent: Option[Resource] = Some(componentBase)
 
-class ContextImpl(
+end ComponentContext
+
+class StackContext(
   private[besom] val runInfo: RunInfo,
   private[besom] val featureSupport: FeatureSupport,
   private[besom] val config: Config,
@@ -123,6 +129,8 @@ class ContextImpl(
     with TaskTracker:
 
   export taskTracker.{registerTask, waitForAllTasks, fail}
+
+  override private[besom] def isStackContext: Boolean = true
 
   override private[besom] def isDryRun: Boolean = runInfo.dryRun
 
@@ -232,7 +240,7 @@ class ContextImpl(
       ResourceOps().callInternal[A, R](token, args, resource, opts)
     }
 
-end ContextImpl
+end StackContext
 
 object Context:
   def apply()(using Context): Context = summon[Context]
@@ -249,7 +257,7 @@ object Context:
     memo: Memo,
     stackPromise: Promise[StackResource]
   ): Context =
-    new ContextImpl(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, memo, stackPromise)
+    new StackContext(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, memo, stackPromise)
 
   def apply(
     runInfo: RunInfo,
