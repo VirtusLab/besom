@@ -16,7 +16,7 @@ class MemoTest extends munit.FunSuite:
 
     val memo = Memo().unsafeRunSync()
 
-    val memoizedEffect = memo.memoize("test", "test", stackUrn, effect)
+    val memoizedEffect = memo.memoize("test", "test", Some(stackUrn), effect)
 
     val program =
       for
@@ -37,7 +37,7 @@ class MemoTest extends munit.FunSuite:
 
     val memo = Memo().unsafeRunSync()
 
-    val memoizedEffect = memo.memoize("test", "test", stackUrn, effect)
+    val memoizedEffect = memo.memoize("test", "test", Some(stackUrn), effect)
 
     val program =
       for
@@ -55,7 +55,7 @@ class MemoTest extends munit.FunSuite:
 
     val memo = Memo().unsafeRunSync()
 
-    val memoizedEffect = memo.memoize("test", "test", stackUrn, effect)
+    val memoizedEffect = memo.memoize("test", "test", Some(stackUrn), effect)
 
     val setOfErrors = scala.collection.mutable.Set.empty[Throwable]
 
@@ -77,7 +77,7 @@ class MemoTest extends munit.FunSuite:
     val memo = Memo().unsafeRunSync()
 
     // if only keys are the same, memoization should work always
-    val memoizedEffect = Result(23).flatMap(_ => memo.memoize("test", "test", stackUrn, Result(atomicInt.incrementAndGet())))
+    val memoizedEffect = Result(23).flatMap(_ => memo.memoize("test", "test", Some(stackUrn), Result(atomicInt.incrementAndGet())))
 
     val program =
       for
@@ -97,7 +97,7 @@ class MemoTest extends munit.FunSuite:
     val memo = Memo().unsafeRunSync()
 
     // if only keys are the same, memoization should work always
-    val memoizedEffect = Result(23).flatMap(_ => memo.memoize("test", "test", stackUrn, Result(atomicInt.incrementAndGet())))
+    val memoizedEffect = Result(23).flatMap(_ => memo.memoize("test", "test", Some(stackUrn), Result(atomicInt.incrementAndGet())))
 
     val program =
       for
@@ -119,7 +119,7 @@ class MemoTest extends munit.FunSuite:
 
     // if only keys are the same, memoization should work always
     val memoizedEffect = Result(1 to 3).flatMap { range =>
-      Result.sequence(range.map(i => memo.memoize(s"test-$i", "test", stackUrn, Result(atomicInt.incrementAndGet()))))
+      Result.sequence(range.map(i => memo.memoize(s"test-$i", "test", Some(stackUrn), Result(atomicInt.incrementAndGet()))))
     }
 
     val program =
