@@ -30,8 +30,8 @@ import besom.types.URN
   * @param chm
   *   ConcurrentHashMap using tuple of type and name as a key and Promise as a value.
   */
-class Memo(private val chm: ConcurrentHashMap[(String, String, URN), Promise[?]]):
-  def memoize[A](typ: String, name: String, parentURN: URN, effect: Result[A]): Result[A] =
+class Memo(private val chm: ConcurrentHashMap[(String, String, Option[URN]), Promise[?]]):
+  def memoize[A](typ: String, name: String, parentURN: Option[URN], effect: Result[A]): Result[A] =
     Promise[A]().flatMap { promise =>
       val existing = chm.putIfAbsent((typ, name, parentURN), promise)
       if existing == null then
@@ -44,7 +44,7 @@ class Memo(private val chm: ConcurrentHashMap[(String, String, URN), Promise[?]]
 
 object Memo:
   def apply(): Result[Memo] = Result.defer {
-    val chm = ConcurrentHashMap[(String, String, URN), Promise[?]]()
+    val chm = ConcurrentHashMap[(String, String, Option[URN]), Promise[?]]()
 
     new Memo(chm)
   }

@@ -66,7 +66,7 @@ before-commit: compile-all test-all
 ####################
 
 # Compiles core besom SDK
-compile-core: publish-local-json publish-local-rpc
+compile-core: publish-local-json publish-local-rpc publish-local-model
 	scala-cli --power compile {{no-bloop}} core --suppress-experimental-feature-warning
 
 # Compiles besom cats-effect extension
