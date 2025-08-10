@@ -22,18 +22,19 @@ class CodeGen(using
   def sourcesFromPulumiPackage(
     packageInfo: PulumiPackageInfo
   ): Seq[SourceFile] =
-    try Tracer.time("generate-package"):
-      val generatedScalaFiles = Tracer.time("scala-files") {  scalaFiles(packageInfo) }
+    try
+      Tracer.time("generate-package"):
+        val generatedScalaFiles = Tracer.time("scala-files") { scalaFiles(packageInfo) }
 
-      val projConfFiles = Tracer.time("project-config-files") { 
-        projectConfigFiles(
-          schemaName = packageInfo.name,
-          packageVersion = packageInfo.version,
-          pluginDownloadUrl = packageInfo.pulumiPackage.pluginDownloadURL,
-          packageInfo = packageInfo
-        )
-      }
-      generatedScalaFiles ++ projConfFiles
+        val projConfFiles = Tracer.time("project-config-files") {
+          projectConfigFiles(
+            schemaName = packageInfo.name,
+            packageVersion = packageInfo.version,
+            pluginDownloadUrl = packageInfo.pulumiPackage.pluginDownloadURL,
+            packageInfo = packageInfo
+          )
+        }
+        generatedScalaFiles ++ projConfFiles
     finally
       Tracer.renderTree()
 
@@ -90,41 +91,42 @@ class CodeGen(using
   ): Seq[SourceFile] = {
     given Config.Provider = packageInfo.providerConfig
 
-    packageInfo.parsedTypes
-      .zipWithIndex
+    packageInfo.parsedTypes.zipWithIndex
       .grouped(500)
       .flatMap { batch =>
-        Tracer.time(s"types-batch-${batch.head._2/500}"):
-          batch.mapPar(Config.MaxParallelism) {
-            case ((coordinates: PulumiDefinitionCoordinates, (enumDef: EnumTypeDefinition, false)), _) =>
-              sourceFilesForEnum(
-                typeCoordinates = coordinates,
-                enumDefinition = enumDef
-              )
-            case ((coordinates: PulumiDefinitionCoordinates, (_: EnumTypeDefinition, true)), _) =>
-              Overlay.readFiles(
-                packageInfo,
-                coordinates.token,
-                Vector(
-                  coordinates.asEnumClass
+        Tracer.time(s"types-batch-${batch.head._2 / 500}"):
+          batch
+            .mapPar(Config.MaxParallelism) {
+              case ((coordinates: PulumiDefinitionCoordinates, (enumDef: EnumTypeDefinition, false)), _) =>
+                sourceFilesForEnum(
+                  typeCoordinates = coordinates,
+                  enumDefinition = enumDef
                 )
-              )
-            case ((coordinates: PulumiDefinitionCoordinates, (objectDef: ObjectTypeDefinition, false)), _) =>
-              sourceFilesForObjectType(
-                typeCoordinates = coordinates,
-                objectTypeDefinition = objectDef,
-                configDependencies = configDependencies
-              )
-            case ((coordinates: PulumiDefinitionCoordinates, (_: ObjectTypeDefinition, true)), _) =>
-              Overlay.readFiles(
-                packageInfo,
-                coordinates.token,
-                Vector(
-                  coordinates.asObjectClass(asArgsType = false),
-                  coordinates.asObjectClass(asArgsType = true)
+              case ((coordinates: PulumiDefinitionCoordinates, (_: EnumTypeDefinition, true)), _) =>
+                Overlay.readFiles(
+                  packageInfo,
+                  coordinates.token,
+                  Vector(
+                    coordinates.asEnumClass
+                  )
                 )
-              )
-          }.flatten
+              case ((coordinates: PulumiDefinitionCoordinates, (objectDef: ObjectTypeDefinition, false)), _) =>
+                sourceFilesForObjectType(
+                  typeCoordinates = coordinates,
+                  objectTypeDefinition = objectDef,
+                  configDependencies = configDependencies
+                )
+              case ((coordinates: PulumiDefinitionCoordinates, (_: ObjectTypeDefinition, true)), _) =>
+                Overlay.readFiles(
+                  packageInfo,
+                  coordinates.token,
+                  Vector(
+                    coordinates.asObjectClass(asArgsType = false),
+                    coordinates.asObjectClass(asArgsType = true)
+                  )
+                )
+            }
+            .flatten
       }
       .toSeq
   }
@@ -140,7 +142,8 @@ class CodeGen(using
         s"Class name for ${classCoordinates.typeRef} could not be found"
       )
     )
-    val enumClassStringName = classCoordinates.wireName.orElse(classCoordinates.definitionName)
+    val enumClassStringName = classCoordinates.wireName
+      .orElse(classCoordinates.definitionName)
       .map(Lit.String(_))
       .getOrElse(
         throw GeneralCodegenException(
@@ -247,11 +250,10 @@ class CodeGen(using
   def sourceFilesForResources(packageInfo: PulumiPackageInfo): Seq[SourceFile] = {
     given Config.Provider = packageInfo.providerConfig
 
-    packageInfo.parsedResources
-      .zipWithIndex
+    packageInfo.parsedResources.zipWithIndex
       .grouped(500)
       .flatMap { batch =>
-        Tracer.time(s"resource-batch-${batch.head._2/500}"):
+        Tracer.time(s"resource-batch-${batch.head._2 / 500}"):
           batch.mapPar(Config.MaxParallelism) {
             case ((coordinates: PulumiDefinitionCoordinates, (resourceDefinition: ResourceDefinition, false)), _) =>
               sourceFilesForResource(
@@ -555,24 +557,26 @@ class CodeGen(using
       .zipWithIndex
       .grouped(500)
       .flatMap { batch =>
-        Tracer.time(s"functions-batch-${batch.head._2/500}"):
-          batch.mapPar(Config.MaxParallelism) {
-            case ((coordinates: PulumiDefinitionCoordinates, (functionDefinition: FunctionDefinition, false)), _) =>
-              sourceFilesForFunction(
-                functionCoordinates = coordinates,
-                functionDefinition = functionDefinition
-              )
-            case ((coordinates: PulumiDefinitionCoordinates, (_, true)), _) =>
-              Overlay.readFiles(
-                packageInfo,
-                coordinates.token,
-                Vector(
-                  coordinates.asFunctionClass,
-                  coordinates.asFunctionArgsClass,
-                  coordinates.asFunctionResultClass
+        Tracer.time(s"functions-batch-${batch.head._2 / 500}"):
+          batch
+            .mapPar(Config.MaxParallelism) {
+              case ((coordinates: PulumiDefinitionCoordinates, (functionDefinition: FunctionDefinition, false)), _) =>
+                sourceFilesForFunction(
+                  functionCoordinates = coordinates,
+                  functionDefinition = functionDefinition
                 )
-              )
-          }.flatten
+              case ((coordinates: PulumiDefinitionCoordinates, (_, true)), _) =>
+                Overlay.readFiles(
+                  packageInfo,
+                  coordinates.token,
+                  Vector(
+                    coordinates.asFunctionClass,
+                    coordinates.asFunctionArgsClass,
+                    coordinates.asFunctionResultClass
+                  )
+                )
+            }
+            .flatten
       }
       .toSeq
   }

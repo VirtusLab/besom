@@ -305,6 +305,7 @@ def runExample(
         println(s"Failed to remove stack: ${e.getMessage}")
     }
   }
+  end try
 end runExample
 
 def readSuccessfulProjects(): Set[String] =
