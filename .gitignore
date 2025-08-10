@@ -24,3 +24,8 @@ src/main/scala/besom/rpc
 
 *.asc
 
+.cursor
+/integration-tests/resources/**/project.scala
+integration-tests/resources/executors/gradle/build.gradle.kts
+integration-tests/resources/executors/maven/pom.xml
+integration-tests/resources/executors/sbt/build.sbt
