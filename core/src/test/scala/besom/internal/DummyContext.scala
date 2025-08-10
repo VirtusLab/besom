@@ -74,7 +74,18 @@ object DummyContext:
         case r: Resources         => Result.pure(r)
         case r: Result[Resources] => r
       memo <- Memo()
-      given Context = Context.create(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, memo, stackPromise)
+      given Context = Context.create(
+        runInfo,
+        featureSupport,
+        config,
+        logger,
+        monitor,
+        engine,
+        taskTracker,
+        resources,
+        memo,
+        stackPromise
+      )
       _ <- stackPromise.fulfill(StackResource()(using ComponentBase(Output.pure(stackURN))))
     yield summon[Context]
 

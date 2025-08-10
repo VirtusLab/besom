@@ -21,9 +21,14 @@ case class Flags(
 //noinspection ScalaWeakerAccess,TypeAnnotation
 object Packages:
   def main(args: String*): Unit =
-    val (params, flags) = Args.parse(args, monoFlags = Vector("force", "f"))
+    val (params, flags) = Args.parse(args, monoFlags = Vector("force", "f", "trace"))
 
-    given Config = Config()
+    given Config = Config(
+      tracing = flags.get("trace").orElse(flags.get("t")) match
+        case Some(v: String) => v.toBoolean
+        case Some(v: Int)    => v > 0
+        case None            => false
+    )
     given Flags = Flags(
       force = flags.get("force").orElse(flags.get("f")) match
         case Some(v: String) => v.toBoolean
@@ -360,7 +365,7 @@ object Packages:
       case _                      => Left(Exception(s"Invalid package format: '$value'"))
   end PackageId
 
-  def generate(metadata: Vector[PackageMetadata])(using Config): Vector[PackageMetadata] = {
+  def generate(metadata: Vector[PackageMetadata])(using Config, Flags): Vector[PackageMetadata] = {
     val seen = mutable.HashSet.empty[PackageId]
     val todo = mutable.Queue.empty[PackageMetadata]
     val done = mutable.ListBuffer.empty[PackageMetadata]
@@ -670,25 +675,36 @@ object Packages:
       }
     }.toVector
 
-    val packageYamls = selectedPackages.map { case (customizedMetadata, latestPackageYaml) =>
-      PackageYAML(
-        name = customizedMetadata.name,
-        repo_url = customizedMetadata.server.getOrElse(
-          "https://github.com/pulumi/pulumi-" + customizedMetadata.name
-        ), // TODO: optimistic assumption about the repo url
-        schema_file_url = customizedMetadata.version match {
-          case Some(version) =>
-            // replace the version in the schema file url with the selected version
-            latestPackageYaml.schema_file_url.map(_.replace(latestPackageYaml.version, s"v$version"))
-          case None => latestPackageYaml.schema_file_url
-        },
-        schema_file_path = latestPackageYaml.schema_file_path,
-        version = customizedMetadata.version.map(v => "v" + v.asString).getOrElse(latestPackageYaml.version)
-      )
+    given logger: Logger = Logger()
+
+    val schemaProvider = DownloadingSchemaProvider()
+
+    selectedPackages.foreach { case (metadata, packageYaml) =>
+      schemaProvider.packageInfo(metadata, None)
     }
 
-    // Download schemas for each version independently
-    downloadPackagesSchema(packageYamls)
+    println(s"Writing log of downloaded packages to: '${targetPath / "downloaded-packages.log"}'")
+    logger.writeToFile(targetPath / "downloaded-packages.log")
+
+    // val packageYamls = selectedPackages.map { case (customizedMetadata, latestPackageYaml) =>
+    //   PackageYAML(
+    //     name = customizedMetadata.name,
+    //     repo_url = customizedMetadata.server.getOrElse(
+    //       "https://github.com/pulumi/pulumi-" + customizedMetadata.name
+    //     ), // TODO: optimistic assumption about the repo url
+    //     schema_file_url = customizedMetadata.version match {
+    //       case Some(version) =>
+    //         // replace the version in the schema file url with the selected version
+    //         latestPackageYaml.schema_file_url.map(_.replace(latestPackageYaml.version, s"v$version"))
+    //       case None => latestPackageYaml.schema_file_url
+    //     },
+    //     schema_file_path = latestPackageYaml.schema_file_path,
+    //     version = customizedMetadata.version.map(v => "v" + v.asString).getOrElse(latestPackageYaml.version)
+    //   )
+    // }
+
+    // // Download schemas for each version independently
+    // downloadPackagesSchema(packageYamls)
   }
 
   private def downloadPackagesMetadata(targetPath: os.Path, selected: List[String])(using config: Config): Vector[PackageYAML] =
