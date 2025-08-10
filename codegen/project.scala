@@ -1,5 +1,6 @@
 //> using scala 3.3.1
 //> using options -java-output-version:11 -deprecation -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
+//> using jvm 24
 
 //> using dep org.virtuslab::besom-model:0.5.0-SNAPSHOT
 //> using dep org.virtuslab::scala-yaml:0.1.0
