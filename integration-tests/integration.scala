@@ -16,7 +16,7 @@ val scalaVersion       = Config.DefaultScalaVersion
 val coreVersion        = Config.DefaultBesomVersion
 val scalaPluginVersion = coreVersion
 
-val languagePluginDir = os.pwd / ".out" / "language-plugin"
+val languagePluginDir = os.pwd / ".out" / "language-plugin" / "local"
 
 val defaultProjectFile =
   s"""|//> using scala $scalaVersion
@@ -117,6 +117,11 @@ object pulumi {
   )
 
   def installScalaPlugin() =
+    if !os.exists(languagePluginDir) then
+      println(s"Language plugin directory does not exist: $languagePluginDir")
+      println(s"Please run `just install-language-plugin` to install the language plugin")
+      sys.exit(1)
+
     pproc(
       "pulumi",
       "--non-interactive",
