@@ -7,7 +7,9 @@ import scala.concurrent.duration.*
 @main
 def main(): Unit = Pulumi.run {
 
-  val url = Output.eval(IO("https://httpbin.org/get"))
+  val baseUrl = "https://httpbun.org"
+
+  val getUrl = Output.eval(IO(s"$baseUrl/get"))
 
   val cancelledIOOutput1 = Output.eval(IO("Don't cancel me")).flatMap { _ =>
     IO.canceled
@@ -27,11 +29,11 @@ def main(): Unit = Pulumi.run {
     yield res
   }
 
-  def purrlCommand(url: Output[String]) = Purrl(
+  def purrlCommand(getUrl: Output[String]) = Purrl(
     name = "purrl",
     args = PurrlArgs(
       name = "purrl",
-      url = url,
+      url = getUrl,
       method = "GET",
       headers = Map(
         "test" -> "test"
@@ -40,7 +42,7 @@ def main(): Unit = Pulumi.run {
         "200"
       ),
       deleteMethod = "DELETE",
-      deleteUrl = "https://httpbin.org/delete",
+      deleteUrl = s"$baseUrl/delete",
       deleteResponseCodes = List(
         "200"
       )
@@ -51,6 +53,6 @@ def main(): Unit = Pulumi.run {
     cancelledIOOutput1,
     cancelledIOOutput2.map(out => assert(out == "A valid result"))
   ).exports(
-    purrlCommand = purrlCommand(url).response
+    purrlCommand = purrlCommand(getUrl).response
   )
 }
