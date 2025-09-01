@@ -422,11 +422,11 @@ publish-maven-model: test-model
 
 # Compiles Besom codegen module
 compile-codegen: publish-local-model
-	scala-cli --power compile {{no-bloop}} codegen --suppress-experimental-feature-warning
+	scala-cli --power compile {{no-bloop}} --jvm graalvm-java24:24.0.2 codegen --suppress-experimental-feature-warning
 
 # Runs tests for Besom codegen
 test-codegen:
-	scala-cli --power test {{no-bloop}} codegen --suppress-experimental-feature-warning
+	scala-cli --power test {{no-bloop}} --jvm graalvm-java24:24.0.2 codegen --suppress-experimental-feature-warning
 
 # Cleans codegen build
 clean-codegen:
@@ -434,11 +434,11 @@ clean-codegen:
 
 # Publishes locally Besom codegen
 publish-local-codegen: test-codegen
-	scala-cli --power publish local {{no-bloop}} codegen --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish local {{no-bloop}} --jvm graalvm-java24:24.0.2 codegen --project-version {{besom-version}} --suppress-experimental-feature-warning
 
 # Publishes Besom codegen
 publish-maven-codegen: test-codegen
-	scala-cli --power publish {{no-bloop}} codegen --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} --jvm graalvm-java24:24.0.2 codegen --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 ####################
 # crd2besom
@@ -488,7 +488,7 @@ test-integration-language-plugin: publish-local-codegen publish-local-core insta
 # Runs fast integration tests for codegen
 test-integration-codegen: publish-local-core publish-local-codegen
 	export GITHUB_TOKEN=$(gh auth token); \
-	scala-cli --power test {{no-bloop}} integration-tests --test-only 'besom.integration.codegen*'
+	scala-cli --power test --jvm graalvm-java24:24.0.2 {{no-bloop}} integration-tests --test-only 'besom.integration.codegen*'
 
 # Runs fast&slow integration tests for codegen
 test-integration-codegen-slow: publish-local-core publish-local-codegen
