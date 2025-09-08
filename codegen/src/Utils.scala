@@ -43,7 +43,7 @@ object Utils {
         typeMapper.asScalaType(typeRef, asArgsType)
       } catch {
         case t: Throwable =>
-          throw TypeMapperError(s"Failed to map type: '${typeRef}', asArgsType: $asArgsType", t)
+          throw TypeMapperError(s"Failed to map type: '${typeRef}', asArgsType: $asArgsType\n  $t", t)
       }
   }
 

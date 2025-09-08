@@ -99,7 +99,10 @@ object PulumiPackage {
             e
           )
         case e: ujson.IncompleteParseException =>
-          throw GeneralCodegenException(s"Cannot parse Pulumi package JSON schema, it appears incomplete or corrupted: ${e.getMessage}", e)
+          throw GeneralCodegenException(
+            s"Cannot parse Pulumi package JSON schema, it appears incomplete or corrupted: ${e.getMessage}\n...\n${input.takeRight(100)}",
+            e
+          )
         case e: Throwable =>
           throw GeneralCodegenException(s"Unexpected error while parsing Pulumi package JSON schema: ${e.getMessage}", e)
       }
