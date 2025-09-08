@@ -239,13 +239,22 @@ object Packages:
 
   def resolvePackageVersions(sourceFile: os.Path, packages: List[String])(using Config): Vector[PackageMetadata] =
     lazy val metadata = getPackages(sourceFile)
+    
+    def getPackageFromMetadata(name: String, version: String): Option[PackageMetadata] =
+      metadata.find(m => m.name == name && m.version.map(_.asString) == Some(version))
+
     packages.map {
       PackageId.parse(_) match
-        case Right((name, Some(version))) => PackageMetadata(name, PackageVersion(version))
+        case Right((name, Some(version))) => getPackageFromMetadata(name, version).getOrElse {
+          PackageMetadata(name, PackageVersion(version))
+        }
         case Right((name, None)) =>
-          metadata
-            .find(_.name == name)
-            .getOrElse(throw Exception(s"Package '$name' not found in the generated packages (${metadata.size})"))
+          val matchingPackages = metadata.filter(_.name == name)
+          if matchingPackages.size > 1 then
+            throw Exception(s"Package '$name' found in ${matchingPackages.size} versions in the generated packages (${metadata.size}), please specify the version.")
+          else
+            matchingPackages.headOption
+              .getOrElse(throw Exception(s"Package '$name' not found in the generated packages (${metadata.size})"))
         case Left(e) => throw e
     }.toVector
   end resolvePackageVersions
@@ -367,10 +376,12 @@ object Packages:
 
   def generate(metadata: Vector[PackageMetadata])(using Config, Flags): Vector[PackageMetadata] = {
     val seen = mutable.HashSet.empty[PackageId]
+    val all  = mutable.HashSet.empty[PackageId]
     val todo = mutable.Queue.empty[PackageMetadata]
     val done = mutable.ListBuffer.empty[PackageMetadata]
 
     todo.enqueueAll(metadata)
+    all.addAll(metadata.map(m => (m.name, m.version.map(_.asString))))
     withProgress(s"Generating ${todo.size} packages from metadata", todo.size) {
       while todo.nonEmpty do
         val m             = todo.dequeue()
@@ -388,8 +399,9 @@ object Packages:
             println()
 
             todo.enqueueAll(result.metadata.dependencies)
+            all.addAll(result.metadata.dependencies.map(m => (m.name, m.version.map(_.asString))))
             done += result.metadata
-            Progress.total(todo.size)
+            Progress.total(all.size)
           catch
             case _: os.SubprocessException =>
               Progress.fail(
