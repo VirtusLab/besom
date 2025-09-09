@@ -34,16 +34,17 @@ object JarVersions:
       val zis = ZipInputStream(Files.newInputStream(Paths.get(jarPath)))
       try
         var foundVersion: Option[Int] = None
-        var entry = zis.getNextEntry
+        var entry                     = zis.getNextEntry
         while entry != null do
           val name = entry.getName
           if name.endsWith(".class") then
             try
-              val major = try classMajor(zis) catch 
-                case e: Exception => break(Left(s"Cannot read $name: ${e.getMessage}")) 
-              
+              val major =
+                try classMajor(zis)
+                catch case e: Exception => break(Left(s"Cannot read $name: ${e.getMessage}"))
+
               val inMr = name.startsWith("META-INF/versions/")
-              
+
               if inMr then
                 // Skip MRJAR versions - we only care about base classes
                 zis.closeEntry()
@@ -52,8 +53,7 @@ object JarVersions:
                 // This is a base class
                 foundVersion match
                   case Some(existingVersion) =>
-                    if existingVersion != major then
-                      break(Left(s"Multiple versions found: $existingVersion and $major in $name"))
+                    if existingVersion != major then break(Left(s"Multiple versions found: $existingVersion and $major in $name"))
                   case None =>
                     foundVersion = Some(major)
             catch
@@ -62,10 +62,10 @@ object JarVersions:
           // move on; we only read 8 bytes; closing entry is fine
           zis.closeEntry()
           entry = zis.getNextEntry
-        
+
         foundVersion match
           case Some(version) => Right(version)
-          case None => Left(s"No class files found in JAR at $jarPath")
+          case None          => Left(s"No class files found in JAR at $jarPath")
       finally zis.close()
 
   def wrapModuleName(moduleName: String): String =
@@ -79,11 +79,11 @@ object JarVersions:
 
   def checkVersionsRecursively(path: os.Path, expectedMaxVersion: Int, exclude: String*): Either[(Vector[String], Int), Int] =
     val excludedModules = exclude.map(wrapModuleName).toSet
-    val paths = os.walk(path).toVector
+    val paths           = os.walk(path).toVector
     val results = paths.mapPar(Runtime.getRuntime.availableProcessors()) { path =>
       val last = path.last
       if excludedJars.exists(e => last.endsWith(e)) then Result.Skipped
-      else if path.ext == "jar" && excludedModules.contains(last) then 
+      else if path.ext == "jar" && excludedModules.contains(last) then
         println(s"Skipping $path because it's listed as excluded")
         Result.Skipped
       else if path.ext == "jar" then
@@ -91,26 +91,25 @@ object JarVersions:
           case Left(error) =>
             Result.Failed(error)
           case Right(version) =>
-            if version > expectedMaxVersion then
-              Result.Failed(s"Expected version $expectedMaxVersion, but got $version in $path")
+            if version > expectedMaxVersion then Result.Failed(s"Expected version $expectedMaxVersion, but got $version in $path")
             else Result.Success
       else Result.NotJar
     }
 
-    val errs = results.collect {
-      case Result.Failed(error) => error
+    val errs = results.collect { case Result.Failed(error) =>
+      error
     }
 
     val jarCount = results.collect {
-      case Result.Success => 1
-      case Result.NotJar => 0
-      case Result.Skipped => 1
+      case Result.Success   => 1
+      case Result.NotJar    => 0
+      case Result.Skipped   => 1
       case Result.Failed(_) => 1
     }.sum
-    
+
     if errs.nonEmpty then Left(errs -> jarCount) else Right(jarCount)
-  
-  def main(path: String): Unit = 
+
+  def main(path: String): Unit =
     checkVersionsRecursively(os.Path(path), 55, "codegen", "scripts") match
       case Left((errs, results)) =>
         println(s"Failures [${errs.size}/${results}]:")
