@@ -1,6 +1,7 @@
 # Big idea behind using a Justfile is so that we can have modules like in sbt.
 
 besom-version := `cat version.txt`
+besom-short-version := `version=$(cat version.txt) && if [[ $version == *"-SNAPSHOT" ]]; then echo "${version%.*}-SNAPSHOT"; else echo "${version%.*}"; fi`
 is-snapshot := if "{{besom-version}}" =~ '.*-SNAPSHOT' { "true" } else { "false" }
 no-bloop := if env_var_or_default('BESOM_BUILD_NO_BLOOP', "") == "true" { "--server=false" } else { "" }
 
@@ -39,10 +40,8 @@ default:
 
 # TODO aggregate tasks do not incorporate besom-cfg module (with the exception of clean-all)
 
-# TODO make this version-independent and SNAPSHOT-independent by computing short-version from version.txt
 build-packages-for-templates-and-examples:
-  
-  find examples templates -name '*.scala' -exec grep -h "0.5-SNAPSHOT" {} + | sed -n 's/.*besom-\([^:]*:[^"]*\).*-core.0.5-SNAPSHOT.*/\1/p' | sort -u | tr '\n' ' ' | xargs -I {} just cli packages local {}
+  find examples templates -name '*.scala' -exec grep -h "{{besom-short-version}}" {} + | sed -n 's/.*besom-\([^:]*:[^"]*\).*-core.{{besom-short-version}}.*/\1/p' | sort -u | tr '\n' ' ' | xargs -I {} just cli packages local {}
 
 # Cleans everything
 clean-all: clean-json clean-model clean-rpc clean-sdk clean-auto clean-out clean-compiler-plugin clean-codegen clean-scripts clean-test-integration clean-cfg clean-test-templates clean-test-examples clean-test-markdown
