@@ -38,7 +38,7 @@ jobs:
       - uses: coursier/cache-action@v6.4.3
       - uses: VirtusLab/scala-cli-setup@v1.3.2
         with:
-          jvm: graalvm-java17:22.3.3
+          jvm: graalvm-java24:24.0.2
           power: true
       - name: Login in to pulumi
         run: pulumi login --local

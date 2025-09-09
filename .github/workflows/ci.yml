@@ -63,7 +63,7 @@ jobs:
     - uses: coursier/cache-action@v6.4.3
     - uses: VirtusLab/scala-cli-setup@v1.1.0
       with:
-        jvm: graalvm-java11:22.3.3
+        jvm: graalvm-java24:24.0.2
         apps: sbt
         power: true
     - uses: arduino/setup-protoc@v1
@@ -82,6 +82,9 @@ jobs:
 
     - name: Publish local for integration tests
       run: just publish-local-all
+
+    - name: Check jar versions
+      run: just cli jars ~/.ivy2/local/org.virtuslab/
 
     - name: Integration test
       run: scala-cli --power test integration-tests
