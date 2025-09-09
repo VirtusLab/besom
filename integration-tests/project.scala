@@ -1,4 +1,5 @@
 //> using scala 3.3.1
+//> using options -java-output-version:21
 
 //> using exclude "*/resources/*"
 
