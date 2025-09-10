@@ -1,0 +1,7 @@
+{
+  "methodRemovals": [
+    {
+      "name": "terraformConfig"
+    }
+  ]
+}
