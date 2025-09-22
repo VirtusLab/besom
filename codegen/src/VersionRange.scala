@@ -18,9 +18,16 @@ case class WildcardVersion(major: Int, minorPattern: Option[Int], patchPattern: 
       minorPattern.forall(_ == version.minor) &&
       patchPattern.forall(_ == version.patch)
 
+case class FromVersion(from: SemanticVersion) extends VersionRange:
+  def matches(version: SemanticVersion): Boolean =
+    version >= from
+
 object VersionRange:
   def parse(range: String): Either[Exception, VersionRange] =
-    if range.contains(":") then
+    if range.startsWith("^") then
+      val version = SemanticVersion.parseTolerant(range.stripPrefix("^"))
+      version.map(FromVersion(_))
+    else if range.contains(":") then
       // Handle range with colon e.g. "1.0.0:1.0.2"
       val parts = range.split(":")
       if parts.length != 2 then Left(Exception(s"Invalid version range format: $range. Expected format: version:version"))

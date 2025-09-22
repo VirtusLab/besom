@@ -40,6 +40,9 @@ default:
 
 # TODO aggregate tasks do not incorporate besom-cfg module (with the exception of clean-all)
 
+find-packages-for-templates-and-examples:
+  find examples templates -name '*.scala' -exec grep -h "{{besom-short-version}}" {} + | sed -n 's/.*besom-\([^:]*:[^"]*\).*-core.{{besom-short-version}}.*/\1/p' | sort -u | tr '\n' ' '
+
 build-packages-for-templates-and-examples:
   find examples templates -name '*.scala' -exec grep -h "{{besom-short-version}}" {} + | sed -n 's/.*besom-\([^:]*:[^"]*\).*-core.{{besom-short-version}}.*/\1/p' | sort -u | tr '\n' ' ' | xargs -I {} just cli packages local {}
 

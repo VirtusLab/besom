@@ -149,7 +149,16 @@ object Packages:
     )
 
   private val blockedPackages = Vector(
+    "aws-miniflux", // not available for M1 Mac
+    "aws-s3-replicated-bucket", // not available for M1 Mac
+    "gcp-global-cloudrun", // not available for M1 Mac
+    "iosxe", // provider crashes
+    "aquasec", // provider crashes
+    "nxos", // provider crashes
+    "kafka-connect", // wrong plugin artifact name https://github.com/azaurus1/pulumi-kafka-connect/issues/3
     "azure-native-v1", // deprecated
+    "azure-native-v2", // deprecated
+    "packet", // deprecated
     "azure-quickstart-acr-geo-replication", // uses deprecated azure-native-v1
     "aws-quickstart-aurora-postgres", // archived
     "aws-quickstart-redshift", // archived
@@ -165,16 +174,18 @@ object Packages:
   private val compileProblemPackages = blockedPackages ++ Vector(
     "aws-iam", // id parameter, schema error - https://github.com/pulumi/pulumi-aws-iam/issues/18
     "nuage", // id parameter, schema error - https://github.com/nuage-studio/pulumi-nuage/issues/50
-    // addressed with a hotfix, also now it's iam.PermissionsGroup
-    // "ovh", // urn parameter, schema error - https://github.com/ovh/pulumi-ovh/issues/139
     "fortios" // method collision - https://github.com/VirtusLab/besom/issues/458
   )
 
   def generateAll(targetPath: os.Path)(using Config, Flags): os.Path = {
+    val problemPackages = (codegenProblemPackages ++ compileProblemPackages).toSet
     val metadata = readOrFetchPackagesMetadata(targetPath, Nil)
       .filter {
-        case m if (codegenProblemPackages ++ compileProblemPackages).contains(m.name) =>
+        case m if problemPackages.contains(m.name) =>
           println(s"Skipping problematic package generation: ${m.name}")
+          false
+        case m if m.server.exists(_.contains("terraform-provider-")) =>
+          println(s"Skipping Any Terraform package generation: ${m.name}")
           false
         case _ => true
       }
@@ -266,7 +277,8 @@ object Packages:
     val selectedPackages = resolvePackageVersions(sourceFile, packages)
     withProgress("Compiling packages", selectedPackages.size) {
       selectedPackages.foreach { m =>
-        Progress.report(label = s"${m.name}:${m.version.getOrElse("latest")}")
+        val label = s"${m.name}:${m.version.getOrElse("latest")}"
+        Progress.report(label = label)
         val version = m.version.getOrElse(throw Exception("Package version must be provided for publishing")).asString
         try
           val args: Seq[os.Shellable] = Seq(
@@ -281,9 +293,15 @@ object Packages:
           Progress.total(selectedPackages.size)
         catch
           case _: os.SubprocessException =>
-            Progress.fail(s"[${new Date}] Compilation failed for provider '${m.name}' version '${version}', error: sub-process failed")
+            Progress.fail(
+              label,
+              s"[${new Date}] Compilation failed for provider '${m.name}' version '${version}', error: sub-process failed"
+            )
           case NonFatal(_) =>
-            Progress.fail(s"[${new Date}] Compilation failed for provider '${m.name}' version '${version}'")
+            Progress.fail(
+              label,
+              s"[${new Date}] Compilation failed for provider '${m.name}' version '${version}'"
+            )
         finally Progress.end
       }
     }
@@ -316,22 +334,23 @@ object Packages:
   def resolveMavenVersions(targetDir: os.Path, packages: Vector[PackageMetadata])(using config: Config): Map[String, SemanticVersion] =
     withProgress("Resolving packages from Maven", packages.size) {
       packages.map { m =>
-        val dep = dependency(m)
-        val ver = m.version.getOrElse("latest")
+        val dep   = dependency(m)
+        val ver   = m.version.getOrElse("latest")
+        val label = s"${m.name}:${ver}"
         Thread.sleep(100) // avoid rate limiting
         val res = resolveMavenPackageVersion(dep)
           .fold(
             e => {
-              Progress.fail(s"Can't resolve '${m.name}' version '${ver}':\n ${e.getMessage}")
+              Progress.fail(label, s"Can't resolve '${m.name}' version '${ver}':\n ${e.getMessage}")
               m.name -> None
             },
             v => {
               SemanticVersion.parseTolerant(v) match
                 case Left(e) =>
-                  Progress.fail(s"Can't parse resolved version '${v}' for '${m.name}':\n ${e.getMessage}")
+                  Progress.fail(label, s"Can't parse resolved version '${v}' for '${m.name}':\n ${e.getMessage}")
                   m.name -> None
                 case Right(v) =>
-                  Progress.report(label = s"${m.name}:${v}")
+                  Progress.report(label = label)
                   m.name -> Some(v)
             }
           )
@@ -362,7 +381,7 @@ object Packages:
             Progress.report(label = s"${name}: ${maven} >= ${upstream}")
             Progress.end
           case (m, u) =>
-            Progress.fail(s"${name}: one or both not found: ${m} ${u}")
+            Progress.fail(name, s"${name}: one or both not found: ${m} ${u}")
             Progress.end
       }
     }
@@ -392,7 +411,8 @@ object Packages:
         if !seen.contains(id) then
           seen.add(id)
           val versionOrLatest = m.version.getOrElse("latest")
-          Progress.report(label = s"${m.name}:${versionOrLatest}")
+          val label           = s"${m.name}:${versionOrLatest}"
+          Progress.report(label = label)
           try
             val result  = generator.generatePackageSources(metadata = m)
             val version = result.metadata.version.getOrElse(throw Exception("Package version must be present after generating")).asString
@@ -408,11 +428,13 @@ object Packages:
           catch
             case _: os.SubprocessException =>
               Progress.fail(
+                label,
                 s"[${new Date}] Code generation failed for provider '${m.name}' version '${versionOrLatest}', " +
                   s"error: sub-process failed"
               )
             case NonFatal(e) =>
               Progress.fail(
+                label,
                 s"[${new Date}] Code generation failed for provider '${m.name}' version '${versionOrLatest}', " +
                   s"error [${e.getClass.getSimpleName}]: ${e.getMessage}"
               )
@@ -450,7 +472,8 @@ object Packages:
         if !seen.contains(id) then
           seen.add(id)
           val version = m.version.getOrElse(throw Exception("Package version must be provided for publishing")).asString
-          Progress.report(label = s"${m.name}:${version}")
+          val label   = s"${m.name}:${version}"
+          Progress.report(label = label)
           val logFile = publishLocalDir / s"${m.name}-${version}.log"
           try
             val args: Seq[os.Shellable] = Seq(
@@ -470,11 +493,13 @@ object Packages:
           catch
             case _: os.SubprocessException =>
               Progress.fail(
+                label,
                 s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}, " +
                   s"error: sub-process failed, see logs for details"
               )
             case NonFatal(e) =>
               Progress.fail(
+                label,
                 s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}, " +
                   s"error [${e.getClass.getSimpleName}]: ${e.getMessage}"
               )
@@ -502,8 +527,9 @@ object Packages:
         lazy val resolved = resolveMavenPackageVersion(dependency(m))
         if !flags.force && !seen.contains(id) && resolved.isRight then
           seen.add(id)
-          val v = resolved.getOrElse(throw Exception("Resolved version must be provided at this point"))
-          Progress.report(label = s"${m.name}:${v}")
+          val v     = resolved.getOrElse(throw Exception("Resolved version must be provided at this point"))
+          val label = s"${m.name}:${v}"
+          Progress.report(label = label)
           println(s"[${new Date}] Skipping provider '${m.name}' version '${v}' (already published to Maven)")
           done += m
           Progress.end
@@ -512,7 +538,8 @@ object Packages:
         if !seen.contains(id) then
           seen.add(id)
           val version = m.version.getOrElse(throw Exception("Package version must be provided for publishing")).asString
-          Progress.report(label = s"${m.name}:${version}")
+          val label   = s"${m.name}:${version}"
+          Progress.report(label = label)
           val logFile = publishMavenDir / s"${m.name}-${version}.log"
           try
             awaitDependenciesPublishedToMaven(m)
@@ -532,16 +559,19 @@ object Packages:
           catch
             case e: CantDownloadModule =>
               Progress.fail(
+                label,
                 s"[${new Date}] Publish failed for provider '${m.name}' version '${version}' " +
                   s"error: failed to download dependency, message: ${e.getMessage}"
               )
             case _: os.SubprocessException =>
               Progress.fail(
+                label,
                 s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}, " +
                   s"error: sub-process failed, see logs for details"
               )
             case NonFatal(e) =>
               Progress.fail(
+                label,
                 s"[${new Date}] Publish failed for provider '${m.name}' version '${version}', logs: ${logFile}, " +
                   s"error [${e.getClass.getSimpleName}]: ${e.getMessage}"
               )
@@ -668,8 +698,19 @@ object Packages:
     // First download metadata for all selected packages
     val downloaded = downloadPackagesMetadata(targetPath, selected)
 
+    val selectedWithoutTerraform = selected.filterNot { p =>
+      val parsed = PackageId.parse(p)
+      parsed match
+        case Right(name, _) =>
+          val isTerraform = downloaded.find(_.name == name).exists(_.repo_url.contains("terraform-provider-"))
+          println(s"Package '$name' is Terraform: '$isTerraform' repo url: ${downloaded.find(_.name == name).map(_.repo_url)}")
+          if isTerraform then println(s"Skipping Any Terraform package: '$name'")
+          isTerraform
+        case Left(e) => throw e
+    }
+
     // Create separate PackageMetadata objects for each version
-    val selectedPackages = selected.map { p =>
+    val selectedPackages = selectedWithoutTerraform.map { p =>
       val parsed = PackageId.parse(p)
       parsed match {
         case Right(name, Some(version)) => // explicit version, use it
@@ -700,26 +741,6 @@ object Packages:
 
     println(s"Writing log of downloaded packages to: '${targetPath / "downloaded-packages.log"}'")
     logger.writeToFile(targetPath / "downloaded-packages.log")
-
-    // val packageYamls = selectedPackages.map { case (customizedMetadata, latestPackageYaml) =>
-    //   PackageYAML(
-    //     name = customizedMetadata.name,
-    //     repo_url = customizedMetadata.server.getOrElse(
-    //       "https://github.com/pulumi/pulumi-" + customizedMetadata.name
-    //     ), // TODO: optimistic assumption about the repo url
-    //     schema_file_url = customizedMetadata.version match {
-    //       case Some(version) =>
-    //         // replace the version in the schema file url with the selected version
-    //         latestPackageYaml.schema_file_url.map(_.replace(latestPackageYaml.version, s"v$version"))
-    //       case None => latestPackageYaml.schema_file_url
-    //     },
-    //     schema_file_path = latestPackageYaml.schema_file_path,
-    //     version = customizedMetadata.version.map(v => "v" + v.asString).getOrElse(latestPackageYaml.version)
-    //   )
-    // }
-
-    // // Download schemas for each version independently
-    // downloadPackagesSchema(packageYamls)
   }
 
   private def downloadPackagesMetadata(targetPath: os.Path, selected: List[String])(using config: Config): Vector[PackageYAML] =
@@ -768,7 +789,7 @@ object Packages:
         }
         .filterNot((name, _) => {
           val block = blockedPackages.contains(name)
-          if block then Progress.fail(s"Skipping package: '$name', it's known to have problems")
+          if block then Progress.fail(name, s"Skipping package: '$name', it's known to have problems")
           block
         })
         .map { (packageName: String, p: PackageSource) =>
@@ -807,7 +828,7 @@ object Packages:
               metadataRaw.map(m => PackageMetadata(m.name, m.version).withUrl(m.repo_url))
 
             metadata match
-              case Left(error) => Progress.fail(error)
+              case Left(error) => Progress.fail(packageName, error)
               case Right(value) =>
                 os.write.over(targetPath / s"${packageName}.metadata.json", value.toJson, createFolders = true)
 
@@ -815,7 +836,7 @@ object Packages:
           catch
             case NonFatal(e) =>
               val msg = s"Failed to download metadata for package: '${p.name}', error: ${e.getMessage}"
-              Progress.fail(msg)
+              Progress.fail(packageName, msg)
               Left(msg)
           finally Progress.end
           end try
@@ -832,7 +853,8 @@ object Packages:
     // pre-fetch all available production schemas, if any are missing here code generation will use a fallback mechanism
     withProgress(s"Downloading ${downloaded.size} packages schemas", downloaded.size) {
       downloaded.foreach(p => {
-        Progress.report(label = s"${p.name}:${p.version}")
+        val label = s"${p.name}:${p.version}"
+        Progress.report(label = label)
         try
           val schemaFileUrl = (p.schema_file_url, p.schema_file_path) match
             case (Some(url), _) =>
@@ -852,12 +874,13 @@ object Packages:
             then os.write.over(schemaPath, schemaResponse.text(), createFolders = true)
             else
               Progress.fail(
+                label,
                 s"Failed to download schema for package: '${p.name}' version '${p.version}' from: '$schemaFileUrl', " +
                   s"error[${schemaResponse.statusCode}]: ${schemaResponse.statusMessage}"
               )
         catch
           case NonFatal(e) =>
-            Progress.fail(s"Failed to download schema for package: '${p.name}' version '${p.version}', error: ${e.getMessage}")
+            Progress.fail(label, s"Failed to download schema for package: '${p.name}' version '${p.version}', error: ${e.getMessage}")
         finally Progress.end
         end try
       })

@@ -43,6 +43,7 @@ case class PulumiPackageInfo(
   )(using logger: Logger): Map[FunctionName, (PulumiDefinitionCoordinates, (FunctionDefinition, Boolean))] = {
     val (methods, notMethods) = resourceDefinition.methods.toSeq
       .sortBy { case (name, _) => name }
+      .filterNot { case (name, _) => name == "terraformConfig" } // issue N: hardcode removal of any terraform related method
       .map { case (name, token) =>
         (
           name,
