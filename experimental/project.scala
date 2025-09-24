@@ -3,4 +3,4 @@
 //> using dep "org.virtuslab::besom-kubernetes:4.22.1-core.0.4"
 //> using dep "io.github.iltotore::iron:2.5.0"
 
-//> using repository sonatype:snapshots
+//> using repository snapshots

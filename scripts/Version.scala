@@ -71,7 +71,7 @@ object Version:
         filesWithBesomDeps
           .foreachEntry { case (path, content) =>
             val hasSnapshotRepo = content.linesIterator
-              .forall(line => line.contains("repository sonatype:snapshots"))
+              .forall(line => line.contains("repository snapshots"))
             val newContent: Vector[String] = content.linesIterator.toVector
               .map {
                 case line if line.contains("besom-fake-") => line // ignore
@@ -80,12 +80,12 @@ object Version:
                 case line => line // pass through
               }
               .filter {
-                case line if !isSnapshot && line.contains("repository sonatype:snapshots") =>
+                case line if !isSnapshot && line.contains("repository snapshots") =>
                   false // remove snapshot repo from non-snapshot version
                 case _ => true
               } ++ {
               if isSnapshot && !hasSnapshotRepo then // add snapshot repo to snapshot version
-                Vector("//> using repository sonatype:snapshots")
+                Vector("//> using repository snapshots")
               else Vector.empty
             }
 

@@ -7,4 +7,4 @@
 //> using dep "org.virtuslab::besom-docker:4.6.2-core.0.5-SNAPSHOT"
 
 //> using exclude "app/*"
-//> using repository sonatype:snapshots
+//> using repository snapshots
