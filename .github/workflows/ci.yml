@@ -36,7 +36,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: coursier/cache-action@v6.4.3
-    - uses: VirtusLab/scala-cli-setup@v1.1.0
+    - uses: VirtusLab/scala-cli-setup@v1.9.1
     - name: Scalafmt list
       run: |
         scala-cli fmt . -F --list --respect-project-filters || (
@@ -61,7 +61,7 @@ jobs:
       with:
         pulumi-version: '3.193.0'
     - uses: coursier/cache-action@v6.4.3
-    - uses: VirtusLab/scala-cli-setup@v1.1.0
+    - uses: VirtusLab/scala-cli-setup@v1.9.1
       with:
         jvm: graalvm-java24:24.0.2
         apps: sbt
