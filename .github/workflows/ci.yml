@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BESOM_LANGHOST_SCALA_CLI_OPTS: "--server=false"
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
     - uses: actions/checkout@v4
     - uses: extractions/setup-just@v1
