@@ -116,7 +116,7 @@ object SbtBuildFileGenerator extends BuildFileGenerator with SbtBuildCommons {
                          |organization := "${config.organization}"
                          |scalaVersion := "${config.scalaVersion}"
                          |
-                         |scalacOptions ++= Seq("-java-output-version", "${config. javaTargetVersion}")
+                         |scalacOptions ++= Seq("-java-output-version", "${config.javaTargetVersion}")
                          |
                          |libraryDependencies ++= Seq(
                          |  "org.virtuslab" %% "besom-core" % "${config.besomVersion}",
@@ -161,7 +161,7 @@ object MultiModuleSbtBuildFileGenerator extends BuildFileGenerator with SbtBuild
           |    version := "${packageVersion}-core.${config.coreShortVersion}",
           |    organization := "${config.organization}",
           |    scalaVersion := "${config.scalaVersion}",
-          |    scalacOptions ++= Seq("-java-output-version", "${config. javaTargetVersion}"),
+          |    scalacOptions ++= Seq("-java-output-version", "${config.javaTargetVersion}"),
           |    libraryDependencies ++= Seq(
           |      "org.virtuslab" %% "besom-core" % "${config.besomVersion}",${dependencies
            .map { case (name, version) =>
@@ -181,7 +181,7 @@ object MultiModuleSbtBuildFileGenerator extends BuildFileGenerator with SbtBuild
              s"""|lazy val `$pkg` = (project in file("$pkg"))
                 |  .settings(
                 |    scalaVersion := "${config.scalaVersion}",
-                |    scalacOptions ++= Seq("-java-output-version", "${config. javaTargetVersion}"),
+                |    scalacOptions ++= Seq("-java-output-version", "${config.javaTargetVersion}"),
                 |    libraryDependencies ++= Seq(
                 |      "org.virtuslab" %% "besom-core" % "${config.besomVersion}",${dependencies
                   .map { case (name, version) =>
