@@ -141,6 +141,7 @@ def loadEnvParams(envParams: Vector[Parameter.Env]): Map[String, LoadedEnvParame
   }.toMap
 
 case class RunConfig(
+  verifyOnly: Boolean = false,
   interactive: Boolean = false,
   skipUntil: Int = 0,
   targetProjects: Set[String] = Set.empty
@@ -150,6 +151,8 @@ def parseArgs(args: Array[String]): RunConfig =
   args
     .foldLeft((RunConfig(), 0)) { case ((config, skip), arg) =>
       arg match
+        case "--verify-only" =>
+          (config.copy(verifyOnly = true), skip)
         case "-i" | "--interactive" =>
           (config.copy(interactive = true), skip)
         case "--skip-until" =>
@@ -330,7 +333,14 @@ val projectsToSkip = Set(
 def main(args: Array[String]) =
   val config                 = parseArgs(args)
   val parsedParamsPerProject = readParameterData(os.pwd / "required_secrets.json", config.targetProjects)
+
+  if config.verifyOnly then println("Verifying parameters...")
+
   verifyAllParametersArePresent(parsedParamsPerProject)
+
+  if config.verifyOnly then
+    println("Verified parameters! Exiting...")
+    sys.exit(0)
 
   if !pulumiPresent then
     println("Pulumi is not present in the system!")
