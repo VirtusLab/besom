@@ -218,7 +218,7 @@ object PulumiPackageInfo {
       val providerConfig     = config.providers(reconciledMetadata.name)
       val packageType =
         if config.multiModuleSbtPackages.contains(reconciledMetadata.name) then MultiModuleSbtPackage
-        else if config.sbtPackages.contains(reconciledMetadata.name) then SbtPackage
+        else if config.singleModuleSbtPackages.contains(reconciledMetadata.name) then SbtPackage
         else ScalaCliPackage
 
       val updatedProviderConfig = providerConfig.copy(

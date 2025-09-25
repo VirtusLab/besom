@@ -21,7 +21,7 @@ case class Config(
   developers: List[String] = Config.DefaultDevelopersList,
   packageType: PackageType = ScalaCliPackage,
   multiModuleSbtPackages: Set[String] = Config.MultiModuleSbtPackages,
-  sbtPackages: Set[String] = Config.SingleModuleSbtBasedPackages,
+  singleModuleSbtPackages: Set[String] = Config.SingleModuleSbtBasedPackages,
   tracing: Boolean = false
 ):
   val coreShortVersion: String = SemanticVersion
