@@ -52,10 +52,6 @@ class HotfixTests extends munit.FunSuite:
     // Verify the fields were renamed
     val modifiedResource = modifiedPackage.resources(s"$packageName:$resourcePath:$resourceName")
 
-    println("--------------------------------")
-    println(modifiedResource)
-    println("--------------------------------")
-
     // Check properties
     assert(!modifiedResource.properties.contains("urn"))
     assert(!modifiedResource.properties.contains("name"))

@@ -21,7 +21,7 @@ case class Config(
   developers: List[String] = Config.DefaultDevelopersList,
   packageType: PackageType = ScalaCliPackage,
   multiModuleSbtPackages: Set[String] = Config.MultiModuleSbtPackages,
-  sbtPackages: Set[String] = Config.SbtBasedPackages,
+  sbtPackages: Set[String] = Config.SingleModuleSbtBasedPackages,
   tracing: Boolean = false
 ):
   val coreShortVersion: String = SemanticVersion
@@ -36,9 +36,9 @@ end Config
 object Config {
   val MaxParallelism: Int = Runtime.getRuntime().availableProcessors()
 
-  val SbtBasedPackages: Set[String]       = Set()
-  val MultiModuleSbtPackages: Set[String] = Set()
-  val LowerFidelitySchemas: Set[String]   = Set("azure-native")
+  val SingleModuleSbtBasedPackages: Set[String] = Set()
+  val MultiModuleSbtPackages: Set[String]       = Set()
+  val LowerFidelitySchemas: Set[String]         = Set("azure-native")
 
   val DefaultJavaVersion       = "23"
   val DefaultJavaTargetVersion = "11"

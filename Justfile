@@ -263,9 +263,14 @@ package-language-plugin-bootstrap:
 
 # Builds pulumi-language-scala binary
 build-language-plugin $GOOS="" $GOARCH="":
-	mkdir -p {{language-plugin-output-dir}} && \
-	cd language-plugin/pulumi-language-scala && \
-	go build -o {{language-plugin-output-dir}}/pulumi-language-scala \
+	#!/usr/bin/env sh
+	mkdir -p {{language-plugin-output-dir}}
+	cd language-plugin/pulumi-language-scala
+	binary_name="pulumi-language-scala"
+	if [ "$GOOS" = "windows" ]; then
+		binary_name="pulumi-language-scala.exe";
+	fi
+	go build -o {{language-plugin-output-dir}}/$binary_name \
 	  -ldflags "-X github.com/pulumi/pulumi/sdk/v3/go/common/version.Version={{besom-version}}"
 
 # Installs the scala language plugin locally
@@ -290,7 +295,11 @@ package-language-plugin $GOOS $GOARCH:
 	mkdir -p $output_dir
 	just build-language-plugin $GOOS $GOARCH
 	cp {{language-plugin-output-dir}}/bootstrap.jar $output_dir/
-	cp {{language-plugin-output-dir}}/pulumi-language-scala $output_dir/
+	binary_name="pulumi-language-scala"
+	if [ "$GOOS" = "windows" ]; then
+		binary_name="pulumi-language-scala.exe"
+	fi
+	cp {{language-plugin-output-dir}}/$binary_name $output_dir/
 	cp {{language-plugin-resources-dir}}/* $output_dir/
 	cd $output_dir
 	tar czvf pulumi-language-scala-v{{besom-version}}-{{GOOS}}-{{GOARCH}}.tar.gz *
@@ -319,7 +328,6 @@ publish-language-plugins-all: package-language-plugins-all
 	just publish-language-plugin linux amd64
 	just publish-language-plugin windows arm64
 	just publish-language-plugin windows amd64
-
 ####################
 # Besom CFG
 ####################
@@ -626,49 +634,6 @@ clean-local-snapshots:
 power-wash: clean-all clean-local-snapshots
 	git clean -i -d -x -e ".idea"
 	killall -9 java
-
-####################
-# Demo
-####################
-
-# Run the sample kubernetes Pulumi app that resides in ./experimental directory
-liftoff:
-	#!/usr/bin/env sh
-	export PULUMI_SKIP_UPDATE_CHECK=true
-	export PULUMI_CONFIG_PASSPHRASE=""
-	cd experimental
-	pulumi --non-interactive --logtostderr up --stack liftoff -y
-
-# Reverts the deployment of experimental sample kubernetes Pulumi app from ./experimental directory
-destroy-liftoff:
-	#!/usr/bin/env sh
-	export PULUMI_SKIP_UPDATE_CHECK=true
-	cd experimental
-	if (pulumi --non-interactive --logtostderr stack ls | grep liftoff > /dev/null); then
-		export PULUMI_CONFIG_PASSPHRASE=""
-		pulumi  --non-interactive --logtostderr destroy --stack liftoff -y
-	fi
-
-# Cleans the deployment of experimental sample kubernetes Pulumi app from ./experimental directory to the ground
-clean-liftoff: destroy-liftoff
-	#!/usr/bin/env sh
-	export PULUMI_SKIP_UPDATE_CHECK=true
-	cd experimental
-	if (pulumi --non-interactive --logtostderr stack ls | grep liftoff > /dev/null); then
-		pulumi --non-interactive --logtostderr stack rm liftoff -y
-	fi
-	export PULUMI_CONFIG_PASSPHRASE=""
-	pulumi --non-interactive --logtostderr stack init liftoff
-
-# Cleans the deployment of ./experimental app completely, rebuilds core and kubernetes provider SDKs, deploys the app again
-clean-slate-liftoff: clean-sdk
-	#!/usr/bin/env sh
-	just publish-local-core
-	just publish-local-compiler-plugin
-	scala-cli run {{no-bloop}} codegen -- named kubernetes 4.2.0
-	scala-cli --power publish local {{no-bloop}} .out/codegen/kubernetes/4.2.0/ --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
-	just clean-liftoff
-	just liftoff
 
 ####################
 # IDE

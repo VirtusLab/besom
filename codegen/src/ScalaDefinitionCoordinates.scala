@@ -80,7 +80,7 @@ case class ScalaDefinitionCoordinates private (
     }
     val topLevelModule =
       if providerConfig.packageType == MultiModuleSbtPackage then Seq(moduleParts.head) else Seq.empty
-    val fileName  = definitionName.getOrElse(definitionName.orElse(selectionName).getOrElse("package"))
+    val fileName  = definitionName.orElse(selectionName).getOrElse("package")
     val sourceDir = if providerConfig.packageType.isSbt then Seq("src", "main", "scala") else Seq("src")
 
     FilePath(topLevelModule ++ sourceDir ++ moduleParts ++ Seq(s"${fileName}.scala"))

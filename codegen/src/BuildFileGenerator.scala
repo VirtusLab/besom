@@ -87,7 +87,23 @@ object ScalaCliBuildFileGenerator extends BuildFileGenerator {
   }
 }
 
-object SbtBuildFileGenerator extends BuildFileGenerator {
+trait SbtBuildCommons { self: BuildFileGenerator =>
+  // Plugins file
+  val pluginsFile = SourceFile(
+    FilePath(Seq("project", "plugins.sbt")),
+    s"""|addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "3.12.0")
+        |addSbtPlugin("com.github.sbt" % "sbt-pgp" % "2.2.1")
+        |""".stripMargin
+  )
+
+  // Plugin metadata
+  def pluginMetadata(schemaName: SchemaName, packageVersion: PackageVersion, pluginDownloadUrl: Option[String]) = SourceFile(
+    FilePath(Seq("src", "main", "resources", "besom", "api", schemaName, "plugin.json")),
+    generatePluginMetadata(schemaName, packageVersion, pluginDownloadUrl)
+  )
+}
+
+object SbtBuildFileGenerator extends BuildFileGenerator with SbtBuildCommons {
   def generateBuildFiles(
     schemaName: SchemaName,
     packageVersion: PackageVersion,
@@ -112,23 +128,15 @@ object SbtBuildFileGenerator extends BuildFileGenerator {
                          |)
                          |""".stripMargin
 
-    val pluginsFileContent =
-      s"""|addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "3.12.0")
-          |addSbtPlugin("com.github.sbt" % "sbt-pgp" % "2.2.1")
-          |""".stripMargin
-
     Seq(
       SourceFile(FilePath(Seq("build.sbt")), buildFileContent),
-      SourceFile(FilePath(Seq("project", "plugins.sbt")), pluginsFileContent),
-      SourceFile(
-        FilePath(Seq("src", "main", "resources", "besom", "api", schemaName, "plugin.json")),
-        generatePluginMetadata(schemaName, packageVersion, pluginDownloadUrl)
-      )
+      pluginMetadata(schemaName, packageVersion, pluginDownloadUrl),
+      pluginsFile
     )
   }
 }
 
-object MultiModuleSbtBuildFileGenerator extends BuildFileGenerator {
+object MultiModuleSbtBuildFileGenerator extends BuildFileGenerator with SbtBuildCommons {
   def generateBuildFiles(
     schemaName: SchemaName,
     packageVersion: PackageVersion,
@@ -188,23 +196,9 @@ object MultiModuleSbtBuildFileGenerator extends BuildFileGenerator {
            .mkString("\n")}
           |""".stripMargin
 
-    // Plugin metadata
-    val pluginMetadata = SourceFile(
-      FilePath(Seq("src", "main", "resources", "besom", "api", schemaName, "plugin.json")),
-      generatePluginMetadata(schemaName, packageVersion, pluginDownloadUrl)
-    )
-
-    // Plugins file
-    val pluginsFile = SourceFile(
-      FilePath(Seq("project", "plugins.sbt")),
-      s"""|addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "3.12.0")
-          |addSbtPlugin("com.github.sbt" % "sbt-pgp" % "2.2.1")
-          |""".stripMargin
-    )
-
     Seq(
       SourceFile(FilePath(Seq("build.sbt")), rootBuildFile),
-      pluginMetadata,
+      pluginMetadata(schemaName, packageVersion, pluginDownloadUrl),
       pluginsFile
     )
   }

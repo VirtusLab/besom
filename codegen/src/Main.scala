@@ -6,8 +6,8 @@ import besom.codegen.{PackageVersion, SchemaFile}
 object Main {
   def main(args: Array[String]): Unit = {
     val (tracing, remainingArgs) = args.toList match {
-      case "--trace" :: rest => (true, rest)
-      case rest              => (false, rest)
+      case lst if lst.contains("--trace") => (true, lst.filterNot(_ == "--trace"))
+      case lst                            => (false, lst)
     }
 
     val result = remainingArgs match {

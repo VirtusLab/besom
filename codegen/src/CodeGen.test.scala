@@ -451,7 +451,6 @@ class CodeGenTest extends munit.FunSuite {
       ),
       expected = Map(
         "src/windowsesu/enums/SupportType.scala" ->
-          // "windowsesu/src/main/scala/windowsesu/enums/SupportType.scala" ->
           """|package besom.api.azurenative.windowsesu.enums
              |
              |sealed abstract class SupportType(val name: String, val value: String) extends besom.types.StringEnum
@@ -467,7 +466,6 @@ class CodeGenTest extends munit.FunSuite {
              |  given besom.types.EnumCompanion[String, SupportType] = this
              |""".stripMargin,
         "src/windowsesu/MultipleActivationKeyArgs.scala" ->
-          // "windowsesu/src/main/scala/windowsesu/MultipleActivationKeyArgs.scala" ->
           """|package besom.api.azurenative.windowsesu
              |
              |final case class MultipleActivationKeyArgs private(
@@ -544,7 +542,6 @@ class CodeGenTest extends munit.FunSuite {
       ),
       expected = Map(
         "src/hybriddata/enums/UserConfirmation.scala" ->
-          // "hybriddata/src/main/scala/hybriddata/enums/UserConfirmation.scala" ->
           """|package besom.api.azurenative.hybriddata.enums
              |
              |sealed abstract class UserConfirmation(val name: String, val value: String) extends besom.types.StringEnum
@@ -560,7 +557,6 @@ class CodeGenTest extends munit.FunSuite {
              |  given besom.types.EnumCompanion[String, UserConfirmation] = this
              |""".stripMargin,
         "src/hybriddata/JobDefinitionArgs.scala" ->
-          // "hybriddata/src/main/scala/hybriddata/JobDefinitionArgs.scala" ->
           """|package besom.api.azurenative.hybriddata
              |
              |final case class JobDefinitionArgs private(
