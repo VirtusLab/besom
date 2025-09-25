@@ -8,6 +8,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
 
 type EnumInstanceName = String
+type IsOverlay        = Boolean
 
 case class PulumiPackageInfo(
   name: SchemaName,
@@ -19,22 +20,30 @@ case class PulumiPackageInfo(
   objectTypeTokens: Set[String],
   resourceTypeTokens: Set[String],
   enumValueToInstances: Map[PulumiToken, Map[ConstValue, EnumInstanceName]],
-  parsedTypes: Map[PulumiDefinitionCoordinates, (TypeDefinition, Boolean)],
-  parsedResources: Map[PulumiDefinitionCoordinates, (ResourceDefinition, Boolean)],
-  parsedFunctions: Map[PulumiDefinitionCoordinates, (FunctionDefinition, Boolean)]
-)(
-  private[codegen] val pulumiPackage: PulumiPackage,
-  private[codegen] val providerConfig: Config.Provider
+  // boolean indicates if the type/resource/function is an overlay in next 3 maps
+  parsedTypes: Map[PulumiDefinitionCoordinates, (TypeDefinition, IsOverlay)],
+  parsedResources: Map[PulumiDefinitionCoordinates, (ResourceDefinition, IsOverlay)],
+  parsedFunctions: Map[PulumiDefinitionCoordinates, (FunctionDefinition, IsOverlay)],
+  pulumiPackage: PulumiPackage,
+  providerConfig: Config.Provider,
+  packageType: PackageType,
+  typeRenames: Map[PulumiToken, String]
 ) {
   import PulumiPackageInfo.*
 
   def asPackageMetadata: PackageMetadata = PackageMetadata(name, Some(version))
+
+  def topLevelPackages: Set[String] = {
+    val allCoordinates = parsedTypes.keys ++ parsedResources.keys ++ parsedFunctions.keys
+    allCoordinates.map(_.topLevelPackage).toSet
+  }
 
   def parseMethods(
     resourceDefinition: ResourceDefinition
   )(using logger: Logger): Map[FunctionName, (PulumiDefinitionCoordinates, (FunctionDefinition, Boolean))] = {
     val (methods, notMethods) = resourceDefinition.methods.toSeq
       .sortBy { case (name, _) => name }
+      .filterNot { case (name, _) => name == "terraformConfig" } // issue N: hardcode removal of any terraform related method
       .map { case (name, token) =>
         (
           name,
@@ -78,37 +87,44 @@ object PulumiPackageInfo {
     name: SchemaName,
     version: PackageVersion,
     moduleToPackageParts: String => Seq[String],
-    providerToPackageParts: String => Seq[String]
-  )(
-    private[codegen] val pulumiPackage: PulumiPackage,
-    private[codegen] val providerConfig: Config.Provider
+    providerToPackageParts: String => Seq[String],
+    pulumiPackage: PulumiPackage,
+    providerConfig: Config.Provider,
+    packageType: PackageType,
+    typeRenames: Map[PulumiToken, String]
   ):
-    def parseResources: Map[PulumiDefinitionCoordinates, (ResourceDefinition, Boolean)] =
+    def parseResources(using Logger): Map[PulumiDefinitionCoordinates, (ResourceDefinition, Boolean)] =
       pulumiPackage.resources.map { case (token, resource) =>
-        val coordinates = PulumiDefinitionCoordinates.fromRawToken(
-          typeToken = token,
+        val pulumiToken = PulumiToken(token)
+        val coordinates = PulumiDefinitionCoordinates.fromToken(
+          typeToken = pulumiToken,
           moduleToPackageParts = moduleToPackageParts,
-          providerToPackageParts = providerToPackageParts
+          providerToPackageParts = providerToPackageParts,
+          overrideDefinitionName = typeRenames.get(pulumiToken)
         )
         (coordinates, (resource, resource.isOverlay))
       }
 
     def parseTypes(using Logger): Map[PulumiDefinitionCoordinates, (TypeDefinition, Boolean)] =
       pulumiPackage.types.map { case (token, typeRef) =>
-        val coordinates = PulumiDefinitionCoordinates.fromRawToken(
-          typeToken = token,
+        val pulumiToken = PulumiToken(token)
+        val coordinates = PulumiDefinitionCoordinates.fromToken(
+          typeToken = pulumiToken,
           moduleToPackageParts = moduleToPackageParts,
-          providerToPackageParts = providerToPackageParts
+          providerToPackageParts = providerToPackageParts,
+          overrideDefinitionName = typeRenames.get(pulumiToken)
         )
         (coordinates, (typeRef, typeRef.isOverlay))
       }
 
     def parseFunctions(using Logger): Map[PulumiDefinitionCoordinates, (FunctionDefinition, Boolean)] =
       pulumiPackage.functions.map { case (token, function) =>
-        val coordinates = PulumiDefinitionCoordinates.fromRawToken(
-          typeToken = token,
+        val pulumiToken = PulumiToken(token)
+        val coordinates = PulumiDefinitionCoordinates.fromToken(
+          typeToken = pulumiToken,
           moduleToPackageParts = moduleToPackageParts,
-          providerToPackageParts = providerToPackageParts
+          providerToPackageParts = providerToPackageParts,
+          overrideDefinitionName = typeRenames.get(pulumiToken)
         )
         (coordinates, (function, function.isOverlay))
       }
@@ -168,8 +184,12 @@ object PulumiPackageInfo {
         enumValueToInstances = enumValueToInstancesBuffer.toMap,
         parsedTypes = parsedTypes,
         parsedResources = parsedResources,
-        parsedFunctions = parseFunctions
-      )(pulumiPackage, providerConfig)
+        parsedFunctions = parseFunctions,
+        pulumiPackage = pulumiPackage,
+        providerConfig = providerConfig,
+        packageType = packageType,
+        typeRenames = typeRenames
+      )
     end process
   end PreProcessed
   private[PulumiPackageInfo] object PreProcessed:
@@ -196,6 +216,15 @@ object PulumiPackageInfo {
 
       val reconciledMetadata = pulumiPackage.toPackageMetadata(packageMetadata)
       val providerConfig     = config.providers(reconciledMetadata.name)
+      val packageType =
+        if config.multiModuleSbtPackages.contains(reconciledMetadata.name) then MultiModuleSbtPackage
+        else if config.singleModuleSbtPackages.contains(reconciledMetadata.name) then SbtPackage
+        else ScalaCliPackage
+
+      val updatedProviderConfig = providerConfig.copy(
+        packageType = packageType
+      )
+
       val overrideModuleToPackages = providerConfig.moduleToPackages.view.mapValues { pkg =>
         pkg.split("\\.").filter(_.nonEmpty).toSeq
       }.toMap
@@ -204,12 +233,20 @@ object PulumiPackageInfo {
       val additionalKubernetesModule =
         Option.when(pulumiPackage.name == "kubernetes")("apiextensions.k8s.io", Seq("apiextensions"))
 
+      val typeRenames = pulumiPackage.typeRenames.map { case (token, renameScalaTypeTo) =>
+        (PulumiToken(token), renameScalaTypeTo)
+      }
+
       PreProcessed(
         name = reconciledMetadata.name,
         version = reconciledMetadata.version.orDefault,
         moduleToPackageParts = moduleToPackageParts(pulumiPackage, overrideModuleToPackages ++ additionalKubernetesModule),
-        providerToPackageParts = providerToPackageParts
-      )(pulumiPackage, providerConfig)
+        providerToPackageParts = providerToPackageParts,
+        pulumiPackage = pulumiPackage,
+        providerConfig = updatedProviderConfig,
+        packageType = packageType,
+        typeRenames = typeRenames
+      )
     }
 
     // to get all of the package parts, first use the regexp provided by the schema

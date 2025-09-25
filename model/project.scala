@@ -1,5 +1,5 @@
 //> using scala 3.3.1
-//> using options -release:11 -deprecation -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
+//> using options -java-output-version:11 -deprecation -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
 
 //> using test.dep org.scalameta::munit::1.0.0
 

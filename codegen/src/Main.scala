@@ -5,21 +5,26 @@ import besom.codegen.{PackageVersion, SchemaFile}
 
 object Main {
   def main(args: Array[String]): Unit = {
-    val result = args.toList match {
+    val (tracing, remainingArgs) = args.toList match {
+      case lst if lst.contains("--trace") => (true, lst.filterNot(_ == "--trace"))
+      case lst                            => (false, lst)
+    }
+
+    val result = remainingArgs match {
       case "named" :: name :: version :: Nil =>
-        given Config = Config()
+        given Config = Config(tracing = tracing)
         generator.generatePackageSources(metadata = PackageMetadata(name, version))
       case "named" :: name :: version :: outputDir :: Nil =>
-        given Config = Config(outputDir = Some(os.rel / outputDir))
+        given Config = Config(outputDir = Some(os.rel / outputDir), tracing = tracing)
         generator.generatePackageSources(metadata = PackageMetadata(name, version))
       case "metadata" :: metadataPath :: Nil =>
-        given Config = Config()
+        given Config = Config(tracing = tracing)
         generator.generatePackageSources(metadata = PackageMetadata.fromJsonFile(os.Path(metadataPath)))
       case "metadata" :: metadataPath :: outputDir :: Nil =>
-        given Config = Config(outputDir = Some(os.rel / outputDir))
+        given Config = Config(outputDir = Some(os.rel / outputDir), tracing = tracing)
         generator.generatePackageSources(metadata = PackageMetadata.fromJsonFile(os.Path(metadataPath)))
       case "schema" :: name :: version :: schemaPath :: Nil =>
-        given Config = Config()
+        given Config = Config(tracing = tracing)
         generator.generatePackageSources(
           metadata = PackageMetadata(name, version),
           schema = Some(os.Path(schemaPath))
@@ -31,7 +36,8 @@ object Main {
           vcs = vcs,
           license = license,
           repository = repository,
-          developers = List(developer)
+          developers = List(developer),
+          tracing = tracing
         )
         generator.generatePackageSources(
           metadata = PackageMetadata(name, version),
@@ -42,10 +48,10 @@ object Main {
           s"""|Unknown arguments: '${args.mkString(" ")}'
               |
               |Usage:
-              |  named <name> <version> [outputDir]               - Generate package from name and version
-              |  metadata <metadataPath> [outputDir]              - Generate package from metadata file
-              |  schema <name> <version> <schemaPath> [outputDir] - Generate package from schema file
-              |  schema <name> <version> <schemaPath> <organization> <url> <vcs> <license> <repository> <developer> [outputDir] - Generate package from schema file
+              |  named <name> <version> [outputDir] [--trace]               - Generate package from name and version
+              |  metadata <metadataPath> [outputDir] [--trace]              - Generate package from metadata file
+              |  schema <name> <version> <schemaPath> [outputDir] [--trace] - Generate package from schema file
+              |  schema <name> <version> <schemaPath> <organization> <url> <vcs> <license> <repository> <developer> [outputDir] [--trace] - Generate package from schema file
               |""".stripMargin
         )
         sys.exit(1)
@@ -162,7 +168,8 @@ object generator {
               os.write(fileDuplicate, sourceFile.sourceCode, createFolders = true)
               val message = s"Duplicate file '${fileDuplicate.relativeTo(os.pwd)}' while, " +
                 s"generating package '${packageInfo.name}:${packageInfo.version}', error: ${e.getMessage}"
-              logger.warn(message)
+
+              throw Exception(message, e)
           }
         }
       sources.size

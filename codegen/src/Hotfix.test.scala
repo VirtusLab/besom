@@ -14,11 +14,11 @@ class HotfixTests extends munit.FunSuite:
     val resourcePath = "compute/instance"
     val resourceName = "VirtualMachine"
 
-    val hotfixDir = Config.DefaultOverlaysDir / "hotfixes" / packageName / version / os.RelPath(resourcePath)
+    val hotfixDir = Config.DefaultOverlaysDir / "hotfixes" / packageName / version / "resources" / os.RelPath(resourcePath)
     os.makeDir.all(hotfixDir)
 
     val hotfixContent =
-      """{"fieldRemovals": [{"name": "urn", "fix": null}, {"name": "name", "fix": null}]}"""
+      """{"fieldRemovals": [{"name": "urn", "fix": null}, {"name": "name", "fix": null}],"typeRename":{"renameScalaTypeTo":"VM"}}"""
     os.write.over(hotfixDir / s"$resourceName.json", hotfixContent)
 
     // Create a test package
@@ -66,6 +66,11 @@ class HotfixTests extends munit.FunSuite:
     // Check required inputs
     assert(!modifiedResource.requiredInputs.contains("name"))
 
+    // Check type renames
+    assert(modifiedPackage.typeRenames.contains(s"$packageName:$resourcePath:$resourceName"))
+    assert(modifiedPackage.typeRenames(s"$packageName:$resourcePath:$resourceName") == "VM")
+    assert(modifiedPackage.typeRenames.size == 1)
+
     // Cleanup
     os.remove.all(Config.DefaultOverlaysDir / "hotfixes" / packageName)
   }
@@ -76,7 +81,7 @@ class HotfixTests extends munit.FunSuite:
     val resourcePath = "compute/instance"
     val resourceName = "VirtualMachine"
 
-    val hotfixDir = Config.DefaultOverlaysDir / "hotfixes" / packageName / version / os.RelPath(resourcePath)
+    val hotfixDir = Config.DefaultOverlaysDir / "hotfixes" / packageName / version / "resources" / os.RelPath(resourcePath)
     os.makeDir.all(hotfixDir)
 
     val hotfixContent = """{"fieldRemovals": [{"name": "urn", "fix": null}]}"""
@@ -124,7 +129,7 @@ class HotfixTests extends munit.FunSuite:
     val resourcePath = "compute/instance"
     val resourceName = "VirtualMachine"
 
-    val hotfixDir = Config.DefaultOverlaysDir / "hotfixes" / packageName / version / os.RelPath(resourcePath)
+    val hotfixDir = Config.DefaultOverlaysDir / "hotfixes" / packageName / version / "resources" / os.RelPath(resourcePath)
     os.makeDir.all(hotfixDir)
 
     val hotfixContent = """{"fieldRemovals": [{"name": "urn", "fix": "just to test logging"}]}"""
@@ -168,6 +173,34 @@ class HotfixTests extends munit.FunSuite:
       val unmodifiedResource = unmodifiedPackage.resources(s"$packageName:$resourcePath:$resourceName")
       assert(unmodifiedResource.properties.contains("urn"))
     }
+
+    // Cleanup
+    os.remove.all(Config.DefaultOverlaysDir / "hotfixes" / packageName)
+  }
+
+  test("Hotfix applies provider method removal hotfixes") {
+    val packageName = "test-provider"
+    val version     = "1.0.0"
+
+    val hotfixDir = Config.DefaultOverlaysDir / "hotfixes" / packageName / version / "provider"
+    os.makeDir.all(hotfixDir)
+
+    val hotfixContent = """{"methodRemovals": [{"name": "create"}]}"""
+    os.write.over(hotfixDir / "provider.json", hotfixContent)
+
+    val testProvider = ResourceDefinition(
+      methods = Map("create" -> "create", "delete" -> "delete")
+    )
+
+    val testPackage = PulumiPackage(
+      name = packageName,
+      provider = testProvider
+    )
+
+    val modifiedPackage = Hotfix.applyToPackage(testPackage, packageName, SemanticVersion(1, 0, 0))
+
+    assert(!modifiedPackage.provider.methods.contains("create"))
+    assert(modifiedPackage.provider.methods.contains("delete"))
 
     // Cleanup
     os.remove.all(Config.DefaultOverlaysDir / "hotfixes" / packageName)

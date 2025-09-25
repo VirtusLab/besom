@@ -6,7 +6,8 @@ case class ScalaDefinitionCoordinates private (
   private val providerPackageParts: Seq[String],
   private val modulePackageParts: Seq[String],
   definitionName: Option[String],
-  selectionName: Option[String]
+  selectionName: Option[String],
+  wireName: Option[String]
 ) {
   import ScalaDefinitionCoordinates.*
 
@@ -77,8 +78,12 @@ case class ScalaDefinitionCoordinates private (
         }
       case Nil => Utils.indexModuleName :: Nil
     }
-    val fileName = definitionName.getOrElse(definitionName.orElse(selectionName).getOrElse("package"))
-    FilePath(Seq("src") ++ moduleParts ++ Seq(s"${fileName}.scala"))
+    val topLevelModule =
+      if providerConfig.packageType == MultiModuleSbtPackage then Seq(moduleParts.head) else Seq.empty
+    val fileName  = definitionName.orElse(selectionName).getOrElse("package")
+    val sourceDir = if providerConfig.packageType.isSbt then Seq("src", "main", "scala") else Seq("src")
+
+    FilePath(topLevelModule ++ sourceDir ++ moduleParts ++ Seq(s"${fileName}.scala"))
   }
 }
 
@@ -90,7 +95,8 @@ object ScalaDefinitionCoordinates {
     providerPackageParts: Seq[String],
     modulePackageParts: Seq[String],
     definitionName: Option[String],
-    selectionName: Option[String] = None
+    selectionName: Option[String] = None,
+    wireName: Option[String] = None
   ): ScalaDefinitionCoordinates = {
     if definitionName.map(_.isBlank).getOrElse(false)
     then throw ScalaDefinitionCoordinatesError(s"Cannot create ScalaDefinitionCoordinates with blank definitionName: $definitionName")
@@ -98,7 +104,8 @@ object ScalaDefinitionCoordinates {
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
       definitionName = definitionName,
-      selectionName = selectionName
+      selectionName = selectionName,
+      wireName = wireName
     )
   }
 }

@@ -4,9 +4,14 @@ case class PulumiDefinitionCoordinates private (
   token: PulumiToken,
   private val providerPackageParts: Seq[String],
   private val modulePackageParts: Seq[String],
-  private val definitionName: String
+  private val definitionName: String,
+  private val wireName: Option[String]
 ) {
   import PulumiDefinitionCoordinates.*
+
+  def topLevelPackage: String = modulePackageParts.headOption.getOrElse {
+    throw new RuntimeException(s"No top level package for $token")
+  }
 
   def className(asArgsType: Boolean)(implicit logger: Logger): String = {
     val classNameSuffix = if (asArgsType) "Args" else ""
@@ -17,7 +22,8 @@ case class PulumiDefinitionCoordinates private (
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
-      definitionName = Some(className(asArgsType))
+      definitionName = Some(className(asArgsType)),
+      wireName = wireName
     )
   }
   def asObjectClass(asArgsType: Boolean)(implicit logger: Logger): ScalaDefinitionCoordinates = {
@@ -26,14 +32,16 @@ case class PulumiDefinitionCoordinates private (
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts :+ packageSuffix,
-      definitionName = Some(className(asArgsType))
+      definitionName = Some(className(asArgsType)),
+      wireName = wireName
     )
   }
   def asEnumClass(implicit logger: Logger): ScalaDefinitionCoordinates = {
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts :+ enumsPackage,
-      definitionName = Some(className(asArgsType = false))
+      definitionName = Some(className(asArgsType = false)),
+      wireName = wireName
     )
   }
 
@@ -53,7 +61,8 @@ case class PulumiDefinitionCoordinates private (
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
       definitionName = methodPrefix,
-      selectionName = Some(mangleMethodName(methodName))
+      selectionName = Some(mangleMethodName(methodName)),
+      wireName = wireName
     )
   }
   def asFunctionArgsClass(using Logger): ScalaDefinitionCoordinates = {
@@ -61,7 +70,8 @@ case class PulumiDefinitionCoordinates private (
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
-      definitionName = Some((methodPrefix.toSeq :+ mangleTypeName(methodName)).mkString("") + "Args")
+      definitionName = Some((methodPrefix.toSeq :+ mangleTypeName(methodName)).mkString("") + "Args"),
+      wireName = wireName
     )
   }
   def asFunctionResultClass(using Logger): ScalaDefinitionCoordinates = {
@@ -69,7 +79,8 @@ case class PulumiDefinitionCoordinates private (
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
-      definitionName = Some((methodPrefix.toSeq :+ mangleTypeName(methodName)).mkString("") + "Result")
+      definitionName = Some((methodPrefix.toSeq :+ mangleTypeName(methodName)).mkString("") + "Result"),
+      wireName = wireName
     )
   }
 
@@ -77,7 +88,8 @@ case class PulumiDefinitionCoordinates private (
     ScalaDefinitionCoordinates(
       providerPackageParts = providerPackageParts,
       modulePackageParts = modulePackageParts,
-      definitionName = Some(mangleTypeName(definitionName))
+      definitionName = Some(mangleTypeName(definitionName)),
+      wireName = wireName
     )
   }
 }
@@ -86,34 +98,41 @@ object PulumiDefinitionCoordinates {
   def fromRawToken(
     typeToken: String,
     moduleToPackageParts: String => Seq[String],
-    providerToPackageParts: String => Seq[String]
-  ): PulumiDefinitionCoordinates = {
+    providerToPackageParts: String => Seq[String],
+    overrideDefinitionName: Option[String] = None
+  )(using Logger): PulumiDefinitionCoordinates = {
     fromToken(
       typeToken = PulumiToken(typeToken),
       moduleToPackageParts = moduleToPackageParts,
-      providerToPackageParts = providerToPackageParts
+      providerToPackageParts = providerToPackageParts,
+      overrideDefinitionName = overrideDefinitionName
     )
   }
 
   def fromToken(
     typeToken: PulumiToken,
     moduleToPackageParts: String => Seq[String],
-    providerToPackageParts: String => Seq[String]
-  ): PulumiDefinitionCoordinates = {
+    providerToPackageParts: String => Seq[String],
+    overrideDefinitionName: Option[String] = None
+  )(using logger: Logger): PulumiDefinitionCoordinates = {
     typeToken match {
       case PulumiToken("pulumi", "providers", providerName) =>
         PulumiDefinitionCoordinates(
           token = typeToken,
           providerPackageParts = providerName :: Nil,
           modulePackageParts = Utils.indexModuleName :: Nil,
-          definitionName = Utils.providerTypeName
+          definitionName = Utils.providerTypeName,
+          wireName = None
         )
       case PulumiToken(providerName, moduleName, definitionName) =>
+        if overrideDefinitionName.isDefined then logger.warn(s"Overriding definition name for $typeToken to ${overrideDefinitionName.get}")
+
         PulumiDefinitionCoordinates(
           token = typeToken,
           providerPackageParts = providerToPackageParts(providerName),
           modulePackageParts = moduleToPackageParts(moduleName),
-          definitionName = definitionName
+          definitionName = overrideDefinitionName.getOrElse(definitionName),
+          wireName = overrideDefinitionName.map(_ => definitionName)
         )
     }
   }
@@ -190,10 +209,11 @@ object PulumiDefinitionCoordinates {
     token: PulumiToken,
     providerPackageParts: Seq[String],
     modulePackageParts: Seq[String],
-    definitionName: String
+    definitionName: String,
+    wireName: Option[String]
   ): PulumiDefinitionCoordinates = {
     if (definitionName.isBlank)
       throw PulumiDefinitionCoordinatesError("Unexpected empty 'definitionName' parameter")
-    new PulumiDefinitionCoordinates(token, providerPackageParts, modulePackageParts, definitionName)
+    new PulumiDefinitionCoordinates(token, providerPackageParts, modulePackageParts, definitionName, wireName)
   }
 }

@@ -1,0 +1,5 @@
+{
+  "typeRename": {
+    "renameScalaTypeTo": "StorageAutoGrowOld"
+  }
+}

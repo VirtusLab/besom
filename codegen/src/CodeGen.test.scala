@@ -98,9 +98,8 @@ class CodeGenTest extends munit.FunSuite {
               |    name: besom.util.NonEmptyString,
               |    args: ProviderArgs = ProviderArgs(),
               |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
-              |  ): besom.types.Output[Provider] = besom.internal.Output.getContext.flatMap { implicit ctx =>
+              |  )(using ctx: besom.internal.Context): besom.types.Output[Provider] =
               |    ctx.readOrRegisterResource[Provider, ProviderArgs]("pulumi:providers:example", name, args, opts(using besom.ResourceOptsVariant.Custom))
-              |  }
               |
               |  private[besom] def typeToken: besom.types.ResourceType = "pulumi:providers:example"
               |
@@ -256,9 +255,8 @@ class CodeGenTest extends munit.FunSuite {
              |    name: besom.util.NonEmptyString,
              |    args: ClusterArgs = ClusterArgs(),
              |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
-             |  ): besom.types.Output[Cluster] = besom.internal.Output.getContext.flatMap { implicit ctx =>
+             |  )(using ctx: besom.internal.Context): besom.types.Output[Cluster] =
              |    ctx.readOrRegisterResource[Cluster, ClusterArgs]("google-native:container/v1:Cluster", name, args, opts(using besom.ResourceOptsVariant.Custom))
-             |  }
              |
              |  private[besom] def typeToken: besom.types.ResourceType = "google-native:container/v1:Cluster"
              |
@@ -446,7 +444,10 @@ class CodeGenTest extends munit.FunSuite {
       ignored = List(
         "src/index/Provider.scala",
         "src/index/ProviderArgs.scala",
-        "src/windowsesu/MultipleActivationKey.scala"
+        "src/windowsesu/MultipleActivationKey.scala",
+        "index/src/main/scala/index/Provider.scala",
+        "index/src/main/scala/index/ProviderArgs.scala",
+        "windowsesu/src/main/scala/windowsesu/MultipleActivationKey.scala"
       ),
       expected = Map(
         "src/windowsesu/enums/SupportType.scala" ->
@@ -534,7 +535,10 @@ class CodeGenTest extends munit.FunSuite {
       ignored = List(
         "src/index/Provider.scala",
         "src/index/ProviderArgs.scala",
-        "src/hybriddata/JobDefinition.scala"
+        "src/hybriddata/JobDefinition.scala",
+        "index/src/main/scala/index/Provider.scala",
+        "index/src/main/scala/index/ProviderArgs.scala",
+        "hybriddata/src/main/scala/hybriddata/JobDefinition.scala"
       ),
       expected = Map(
         "src/hybriddata/enums/UserConfirmation.scala" ->
@@ -928,9 +932,8 @@ class CodeGenTest extends munit.FunSuite {
               |    name: besom.util.NonEmptyString,
               |    args: ProviderArgs,
               |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
-              |  ): besom.types.Output[Provider] = besom.internal.Output.getContext.flatMap { implicit ctx =>
+              |  )(using ctx: besom.internal.Context): besom.types.Output[Provider] =
               |    ctx.readOrRegisterResource[Provider, ProviderArgs]("pulumi:providers:example", name, args, opts(using besom.ResourceOptsVariant.Custom))
-              |  }
               |
               |  private[besom] def typeToken: besom.types.ResourceType = "pulumi:providers:example"
               |
@@ -1113,9 +1116,8 @@ class CodeGenTest extends munit.FunSuite {
              |    name: besom.util.NonEmptyString,
              |    args: MangledArgs = MangledArgs(),
              |    opts: besom.ResourceOptsVariant.Custom ?=> besom.CustomResourceOptions = besom.CustomResourceOptions()
-             |  ): besom.types.Output[Mangled] = besom.internal.Output.getContext.flatMap { implicit ctx =>
+             |  )(using ctx: besom.internal.Context): besom.types.Output[Mangled] =
              |    ctx.readOrRegisterResource[Mangled, MangledArgs]("mangled-provider:index:mangled", name, args, opts(using besom.ResourceOptsVariant.Custom))
-             |  }
              |
              |  private[besom] def typeToken: besom.types.ResourceType = "mangled-provider:index:mangled"
              |

@@ -11,6 +11,7 @@ import besom.codegen.Config
     case "proto"    => Proto.main(args.tail*)
     case "coverage" => Coverage.main(args.tail*)
     case "version"  => Version.main(args.tail*)
+    case "jars"     => JarVersions.main(args.tail.headOption.getOrElse(os.pwd.toString))
     case cmd =>
       println(s"Unknown command: $cmd\n")
       println(
@@ -20,5 +21,6 @@ import besom.codegen.Config
            |  proto    - fetch and compile Pulumi gRPC proto files
            |  coverage - generate test coverage report
            |  version  - bump and update version in project.scala files
+           |  jars     - check that all jars in directory conform to the binary versioning scheme
            |""".stripMargin
       )

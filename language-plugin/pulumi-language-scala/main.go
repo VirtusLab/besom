@@ -63,13 +63,12 @@ func main() {
 	if err != nil {
 		cmdutil.Exit(fmt.Errorf("could not get the path of the executable: %w", err))
 	}
-	bootstrapLibJarPath := filepath.Join(filepath.Dir(execPath), "bootstrap.jar") // TODO: hardocoded jar name
 
 	scalaExecOptions := executors.ScalaExecutorOptions{
 		Binary:              binary,
 		UseExecutor:         useExecutor,
 		WD:                  fsys.DirFS(wd),
-		BootstrapLibJarPath: bootstrapLibJarPath,
+		LanguagePluginHomeDir: filepath.Dir(execPath),
 	}
 
 	// Optionally pluck out the engine, so we can do logging, etc.
@@ -138,6 +137,11 @@ func newLanguageHost(execOptions executors.ScalaExecutorOptions,
 func (host *scalaLanguageHost) Executor() (*executors.ScalaExecutor, error) {
 	if host.currentExecutor == nil {
 		executor, err := executors.NewScalaExecutor(host.execOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		err = executor.SetupProject()
 		if err != nil {
 			return nil, err
 		}
@@ -461,10 +465,10 @@ func (host *scalaLanguageHost) About(ctx context.Context, _ *emptypb.Empty) (*pu
 	}
 
 	javaExec, err := executors.NewScalaExecutor(executors.ScalaExecutorOptions{
-		UseExecutor:         "jar",
-		WD:                  host.execOptions.WD,
-		BootstrapLibJarPath: host.execOptions.BootstrapLibJarPath,
-		Binary:              host.execOptions.Binary,
+		UseExecutor:           "jar",
+		WD:                    host.execOptions.WD,
+		LanguagePluginHomeDir: host.execOptions.LanguagePluginHomeDir,
+		Binary:                host.execOptions.Binary,
 	})
 	if err != nil {
 		return nil, err

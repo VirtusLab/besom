@@ -176,7 +176,7 @@ pulumi --logtostderr plugin install language scala $(cat version.txt) --server g
 To use development version of the Besom SDKs add repository in your `project.scala`:
 
 ```scala
-//> using repository sonatype:snapshots
+//> using repository snapshots
 ```
 
 or use a command line option:

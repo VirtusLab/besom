@@ -5,6 +5,7 @@
 
 //> using dep "org.virtuslab::besom-json:0.5.0-SNAPSHOT"
 //> using dep "org.virtuslab::besom-rpc:0.5.0-SNAPSHOT"
+//> using dep "org.virtuslab::besom-model:0.5.0-SNAPSHOT"
 
 //> using dep "com.google.protobuf:protobuf-java-util:3.25.1"
 //> using dep "io.grpc:grpc-netty:1.64.0"
@@ -29,4 +30,4 @@
 //> using publish.developer "prolativ|Michał Pałka|https://github.com/prolativ"
 //> using publish.developer "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban"
 //> using publish.developer "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
-//> using repository sonatype:snapshots
+//> using repository snapshots

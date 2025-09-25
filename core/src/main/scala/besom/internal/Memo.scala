@@ -1,6 +1,7 @@
 package besom.internal
 
 import java.util.concurrent.ConcurrentHashMap
+import besom.types.URN
 
 /** A memoization utility that caches the results of a side-effecting computation based on the type and name of the resource for which said
   * computation is being performed. This is necessary in order to prevent runtime crashes caused by multiple evaluations of resource
@@ -29,10 +30,10 @@ import java.util.concurrent.ConcurrentHashMap
   * @param chm
   *   ConcurrentHashMap using tuple of type and name as a key and Promise as a value.
   */
-class Memo(private val chm: ConcurrentHashMap[(String, String), Promise[?]]):
-  def memoize[A](typ: String, name: String, effect: Result[A]): Result[A] =
+class Memo(private val chm: ConcurrentHashMap[(String, String, Option[URN]), Promise[?]]):
+  def memoize[A](typ: String, name: String, parentURN: Option[URN], effect: Result[A]): Result[A] =
     Promise[A]().flatMap { promise =>
-      val existing = chm.putIfAbsent((typ, name), promise)
+      val existing = chm.putIfAbsent((typ, name, parentURN), promise)
       if existing == null then
         effect
           .flatMap(promise.fulfill)
@@ -43,7 +44,7 @@ class Memo(private val chm: ConcurrentHashMap[(String, String), Promise[?]]):
 
 object Memo:
   def apply(): Result[Memo] = Result.defer {
-    val chm = ConcurrentHashMap[(String, String), Promise[?]]()
+    val chm = ConcurrentHashMap[(String, String, Option[URN]), Promise[?]]()
 
     new Memo(chm)
   }

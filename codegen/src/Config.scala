@@ -18,7 +18,11 @@ case class Config(
   vcs: String = Config.DefaultVcs,
   license: String = Config.DefaultLicense,
   repository: String = Config.DefaultRepository,
-  developers: List[String] = Config.DefaultDevelopersList
+  developers: List[String] = Config.DefaultDevelopersList,
+  packageType: PackageType = ScalaCliPackage,
+  multiModuleSbtPackages: Set[String] = Config.MultiModuleSbtPackages,
+  singleModuleSbtPackages: Set[String] = Config.SingleModuleSbtBasedPackages,
+  tracing: Boolean = false
 ):
   val coreShortVersion: String = SemanticVersion
     .parseTolerant(besomVersion)
@@ -30,10 +34,15 @@ end Config
 
 // noinspection ScalaWeakerAccess
 object Config {
+  val MaxParallelism: Int = Runtime.getRuntime().availableProcessors()
+
+  val SingleModuleSbtBasedPackages: Set[String] = Set()
+  val MultiModuleSbtPackages: Set[String]       = Set()
+  val LowerFidelitySchemas: Set[String]         = Set("azure-native")
 
   val DefaultJavaVersion       = "23"
   val DefaultJavaTargetVersion = "11"
-  val DefaultScalaVersion      = "3.3.5"
+  val DefaultScalaVersion      = "3.3.6"
 
   val DefaultBesomVersion: String = {
     try {
@@ -58,7 +67,8 @@ object Config {
 
   case class Provider(
     nonCompiledModules: Seq[String] = Seq.empty,
-    moduleToPackages: Map[String, String] = Map.empty
+    moduleToPackages: Map[String, String] = Map.empty,
+    packageType: PackageType = ScalaCliPackage
   )
 
   val DefaultProvidersConfigs: Map[String, Provider] = Map().withDefault(_ => Config.Provider())

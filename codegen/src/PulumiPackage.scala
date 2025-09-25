@@ -47,7 +47,9 @@ case class PulumiPackage(
   provider: ResourceDefinition = ResourceDefinition(),
   resources: Map[String, ResourceDefinition] = Map.empty,
   functions: Map[String, FunctionDefinition] = Map.empty,
-  language: Language = Language()
+  language: Language = Language(),
+  // these fields are not part of the Pulumi package schema, but are used to modify the generated code
+  typeRenames: Map[String, String] = Map.empty
 )
 object PulumiPackage {
   implicit val reader: Reader[PulumiPackage] = macroR
@@ -97,7 +99,10 @@ object PulumiPackage {
             e
           )
         case e: ujson.IncompleteParseException =>
-          throw GeneralCodegenException(s"Cannot parse Pulumi package JSON schema, it appears incomplete or corrupted: ${e.getMessage}", e)
+          throw GeneralCodegenException(
+            s"Cannot parse Pulumi package JSON schema, it appears incomplete or corrupted: ${e.getMessage}\n...\n${input.takeRight(100)}",
+            e
+          )
         case e: Throwable =>
           throw GeneralCodegenException(s"Unexpected error while parsing Pulumi package JSON schema: ${e.getMessage}", e)
       }

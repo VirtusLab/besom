@@ -1,5 +1,5 @@
 //> using scala 3.3.1
-//> using options -java-output-version:11
+//> using options -java-output-version:21
 
 //> using dep com.lihaoyi::os-lib:0.9.3
 //> using dep com.lihaoyi::requests:0.8.0
@@ -11,6 +11,7 @@
 //> using dep org.virtuslab::scala-yaml:0.3.0
 //> using dep io.get-coursier:coursier_2.13:2.1.9
 //> using dep org.virtuslab::besom-codegen:0.5.0-SNAPSHOT
+//> using dep com.softwaremill.ox::core:1.0.0
 //> using test.dep org.scalameta::munit::1.0.0-M10
 
 //> using publish.name "besom-scripts"
@@ -24,4 +25,4 @@
 //> using publish.developer "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban"
 //> using publish.developer "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
 
-//> using repository sonatype:snapshots
+//> using repository snapshots

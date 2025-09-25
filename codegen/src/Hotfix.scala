@@ -5,25 +5,45 @@ import besom.codegen.metaschema.PulumiPackage
 import besom.model.SemanticVersion
 
 case class FieldRemoval(name: String, fix: Option[String])
+case class TypeRename(renameScalaTypeTo: String)
+case class FunctionRemoval(name: String)
+case class MethodRemoval(name: String)
 
-case class HotfixDefinition(
-  fieldRemovals: List[FieldRemoval]
+case class ResourceHotfixDefinition(
+  fieldRemovals: List[FieldRemoval] = List.empty,
+  typeRename: Option[TypeRename] = None
 )
 
-object HotfixDefinition:
-  implicit val readerRemoval: Reader[FieldRemoval] = macroR
-  implicit val reader: Reader[HotfixDefinition]    = macroR
+case class ProviderHotfixDefinition(
+  fieldRemovals: List[FieldRemoval] = List.empty,
+  methodRemovals: List[MethodRemoval] = List.empty
+)
+
+case class FunctionHotfixDefinition(
+  functionRemovals: List[FunctionRemoval] = List.empty
+)
+
+case class PackageHotfixes(
+  resourceHotfixes: Map[String, Map[String, ResourceHotfixDefinition]], // Map of module path -> resource name -> hotfix definition
+  providerHotfixes: Option[ProviderHotfixDefinition],
+  functionsHotfixes: Option[FunctionHotfixDefinition]
+)
 
 object Hotfix:
+  implicit val readerFieldRemoval: Reader[FieldRemoval]                         = macroR
+  implicit val readerTypeRename: Reader[TypeRename]                             = macroR
+  implicit val readerResourceHotfixDefinition: Reader[ResourceHotfixDefinition] = macroR
+  implicit val readerProviderHotfixDefinition: Reader[ProviderHotfixDefinition] = macroR
+  implicit val readerFunctionHotfixDefinition: Reader[FunctionHotfixDefinition] = macroR
+  implicit val readerFunctionRemoval: Reader[FunctionRemoval]                   = macroR
+  implicit val readerMethodRemoval: Reader[MethodRemoval]                       = macroR
+
   private val hotfixesDir = "hotfixes"
 
-  def findMatchingHotfix(
-    packageName: String,
+  private def loadPackageHotfixes(
     version: SemanticVersion,
-    resourcePath: String,
-    resourceName: String
-  )(using config: Config, logger: Logger): Option[HotfixDefinition] =
-    val hotfixesPath = config.overlaysDir / hotfixesDir / packageName
+    hotfixesPath: os.Path
+  ): Option[PackageHotfixes] =
     if !os.exists(hotfixesPath) then None
     else
       // List all version range directories and find matching one
@@ -32,19 +52,41 @@ object Hotfix:
         VersionRange.parse(versionRange) match
           case Right(range) => range.matches(version)
           case Left(error) =>
-            logger.warn(s"Invalid version range format in directory: $versionRange")
-            false
+            throw GeneralCodegenException(s"Invalid version range format in directory $dir: '$versionRange'", error)
       }
 
-      matchingVersionDir.flatMap { dir =>
-        val hotfixPath = dir / os.RelPath(resourcePath) / s"$resourceName.json"
-        if !os.exists(hotfixPath) then None
-        else
-          try Some(read[HotfixDefinition](ujson.read(os.read(hotfixPath))))
+      matchingVersionDir.map { dir =>
+        val resourcesDirForPackage = dir / "resources"
+        val providerDirForPackage  = dir / "provider"
+
+        // Recursively find all JSON files in the resources directory
+        val resourceHotfixFiles =
+          if os.exists(resourcesDirForPackage) then os.walk(resourcesDirForPackage).filter(_.ext == "json") else IndexedSeq.empty
+
+        // Group hotfixes by module path and resource name
+        val resourceHotfixMap = resourceHotfixFiles.foldLeft(Map.empty[String, Map[String, ResourceHotfixDefinition]]) { (acc, file) =>
+          try
+            val relativePath = file.relativeTo(resourcesDirForPackage)
+            val modulePath   = relativePath / os.up
+            val resourceName = file.baseName
+            val hotfix       = read[ResourceHotfixDefinition](ujson.read(os.read(file)))
+
+            val moduleMap = acc.getOrElse(modulePath.toString, Map.empty)
+            acc + (modulePath.toString -> (moduleMap + (resourceName -> hotfix)))
           catch
             case e: Exception =>
-              logger.warn(s"Failed to parse hotfix file: $hotfixPath: ${e.getMessage}")
-              None
+              throw GeneralCodegenException(s"Failed to parse hotfix file: $file: ${e.getMessage}")
+        }
+
+        val providerHotfixes =
+          if os.exists(providerDirForPackage / "provider.json") then
+            try Some(read[ProviderHotfixDefinition](ujson.read(os.read(providerDirForPackage / "provider.json"))))
+            catch
+              case e: Exception =>
+                throw GeneralCodegenException(s"Failed to parse hotfix file: ${providerDirForPackage / "provider.json"}: ${e.getMessage}")
+          else None
+
+        PackageHotfixes(resourceHotfixMap, providerHotfixes, None)
       }
 
   def applyToPackage(
@@ -52,42 +94,78 @@ object Hotfix:
     packageName: String,
     version: SemanticVersion
   )(using config: Config, logger: Logger): PulumiPackage =
-    val modifiedResources = pulumiPackage.resources.map { case (tokenStr, resourceDef) =>
-      try
-        val token = PulumiToken(tokenStr)
-        findMatchingHotfix(packageName, version, token.module, token.name) match
-          case Some(hotfix) =>
-            hotfix.fieldRemovals.foreach { fieldRemoval =>
-              val fix = fieldRemoval.fix.getOrElse("no")
-              logger.warn(
-                s"Removing field ${fieldRemoval.name} from resource ${token.name} ($tokenStr) in package $packageName:$version, fix in progress: $fix"
-              )
-            }
-            val withoutRemovedProperties = resourceDef.properties.filterNot { case (name, _) =>
-              hotfix.fieldRemovals.exists(_.name == name)
-            }
-            val withoutRemovedInputProperties = resourceDef.inputProperties.filterNot { case (name, _) =>
-              hotfix.fieldRemovals.exists(_.name == name)
-            }
-            val withoutRemovedRequired       = resourceDef.required.filterNot(name => hotfix.fieldRemovals.exists(_.name == name))
-            val withoutRemovedRequiredInputs = resourceDef.requiredInputs.filterNot(name => hotfix.fieldRemovals.exists(_.name == name))
+    val hotfixesPath = config.overlaysDir / hotfixesDir / packageName
+    loadPackageHotfixes(version, hotfixesPath) match
+      case Some(packageHotfixes) =>
+        // Apply hotfixes only to resources that have them
+        val updatedResources = packageHotfixes.resourceHotfixes.foldLeft(pulumiPackage.resources) { (resources, moduleEntry) =>
+          val (modulePath, moduleHotfixes) = moduleEntry
+          moduleHotfixes.foldLeft(resources) { (resources, resourceEntry) =>
+            val (resourceName, hotfix) = resourceEntry
+            val tokenStr               = s"$packageName:$modulePath:$resourceName"
 
-            (
-              tokenStr,
-              resourceDef.copy(
-                properties = withoutRemovedProperties,
-                inputProperties = withoutRemovedInputProperties,
-                required = withoutRemovedRequired,
-                requiredInputs = withoutRemovedRequiredInputs
-              )
-            )
-          case None => (tokenStr, resourceDef)
-      catch
-        case e: Exception =>
-          logger.warn(s"Failed to parse token: $tokenStr: ${e.getMessage}")
-          (tokenStr, resourceDef)
-    }
+            resources.get(tokenStr) match
+              case Some(resourceDef) =>
+                hotfix.fieldRemovals.foreach { fieldRemoval =>
+                  val fix = fieldRemoval.fix.getOrElse("no")
+                  logger.warn(
+                    s"Removing field ${fieldRemoval.name} from resource ${resourceName} ($tokenStr) in package $packageName:$version, fix in progress: $fix"
+                  )
+                }
 
-    pulumiPackage.copy(resources = modifiedResources)
+                val withoutRemovedProperties = resourceDef.properties.filterNot { case (name, _) =>
+                  hotfix.fieldRemovals.exists(_.name == name)
+                }
+                val withoutRemovedInputProperties = resourceDef.inputProperties.filterNot { case (name, _) =>
+                  hotfix.fieldRemovals.exists(_.name == name)
+                }
+                val withoutRemovedRequired       = resourceDef.required.filterNot(name => hotfix.fieldRemovals.exists(_.name == name))
+                val withoutRemovedRequiredInputs = resourceDef.requiredInputs.filterNot(name => hotfix.fieldRemovals.exists(_.name == name))
+
+                resources + (tokenStr -> resourceDef.copy(
+                  properties = withoutRemovedProperties,
+                  inputProperties = withoutRemovedInputProperties,
+                  required = withoutRemovedRequired,
+                  requiredInputs = withoutRemovedRequiredInputs
+                ))
+
+              case None =>
+                logger.warn(s"Resource $tokenStr not found in package, skipping hotfix")
+                resources
+          }
+        }
+
+        val typeRenames = packageHotfixes.resourceHotfixes.flatMap { case (modulePath, moduleHotfixes) =>
+          moduleHotfixes.flatMap { case (resourceName, hotfix) =>
+            hotfix.typeRename.map { case TypeRename(renameScalaTypeTo) =>
+              (s"$packageName:$modulePath:$resourceName", renameScalaTypeTo)
+            }
+          }
+        }
+
+        val updatedProvider = packageHotfixes.providerHotfixes.foldLeft(pulumiPackage.provider) { (provider, hotfix) =>
+          val withoutRemovedMethods = hotfix.methodRemovals.foldLeft(provider) { case (provider, methodRemoval) =>
+            logger.warn(s"Removing method ${methodRemoval.name} from provider $packageName:$version, fix in progress: $methodRemoval")
+            provider.copy(methods = provider.methods.filterNot { case (name, v) => name == methodRemoval.name })
+          }
+
+          val withoutRemovedFields = hotfix.fieldRemovals.foldLeft(withoutRemovedMethods) { case (provider, fieldRemoval) =>
+            provider.copy(properties = provider.properties.filterNot { case (name, v) => name == fieldRemoval.name })
+          }
+
+          withoutRemovedFields
+        }
+
+        pulumiPackage.copy(
+          resources = updatedResources,
+          typeRenames = typeRenames,
+          provider = updatedProvider
+        )
+
+      case None =>
+        logger.debug(s"No hotfixes found for $packageName:$version")
+        pulumiPackage
+
+    end match
   end applyToPackage
 end Hotfix

@@ -64,6 +64,28 @@ object DummyContext:
     configSecretKeys: Set[NonEmptyString] = Set.empty,
     resources: Resources | Result[Resources] = Resources(),
     stackURN: URN = URN.empty
+  ): Result[Context] = mockContext(
+    runInfo,
+    featureSupport,
+    monitor,
+    engine,
+    configMap,
+    configSecretKeys,
+    resources,
+    stackURN
+  )(Context.create)
+
+  def mockContext(
+    runInfo: RunInfo = dummyRunInfo,
+    featureSupport: FeatureSupport = dummyFeatureSupport,
+    monitor: Monitor = dummyMonitor,
+    engine: Engine = dummyEngine,
+    configMap: Map[NonEmptyString, String] = Map.empty,
+    configSecretKeys: Set[NonEmptyString] = Set.empty,
+    resources: Resources | Result[Resources] = Resources(),
+    stackURN: URN = URN.empty
+  )(
+    f: (RunInfo, FeatureSupport, Config, BesomLogger, Monitor, Engine, TaskTracker, Resources, Memo, Promise[StackResource]) => Context
   ): Result[Context] =
     for
       taskTracker  <- TaskTracker()
@@ -74,7 +96,18 @@ object DummyContext:
         case r: Resources         => Result.pure(r)
         case r: Result[Resources] => r
       memo <- Memo()
-      given Context = Context.create(runInfo, featureSupport, config, logger, monitor, engine, taskTracker, resources, memo, stackPromise)
+      given Context = f(
+        runInfo,
+        featureSupport,
+        config,
+        logger,
+        monitor,
+        engine,
+        taskTracker,
+        resources,
+        memo,
+        stackPromise
+      )
       _ <- stackPromise.fulfill(StackResource()(using ComponentBase(Output.pure(stackURN))))
     yield summon[Context]
 

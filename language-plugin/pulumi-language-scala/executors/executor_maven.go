@@ -5,7 +5,6 @@ package executors
 import (
 	"strings"
 
-	"github.com/pulumi/pulumi/sdk/v3/go/common/util/logging"
 	"github.com/virtuslab/besom/language-host/fsys"
 )
 
@@ -29,26 +28,13 @@ func (m maven) NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, erro
 	if err != nil {
 		return nil, err
 	}
+	bootstrapLibJarPath := ResolveBootstrapLibJarPath(opts.LanguagePluginHomeDir)
 	pluginDiscovererOutputPath := PluginDiscovererOutputFilePath(opts.WD)
-	executor, err := m.newMavenExecutor(cmd, opts.BootstrapLibJarPath, pluginDiscovererOutputPath)
+	executor, err := m.newMavenExecutor(cmd, bootstrapLibJarPath, pluginDiscovererOutputPath)
 	if err != nil {
 		return nil, err
 	}
 
-	logging.V(3).Infof(`Detected Maven executor:
-            Cmd:        %s
-            Dir:        %s
-            RunArgs:    %s
-            PluginArgs: %s
-            BuildArgs:  %s
-            VersionArgs %s`,
-		executor.Cmd,
-		executor.Dir,
-		strings.Join(executor.RunArgs, " "),
-		strings.Join(executor.PluginArgs, " "),
-		strings.Join(executor.BuildArgs, " "),
-		strings.Join(executor.VersionArgs, " "),
-	)
 	return executor, err
 }
 
@@ -83,5 +69,6 @@ func (maven) newMavenExecutor(cmd string, bootstrapLibJarPath string, pluginDisc
 			"-DaddArgs=--output-file|" + pluginDiscovererOutputPath,
 		},
 		VersionArgs: []string{"--version"},
+		SetupProject: func() error { return nil }, // NOOP
 	}, nil
 }

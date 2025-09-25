@@ -104,4 +104,20 @@ class VersionRangeTests extends munit.FunSuite:
       }
     )
   }
+
+  test("VersionRange.parse parses from version") {
+    val result = VersionRange.parse("^1.0.0")
+    assert(result.isRight)
+    result.foreach {
+      case fv @ FromVersion(version) =>
+        assertEquals(version, SemanticVersion(1, 0, 0))
+        assert(fv.matches(SemanticVersion(1, 0, 0)))
+        assert(fv.matches(SemanticVersion(1, 0, 1)))
+        assert(!fv.matches(SemanticVersion(0, 0, 0)))
+        assert(!fv.matches(SemanticVersion(0, 9, 0)))
+        assert(fv.matches(SemanticVersion(2, 0, 0)))
+        assert(fv.matches(SemanticVersion(1, 1, 0)))
+      case _ => fail("Expected FromVersion")
+    }
+  }
 end VersionRangeTests

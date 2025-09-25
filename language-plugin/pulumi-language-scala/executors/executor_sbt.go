@@ -5,6 +5,9 @@ package executors
 import (
 	"fmt"
 	"os"
+	"io"
+	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/virtuslab/besom/language-host/fsys"
@@ -30,8 +33,7 @@ func (s sbt) NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, error)
 	if err != nil {
 		return nil, err
 	}
-	pluginDiscovererOutputPath := PluginDiscovererOutputFilePath(opts.WD)
-	return s.newSbtExecutor(cmd, opts.BootstrapLibJarPath, pluginDiscovererOutputPath)
+	return s.newSbtExecutor(cmd, opts.WD, opts.LanguagePluginHomeDir)
 }
 
 func (sbt) isSbtProject(opts ScalaExecutorOptions) (bool, error) {
@@ -54,33 +56,26 @@ func (sbt) isSbtProject(opts ScalaExecutorOptions) (bool, error) {
 	return false, nil
 }
 
-func (sbt) newSbtExecutor(cmd string, bootstrapLibJarPath string, pluginDiscovererOutputPath string) (*ScalaExecutor, error) {
+func (sbt) newSbtExecutor(cmd string, projectRoot fsys.ParentFS, languagePluginHomeDir string) (*ScalaExecutor, error) {
 	sbtModule := os.Getenv("BESOM_SBT_MODULE")
+	sbtBesomPluginPath := SbtBesomPluginPath(languagePluginHomeDir)
+	sbtBesomPluginTargetPath := path.Join(projectRoot.Path(), "project", "BesomPlugin.scala")
+	bootstrapLibJarPath := ResolveBootstrapLibJarPath(languagePluginHomeDir)
+	pluginDiscovererOutputPath := PluginDiscovererOutputFilePath(projectRoot)
 
 	se := &ScalaExecutor{
 		Name:        "sbt",
 		Cmd:         cmd,
 		RunArgs:     makeArgs(sbtModule, "run"),
 		BuildArgs:   makeArgs(sbtModule, "compile"),
-		PluginArgs:  []string{"-batch", makePluginsSbtCommandParts(sbtModule, bootstrapLibJarPath, pluginDiscovererOutputPath)},
+		PluginArgs:  makeArgs(sbtModule, fmt.Sprintf(`besomExtractPulumiPlugins %s %s`, bootstrapLibJarPath, pluginDiscovererOutputPath)),
 		VersionArgs: []string{"--numeric-version"},
+		SetupProject: func() error {
+			return copyFileIfNotPresent(sbtBesomPluginPath, sbtBesomPluginTargetPath)
+		},
 	}
 
 	return se, nil
-}
-
-func makePluginsSbtCommandParts(sbtModule string, bootstrapLibJarPath string, pluginDiscovererOutputPath string) string {
-	if sbtModule != "" {
-		sbtModule = sbtModule + " / "
-	}
-
-	pluginsSbtCommandParts := []string{
-		fmt.Sprintf(`; set %sCompile / unmanagedJars += Attributed.blank(file("%s"))`, sbtModule, bootstrapLibJarPath),
-		fmt.Sprintf(`; %srunMain besom.bootstrap.PulumiPluginsDiscoverer --output-file %s`, sbtModule, pluginDiscovererOutputPath),
-	}
-	pluginsSbtCommand := strings.Join(pluginsSbtCommandParts, " ")
-
-	return pluginsSbtCommand
 }
 
 func makeArgs(sbtModule string, cmd string) []string {
@@ -88,4 +83,60 @@ func makeArgs(sbtModule string, cmd string) []string {
 		return []string{"-batch", fmt.Sprintf("%s/%s", sbtModule, cmd)}
 	}
 	return []string{"-batch", cmd}
+}
+
+
+// copyFileIfNotPresent copies a file from src to dest only if dest does not already exist.
+// It uses io.Copy and preserves the source file's permissions.
+// It also creates parent directories for destPath if they do not exist.
+func copyFileIfNotPresent(srcPath, destPath string) error {
+    // Check if destination file exists
+    if _, err := os.Stat(destPath); err == nil {
+        // File already exists
+        return nil
+    } else if !os.IsNotExist(err) {
+        // Some other error occurred when checking
+        return fmt.Errorf("error checking destination file: %w", err)
+    }
+
+    // Ensure parent directories exist
+    destDir := filepath.Dir(destPath)
+    if err := os.MkdirAll(destDir, 0755); err != nil {
+        return fmt.Errorf("failed to create parent directories: %w", err)
+    }
+
+    // Open source file
+    srcFile, err := os.Open(srcPath)
+    if err != nil {
+        return fmt.Errorf("failed to open source file: %w", err)
+    }
+    defer srcFile.Close()
+
+    // Create destination file
+    destFile, err := os.Create(destPath)
+    if err != nil {
+        return fmt.Errorf("failed to create destination file: %w", err)
+    }
+    defer func() {
+        cerr := destFile.Close()
+        if err == nil {
+            err = cerr
+        }
+    }()
+
+    // Copy contents
+    if _, err := io.Copy(destFile, srcFile); err != nil {
+        return fmt.Errorf("failed to copy file contents: %w", err)
+    }
+
+    // Copy file permissions
+    srcInfo, err := os.Stat(srcPath)
+    if err != nil {
+        return fmt.Errorf("failed to get source file info: %w", err)
+    }
+    if err := os.Chmod(destPath, srcInfo.Mode()); err != nil {
+        return fmt.Errorf("failed to set destination file permissions: %w", err)
+    }
+
+    return nil
 }

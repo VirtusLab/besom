@@ -14,14 +14,13 @@ class ContextPropagationTest extends munit.FunSuite:
   case class TestResource(urn: Output[URN], id: Output[ResourceId], url: Output[String]) extends CustomResource derives ResourceDecoder
   object TestResource extends ResourceCompanion[TestResource, EmptyArgs]:
     val typeToken: ResourceType = ResourceType.unsafeOf("test:resource:TestResource")
-    def apply(name: NonEmptyString): Output[TestResource] = Output.getContext.flatMap { implicit ctx =>
+    def apply(name: NonEmptyString)(using ctx: Context): Output[TestResource] =
       ctx.readOrRegisterResource[TestResource, EmptyArgs](
         typeToken,
         name,
         EmptyArgs(),
         CustomResourceOptions()
       )
-    }
 
   case class TestComponentResource(url: Output[String])(using ComponentBase) extends ComponentResource
   object TestComponentResource extends ResourceCompanion[TestComponentResource, EmptyArgs]:
@@ -41,7 +40,7 @@ class ContextPropagationTest extends munit.FunSuite:
         RegisterResourceResponse(urn = resourceUrn.asString, `object` = Some(obj), id = "test-id")
       }
 
-    val ctx: Context = DummyContext(monitor = spyMonitor, stackURN = stackUrn).unsafeRunSync()
+    given ctx: Context = DummyContext(monitor = spyMonitor, stackURN = stackUrn).unsafeRunSync()
 
     val resource = TestResource("test-resource").unsafeRunSync()(using ctx)
 
@@ -95,7 +94,7 @@ class ContextPropagationTest extends munit.FunSuite:
       override def registerResourceOutputs(registerResourceOutputsRequest: RegisterResourceOutputsRequest): Result[Unit] =
         Result.pure(())
 
-    val ctx: Context = DummyContext(monitor = spyMonitor, stackURN = stackUrn).unsafeRunSync()
+    given ctx: Context = DummyContext(monitor = spyMonitor, stackURN = stackUrn).unsafeRunSync()
 
     val comp = besom
       .component("test-component", TestComponentResource.typeToken, ComponentResourceOptions()) {
@@ -118,4 +117,49 @@ class ContextPropagationTest extends munit.FunSuite:
           case None => fail("Expected component urn to be defined")
   }
 
+  test("context propagation - context is not infective outside of scope of the component") {
+    val stackUrn = URN(
+      "urn:pulumi:stack::project::stack:Stack$besom:testing/test:Stack::test-stack"
+    )
+    val componentUrn = URN("urn:pulumi:stack::project::custom:components:Component$besom:testing/test:Component::test-component")
+
+    val resourceUrn = URN("urn:pulumi:stack::project::custom:resources:Resource$besom:testing/test:Resource::test-resource")
+
+    val spyMonitor = new DummyContext.DummyMonitor:
+      override def registerResourceOutputs(registerResourceOutputsRequest: RegisterResourceOutputsRequest): Result[Unit] =
+        Result.unit
+      override def registerResource(registerResourceRequest: RegisterResourceRequest): Result[RegisterResourceResponse] = Result.defer {
+        registerResourceRequest.`type` -> registerResourceRequest.name match
+          case (TestComponentResource.typeToken, "test-component") =>
+            assert(registerResourceRequest.parent == stackUrn.asString)
+
+            val obj: Struct = Map.empty[String, Value].asStruct
+
+            RegisterResourceResponse(urn = componentUrn.asString, `object` = Some(obj))
+          case (TestResource.typeToken, "test-resource") =>
+            assert(registerResourceRequest.parent == stackUrn.asString)
+
+            val obj: Struct = Map("url" -> "https://test.com".asValue).asStruct
+
+            RegisterResourceResponse(urn = resourceUrn.asString, `object` = Some(obj), id = "test-id")
+
+          case _ =>
+            fail("Unexpected resource type")
+      }
+
+    given ctx: Context = DummyContext(monitor = spyMonitor, stackURN = stackUrn).unsafeRunSync()
+
+    // start program tree
+    val resource = TestResource("test-resource")
+
+    val comp = besom
+      .component("test-component", TestComponentResource.typeToken, ComponentResourceOptions()) {
+        TestComponentResource(resource.flatMap(_.url))
+      }
+
+    val stack = besom.types.Stack(comp)
+    // end program tree
+
+    stack.evaluateDependencies.unsafeRunSync()
+  }
 end ContextPropagationTest

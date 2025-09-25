@@ -21,8 +21,9 @@ func (s scalacli) NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, e
 	if err != nil {
 		return nil, err
 	}
+	bootstrapLibJarPath := ResolveBootstrapLibJarPath(opts.LanguagePluginHomeDir)
 	pluginDiscovererOutputPath := PluginDiscovererOutputFilePath(opts.WD)
-	return s.newScalaCliExecutor(cmd, opts.BootstrapLibJarPath, pluginDiscovererOutputPath)
+	return s.newScalaCliExecutor(cmd, bootstrapLibJarPath, pluginDiscovererOutputPath)
 }
 
 func (scalacli) newScalaCliExecutor(cmd string, bootstrapLibJarPath string, pluginDiscovererOutputPath string) (*ScalaExecutor, error) {
@@ -34,5 +35,6 @@ func (scalacli) newScalaCliExecutor(cmd string, bootstrapLibJarPath string, plug
 		RunArgs:     []string{"run", ".", scalaCliOpts},
 		PluginArgs:  []string{"run", ".", scalaCliOpts, "--jar", bootstrapLibJarPath, "--main-class", "besom.bootstrap.PulumiPluginsDiscoverer", "--", "--output-file", pluginDiscovererOutputPath},
 		VersionArgs: []string{"version", "--cli", "--offline"},
+		SetupProject: func() error { return nil }, // NOOP
 	}, nil
 }

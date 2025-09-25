@@ -1,9 +1,11 @@
 # Big idea behind using a Justfile is so that we can have modules like in sbt.
 
 besom-version := `cat version.txt`
+besom-short-version := `version=$(cat version.txt) && if [[ $version == *"-SNAPSHOT" ]]; then echo "${version%.*}-SNAPSHOT"; else echo "${version%.*}"; fi`
 is-snapshot := if "{{besom-version}}" =~ '.*-SNAPSHOT' { "true" } else { "false" }
 no-bloop := if env_var_or_default('BESOM_BUILD_NO_BLOOP', "") == "true" { "--server=false" } else { "" }
 
+language-plugin-resources-dir := justfile_directory() + "/language-plugin/resources"
 language-plugin-output-dir := justfile_directory() + "/.out/language-plugin"
 codegen-output-dir := justfile_directory() + "/.out/codegen"
 schemas-output-dir := justfile_directory() + "/.out/schemas"
@@ -38,9 +40,11 @@ default:
 
 # TODO aggregate tasks do not incorporate besom-cfg module (with the exception of clean-all)
 
-# TODO make this version-independent and SNAPSHOT-independent by computing short-version from version.txt
+find-packages-for-templates-and-examples:
+  find examples templates -name '*.scala' -exec grep -h "{{besom-short-version}}" {} + | sed -n 's/.*besom-\([^:]*:[^"]*\).*-core.{{besom-short-version}}.*/\1/p' | sort -u | tr '\n' ' '
+
 build-packages-for-templates-and-examples:
-  grep -hr "0.5-SNAPSHOT" examples/**/*.scala templates/**/*.scala | sed -n 's/.*besom-\([^:]*:[^"]*\).*-core.0.5-SNAPSHOT.*/\1/p' | sort -u | tr '\n' ' ' | xargs -I {} just cli packages local {}
+  find examples templates -name '*.scala' -exec grep -h "{{besom-short-version}}" {} + | sed -n 's/.*besom-\([^:]*:[^"]*\).*-core.{{besom-short-version}}.*/\1/p' | sort -u | tr '\n' ' ' | xargs -I {} just cli packages local {}
 
 # Cleans everything
 clean-all: clean-json clean-model clean-rpc clean-sdk clean-auto clean-out clean-compiler-plugin clean-codegen clean-scripts clean-test-integration clean-cfg clean-test-templates clean-test-examples clean-test-markdown
@@ -65,7 +69,7 @@ before-commit: compile-all test-all
 ####################
 
 # Compiles core besom SDK
-compile-core: publish-local-json publish-local-rpc
+compile-core: publish-local-model publish-local-json publish-local-rpc 
 	scala-cli --power compile {{no-bloop}} core --suppress-experimental-feature-warning
 
 # Compiles besom cats-effect extension
@@ -108,7 +112,7 @@ publish-local-sdk: publish-local-core publish-local-cats publish-local-zio publi
 publish-maven-sdk: publish-maven-core publish-maven-cats publish-maven-zio publish-maven-compiler-plugin
 
 # Publishes locally core besom SDK
-publish-local-core: publish-local-json publish-local-rpc
+publish-local-core: publish-local-json publish-local-rpc publish-local-model
 	scala-cli --power publish local {{no-bloop}} core --project-version {{besom-version}} --suppress-experimental-feature-warning
 	scala-cli --power publish core --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 
@@ -203,9 +207,13 @@ clean-json:
 # Publishes locally json module
 publish-local-json:
 	scala-cli --power publish local {{no-bloop}} besom-json --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 	scala-cli --power publish local {{no-bloop}} besom-json --js --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --js --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 	scala-cli --power publish local {{no-bloop}} besom-json --native --native-version 0.5.7 --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --native --native-version 0.5.7 --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 	scala-cli --power publish local {{no-bloop}} besom-json --native --native-version 0.4.17 --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --native --native-version 0.4.17 --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 
 # Publishes json module to Maven
 publish-maven-json:
@@ -255,9 +263,14 @@ package-language-plugin-bootstrap:
 
 # Builds pulumi-language-scala binary
 build-language-plugin $GOOS="" $GOARCH="":
-	mkdir -p {{language-plugin-output-dir}} && \
-	cd language-plugin/pulumi-language-scala && \
-	go build -o {{language-plugin-output-dir}}/pulumi-language-scala \
+	#!/usr/bin/env sh
+	mkdir -p {{language-plugin-output-dir}}
+	cd language-plugin/pulumi-language-scala
+	binary_name="pulumi-language-scala"
+	if [ "$GOOS" = "windows" ]; then
+		binary_name="pulumi-language-scala.exe";
+	fi
+	go build -o {{language-plugin-output-dir}}/$binary_name \
 	  -ldflags "-X github.com/pulumi/pulumi/sdk/v3/go/common/version.Version={{besom-version}}"
 
 # Installs the scala language plugin locally
@@ -270,6 +283,7 @@ install-language-plugin: build-language-plugin
 	mkdir -p $output_dir
 	cp {{language-plugin-output-dir}}/bootstrap.jar $output_dir/
 	cp {{language-plugin-output-dir}}/pulumi-language-scala $output_dir/
+	cp {{language-plugin-resources-dir}}/* $output_dir/
 	pulumi --non-interactive --logtostderr plugin rm language scala -y
 	pulumi --non-interactive --logtostderr plugin install language scala {{besom-version}} --file {{language-plugin-output-dir}}/local
 
@@ -281,7 +295,12 @@ package-language-plugin $GOOS $GOARCH:
 	mkdir -p $output_dir
 	just build-language-plugin $GOOS $GOARCH
 	cp {{language-plugin-output-dir}}/bootstrap.jar $output_dir/
-	cp {{language-plugin-output-dir}}/pulumi-language-scala $output_dir/
+	binary_name="pulumi-language-scala"
+	if [ "$GOOS" = "windows" ]; then
+		binary_name="pulumi-language-scala.exe"
+	fi
+	cp {{language-plugin-output-dir}}/$binary_name $output_dir/
+	cp {{language-plugin-resources-dir}}/* $output_dir/
 	cd $output_dir
 	tar czvf pulumi-language-scala-v{{besom-version}}-{{GOOS}}-{{GOARCH}}.tar.gz *
 
@@ -309,7 +328,6 @@ publish-language-plugins-all: package-language-plugins-all
 	just publish-language-plugin linux amd64
 	just publish-language-plugin windows arm64
 	just publish-language-plugin windows amd64
-
 ####################
 # Besom CFG
 ####################
@@ -403,6 +421,7 @@ clean-model:
 # Publishes locally model module
 publish-local-model: test-model
 	scala-cli --power publish local {{no-bloop}} model --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} model --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 
 # Publishes model module
 publish-maven-model: test-model
@@ -615,49 +634,6 @@ clean-local-snapshots:
 power-wash: clean-all clean-local-snapshots
 	git clean -i -d -x -e ".idea"
 	killall -9 java
-
-####################
-# Demo
-####################
-
-# Run the sample kubernetes Pulumi app that resides in ./experimental directory
-liftoff:
-	#!/usr/bin/env sh
-	export PULUMI_SKIP_UPDATE_CHECK=true
-	export PULUMI_CONFIG_PASSPHRASE=""
-	cd experimental
-	pulumi --non-interactive --logtostderr up --stack liftoff -y
-
-# Reverts the deployment of experimental sample kubernetes Pulumi app from ./experimental directory
-destroy-liftoff:
-	#!/usr/bin/env sh
-	export PULUMI_SKIP_UPDATE_CHECK=true
-	cd experimental
-	if (pulumi --non-interactive --logtostderr stack ls | grep liftoff > /dev/null); then
-		export PULUMI_CONFIG_PASSPHRASE=""
-		pulumi  --non-interactive --logtostderr destroy --stack liftoff -y
-	fi
-
-# Cleans the deployment of experimental sample kubernetes Pulumi app from ./experimental directory to the ground
-clean-liftoff: destroy-liftoff
-	#!/usr/bin/env sh
-	export PULUMI_SKIP_UPDATE_CHECK=true
-	cd experimental
-	if (pulumi --non-interactive --logtostderr stack ls | grep liftoff > /dev/null); then
-		pulumi --non-interactive --logtostderr stack rm liftoff -y
-	fi
-	export PULUMI_CONFIG_PASSPHRASE=""
-	pulumi --non-interactive --logtostderr stack init liftoff
-
-# Cleans the deployment of ./experimental app completely, rebuilds core and kubernetes provider SDKs, deploys the app again
-clean-slate-liftoff: clean-sdk
-	#!/usr/bin/env sh
-	just publish-local-core
-	just publish-local-compiler-plugin
-	scala-cli run {{no-bloop}} codegen -- named kubernetes 4.2.0
-	scala-cli --power publish local {{no-bloop}} .out/codegen/kubernetes/4.2.0/ --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
-	just clean-liftoff
-	just liftoff
 
 ####################
 # IDE

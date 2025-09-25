@@ -24,9 +24,9 @@ object Args:
   private def parseInner(args: Seq[String], monoFlags: Seq[String]): (Vector[String], Vector[(String, Int | String)]) =
     args match
       case Nil => (Vector.empty, Vector.empty)
-      case v +: tail if monoFlags.contains(s"--$v") || monoFlags.contains(s"-$v") =>
+      case v +: tail if monoFlags.contains(v.stripPrefix("-")) || monoFlags.contains(v.stripPrefix("--")) =>
         val (rest, flags) = parseInner(tail, monoFlags)
-        (rest, (v, 1) +: flags)
+        (rest, (v.stripPrefix("--").stripPrefix("-"), 1) +: flags)
       case s"--$name" +: value +: tail =>
         val (rest, flags) = parseInner(tail, monoFlags)
         (rest, (name, value) +: flags)
@@ -181,7 +181,7 @@ class Progress(
   private def end(endTime: Temporal = LocalTime.now()): Unit =
     ending(label, time, endTime)
 
-  private def fail(error: String, end: Temporal = LocalTime.now()): Unit =
+  private def fail(label: String, error: String, end: Temporal = LocalTime.now()): Unit =
     failure(label, time, end, error)
 
   private def updateTotal(amount: Int): Unit =
@@ -200,8 +200,8 @@ object Progress:
   def report(amount: Int, label: String)(using progress: Progress): Unit =
     progress.increment(amount, lbl = label)
 
-  def fail(error: String)(using progress: Progress): Unit =
-    progress.fail(error)
+  def fail(label: String, error: String)(using progress: Progress): Unit =
+    progress.fail(label, error)
 
   def end(using progress: Progress): Unit =
     progress.end()
@@ -226,6 +226,7 @@ def withProgress[A](title: String, initialTotal: Int)(f: Progress ?=> A): A =
   def end(lbl: String, start: Temporal, end: Temporal) =
     if !failed.contains(lbl)
     then succeeded.put(lbl, s"\r$lbl: DONE [${elapsed(start, end)}]")
+
   def failure(lbl: String, start: Temporal, end: Temporal, error: String) =
     failed.put(lbl, s"\r$lbl: ERROR [${elapsed(start, end)}]: $error")
 
