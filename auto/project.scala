@@ -2,9 +2,9 @@
 //> using options -java-output-version:11
 //> using options -deprecation -feature -Werror -Wunused:all
 
-//> using dep org.virtuslab::besom-json:0.5.0-SNAPSHOT
-//> using dep org.virtuslab::besom-core:0.5.0-SNAPSHOT
-//> using dep org.virtuslab::besom-model:0.5.0-SNAPSHOT
+//> using dep org.virtuslab::besom-json:0.5.0
+//> using dep org.virtuslab::besom-core:0.5.0
+//> using dep org.virtuslab::besom-model:0.5.0
 //> using dep org.virtuslab::scala-yaml:0.0.8
 //> using dep com.lihaoyi::os-lib:0.10.0
 //> using dep com.lihaoyi::os-lib-watch:0.10.0
@@ -23,4 +23,3 @@
 //> using publish.repository "central"
 //> using publish.developer "lbialy|Łukasz Biały|https://github.com/lbialy"
 //> using publish.developer "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
-//> using repository snapshots

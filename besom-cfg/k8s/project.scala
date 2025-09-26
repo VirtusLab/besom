@@ -3,9 +3,9 @@
 //> using options -java-output-version:21
 
 //> using dep com.lihaoyi::os-lib::0.9.3
-//> using dep org.virtuslab::besom-cfg:0.5.0-SNAPSHOT
-//> using dep org.virtuslab::besom-cfg-containers:0.5.0-SNAPSHOT
-//> using dep org.virtuslab::besom-kubernetes:4.22.1-core.0.4
+//> using dep org.virtuslab::besom-cfg:0.5.0
+//> using dep org.virtuslab::besom-cfg-containers:0.5.0
+//> using dep org.virtuslab::besom-kubernetes:4.22.1-core.0.5
 
 //> using dep com.lihaoyi::fansi::0.5.0
 //> using dep com.lihaoyi::fastparse:3.1.0
@@ -26,4 +26,3 @@
 //> using publish.developer "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban"
 //> using publish.developer "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
 
-//> using repository snapshots
