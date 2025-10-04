@@ -1,13 +1,13 @@
 import React from 'react';
 import clsx from 'clsx';
-import {useBlogPost} from '@docusaurus/theme-common/internal';
+import { useBlogPost } from '@docusaurus/plugin-content-blog/client';
 import EditThisPage from '@theme/EditThisPage';
 import TagsListInline from '@theme/TagsListInline';
 import ReadMoreLink from '@theme/BlogPostItem/Footer/ReadMoreLink';
 import styles from './styles.module.css';
 export default function BlogPostItemFooter() {
-  const {metadata, isBlogPostPage} = useBlogPost();
-  const {tags, title, editUrl, hasTruncateMarker} = metadata;
+  const { metadata, isBlogPostPage } = useBlogPost();
+  const { tags, title, editUrl, hasTruncateMarker } = metadata;
   // A post is truncated if it's in the "list view" and it has a truncate marker
   const truncatedPost = !isBlogPostPage && hasTruncateMarker;
   const tagsExists = tags.length > 0;
@@ -22,7 +22,7 @@ export default function BlogPostItemFooter() {
         isBlogPostPage && styles.blogPostFooterDetailsFull,
       )}>
       {tagsExists && (
-        <div className={clsx('col', {'col--9': truncatedPost})}>
+        <div className={clsx('col', { 'col--9': truncatedPost })}>
           <TagsListInline tags={tags} />
         </div>
       )}

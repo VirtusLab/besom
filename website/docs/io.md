@@ -32,7 +32,7 @@ To make this more digestable - the basic `Input[A]` type is declared as:
 opaque type Input[+A] >: A | Output[A] = A | Output[A]
 ```
 
-ane the `Input.Optional[A]` variant is declared as:
+and the `Input.Optional[A]` variant is declared as:
 
 ```scala
 opaque type Optional[+A] >: Input[A | Option[A]] = Input[A | Option[A]]
@@ -57,7 +57,7 @@ This elastic and permissive model was designed to allow a more declarative style
 parallelism of evaluation. In fact, Outputs are meant to be thought of as short pipelines that one uses
 to transform properties and values obtained from one resource to be used as argument for another. If you're
 used to the classic way of working with monadic programs with chains of `flatMap` and `map` or for-comprehensions 
-this might seem a bit odd to you - why would we take values wrapped in Outputs as arguments? The answer is: previews!
+this might seem a bit odd to you - why would we take values wrapped in Outputs as arguments? The answer is: **previews!**
 
 Outputs incorporate semantics of `Option` to support Pulumi's preview / dry-run feature that allows one to see what 
 changes will be applied when the program is executed against the actual environment. This, however, means that Outputs
@@ -68,11 +68,5 @@ short-circuiting logic will kick in and all the subsequent `flatMap`/`map` steps
 of the changes that will get applied in your next change to the infrastructure. To avoid this problem it is highly 
 recommended to write Besom programs in a style highly reminiscent of direct style and use for-comprehensions only to transform 
 properties passed from configuration or declared resources to another resources. This way the graph of resources is fully 
-known in dry-run phase and can be properly inspected. Full power of monadic composition should be reserved for situations 
+known in the dry-run phase and can be properly inspected. Full power of monadic composition should be reserved for situations 
 where it is strictly necessary.
-
-:::info
-We are working on a solution that would allow us to track computed `Output` values on the type level and therefore inform
-the user (via a compile-time information or warning) that a dynamic subtree of resources will be spawned by their code 
-that won't be visible in preview.
-:::

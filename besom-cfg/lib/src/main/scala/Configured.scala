@@ -6,7 +6,7 @@ import besom.cfg.internal.*
 import besom.util.Validated
 import scala.util.control.NoStackTrace
 
-final val Version = "0.4.0"
+final val Version = "0.5.0"
 
 // trait Constraint[A]:
 //   def validate(a: A): Boolean
