@@ -16,7 +16,7 @@ const s3Bucket: aws.s3.Bucket = new aws.s3.Bucket("my-bucket")
 ```
 
 This operation returns a resource object of type `aws.s3.Bucket` that has several fields, 
-each of an [`Output[A]`](#outputs) type. The values will be provided by the engine later, when the resource is created
+each of an [`Output[A]`](io.md#outputs) type. The values will be provided by the engine later, when the resource is created
 and its properties can be fetched.
 
 For all of that to happen this synchronous constructor call has to **hide the complex, asynchronous machinery** that 
@@ -59,7 +59,7 @@ Resource constructors always take 3 arguments:
     * `CustomResourceOptions` used with most of the resources defined in provider packages
     * `ComponentResourceOptions` used with resources, both user-defined and remote components (defined in provider packages) 
       and finally
-    * `StackReferenceResourceOptions` used with [StackReferences](basics.md/#stack-references). 
+    * `StackReferenceResourceOptions` used with [StackReferences](basics.md#stack-references).
     
     To ease the use of resource options a shortcut context function is provided that allows user to summon the constructor 
     of expected resource options type by just typing `opts(...)`. Here's an example: 

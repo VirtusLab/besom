@@ -1,13 +1,13 @@
 import React from 'react';
-import {useBaseUrlUtils} from '@docusaurus/useBaseUrl';
-import {useBlogPost} from '@docusaurus/theme-common/internal';
-export default function BlogPostItemContainer({children, className}) {
+import { useBaseUrlUtils } from '@docusaurus/useBaseUrl';
+import { useBlogPost } from '@docusaurus/plugin-content-blog/client';
+export default function BlogPostItemContainer({ children, className }) {
   const {
     frontMatter,
     assets,
-    metadata: {description},
+    metadata: { description },
   } = useBlogPost();
-  const {withBaseUrl} = useBaseUrlUtils();
+  const { withBaseUrl } = useBaseUrlUtils();
   const image = assets.image ?? frontMatter.image;
   const keywords = frontMatter.keywords ?? [];
   return (
@@ -18,7 +18,7 @@ export default function BlogPostItemContainer({children, className}) {
       itemType="http://schema.org/BlogPosting">
       {description && <meta itemProp="description" content={description} />}
       {image && (
-        <link itemProp="image" href={withBaseUrl(image, {absolute: true})} />
+        <link itemProp="image" href={withBaseUrl(image, { absolute: true })} />
       )}
       {keywords.length > 0 && (
         <meta itemProp="keywords" content={keywords.join(',')} />

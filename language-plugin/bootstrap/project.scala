@@ -3,4 +3,3 @@
 
 //> using dep org.virtuslab::besom-json:0.5.0
 //> using dep io.github.classgraph:classgraph:4.8.180
-

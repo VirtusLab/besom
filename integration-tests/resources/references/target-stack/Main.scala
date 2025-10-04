@@ -7,7 +7,7 @@ import besom.json.*
 @main def main = Pulumi.run {
 
   case class Structured(a: Output[String], b: Double) derives JsonReader, Encoder
-  case class SourceStack(sshKeyUrn: String, value1: Int, value2: String, structured: Structured) derives JsonReader, Encoder
+  case class SourceStack(sshKeyUrn: String, value1: Int, value2: String, structured: Structured) derives JsonReader
 
   val sourceStackName = config.requireString("sourceStack").map(NonEmptyString(_).get)
   val sourceStack = StackReference(

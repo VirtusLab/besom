@@ -3,9 +3,12 @@
 
 const fs = require('fs');
 
-const lightCodeTheme = require('prism-react-renderer/themes/github');
-const darkCodeTheme = require('prism-react-renderer/themes/dracula');
-const codeblockVersion = require('./src/remark/codeblockVersion');
+import { themes as prismThemes } from 'prism-react-renderer'
+
+const lightCodeTheme = prismThemes.github
+const darkCodeTheme = prismThemes.dracula
+
+const codeblockVersion = require('./src/remark/codeblockVersion').default;
 
 const organizationName = 'virtuslab';
 const projectName = 'besom';

@@ -1,4 +1,4 @@
-const visit = require('unist-util-visit');
+import { visit } from 'unist-util-visit';
 
 const codeblockVersion = (besomVersion) => () => async (ast) => {
   visit(ast, 'code', (node) => {
@@ -6,4 +6,4 @@ const codeblockVersion = (besomVersion) => () => async (ast) => {
   })
 }
 
-module.exports = codeblockVersion;
+export default codeblockVersion;
