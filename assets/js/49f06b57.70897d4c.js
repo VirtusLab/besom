@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkbesom_website=self.webpackChunkbesom_website||[]).push([[912],{2028:e=>{e.exports=JSON.parse('{"blogBasePath":"/besom/blog","blogTitle":"Besom, Scala SDK for Pulumi blog","authorsListPath":"/besom/blog/authors"}')}}]);
