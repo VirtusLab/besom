@@ -1,4 +1,5 @@
 //> using scala "3.3.1"
 //> using options -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
-//> using dep "org.virtuslab::besom-core:0.5.0"
+//> using dep "org.virtuslab::besom-core:0.5.1-SNAPSHOT"
 //> using dep "org.virtuslab::besom-azure-native:3.5.0-core.0.5"
+//> using repository snapshots
