@@ -368,7 +368,7 @@ trait AnonymousTypeProtoLike {
   def items: Option[TypeReference]
 
   def maybeAsAnonymousType(plain: Boolean): Option[AnonymousType] = {
-    `type`.map {
+    `type`.collect {
       case "string"  => StringType
       case "integer" => IntegerType
       case "number"  => NumberType
@@ -383,6 +383,8 @@ trait AnonymousTypeProtoLike {
           case Some(propertyType) => MapType(propertyType, plain)
           case None               => MapType(StringType, plain)
         }
+      // "ref" and other unmatched cases will return None, which is correct
+      // when $ref is present, the type field should be ignored per Pulumi schema spec
     }
   }
 
