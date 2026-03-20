@@ -611,9 +611,10 @@ cli *ARGS:
 upsert-gh-release:
 	#!/usr/bin/env sh
 	if {{is-snapshot}}; then
-		echo "Not a snapshot version, refusing to delete a release"
-	else
 		gh release delete v{{besom-version}} --yes || echo "Nothing to delete"
+	else
+		echo "Not a snapshot version, refusing to delete a release"
+		exit 1
 	fi
 	echo Creating release v{{besom-version}}
 	gh release create v{{besom-version}} --title v{{besom-version}} --notes "" --prerelease --draft
