@@ -94,29 +94,45 @@ case class Stack(name: String, workspace: Workspace):
         val args: Seq[String]      = Seq("preview") ++ sharedArgs ++ kindArgs ++ watchArgs
         pulumi(args)().left.map(AutoError("Preview failed", _)) // after this line pulumi cli is no longer running
       }
-      summary <- extractSummaryEventFromEventLog(eventsPath)
-    yield PreviewResult(stdout = r.out, stderr = r.err, summary = summary.resourceChanges)
+      events  <- parseEventLog(eventsPath)
+      summary <- extractSummary(events)
+    yield PreviewResult(
+      stdout = r.out,
+      stderr = r.err,
+      summary = summary.resourceChanges,
+      resourceChanges = extractResourcePreEvents(events),
+      diagnostics = extractDiagnostics(events)
+    )
   end preview
 
-  def extractSummaryEventFromEventLog(path: os.Path): Either[Exception, SummaryEvent] =
-    val maybeEvents = os.read.lines(path).map(EngineEvent.fromJson(_))
-
-    if maybeEvents.forall(_.isRight) then
-      maybeEvents
-        .collectFirst { case Right(ee) if ee.summaryEvent.isDefined => ee.summaryEvent.get }
-        .toRight(AutoError("Failed to get preview summary, got no summary event"))
-    else
-      val err =
-        maybeEvents
-          .collect { case Left(e) => e }
-          .foldLeft(AutoError("Failed to get event log, got invalid events")) { case (acc, e) =>
-            acc.addSuppressed(e)
-            acc
-          }
-
+  private def parseEventLog(path: os.Path): Either[Exception, List[EngineEvent]] =
+    val lines = os.read.lines(path).filter(_.nonEmpty)
+    val parsed = lines.map(EngineEvent.fromJson(_))
+    val errors = parsed.collect { case Left(e) => e }
+    if errors.nonEmpty then
+      val err = errors.foldLeft(AutoError(s"Failed to parse ${errors.size} engine events")) { case (acc, e) =>
+        acc.addSuppressed(e)
+        acc
+      }
       Left(err)
+    else Right(parsed.collect { case Right(e) => e }.toList)
 
-  end extractSummaryEventFromEventLog
+  private def extractSummary(events: List[EngineEvent]): Either[Exception, SummaryEvent] =
+    events
+      .collectFirst { case e if e.summaryEvent.isDefined => e.summaryEvent.get }
+      .toRight(AutoError("No summary event found in event log"))
+
+  private def extractResourcePreEvents(events: List[EngineEvent]): List[ResourcePreEvent] =
+    events.flatMap(_.resourcePreEvent)
+
+  private def extractDiagnostics(events: List[EngineEvent]): List[DiagnosticEvent] =
+    events.flatMap(_.diagnosticEvent)
+
+  private def extractFailures(events: List[EngineEvent]): List[ResOpFailedEvent] =
+    events.flatMap(_.resOpFailedEvent)
+
+  private def extractResourceOutputs(events: List[EngineEvent]): List[ResOutputsEvent] =
+    events.flatMap(_.resOutputsEvent)
 
   /** Create or update the resources in a stack by executing the program in the Workspace. Update updates the resources in a stack by
     * executing the program in the Workspace associated with this stack, if one is provided.
@@ -151,31 +167,34 @@ case class Stack(name: String, workspace: Workspace):
         Seq(s"--exec-kind=${ExecKind.AutoInline}", s"--client=$address")
       else Seq(s"--exec-kind=${ExecKind.AutoLocal}")
 
-    val watchArgs = Seq.empty[String] // TODO: missing event stream, implement watchArgs
-
-    val args: Seq[String] = Seq("up", "--yes", "--skip-preview") ++ sharedArgs ++ kindArgs ++ watchArgs
-
-    pulumi(args)(
+    for
+      eventsPath <- eventLogsPath("up")
+      r <- {
+        val watchArgs: Seq[String] = Seq("--event-log=" + eventsPath)
+        val args: Seq[String] = Seq("up", "--yes", "--skip-preview") ++ sharedArgs ++ kindArgs ++ watchArgs
+        pulumi(args)(
 // FIXME: missing streams, implement progressStreams and errorProgressStreams
 //      shell.Option.Stdout(opts.progressStreams),
 //      shell.Option.Stderr(opts.errorProgressStreams)
-    ) match
-      case Left(e) => Left(AutoError("Up failed", e))
-      case Right(r) =>
-        for
-          outputs <- outputs
-          history <- history(
-            pageSize = 1,
-            page = 1,
-            /* If it's a remote workspace, don't set ShowSecrets to prevent attempting to load the project file. */
-            Option.when(opts.showSecrets && !isRemote)(HistoryOption.ShowSecrets).toSeq*
-          ).flatMap(_.headOption.toRight(AutoError("Failed to get history, result was empty")))
-        yield UpResult(
-          stdout = r.out,
-          stderr = r.err,
-          outputs = outputs,
-          summary = history
-        )
+        ).left.map(AutoError("Up failed", _))
+      }
+      outputs <- outputs
+      history <- history(
+        pageSize = 1,
+        page = 1,
+        /* If it's a remote workspace, don't set ShowSecrets to prevent attempting to load the project file. */
+        Option.when(opts.showSecrets && !isRemote)(HistoryOption.ShowSecrets).toSeq*
+      ).flatMap(_.headOption.toRight(AutoError("Failed to get history, result was empty")))
+      events <- parseEventLog(eventsPath)
+    yield UpResult(
+      stdout = r.out,
+      stderr = r.err,
+      outputs = outputs,
+      summary = history,
+      resourceOperations = extractResourceOutputs(events),
+      failures = extractFailures(events),
+      diagnostics = extractDiagnostics(events)
+    )
   end up
 
   /** Refresh compares the current stack’s resource state with the state known to exist in the actual cloud provider. Any such changes are
@@ -201,23 +220,26 @@ case class Stack(name: String, workspace: Workspace):
       ++ (if workspace.program.isDefined then Seq(s"--exec-kind=${ExecKind.AutoInline}") else Seq(s"--exec-kind=${ExecKind.AutoLocal}"))
       ++ remoteArgs // Apply the remote args, if needed
 
-    val watchArgs = Seq.empty[String] // TODO: missing event stream, implement watchArgs
-
-    val args: Seq[String] = Seq("refresh", "--yes", "--skip-preview") ++ sharedArgs ++ watchArgs
-    pulumi(args)() match
-      case Left(e) => Left(AutoError("Refresh failed", e))
-      case Right(r) =>
-        for history <- history(
-            pageSize = 1,
-            page = 1,
-            /* If it's a remote workspace, don't set ShowSecrets to prevent attempting to load the project file. */
-            Option.when(opts.showSecrets && !isRemote)(HistoryOption.ShowSecrets).toSeq*
-          ).flatMap(_.headOption.toRight(AutoError("Failed to get history, result was empty")))
-        yield RefreshResult(
-          stdout = r.out,
-          stderr = r.err,
-          summary = history
-        )
+    for
+      eventsPath <- eventLogsPath("refresh")
+      r <- {
+        val watchArgs: Seq[String] = Seq("--event-log=" + eventsPath)
+        val args: Seq[String] = Seq("refresh", "--yes", "--skip-preview") ++ sharedArgs ++ watchArgs
+        pulumi(args)().left.map(AutoError("Refresh failed", _))
+      }
+      history <- history(
+        pageSize = 1,
+        page = 1,
+        /* If it's a remote workspace, don't set ShowSecrets to prevent attempting to load the project file. */
+        Option.when(opts.showSecrets && !isRemote)(HistoryOption.ShowSecrets).toSeq*
+      ).flatMap(_.headOption.toRight(AutoError("Failed to get history, result was empty")))
+      events <- parseEventLog(eventsPath)
+    yield RefreshResult(
+      stdout = r.out,
+      stderr = r.err,
+      summary = history,
+      diagnostics = extractDiagnostics(events)
+    )
   end refresh
 
   /** Destroy deletes all resources in a stack, leaving all history and configuration intact.
@@ -242,24 +264,27 @@ case class Stack(name: String, workspace: Workspace):
       ++ (if workspace.program.isDefined then Seq(s"--exec-kind=${ExecKind.AutoInline}") else Seq(s"--exec-kind=${ExecKind.AutoLocal}"))
       ++ remoteArgs // Apply the remote args, if needed
 
-    val watchArgs = Seq.empty[String] // TODO: missing event stream, implement watchArgs
-
-    val args: Seq[String] = Seq("destroy", "--yes", "--skip-preview") ++ sharedArgs ++ watchArgs
-    pulumi(args)() match
-      case Left(e) => Left(AutoError("Destroy failed", e))
-      case Right(r) =>
-        for history <- history(
-            pageSize = 1,
-            page = 1,
-            /* If it's a remote workspace, don't set ShowSecrets to prevent attempting to load the project file. */
-            Option.when(opts.showSecrets && !isRemote)(HistoryOption.ShowSecrets).toSeq*
-          ).flatMap(_.headOption.toRight(AutoError("Failed to get history, result was empty")))
-        yield DestroyResult(
-          stdout = r.out,
-          stderr = r.err,
-          summary = history
-        )
-
+    for
+      eventsPath <- eventLogsPath("destroy")
+      r <- {
+        val watchArgs: Seq[String] = Seq("--event-log=" + eventsPath)
+        val args: Seq[String] = Seq("destroy", "--yes", "--skip-preview") ++ sharedArgs ++ watchArgs
+        pulumi(args)().left.map(AutoError("Destroy failed", _))
+      }
+      history <- history(
+        pageSize = 1,
+        page = 1,
+        /* If it's a remote workspace, don't set ShowSecrets to prevent attempting to load the project file. */
+        Option.when(opts.showSecrets && !isRemote)(HistoryOption.ShowSecrets).toSeq*
+      ).flatMap(_.headOption.toRight(AutoError("Failed to get history, result was empty")))
+      events <- parseEventLog(eventsPath)
+    yield DestroyResult(
+      stdout = r.out,
+      stderr = r.err,
+      summary = history,
+      failures = extractFailures(events),
+      diagnostics = extractDiagnostics(events)
+    )
   end destroy
 
   /** Get the current set of [[Stack]] outputs from the last [[Stack.up]]
@@ -1258,7 +1283,9 @@ end Color
 case class PreviewResult(
   stdout: String,
   stderr: String,
-  summary: Map[OpType, Int]
+  summary: Map[OpType, Int],
+  resourceChanges: List[ResourcePreEvent] = Nil,
+  diagnostics: List[DiagnosticEvent] = Nil
 ):
   def permalink: Either[Exception, String] = ??? // TODO: implement GetPermalink
 end PreviewResult
@@ -1278,7 +1305,10 @@ case class UpResult(
   stdout: String,
   stderr: String,
   outputs: OutputMap,
-  summary: UpdateSummary
+  summary: UpdateSummary,
+  resourceOperations: List[ResOutputsEvent] = Nil,
+  failures: List[ResOpFailedEvent] = Nil,
+  diagnostics: List[DiagnosticEvent] = Nil
 ):
   def permalink: Either[Exception, String] = ??? // TODO: implement GetPermalink
 end UpResult
@@ -1295,7 +1325,8 @@ end UpResult
 case class RefreshResult(
   stdout: String,
   stderr: String,
-  summary: UpdateSummary
+  summary: UpdateSummary,
+  diagnostics: List[DiagnosticEvent] = Nil
 ):
   def permalink: Either[Exception, String] = ??? // TODO: implement GetPermalink
 end RefreshResult
@@ -1312,7 +1343,9 @@ end RefreshResult
 case class DestroyResult(
   stdout: String,
   stderr: String,
-  summary: UpdateSummary
+  summary: UpdateSummary,
+  failures: List[ResOpFailedEvent] = Nil,
+  diagnostics: List[DiagnosticEvent] = Nil
 ):
   def permalink: Either[Exception, String] = ??? // TODO: implement GetPermalink
 end DestroyResult
@@ -1367,10 +1400,31 @@ end UpdateSummary
 case class EngineEvent(
   sequence: Int,
   timestamp: Int,
-  summaryEvent: Option[SummaryEvent]
-  // Ignore there rest for now
+  cancelEvent: Option[CancelEvent] = None,
+  stdoutEvent: Option[StdoutEngineEvent] = None,
+  diagnosticEvent: Option[DiagnosticEvent] = None,
+  preludeEvent: Option[PreludeEvent] = None,
+  summaryEvent: Option[SummaryEvent] = None,
+  resourcePreEvent: Option[ResourcePreEvent] = None,
+  resOutputsEvent: Option[ResOutputsEvent] = None,
+  resOpFailedEvent: Option[ResOpFailedEvent] = None,
+  policyEvent: Option[PolicyEvent] = None,
+  policyRemediationEvent: Option[PolicyRemediationEvent] = None,
+  policyLoadEvent: Option[PolicyLoadEvent] = None,
+  policyAnalyzeSummaryEvent: Option[PolicyAnalyzeSummaryEvent] = None,
+  policyRemediateSummaryEvent: Option[PolicyRemediateSummaryEvent] = None,
+  policyAnalyzeStackSummaryEvent: Option[PolicyAnalyzeStackSummaryEvent] = None,
+  startDebuggingEvent: Option[StartDebuggingEvent] = None,
+  progressEvent: Option[ProgressEvent] = None,
+  errorEvent: Option[ErrorEvent] = None
 )
 object EngineEvent:
+  private def optionalField[T: JsonFormat](fields: Map[String, JsValue], name: String): Option[T] =
+    fields.get(name).flatMap {
+      case JsNull => None
+      case v      => Some(v.convertTo[T])
+    }
+
   implicit object EngineEventFormat extends RootJsonFormat[EngineEvent] {
     def write(e: EngineEvent): JsObject = JsObject(
       "sequence" -> JsNumber(e.sequence),
@@ -1379,20 +1433,28 @@ object EngineEvent:
     )
 
     def read(value: JsValue): EngineEvent = {
-      value.asJsObject.getFields("sequence", "timestamp", "summaryEvent") match {
-        case Seq(JsNumber(sequence), JsNumber(timestamp), summaryEvent) =>
-          new EngineEvent(
-            sequence.toInt,
-            timestamp.toInt,
-            summaryEvent.convertTo[Option[SummaryEvent]]
-          )
-        case Seq(JsNumber(sequence), JsNumber(timestamp), _*) => // Ignore events we don't care about
-          new EngineEvent(
-            sequence.toInt,
-            timestamp.toInt,
-            None
-          )
-      }
+      val fields = value.asJsObject.fields
+      EngineEvent(
+        sequence = fields("sequence").convertTo[Int],
+        timestamp = fields("timestamp").convertTo[Int],
+        cancelEvent = optionalField[CancelEvent](fields, "cancelEvent"),
+        stdoutEvent = optionalField[StdoutEngineEvent](fields, "stdoutEvent"),
+        diagnosticEvent = optionalField[DiagnosticEvent](fields, "diagnosticEvent"),
+        preludeEvent = optionalField[PreludeEvent](fields, "preludeEvent"),
+        summaryEvent = optionalField[SummaryEvent](fields, "summaryEvent"),
+        resourcePreEvent = optionalField[ResourcePreEvent](fields, "resourcePreEvent"),
+        resOutputsEvent = optionalField[ResOutputsEvent](fields, "resOutputsEvent"),
+        resOpFailedEvent = optionalField[ResOpFailedEvent](fields, "resOpFailedEvent"),
+        policyEvent = optionalField[PolicyEvent](fields, "policyEvent"),
+        policyRemediationEvent = optionalField[PolicyRemediationEvent](fields, "policyRemediationEvent"),
+        policyLoadEvent = optionalField[PolicyLoadEvent](fields, "policyLoadEvent"),
+        policyAnalyzeSummaryEvent = optionalField[PolicyAnalyzeSummaryEvent](fields, "policyAnalyzeSummaryEvent"),
+        policyRemediateSummaryEvent = optionalField[PolicyRemediateSummaryEvent](fields, "policyRemediateSummaryEvent"),
+        policyAnalyzeStackSummaryEvent = optionalField[PolicyAnalyzeStackSummaryEvent](fields, "policyAnalyzeStackSummaryEvent"),
+        startDebuggingEvent = optionalField[StartDebuggingEvent](fields, "startDebuggingEvent"),
+        progressEvent = optionalField[ProgressEvent](fields, "progressEvent"),
+        errorEvent = optionalField[ErrorEvent](fields, "errorEvent")
+      )
     }
   }
 

@@ -43,13 +43,27 @@ class LocalWorkspaceTest extends munit.FunSuite:
         LocalWorkspaceOption.PulumiHome(pulumiHomeDir),
         LocalWorkspaceOption.EnvVars(shell.pulumi.env.PulumiConfigPassphraseEnv -> "test")
       )
-      prevRes <- stack.preview()
-      upRes   <- stack.up()
-    yield (prevRes, upRes)
+      prevRes    <- stack.preview()
+      upRes      <- stack.up()
+      destroyRes <- stack.destroy()
+    yield (prevRes, upRes, destroyRes)
     res.fold(
       e => fail(e.getMessage, e),
-      (prevRes, upRes) => {
+      (prevRes, upRes, destroyRes) => {
+        // Preview: summary (backward compat)
         assertEquals(prevRes.summary, Map(OpType.Create -> 1))
+
+        // Preview: resourceChanges should contain ResourcePreEvent(s) for the create
+        assert(prevRes.resourceChanges.nonEmpty, s"Expected non-empty resourceChanges, got: ${prevRes.resourceChanges}")
+        assert(
+          prevRes.resourceChanges.exists(_.metadata.op == OpType.Create),
+          s"Expected at least one Create ResourcePreEvent, got ops: ${prevRes.resourceChanges.map(_.metadata.op)}"
+        )
+
+        // Preview: diagnostics is a List (may or may not be empty depending on provider)
+        assert(prevRes.diagnostics != null)
+
+        // Up: outputs (backward compat)
         assertEquals(
           upRes.outputs,
           Map(
@@ -68,6 +82,15 @@ class LocalWorkspaceTest extends munit.FunSuite:
           )
         )
         assertEquals(upRes.summary.result, Some("succeeded"))
+
+        // Up: resourceOperations should have ResOutputsEvent(s)
+        assert(upRes.resourceOperations.nonEmpty, s"Expected non-empty resourceOperations, got: ${upRes.resourceOperations}")
+        assert(upRes.failures.isEmpty, s"Expected no failures, got: ${upRes.failures}")
+
+        // Destroy: should succeed without failures
+        assertEquals(destroyRes.summary.result, Some("succeeded"))
+        assert(destroyRes.failures.isEmpty, s"Expected no failures on destroy, got: ${destroyRes.failures}")
+        assert(destroyRes.diagnostics != null)
       }
     )
   }
