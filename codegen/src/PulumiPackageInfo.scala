@@ -118,7 +118,9 @@ object PulumiPackageInfo {
       }
 
     def parseFunctions(using Logger): Map[PulumiDefinitionCoordinates, (FunctionDefinition, Boolean)] =
-      pulumiPackage.functions.map { case (token, function) =>
+      pulumiPackage.functions
+        .filterNot { case (token, _) => token.endsWith("/terraformConfig") }
+        .map { case (token, function) =>
         val pulumiToken = PulumiToken(token)
         val coordinates = PulumiDefinitionCoordinates.fromToken(
           typeToken = pulumiToken,

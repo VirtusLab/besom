@@ -368,23 +368,26 @@ trait AnonymousTypeProtoLike {
   def items: Option[TypeReference]
 
   def maybeAsAnonymousType(plain: Boolean): Option[AnonymousType] = {
-    `type`.collect {
-      case "string"  => StringType
-      case "integer" => IntegerType
-      case "number"  => NumberType
-      case "boolean" => BooleanType
+    `type`.flatMap {
+      case "string"  => Some(StringType)
+      case "integer" => Some(IntegerType)
+      case "number"  => Some(NumberType)
+      case "boolean" => Some(BooleanType)
       case "array" =>
         items match {
-          case Some(itemType) => ArrayType(itemType, plain)
+          case Some(itemType) => Some(ArrayType(itemType, plain))
           case None           => throw new Exception(s"The array type $this lacks `items`")
         }
       case "object" =>
         additionalProperties match {
-          case Some(propertyType) => MapType(propertyType, plain)
-          case None               => MapType(StringType, plain)
+          case Some(propertyType) => Some(MapType(propertyType, plain))
+          case None               => Some(MapType(StringType, plain))
         }
-      // "ref" and other unmatched cases will return None, which is correct
-      // when $ref is present, the type field should be ignored per Pulumi schema spec
+      case other =>
+        System.err.println(
+          s"Warning: skipping unrecognized type '$other' in AnonymousType (see https://github.com/VirtusLab/besom/issues/590)"
+        )
+        None
     }
   }
 
@@ -632,10 +635,11 @@ trait ObjectTypeDefinitionProtoLike {
             isOverlay = isOverlay
           )
         )
-      case Some(_) =>
-        throw new Exception(
-          s"Cannot read ObjectTypeDefinition from prototype structure: ${this} (`type` was not `object`)"
+      case Some(other) =>
+        System.err.println(
+          s"Warning: skipping ObjectTypeDefinition with unrecognized type '$other' (see https://github.com/VirtusLab/besom/issues/591)"
         )
+        None
     }
 }
 
@@ -667,9 +671,7 @@ case class ObjectTypeDefinition(
 
 object ObjectTypeDefinition {
   implicit val reader: Reader[ObjectTypeDefinition] = ObjectTypeDefinitionProto.reader.map { proto =>
-    proto.maybeAsObjectTypeDefinition.getOrElse(
-      throw new Exception(s"Cannot read ObjectTypeDefinition from prototype structure: ${proto}")
-    )
+    proto.maybeAsObjectTypeDefinition.getOrElse(ObjectTypeDefinition())
   }
 }
 
