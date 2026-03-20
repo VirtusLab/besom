@@ -229,8 +229,35 @@ class CoreTests extends munit.FunSuite:
     pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
   }
 
+  @volatile private var purrlHttpServer: com.sun.net.httpserver.HttpServer = _
+
   FunFixture[pulumi.FixtureContext](
-    setup = {
+    setup = { testOpts =>
+      val server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress(0), 0)
+      server.createContext(
+        "/get",
+        exchange => {
+          val response = """{"message":"ok"}"""
+          exchange.sendResponseHeaders(200, response.getBytes.length.toLong)
+          exchange.getResponseBody.write(response.getBytes)
+          exchange.getResponseBody.close()
+        }
+      )
+      server.createContext(
+        "/delete",
+        exchange => {
+          val response = """{"message":"deleted"}"""
+          exchange.sendResponseHeaders(200, response.getBytes.length.toLong)
+          exchange.getResponseBody.write(response.getBytes)
+          exchange.getResponseBody.close()
+        }
+      )
+      server.setExecutor(java.util.concurrent.Executors.newSingleThreadExecutor())
+      server.start()
+      purrlHttpServer = server
+      val port = server.getAddress.getPort
+      println(s"Started local HTTP server for purrl test on port $port")
+
       val schemaName    = "purrl"
       val latestVersion = SchemasWithLatestVersion(schemaName)
       pulumi.fixture.setup(
@@ -240,10 +267,17 @@ class CoreTests extends munit.FunSuite:
             (defaultProjectFile
               + s"""//> using dep org.virtuslab::besom-cats:$coreVersion\n"""
               + CodeGen.packageDependency(schemaName, latestVersion.value))
-        )
-      )
+        ),
+        pulumiEnv = Map("TEST_HTTP_SERVER_URL" -> s"http://localhost:$port")
+      )(testOpts)
     },
-    teardown = pulumi.fixture.teardown
+    teardown = { ctx =>
+      pulumi.fixture.teardown(ctx)
+      if purrlHttpServer != null then
+        purrlHttpServer.stop(0)
+        purrlHttpServer = null
+        println("Stopped local HTTP server for purrl test")
+    }
   ).test("cats purrl provider should work") { ctx =>
     pulumi.up(ctx.stackName).call(cwd = ctx.programDir, env = ctx.env)
   }
