@@ -7,7 +7,7 @@ import scala.concurrent.duration.*
 @main
 def main(): Unit = Pulumi.run {
 
-  val baseUrl = "https://httpbun.org"
+  val baseUrl = sys.env("TEST_HTTP_SERVER_URL")
 
   val getUrl = Output.eval(IO(s"$baseUrl/get"))
 
