@@ -23,8 +23,45 @@ object BesomPlugin extends AutoPlugin {
       val List(bootstrapLibJarPath, pluginDiscovererOutputPath) = args
 
       val log                      = streams.value.log
+      val currentProject           = name.value
       val depsClassPath: Seq[File] = (Compile / fullClasspath).value.map(_.data)
-      val scalaRun                 = runner.value
+
+      if (!depsClassPath.exists(_.getName.contains("besom-core"))) {
+        val boxWidth         = 75
+        val projectPrefix    = "   Current sbt project: "
+        val truncatedProject = if (currentProject.length > 44) currentProject.take(41) + "..." else currentProject
+        val projectLine      = (projectPrefix + truncatedProject).padTo(boxWidth, ' ')
+
+        log.error(
+          s"""
+             |╔═══════════════════════════════════════════════════════════════════════════╗
+             |║                                                                           ║
+             |║   ⚠️  BESOM PROJECT NOT FOUND  ⚠️                                         ║
+             |║                                                                           ║
+             |║$projectLine║
+             |║                                                                           ║
+             |║   The current sbt project does not appear to be a Besom project!         ║
+             |║   'besom-core' dependency was not found in the classpath.                ║
+             |║                                                                           ║
+             |║   This project is probably not your infrastructure-as-code project.      ║
+             |║                                                                           ║
+             |║   💡 SOLUTION:                                                            ║
+             |║                                                                           ║
+             |║   Set the BESOM_SBT_MODULE environment variable to point to the          ║
+             |║   correct sbt project that contains your Besom IaC definitions.          ║
+             |║                                                                           ║
+             |║   Example:                                                                ║
+             |║     (bash) export BESOM_SBT_MODULE=myInfraProject                         ║
+             |║     (zsh)  export BESOM_SBT_MODULE=myInfraProject                         ║
+             |║     (fish) set -x BESOM_SBT_MODULE myInfraProject                         ║
+             |║                                                                           ║
+             |╚═══════════════════════════════════════════════════════════════════════════╝
+             |""".stripMargin
+        )
+        sys.error(s"besom-core not found in the classpath of $currentProject, probably not an infrastructure-as-code project")
+      }
+
+      val scalaRun = runner.value
 
       log.debug(s"Extracting Pulumi plugins from the classpath into ${pluginDiscovererOutputPath}")
       val bootstrapJarDep           = new File(bootstrapLibJarPath)
