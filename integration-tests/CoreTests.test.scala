@@ -234,18 +234,24 @@ class CoreTests extends munit.FunSuite:
   FunFixture[pulumi.FixtureContext](
     setup = { testOpts =>
       val server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress(0), 0)
-      server.createContext("/get", exchange => {
-        val response = """{"message":"ok"}"""
-        exchange.sendResponseHeaders(200, response.getBytes.length.toLong)
-        exchange.getResponseBody.write(response.getBytes)
-        exchange.getResponseBody.close()
-      })
-      server.createContext("/delete", exchange => {
-        val response = """{"message":"deleted"}"""
-        exchange.sendResponseHeaders(200, response.getBytes.length.toLong)
-        exchange.getResponseBody.write(response.getBytes)
-        exchange.getResponseBody.close()
-      })
+      server.createContext(
+        "/get",
+        exchange => {
+          val response = """{"message":"ok"}"""
+          exchange.sendResponseHeaders(200, response.getBytes.length.toLong)
+          exchange.getResponseBody.write(response.getBytes)
+          exchange.getResponseBody.close()
+        }
+      )
+      server.createContext(
+        "/delete",
+        exchange => {
+          val response = """{"message":"deleted"}"""
+          exchange.sendResponseHeaders(200, response.getBytes.length.toLong)
+          exchange.getResponseBody.write(response.getBytes)
+          exchange.getResponseBody.close()
+        }
+      )
       server.setExecutor(java.util.concurrent.Executors.newSingleThreadExecutor())
       server.start()
       purrlHttpServer = server

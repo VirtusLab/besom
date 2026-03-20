@@ -121,15 +121,15 @@ object PulumiPackageInfo {
       pulumiPackage.functions
         .filterNot { case (token, _) => token.endsWith("/terraformConfig") }
         .map { case (token, function) =>
-        val pulumiToken = PulumiToken(token)
-        val coordinates = PulumiDefinitionCoordinates.fromToken(
-          typeToken = pulumiToken,
-          moduleToPackageParts = moduleToPackageParts,
-          providerToPackageParts = providerToPackageParts,
-          overrideDefinitionName = typeRenames.get(pulumiToken)
-        )
-        (coordinates, (function, function.isOverlay))
-      }
+          val pulumiToken = PulumiToken(token)
+          val coordinates = PulumiDefinitionCoordinates.fromToken(
+            typeToken = pulumiToken,
+            moduleToPackageParts = moduleToPackageParts,
+            providerToPackageParts = providerToPackageParts,
+            overrideDefinitionName = typeRenames.get(pulumiToken)
+          )
+          (coordinates, (function, function.isOverlay))
+        }
 
     def process(using logger: Logger): PulumiPackageInfo =
       // pre-process the package to gather information about types, that are used later during various parts of codegen
