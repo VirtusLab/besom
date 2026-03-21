@@ -81,7 +81,7 @@ class EngineEventJSONTest extends munit.FunSuite {
     assertEquals(diag.streamID, Some(0))
     assertEquals(diag.ephemeral, false)
     assertEquals(diag.urn, None)
-    assertEquals(diag.prefix, "")
+    assertEquals(diag.prefix, None)
   }
 
   test("DiagnosticEvent with urn and prefix") {
@@ -91,7 +91,7 @@ class EngineEventJSONTest extends munit.FunSuite {
     val event = EngineEvent.fromJson(json).get
     val diag  = event.diagnosticEvent.get
     assertEquals(diag.urn, Some("urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket"))
-    assertEquals(diag.prefix, "aws:s3/bucket:Bucket (my-bucket): ")
+    assertEquals(diag.prefix, Some("aws:s3/bucket:Bucket (my-bucket): "))
     assertEquals(diag.severity, "warning")
     assertEquals(diag.ephemeral, true)
   }
@@ -100,7 +100,7 @@ class EngineEventJSONTest extends munit.FunSuite {
 
   test("ResourcePreEvent should deserialize from JSON") {
     val json =
-      """{"sequence":3,"timestamp":1704893591,"resourcePreEvent":{"metadata":{"op":"create","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","type":"aws:s3/bucket:Bucket","provider":"urn:pulumi:dev::myproject::pulumi:providers:aws::default_6_0_0::id","new":{"type":"aws:s3/bucket:Bucket","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","custom":true,"id":"","parent":"urn:pulumi:dev::myproject::pulumi:pulumi:Stack::myproject-dev","inputs":{"bucket":"my-bucket"},"outputs":{}},"logical":false},"planning":true}}"""
+      """{"sequence":3,"timestamp":1704893591,"resourcePreEvent":{"metadata":{"op":"create","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","type":"aws:s3/bucket:Bucket","provider":"urn:pulumi:dev::myproject::pulumi:providers:aws::default_6_0_0::id","new":{"type":"aws:s3/bucket:Bucket","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","custom":true,"id":"","parent":"urn:pulumi:dev::myproject::pulumi:pulumi:Stack::myproject-dev","inputs":{"bucket":"my-bucket"},"outputs":{},"provider":"urn:pulumi:dev::myproject::pulumi:providers:aws::default_6_0_0::id"},"logical":false},"planning":true}}"""
 
     val event = EngineEvent.fromJson(json).get
     assert(event.resourcePreEvent.isDefined)
@@ -110,8 +110,8 @@ class EngineEventJSONTest extends munit.FunSuite {
     assertEquals(pre.metadata.urn, "urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket")
     assertEquals(pre.metadata.`type`, "aws:s3/bucket:Bucket")
     assert(pre.metadata.old.isEmpty)
-    assert(pre.metadata.new_.isDefined)
-    val newState = pre.metadata.new_.get
+    assert(pre.metadata.`new`.isDefined)
+    val newState = pre.metadata.`new`.get
     assertEquals(newState.`type`, "aws:s3/bucket:Bucket")
     assertEquals(newState.custom, true)
     assert(newState.inputs.isDefined)
@@ -120,7 +120,7 @@ class EngineEventJSONTest extends munit.FunSuite {
 
   test("ResourcePreEvent with detailed diff") {
     val json =
-      """{"sequence":5,"timestamp":1704893592,"resourcePreEvent":{"metadata":{"op":"update","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","type":"aws:s3/bucket:Bucket","old":{"type":"aws:s3/bucket:Bucket","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","custom":true,"id":"bucket-123","parent":"","inputs":{"bucket":"my-bucket"},"outputs":{"arn":"arn:aws:s3:::my-bucket"}},"new":{"type":"aws:s3/bucket:Bucket","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","custom":true,"id":"","parent":"","inputs":{"bucket":"my-bucket","tags":{"env":"dev"}}},"diffs":["tags"],"detailedDiff":{"tags":{"diffKind":"add","inputDiff":true}},"logical":false},"planning":false}}"""
+      """{"sequence":5,"timestamp":1704893592,"resourcePreEvent":{"metadata":{"op":"update","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","type":"aws:s3/bucket:Bucket","provider":"","old":{"type":"aws:s3/bucket:Bucket","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","custom":true,"id":"bucket-123","parent":"","inputs":{"bucket":"my-bucket"},"outputs":{"arn":"arn:aws:s3:::my-bucket"},"provider":""},"new":{"type":"aws:s3/bucket:Bucket","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","custom":true,"id":"","parent":"","inputs":{"bucket":"my-bucket","tags":{"env":"dev"}},"outputs":null,"provider":""},"diffs":["tags"],"detailedDiff":{"tags":{"diffKind":"add","inputDiff":true}},"logical":false},"planning":false}}"""
 
     val event = EngineEvent.fromJson(json).get
     val pre   = event.resourcePreEvent.get
@@ -139,23 +139,23 @@ class EngineEventJSONTest extends munit.FunSuite {
 
   test("ResOutputsEvent should deserialize from JSON") {
     val json =
-      """{"sequence":6,"timestamp":1704893593,"resOutputsEvent":{"metadata":{"op":"create","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","type":"aws:s3/bucket:Bucket","new":{"type":"aws:s3/bucket:Bucket","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","custom":true,"id":"bucket-123","parent":"","outputs":{"arn":"arn:aws:s3:::my-bucket","bucket":"my-bucket"}},"logical":false},"planning":false}}"""
+      """{"sequence":6,"timestamp":1704893593,"resOutputsEvent":{"metadata":{"op":"create","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","type":"aws:s3/bucket:Bucket","provider":"","new":{"type":"aws:s3/bucket:Bucket","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","custom":true,"id":"bucket-123","parent":"","inputs":null,"outputs":{"arn":"arn:aws:s3:::my-bucket","bucket":"my-bucket"},"provider":""},"logical":false},"planning":false}}"""
 
     val event = EngineEvent.fromJson(json).get
     assert(event.resOutputsEvent.isDefined)
     val outputs = event.resOutputsEvent.get
     assertEquals(outputs.planning, false)
     assertEquals(outputs.metadata.op, OpType.Create)
-    assert(outputs.metadata.new_.isDefined)
-    assertEquals(outputs.metadata.new_.get.id, "bucket-123")
-    assert(outputs.metadata.new_.get.outputs.isDefined)
+    assert(outputs.metadata.`new`.isDefined)
+    assertEquals(outputs.metadata.`new`.get.id, "bucket-123")
+    assert(outputs.metadata.`new`.get.outputs.isDefined)
   }
 
   // ── ResOpFailedEvent ────────────────────────────────────────────────
 
   test("ResOpFailedEvent should deserialize from JSON") {
     val json =
-      """{"sequence":7,"timestamp":1704893594,"resOpFailedEvent":{"metadata":{"op":"create","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","type":"aws:s3/bucket:Bucket","logical":false},"status":2,"steps":1}}"""
+      """{"sequence":7,"timestamp":1704893594,"resOpFailedEvent":{"metadata":{"op":"create","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","type":"aws:s3/bucket:Bucket","provider":""},"status":2,"steps":1}}"""
 
     val event = EngineEvent.fromJson(json).get
     assert(event.resOpFailedEvent.isDefined)
@@ -180,7 +180,7 @@ class EngineEventJSONTest extends munit.FunSuite {
     assertEquals(pe.policyPackName, "aws-best-practices")
     assertEquals(pe.policyPackVersion, "1.0.0")
     assertEquals(pe.enforcementLevel, "mandatory")
-    assertEquals(pe.severity, "high")
+    assertEquals(pe.severity, Some("high"))
   }
 
   // ── PolicyRemediationEvent ──────────────────────────────────────────
@@ -278,7 +278,7 @@ class EngineEventJSONTest extends munit.FunSuite {
     assertEquals(pe.`type`, ProgressType.PluginDownload)
     assertEquals(pe.id, "pulumi-resource-aws-v6.0.0")
     assertEquals(pe.message, "Downloading...")
-    assertEquals(pe.completed, 524288L)
+    assertEquals(pe.received, 524288L)
     assertEquals(pe.total, 1048576L)
     assertEquals(pe.done, false)
   }
@@ -290,7 +290,7 @@ class EngineEventJSONTest extends munit.FunSuite {
     val pe    = event.progressEvent.get
     assertEquals(pe.`type`, ProgressType.PluginInstall)
     assertEquals(pe.done, true)
-    assertEquals(pe.completed, 1048576L)
+    assertEquals(pe.received, 1048576L)
   }
 
   // ── ErrorEvent ──────────────────────────────────────────────────────
@@ -347,33 +347,34 @@ class EngineEventJSONTest extends munit.FunSuite {
     assert(!DiffKind.Update.forcesReplacement)
   }
 
-  test("StepEventStateMetadata handles missing optional fields") {
-    val json = """{"type":"pulumi:pulumi:Stack","urn":"urn:pulumi:dev::proj::pulumi:pulumi:Stack::proj-dev","custom":false}"""
+  test("StepEventStateMetadata defaults omitempty fields when absent") {
+    val json =
+      """{"type":"pulumi:pulumi:Stack","urn":"urn:pulumi:dev::proj::pulumi:pulumi:Stack::proj-dev","id":"","parent":"","inputs":{"key":"val"},"outputs":null,"provider":""}"""
 
     val state = json.parseJson[StepEventStateMetadata].getOrElse(fail("Failed to parse"))
     assertEquals(state.`type`, "pulumi:pulumi:Stack")
     assertEquals(state.urn, "urn:pulumi:dev::proj::pulumi:pulumi:Stack::proj-dev")
-    assertEquals(state.id, "")
-    assertEquals(state.parent, "")
+    // omitempty bools default to false when absent
     assertEquals(state.custom, false)
     assertEquals(state.delete, false)
     assertEquals(state.protect, false)
     assertEquals(state.retainOnDelete, false)
-    assertEquals(state.inputs, None)
-    assertEquals(state.outputs, None)
-    assertEquals(state.provider, "")
+    // omitempty Option defaults to None when absent
     assertEquals(state.initErrors, None)
+    // nullable maps
+    assertEquals(state.inputs, Some(Map("key" -> JsString("val"))))
+    assertEquals(state.outputs, None)
   }
 
   test("StepEventMetadata handles 'new' keyword field") {
     val json =
-      """{"op":"create","urn":"urn:pulumi:dev::proj::pulumi:pulumi:Stack::proj-dev","type":"pulumi:pulumi:Stack","new":{"type":"pulumi:pulumi:Stack","urn":"urn:pulumi:dev::proj::pulumi:pulumi:Stack::proj-dev","custom":false}}"""
+      """{"op":"create","urn":"urn:pulumi:dev::proj::pulumi:pulumi:Stack::proj-dev","type":"pulumi:pulumi:Stack","provider":"","old":null,"new":{"type":"pulumi:pulumi:Stack","urn":"urn:pulumi:dev::proj::pulumi:pulumi:Stack::proj-dev","id":"","parent":"","inputs":null,"outputs":null,"provider":""},"detailedDiff":null}"""
 
     val meta = json.parseJson[StepEventMetadata].getOrElse(fail("Failed to parse"))
     assertEquals(meta.op, OpType.Create)
     assert(meta.old.isEmpty)
-    assert(meta.new_.isDefined)
-    assertEquals(meta.new_.get.`type`, "pulumi:pulumi:Stack")
+    assert(meta.`new`.isDefined)
+    assertEquals(meta.`new`.get.`type`, "pulumi:pulumi:Stack")
   }
 
   test("ProgressType round-trip") {

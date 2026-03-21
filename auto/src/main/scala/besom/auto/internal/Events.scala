@@ -25,12 +25,11 @@ object DiffKind:
     case "update-replace" => DiffKind.UpdateReplace
     case other            => throw DeserializationException(s"Unknown DiffKind: $other")
 
-  implicit object DiffKindFormat extends RootJsonFormat[DiffKind] {
+  given RootJsonFormat[DiffKind] with
     def write(obj: DiffKind): JsValue = JsString(obj.value)
     def read(json: JsValue): DiffKind = json match
       case JsString(s) => DiffKind.from(s)
       case _           => throw DeserializationException("Expected string for DiffKind")
-  }
 end DiffKind
 
 /** Describes the type of progress event. */
@@ -44,264 +43,118 @@ object ProgressType:
     case "plugin-install"  => ProgressType.PluginInstall
     case other             => throw DeserializationException(s"Unknown ProgressType: $other")
 
-  implicit object ProgressTypeFormat extends RootJsonFormat[ProgressType] {
+  given RootJsonFormat[ProgressType] with
     def write(obj: ProgressType): JsValue = JsString(obj.value)
     def read(json: JsValue): ProgressType = json match
       case JsString(s) => ProgressType.from(s)
       case _           => throw DeserializationException("Expected string for ProgressType")
-  }
 end ProgressType
 
 // ── Supporting types ───────────────────────────────────────────────────
 
-/** Describes the difference between a property's old and new values. */
+/** Describes the difference between a property's old and new values.
+  *
+  * All fields required per Go source (no omitempty).
+  */
 case class PropertyDiff(
   diffKind: DiffKind,
   inputDiff: Boolean
-)
-object PropertyDiff:
-  implicit object PropertyDiffFormat extends RootJsonFormat[PropertyDiff] {
-    def write(obj: PropertyDiff): JsValue = ???
-    def read(json: JsValue): PropertyDiff = {
-      val obj = json.asJsObject
-      PropertyDiff(
-        diffKind = obj.fields.get("diffKind").map(_.convertTo[DiffKind]).getOrElse(DiffKind.Update),
-        inputDiff = obj.fields.get("inputDiff").exists(_.convertTo[Boolean])
-      )
-    }
-  }
-end PropertyDiff
+) derives JsonFormat
 
-/** Resource state as part of a step event. */
+/** Resource state as part of a step event.
+  *
+  * Required fields (always present in JSON): type, urn, id, parent, inputs, outputs, provider. Optional fields (omitempty in Go): custom,
+  * delete, protect, retainOnDelete, initErrors.
+  */
 case class StepEventStateMetadata(
   `type`: String,
   urn: String,
   id: String,
   parent: String,
-  custom: Boolean,
-  delete: Boolean,
-  protect: Boolean,
-  retainOnDelete: Boolean,
   inputs: Option[Map[String, JsValue]],
   outputs: Option[Map[String, JsValue]],
   provider: String,
-  initErrors: Option[List[String]]
-)
-object StepEventStateMetadata:
-  implicit object StepEventStateMetadataFormat extends RootJsonFormat[StepEventStateMetadata] {
-    def write(obj: StepEventStateMetadata): JsValue = ???
-    def read(json: JsValue): StepEventStateMetadata = {
-      val obj    = json.asJsObject
-      val fields = obj.fields
-      StepEventStateMetadata(
-        `type` = fields.get("type").map(_.convertTo[String]).getOrElse(""),
-        urn = fields.get("urn").map(_.convertTo[String]).getOrElse(""),
-        id = fields.get("id").map(_.convertTo[String]).getOrElse(""),
-        parent = fields.get("parent").map(_.convertTo[String]).getOrElse(""),
-        custom = fields.get("custom").exists(_.convertTo[Boolean]),
-        delete = fields.get("delete").exists(_.convertTo[Boolean]),
-        protect = fields.get("protect").exists(_.convertTo[Boolean]),
-        retainOnDelete = fields.get("retainOnDelete").exists(_.convertTo[Boolean]),
-        inputs = fields.get("inputs").flatMap {
-          case JsNull => None
-          case v      => Some(v.convertTo[Map[String, JsValue]])
-        },
-        outputs = fields.get("outputs").flatMap {
-          case JsNull => None
-          case v      => Some(v.convertTo[Map[String, JsValue]])
-        },
-        provider = fields.get("provider").map(_.convertTo[String]).getOrElse(""),
-        initErrors = fields.get("initErrors").flatMap {
-          case JsNull => None
-          case v      => Some(v.convertTo[List[String]])
-        }
-      )
-    }
-  }
-end StepEventStateMetadata
+  custom: Boolean = false,
+  delete: Boolean = false,
+  protect: Boolean = false,
+  retainOnDelete: Boolean = false,
+  initErrors: Option[List[String]] = None
+) derives JsonFormat
 
-/** Step event metadata including operation type, resource URN, and old/new state. */
+/** Step event metadata including operation type, resource URN, and old/new state.
+  *
+  * Uses backtick-escaped `` `new` `` field to match JSON key `"new"`.
+  *
+  * Required: op, urn, type, old (nullable), new (nullable), detailedDiff (nullable), provider. Optional (omitempty): keys, diffs, logical.
+  */
 case class StepEventMetadata(
   op: OpType,
   urn: String,
   `type`: String,
   provider: String,
   old: Option[StepEventStateMetadata],
-  new_ : Option[StepEventStateMetadata],
-  keys: Option[List[String]],
-  diffs: Option[List[String]],
+  `new`: Option[StepEventStateMetadata],
   detailedDiff: Option[Map[String, PropertyDiff]],
-  logical: Boolean
-)
-object StepEventMetadata:
-  implicit object StepEventMetadataFormat extends RootJsonFormat[StepEventMetadata] {
-    def write(obj: StepEventMetadata): JsValue = ???
-    def read(json: JsValue): StepEventMetadata = {
-      val obj    = json.asJsObject
-      val fields = obj.fields
-      StepEventMetadata(
-        op = fields("op").convertTo[OpType],
-        urn = fields.get("urn").map(_.convertTo[String]).getOrElse(""),
-        `type` = fields.get("type").map(_.convertTo[String]).getOrElse(""),
-        provider = fields.get("provider").map(_.convertTo[String]).getOrElse(""),
-        old = fields.get("old").flatMap {
-          case JsNull => None
-          case v      => Some(v.convertTo[StepEventStateMetadata])
-        },
-        new_ = fields.get("new").flatMap {
-          case JsNull => None
-          case v      => Some(v.convertTo[StepEventStateMetadata])
-        },
-        keys = fields.get("keys").flatMap {
-          case JsNull => None
-          case v      => Some(v.convertTo[List[String]])
-        },
-        diffs = fields.get("diffs").flatMap {
-          case JsNull => None
-          case v      => Some(v.convertTo[List[String]])
-        },
-        detailedDiff = fields.get("detailedDiff").flatMap {
-          case JsNull => None
-          case v      => Some(v.convertTo[Map[String, PropertyDiff]])
-        },
-        logical = fields.get("logical").exists(_.convertTo[Boolean])
-      )
-    }
-  }
-end StepEventMetadata
+  keys: Option[List[String]] = None,
+  diffs: Option[List[String]] = None,
+  logical: Boolean = false
+) derives JsonFormat
 
 // ── Event types ────────────────────────────────────────────────────────
 
 /** Emitted when the user cancels the update or the update completes. */
-case class CancelEvent()
-object CancelEvent:
-  implicit object CancelEventFormat extends RootJsonFormat[CancelEvent] {
-    def write(obj: CancelEvent): JsValue = ???
-    def read(json: JsValue): CancelEvent = CancelEvent()
-  }
-end CancelEvent
+case class CancelEvent() derives JsonFormat
 
-/** Stdout messages from the engine. */
+/** Stdout messages from the engine. All fields required. */
 case class StdoutEngineEvent(
   message: String,
   color: String
-)
-object StdoutEngineEvent:
-  implicit object StdoutEngineEventFormat extends RootJsonFormat[StdoutEngineEvent] {
-    def write(obj: StdoutEngineEvent): JsValue = ???
-    def read(json: JsValue): StdoutEngineEvent = {
-      val fields = json.asJsObject.fields
-      StdoutEngineEvent(
-        message = fields.get("message").map(_.convertTo[String]).getOrElse(""),
-        color = fields.get("color").map(_.convertTo[String]).getOrElse("")
-      )
-    }
-  }
-end StdoutEngineEvent
+) derives JsonFormat
 
-/** Emitted at the start of an operation, contains config. */
+/** Emitted at the start of an operation. Config is always present. */
 case class PreludeEvent(
   config: Map[String, String]
-)
-object PreludeEvent:
-  implicit object PreludeEventFormat extends RootJsonFormat[PreludeEvent] {
-    def write(obj: PreludeEvent): JsValue = ???
-    def read(json: JsValue): PreludeEvent = {
-      val fields = json.asJsObject.fields
-      PreludeEvent(
-        config = fields.get("config").map(_.convertTo[Map[String, String]]).getOrElse(Map.empty)
-      )
-    }
-  }
-end PreludeEvent
+) derives JsonFormat
 
-/** A diagnostic message from the Pulumi engine or a provider. */
+/** A diagnostic message from the Pulumi engine or a provider.
+  *
+  * Required: severity, message, color. Optional (omitempty): urn, prefix, streamID, ephemeral.
+  */
 case class DiagnosticEvent(
-  urn: Option[String],
-  prefix: String,
   severity: String,
   message: String,
   color: String,
-  streamID: Option[Int],
-  ephemeral: Boolean
-)
-object DiagnosticEvent:
-  implicit object DiagnosticEventFormat extends RootJsonFormat[DiagnosticEvent] {
-    def write(obj: DiagnosticEvent): JsValue = ???
-    def read(json: JsValue): DiagnosticEvent = {
-      val fields = json.asJsObject.fields
-      DiagnosticEvent(
-        urn = fields.get("urn").map(_.convertTo[String]),
-        prefix = fields.get("prefix").map(_.convertTo[String]).getOrElse(""),
-        severity = fields.get("severity").map(_.convertTo[String]).getOrElse(""),
-        message = fields.get("message").map(_.convertTo[String]).getOrElse(""),
-        color = fields.get("color").map(_.convertTo[String]).getOrElse(""),
-        streamID = fields.get("streamID").map(_.convertTo[Int]),
-        ephemeral = fields.get("ephemeral").exists(_.convertTo[Boolean])
-      )
-    }
-  }
-end DiagnosticEvent
+  urn: Option[String] = None,
+  prefix: Option[String] = None,
+  streamID: Option[Int] = None,
+  ephemeral: Boolean = false
+) derives JsonFormat
 
-/** Emitted before a resource is modified. */
+/** Emitted before a resource is modified. Metadata is required, planning is omitempty. */
 case class ResourcePreEvent(
   metadata: StepEventMetadata,
-  planning: Boolean
-)
-object ResourcePreEvent:
-  implicit object ResourcePreEventFormat extends RootJsonFormat[ResourcePreEvent] {
-    def write(obj: ResourcePreEvent): JsValue = ???
-    def read(json: JsValue): ResourcePreEvent = {
-      val fields = json.asJsObject.fields
-      ResourcePreEvent(
-        metadata = fields("metadata").convertTo[StepEventMetadata],
-        planning = fields.get("planning").exists(_.convertTo[Boolean])
-      )
-    }
-  }
-end ResourcePreEvent
+  planning: Boolean = false
+) derives JsonFormat
 
 /** Emitted when a resource operation completes and outputs are available. */
 case class ResOutputsEvent(
   metadata: StepEventMetadata,
-  planning: Boolean
-)
-object ResOutputsEvent:
-  implicit object ResOutputsEventFormat extends RootJsonFormat[ResOutputsEvent] {
-    def write(obj: ResOutputsEvent): JsValue = ???
-    def read(json: JsValue): ResOutputsEvent = {
-      val fields = json.asJsObject.fields
-      ResOutputsEvent(
-        metadata = fields("metadata").convertTo[StepEventMetadata],
-        planning = fields.get("planning").exists(_.convertTo[Boolean])
-      )
-    }
-  }
-end ResOutputsEvent
+  planning: Boolean = false
+) derives JsonFormat
 
-/** Emitted when a resource operation fails. */
+/** Emitted when a resource operation fails. All fields required. */
 case class ResOpFailedEvent(
   metadata: StepEventMetadata,
   status: Int,
   steps: Int
-)
-object ResOpFailedEvent:
-  implicit object ResOpFailedEventFormat extends RootJsonFormat[ResOpFailedEvent] {
-    def write(obj: ResOpFailedEvent): JsValue = ???
-    def read(json: JsValue): ResOpFailedEvent = {
-      val fields = json.asJsObject.fields
-      ResOpFailedEvent(
-        metadata = fields("metadata").convertTo[StepEventMetadata],
-        status = fields.get("status").map(_.convertTo[Int]).getOrElse(0),
-        steps = fields.get("steps").map(_.convertTo[Int]).getOrElse(0)
-      )
-    }
-  }
-end ResOpFailedEvent
+) derives JsonFormat
 
-/** Emitted when a policy violation occurs. */
+/** Emitted when a policy violation occurs.
+  *
+  * Required: message, color, policyName, policyPackName, policyPackVersion, policyPackVersionTag, enforcementLevel. Optional (omitempty):
+  * resourceUrn, severity.
+  */
 case class PolicyEvent(
-  resourceUrn: Option[String],
   message: String,
   color: String,
   policyName: String,
@@ -309,98 +162,40 @@ case class PolicyEvent(
   policyPackVersion: String,
   policyPackVersionTag: String,
   enforcementLevel: String,
-  severity: String
-)
-object PolicyEvent:
-  implicit object PolicyEventFormat extends RootJsonFormat[PolicyEvent] {
-    def write(obj: PolicyEvent): JsValue = ???
-    def read(json: JsValue): PolicyEvent = {
-      val fields = json.asJsObject.fields
-      PolicyEvent(
-        resourceUrn = fields.get("resourceUrn").map(_.convertTo[String]),
-        message = fields.get("message").map(_.convertTo[String]).getOrElse(""),
-        color = fields.get("color").map(_.convertTo[String]).getOrElse(""),
-        policyName = fields.get("policyName").map(_.convertTo[String]).getOrElse(""),
-        policyPackName = fields.get("policyPackName").map(_.convertTo[String]).getOrElse(""),
-        policyPackVersion = fields.get("policyPackVersion").map(_.convertTo[String]).getOrElse(""),
-        policyPackVersionTag = fields.get("policyPackVersionTag").map(_.convertTo[String]).getOrElse(""),
-        enforcementLevel = fields.get("enforcementLevel").map(_.convertTo[String]).getOrElse(""),
-        severity = fields.get("severity").map(_.convertTo[String]).getOrElse("")
-      )
-    }
-  }
-end PolicyEvent
+  resourceUrn: Option[String] = None,
+  severity: Option[String] = None
+) derives JsonFormat
 
-/** Emitted during policy remediation. */
+/** Emitted during policy remediation.
+  *
+  * Required: color, policyName, policyPackName, policyPackVersion, policyPackVersionTag. Optional (omitempty): resourceUrn, before, after.
+  */
 case class PolicyRemediationEvent(
-  resourceUrn: Option[String],
   color: String,
   policyName: String,
   policyPackName: String,
   policyPackVersion: String,
   policyPackVersionTag: String,
-  before: Option[Map[String, JsValue]],
-  after: Option[Map[String, JsValue]]
-)
-object PolicyRemediationEvent:
-  implicit object PolicyRemediationEventFormat extends RootJsonFormat[PolicyRemediationEvent] {
-    def write(obj: PolicyRemediationEvent): JsValue = ???
-    def read(json: JsValue): PolicyRemediationEvent = {
-      val fields = json.asJsObject.fields
-      PolicyRemediationEvent(
-        resourceUrn = fields.get("resourceUrn").map(_.convertTo[String]),
-        color = fields.get("color").map(_.convertTo[String]).getOrElse(""),
-        policyName = fields.get("policyName").map(_.convertTo[String]).getOrElse(""),
-        policyPackName = fields.get("policyPackName").map(_.convertTo[String]).getOrElse(""),
-        policyPackVersion = fields.get("policyPackVersion").map(_.convertTo[String]).getOrElse(""),
-        policyPackVersionTag = fields.get("policyPackVersionTag").map(_.convertTo[String]).getOrElse(""),
-        before = fields.get("before").flatMap {
-          case JsNull => None
-          case v      => Some(v.convertTo[Map[String, JsValue]])
-        },
-        after = fields.get("after").flatMap {
-          case JsNull => None
-          case v      => Some(v.convertTo[Map[String, JsValue]])
-        }
-      )
-    }
-  }
-end PolicyRemediationEvent
+  resourceUrn: Option[String] = None,
+  before: Option[Map[String, JsValue]] = None,
+  after: Option[Map[String, JsValue]] = None
+) derives JsonFormat
 
 /** Emitted when a policy pack is loaded (empty event, signals load happened). */
-case class PolicyLoadEvent()
-object PolicyLoadEvent:
-  implicit object PolicyLoadEventFormat extends RootJsonFormat[PolicyLoadEvent] {
-    def write(obj: PolicyLoadEvent): JsValue = ???
-    def read(json: JsValue): PolicyLoadEvent = PolicyLoadEvent()
-  }
-end PolicyLoadEvent
+case class PolicyLoadEvent() derives JsonFormat
 
-/** Summary of policy analysis for a resource. */
+/** Summary of policy analysis for a resource.
+  *
+  * Required: resourceUrn, policyPackName, policyPackVersion, policyPackVersionTag. Optional (omitempty): passed, failed.
+  */
 case class PolicyAnalyzeSummaryEvent(
   resourceUrn: String,
   policyPackName: String,
   policyPackVersion: String,
   policyPackVersionTag: String,
-  passed: List[String],
-  failed: List[String]
-)
-object PolicyAnalyzeSummaryEvent:
-  implicit object PolicyAnalyzeSummaryEventFormat extends RootJsonFormat[PolicyAnalyzeSummaryEvent] {
-    def write(obj: PolicyAnalyzeSummaryEvent): JsValue = ???
-    def read(json: JsValue): PolicyAnalyzeSummaryEvent = {
-      val fields = json.asJsObject.fields
-      PolicyAnalyzeSummaryEvent(
-        resourceUrn = fields.get("resourceUrn").map(_.convertTo[String]).getOrElse(""),
-        policyPackName = fields.get("policyPackName").map(_.convertTo[String]).getOrElse(""),
-        policyPackVersion = fields.get("policyPackVersion").map(_.convertTo[String]).getOrElse(""),
-        policyPackVersionTag = fields.get("policyPackVersionTag").map(_.convertTo[String]).getOrElse(""),
-        passed = fields.get("passed").map(_.convertTo[List[String]]).getOrElse(Nil),
-        failed = fields.get("failed").map(_.convertTo[List[String]]).getOrElse(Nil)
-      )
-    }
-  }
-end PolicyAnalyzeSummaryEvent
+  passed: List[String] = Nil,
+  failed: List[String] = Nil
+) derives JsonFormat
 
 /** Summary of policy remediation for a resource. */
 case class PolicyRemediateSummaryEvent(
@@ -408,107 +203,38 @@ case class PolicyRemediateSummaryEvent(
   policyPackName: String,
   policyPackVersion: String,
   policyPackVersionTag: String,
-  passed: List[String],
-  failed: List[String]
-)
-object PolicyRemediateSummaryEvent:
-  implicit object PolicyRemediateSummaryEventFormat extends RootJsonFormat[PolicyRemediateSummaryEvent] {
-    def write(obj: PolicyRemediateSummaryEvent): JsValue = ???
-    def read(json: JsValue): PolicyRemediateSummaryEvent = {
-      val fields = json.asJsObject.fields
-      PolicyRemediateSummaryEvent(
-        resourceUrn = fields.get("resourceUrn").map(_.convertTo[String]).getOrElse(""),
-        policyPackName = fields.get("policyPackName").map(_.convertTo[String]).getOrElse(""),
-        policyPackVersion = fields.get("policyPackVersion").map(_.convertTo[String]).getOrElse(""),
-        policyPackVersionTag = fields.get("policyPackVersionTag").map(_.convertTo[String]).getOrElse(""),
-        passed = fields.get("passed").map(_.convertTo[List[String]]).getOrElse(Nil),
-        failed = fields.get("failed").map(_.convertTo[List[String]]).getOrElse(Nil)
-      )
-    }
-  }
-end PolicyRemediateSummaryEvent
+  passed: List[String] = Nil,
+  failed: List[String] = Nil
+) derives JsonFormat
 
 /** Stack-level summary of policy analysis. */
 case class PolicyAnalyzeStackSummaryEvent(
   policyPackName: String,
   policyPackVersion: String,
   policyPackVersionTag: String,
-  passed: List[String],
-  failed: List[String]
-)
-object PolicyAnalyzeStackSummaryEvent:
-  implicit object PolicyAnalyzeStackSummaryEventFormat extends RootJsonFormat[PolicyAnalyzeStackSummaryEvent] {
-    def write(obj: PolicyAnalyzeStackSummaryEvent): JsValue = ???
-    def read(json: JsValue): PolicyAnalyzeStackSummaryEvent = {
-      val fields = json.asJsObject.fields
-      PolicyAnalyzeStackSummaryEvent(
-        policyPackName = fields.get("policyPackName").map(_.convertTo[String]).getOrElse(""),
-        policyPackVersion = fields.get("policyPackVersion").map(_.convertTo[String]).getOrElse(""),
-        policyPackVersionTag = fields.get("policyPackVersionTag").map(_.convertTo[String]).getOrElse(""),
-        passed = fields.get("passed").map(_.convertTo[List[String]]).getOrElse(Nil),
-        failed = fields.get("failed").map(_.convertTo[List[String]]).getOrElse(Nil)
-      )
-    }
-  }
-end PolicyAnalyzeStackSummaryEvent
+  passed: List[String] = Nil,
+  failed: List[String] = Nil
+) derives JsonFormat
 
-/** Emitted when a debugging session starts. */
+/** Emitted when a debugging session starts. Config is omitempty. */
 case class StartDebuggingEvent(
-  config: Map[String, JsValue]
-)
-object StartDebuggingEvent:
-  implicit object StartDebuggingEventFormat extends RootJsonFormat[StartDebuggingEvent] {
-    def write(obj: StartDebuggingEvent): JsValue = ???
-    def read(json: JsValue): StartDebuggingEvent = {
-      val fields = json.asJsObject.fields
-      StartDebuggingEvent(
-        config = fields.get("config").map(_.convertTo[Map[String, JsValue]]).getOrElse(Map.empty)
-      )
-    }
-  }
-end StartDebuggingEvent
+  config: Map[String, JsValue] = Map.empty
+) derives JsonFormat
 
 /** Emitted for plugin download/install progress.
   *
-  * Note: `completed` maps to JSON field `"received"` per Pulumi's Go source.
+  * Note: `received` matches the Go JSON tag `"received"` (Go field is named `Completed`).
   */
 case class ProgressEvent(
   `type`: ProgressType,
   id: String,
   message: String,
-  completed: Long,
+  received: Long,
   total: Long,
   done: Boolean
-)
-object ProgressEvent:
-  implicit object ProgressEventFormat extends RootJsonFormat[ProgressEvent] {
-    def write(obj: ProgressEvent): JsValue = ???
-    def read(json: JsValue): ProgressEvent = {
-      val fields = json.asJsObject.fields
-      ProgressEvent(
-        `type` = fields.get("type").map(_.convertTo[ProgressType]).getOrElse(ProgressType.PluginDownload),
-        id = fields.get("id").map(_.convertTo[String]).getOrElse(""),
-        message = fields.get("message").map(_.convertTo[String]).getOrElse(""),
-        completed = fields.get("received").map(_.convertTo[Long]).getOrElse(0L),
-        total = fields.get("total").map(_.convertTo[Long]).getOrElse(0L),
-        done = fields.get("done").exists(_.convertTo[Boolean])
-      )
-    }
-  }
-end ProgressEvent
+) derives JsonFormat
 
-/** Emitted when an internal engine error occurs. */
+/** Emitted when an internal engine error occurs. Error field is required. */
 case class ErrorEvent(
   error: String
-)
-object ErrorEvent:
-  implicit object ErrorEventFormat extends RootJsonFormat[ErrorEvent] {
-    def write(obj: ErrorEvent): JsValue = ???
-    def read(json: JsValue): ErrorEvent = {
-      val fields = json.asJsObject.fields
-      ErrorEvent(
-        error = fields.get("error").map(_.convertTo[String]).getOrElse("")
-      )
-    }
-  }
-end ErrorEvent
+) derives JsonFormat
