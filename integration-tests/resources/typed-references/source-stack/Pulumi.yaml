@@ -1,0 +1,4 @@
+name: typed-ref-source-test
+description: Besom typed stack exports source stack
+runtime:
+  name: scala

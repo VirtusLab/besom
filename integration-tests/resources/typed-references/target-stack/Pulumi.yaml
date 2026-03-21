@@ -1,0 +1,4 @@
+name: typed-ref-target-test
+description: Besom typed stack exports target stack
+runtime:
+  name: scala

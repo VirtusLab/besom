@@ -210,6 +210,40 @@ class CoreTests extends munit.FunSuite:
     case _ => throw new Exception("Invalid number of contexts")
   }
 
+  FunFixture[pulumi.FixtureMultiContext](
+    setup = {
+      pulumi.fixture.setup(
+        FixtureOpts(),
+        FixtureArgs(
+          wd / "resources" / "typed-references" / "source-stack"
+        ),
+        FixtureArgs(
+          wd / "resources" / "typed-references" / "target-stack"
+        )
+      )
+    },
+    teardown = pulumi.fixture.teardown
+  ).test("typed stack exports and references should work") {
+    case pulumi.FixtureMultiContext(ctx, Vector(ctx1, ctx2)) =>
+      println(s"Source stack name: ${ctx1.stackName}, pulumi home: ${ctx.home}")
+      pulumi.up(ctx1.stackName).call(cwd = ctx1.programDir, env = ctx1.env)
+      val expected = upickle.default.read[Map[String, ujson.Value]](
+        pulumi.outputs(ctx1.stackName, "--show-secrets").call(cwd = ctx1.programDir, env = ctx1.env).out.text()
+      )
+
+      println(s"Target stack name: ${ctx2.stackName}, pulumi home: ${ctx.home}")
+      pulumi
+        .up(ctx2.stackName, "--config", s"sourceStack=organization/typed-ref-source-test/${ctx1.stackName}")
+        .call(cwd = ctx2.programDir, env = ctx2.env)
+      val obtained = upickle.default.read[Map[String, ujson.Value]](
+        pulumi.outputs(ctx2.stackName, "--show-secrets").call(cwd = ctx2.programDir, env = ctx2.env).out.text()
+      )
+
+      assertEquals(obtained, expected)
+
+    case _ => throw new Exception("Invalid number of contexts")
+  }
+
   FunFixture[pulumi.FixtureContext](
     setup = {
       val schemaName    = "tls"
