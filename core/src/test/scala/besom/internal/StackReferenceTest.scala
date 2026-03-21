@@ -120,7 +120,8 @@ class StackReferenceTest extends munit.FunSuite:
   }
   test("typed export round-trip: serialize with Output fields, deserialize with unwrapped mirror case class") {
     given Context = DummyContext(
-      featureSupport = FeatureSupport(keepResources = true, keepOutputValues = false, deletedWith = true, aliasSpecs = true, transforms = true)
+      featureSupport =
+        FeatureSupport(keepResources = true, keepOutputValues = false, deletedWith = true, aliasSpecs = true, transforms = true)
     ).unsafeRunSync()
 
     // export side: case class with Output fields

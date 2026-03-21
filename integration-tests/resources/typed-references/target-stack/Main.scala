@@ -29,8 +29,7 @@ case class InfraOutputs(vpcId: String, zone: String, port: Int, secretToken: Str
 
   val secretCheck = typedSourceStack.flatMap { sourceStack =>
     Output {
-      for
-        s <- sourceStack.secretOutputNames.getData
+      for s <- sourceStack.secretOutputNames.getData
       yield
         val names = s.getValueOrElse(Set.empty)
         assert(names.contains("secretToken"), s"secretToken should be in secret output names, got $names")

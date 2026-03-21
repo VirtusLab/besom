@@ -36,10 +36,8 @@ object Export:
           arg match
             case '{ $a: t } =>
               val tpe = TypeRepr.of[t]
-              if tpe.typeSymbol.flags.is(Flags.Case) then
-                serializeTypedExport[t](a, ctx, stack)
-              else
-                report.errorAndAbort(s"Single argument to exports(...) must be a case class, got ${tpe.show}")
+              if tpe.typeSymbol.flags.is(Flags.Case) then serializeTypedExport[t](a, ctx, stack)
+              else report.errorAndAbort(s"Single argument to exports(...) must be a case class, got ${tpe.show}")
         else report.errorAndAbort("All arguments of `exports(...)` must be explicitly named.")
       case _ =>
         report.errorAndAbort("Expanding arguments of `exports(...)` with `*` is not allowed.")
@@ -48,7 +46,8 @@ object Export:
     import quotes.reflect.*
     val tpe = TypeRepr.of[A]
 
-    val encoder = Expr.summon[Encoder[A]]
+    val encoder = Expr
+      .summon[Encoder[A]]
       .getOrElse(report.errorAndAbort(s"Missing Encoder[${tpe.show}] for typed export. Add `derives Encoder` to your case class."))
 
     '{
