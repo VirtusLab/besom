@@ -4,6 +4,7 @@ import besom.*
 import besom.json.*
 import RunResult.{*, given}
 import besom.internal.logging.BesomLogger
+import com.google.protobuf.struct.Value
 
 class StackReferenceTest extends munit.FunSuite:
 
@@ -116,5 +117,34 @@ class StackReferenceTest extends munit.FunSuite:
     }
 
     assertEquals(obtainedTypedStackReference.outputs, expected)
+  }
+  test("typed export round-trip: serialize with Output fields, deserialize with unwrapped mirror case class") {
+    given Context = DummyContext(
+      featureSupport =
+        FeatureSupport(keepResources = true, keepOutputValues = false, deletedWith = true, aliasSpecs = true, transforms = true)
+    ).unsafeRunSync()
+
+    // export side: case class with Output fields
+    case class InfraExports(vpcId: Output[String], zone: Output[String]) derives Encoder
+
+    // read side: mirror case class with unwrapped fields
+    case class InfraOutputs(vpcId: String, zone: String) derives JsonReader
+
+    // encode via typed export
+    val stack        = Stack.exports(InfraExports(vpcId = Output("vpc-123"), zone = Output("us-east-1")))
+    val exportStruct = stack.getExports.result.unsafeRunSync()
+
+    // convert protobuf struct fields to JsValue map (simulating what Pulumi runtime does between stacks)
+    val jsOutputs = exportStruct.fields.map { case (k, v) =>
+      v.kind match
+        case Value.Kind.StringValue(s) => k -> JsString(s)
+        case Value.Kind.NumberValue(n) => k -> JsNumber(n)
+        case Value.Kind.BoolValue(b)   => k -> JsBoolean(b)
+        case other                     => fail(s"Unexpected value kind: $other")
+    }
+
+    // read via typed stack reference
+    val result = StackReference.requireObject[InfraOutputs](Output(jsOutputs), Output(Set.empty))
+    assertEquals(result.getData.unsafeRunSync(), OutputData(InfraOutputs("vpc-123", "us-east-1")))
   }
 end StackReferenceTest

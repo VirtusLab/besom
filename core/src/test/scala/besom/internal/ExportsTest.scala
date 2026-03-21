@@ -140,4 +140,98 @@ class ExportsTest extends munit.FunSuite with ValueAssertions:
       assertEqualsValue(encoded, expected, encoded.toProtoString)
     }
   }
+  case class TestOutputs(foo: Output[String], bar: Output[Int]) derives Encoder
+
+  runWithBothOutputCodecs {
+    test(s"Stack.export with case class works as intended (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      val stack = Stack.exports(TestOutputs(foo = Output.pure("hello"), bar = Output.pure(42)))
+
+      val stackOutputs = stack.getExports.result.unsafeRunSync()
+      val encoded      = Value(Kind.StructValue(stackOutputs))
+
+      val expected =
+        if Context().featureSupport.keepOutputValues
+        then
+          Map(
+            "foo" -> "hello".asValue.asOutputValue(isSecret = false, List.empty),
+            "bar" -> 42.0.asValue.asOutputValue(isSecret = false, List.empty)
+          ).asValue
+        else
+          Map(
+            "foo" -> "hello".asValue,
+            "bar" -> 42.0.asValue
+          ).asValue
+
+      assertEqualsValue(encoded, expected, encoded.toProtoString)
+    }
+  }
+
+  runWithBothOutputCodecs {
+    test(
+      s"Stack with dependencies then export preserves dependencies (keepOutputValues: ${Context().featureSupport.keepOutputValues})"
+    ) {
+      val dep   = Output.pure("dep")
+      val stack = Stack(dep).exports(TestOutputs(foo = Output.pure("hello"), bar = Output.pure(42)))
+
+      val stackDeps = stack.getDependsOn
+      assertEquals(stackDeps.size, 1)
+
+      val stackOutputs = stack.getExports.result.unsafeRunSync()
+      assertEquals(stackOutputs.fields.size, 2)
+    }
+  }
+
+  runWithBothOutputCodecs {
+    test(
+      s"Stack.export then exports merges correctly (keepOutputValues: ${Context().featureSupport.keepOutputValues})"
+    ) {
+      val stack = Stack
+        .exports(TestOutputs(foo = Output.pure("hello"), bar = Output.pure(42)))
+        .exports(extra = Output.pure("extra"))
+
+      val stackOutputs = stack.getExports.result.unsafeRunSync()
+      assertEquals(stackOutputs.fields.size, 3)
+      assert(stackOutputs.fields.contains("foo"))
+      assert(stackOutputs.fields.contains("bar"))
+      assert(stackOutputs.fields.contains("extra"))
+    }
+  }
+
+  runWithBothOutputCodecs {
+    test(s"Stack.export handles secrets correctly (keepOutputValues: ${Context().featureSupport.keepOutputValues})") {
+      case class SecretOutputs(public: Output[String], secret: Output[String]) derives Encoder
+
+      val stack = Stack.exports(SecretOutputs(public = Output.pure("visible"), secret = Output.secret("hidden")))
+
+      val stackOutputs = stack.getExports.result.unsafeRunSync()
+      val encoded      = stackOutputs.asValue
+
+      val expected =
+        if Context().featureSupport.keepOutputValues
+        then
+          Map(
+            "public" -> "visible".asValue.asOutputValue(isSecret = false, List.empty),
+            "secret" -> "hidden".asValue.asOutputValue(isSecret = true, List.empty)
+          ).asValue
+        else
+          Map(
+            "public" -> "visible".asValue,
+            "secret" -> "hidden".asValue.asSecretValue
+          ).asValue
+
+      assertEqualsValue(encoded, expected, encoded.toProtoString)
+    }
+  }
+
+  test("typed exports should not compile for a case class without Encoder") {
+    val errors = compileErrors(
+      """given Context = DummyContext().unsafeRunSync()
+         case class BadOutputs(foo: String, bar: Int)
+         Stack.exports(BadOutputs("hello", 42))"""
+    )
+    assert(
+      errors.contains("Missing Encoder[BadOutputs] for typed export. Add `derives Encoder` to your case class."),
+      s"Expected error about missing Encoder, got: $errors"
+    )
+  }
 end ExportsTest
