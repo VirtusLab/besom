@@ -27,7 +27,7 @@ class EngineEventJSONTest extends munit.FunSuite {
   // ── CancelEvent ─────────────────────────────────────────────────────
 
   test("CancelEvent should deserialize from JSON") {
-    val json = """{"sequence":99,"timestamp":1704893600,"cancelEvent":{}}"""
+    val json  = """{"sequence":99,"timestamp":1704893600,"cancelEvent":{}}"""
     val event = EngineEvent.fromJson(json).get
     assert(event.cancelEvent.isDefined)
     assertEquals(event.cancelEvent.get, CancelEvent())
@@ -59,7 +59,7 @@ class EngineEventJSONTest extends munit.FunSuite {
   }
 
   test("PreludeEvent with empty config") {
-    val json = """{"sequence":1,"timestamp":1704893590,"preludeEvent":{"config":{}}}"""
+    val json  = """{"sequence":1,"timestamp":1704893590,"preludeEvent":{"config":{}}}"""
     val event = EngineEvent.fromJson(json).get
     assert(event.preludeEvent.isDefined)
     assertEquals(event.preludeEvent.get.config, Map.empty[String, String])
@@ -89,7 +89,7 @@ class EngineEventJSONTest extends munit.FunSuite {
       """{"sequence":2,"timestamp":1704893591,"diagnosticEvent":{"urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","prefix":"aws:s3/bucket:Bucket (my-bucket): ","severity":"warning","message":"deprecated field","color":"","ephemeral":true}}"""
 
     val event = EngineEvent.fromJson(json).get
-    val diag = event.diagnosticEvent.get
+    val diag  = event.diagnosticEvent.get
     assertEquals(diag.urn, Some("urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket"))
     assertEquals(diag.prefix, "aws:s3/bucket:Bucket (my-bucket): ")
     assertEquals(diag.severity, "warning")
@@ -123,7 +123,7 @@ class EngineEventJSONTest extends munit.FunSuite {
       """{"sequence":5,"timestamp":1704893592,"resourcePreEvent":{"metadata":{"op":"update","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","type":"aws:s3/bucket:Bucket","old":{"type":"aws:s3/bucket:Bucket","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","custom":true,"id":"bucket-123","parent":"","inputs":{"bucket":"my-bucket"},"outputs":{"arn":"arn:aws:s3:::my-bucket"}},"new":{"type":"aws:s3/bucket:Bucket","urn":"urn:pulumi:dev::myproject::aws:s3/bucket:Bucket::my-bucket","custom":true,"id":"","parent":"","inputs":{"bucket":"my-bucket","tags":{"env":"dev"}}},"diffs":["tags"],"detailedDiff":{"tags":{"diffKind":"add","inputDiff":true}},"logical":false},"planning":false}}"""
 
     val event = EngineEvent.fromJson(json).get
-    val pre = event.resourcePreEvent.get
+    val pre   = event.resourcePreEvent.get
     assertEquals(pre.metadata.op, OpType.Update)
     assert(pre.metadata.old.isDefined)
     assertEquals(pre.metadata.old.get.id, "bucket-123")
@@ -200,7 +200,7 @@ class EngineEventJSONTest extends munit.FunSuite {
   // ── PolicyLoadEvent ─────────────────────────────────────────────────
 
   test("PolicyLoadEvent should deserialize from JSON") {
-    val json = """{"sequence":8,"timestamp":1704893595,"policyLoadEvent":{}}"""
+    val json  = """{"sequence":8,"timestamp":1704893595,"policyLoadEvent":{}}"""
     val event = EngineEvent.fromJson(json).get
     assert(event.policyLoadEvent.isDefined)
     assertEquals(event.policyLoadEvent.get, PolicyLoadEvent())
@@ -260,7 +260,7 @@ class EngineEventJSONTest extends munit.FunSuite {
   }
 
   test("StartDebuggingEvent with empty config") {
-    val json = """{"sequence":15,"timestamp":1704893600,"startDebuggingEvent":{}}"""
+    val json  = """{"sequence":15,"timestamp":1704893600,"startDebuggingEvent":{}}"""
     val event = EngineEvent.fromJson(json).get
     assert(event.startDebuggingEvent.isDefined)
     assertEquals(event.startDebuggingEvent.get.config, Map.empty[String, JsValue])
@@ -287,7 +287,7 @@ class EngineEventJSONTest extends munit.FunSuite {
     val json =
       """{"sequence":17,"timestamp":1704893602,"progressEvent":{"type":"plugin-install","id":"pulumi-resource-aws-v6.0.0","message":"Installing...","received":1048576,"total":1048576,"done":true}}"""
     val event = EngineEvent.fromJson(json).get
-    val pe = event.progressEvent.get
+    val pe    = event.progressEvent.get
     assertEquals(pe.`type`, ProgressType.PluginInstall)
     assertEquals(pe.done, true)
     assertEquals(pe.completed, 1048576L)

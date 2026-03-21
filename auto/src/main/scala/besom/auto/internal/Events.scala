@@ -91,7 +91,7 @@ object StepEventStateMetadata:
   implicit object StepEventStateMetadataFormat extends RootJsonFormat[StepEventStateMetadata] {
     def write(obj: StepEventStateMetadata): JsValue = ???
     def read(json: JsValue): StepEventStateMetadata = {
-      val obj = json.asJsObject
+      val obj    = json.asJsObject
       val fields = obj.fields
       StepEventStateMetadata(
         `type` = fields.get("type").map(_.convertTo[String]).getOrElse(""),
@@ -137,7 +137,7 @@ object StepEventMetadata:
   implicit object StepEventMetadataFormat extends RootJsonFormat[StepEventMetadata] {
     def write(obj: StepEventMetadata): JsValue = ???
     def read(json: JsValue): StepEventMetadata = {
-      val obj = json.asJsObject
+      val obj    = json.asJsObject
       val fields = obj.fields
       StepEventMetadata(
         op = fields("op").convertTo[OpType],

@@ -106,7 +106,7 @@ case class Stack(name: String, workspace: Workspace):
   end preview
 
   private def parseEventLog(path: os.Path): Either[Exception, List[EngineEvent]] =
-    val lines = os.read.lines(path).filter(_.nonEmpty)
+    val lines  = os.read.lines(path).filter(_.nonEmpty)
     val parsed = lines.map(EngineEvent.fromJson(_))
     val errors = parsed.collect { case Left(e) => e }
     if errors.nonEmpty then
@@ -171,7 +171,7 @@ case class Stack(name: String, workspace: Workspace):
       eventsPath <- eventLogsPath("up")
       r <- {
         val watchArgs: Seq[String] = Seq("--event-log=" + eventsPath)
-        val args: Seq[String] = Seq("up", "--yes", "--skip-preview") ++ sharedArgs ++ kindArgs ++ watchArgs
+        val args: Seq[String]      = Seq("up", "--yes", "--skip-preview") ++ sharedArgs ++ kindArgs ++ watchArgs
         pulumi(args)(
 // FIXME: missing streams, implement progressStreams and errorProgressStreams
 //      shell.Option.Stdout(opts.progressStreams),
@@ -224,7 +224,7 @@ case class Stack(name: String, workspace: Workspace):
       eventsPath <- eventLogsPath("refresh")
       r <- {
         val watchArgs: Seq[String] = Seq("--event-log=" + eventsPath)
-        val args: Seq[String] = Seq("refresh", "--yes", "--skip-preview") ++ sharedArgs ++ watchArgs
+        val args: Seq[String]      = Seq("refresh", "--yes", "--skip-preview") ++ sharedArgs ++ watchArgs
         pulumi(args)().left.map(AutoError("Refresh failed", _))
       }
       history <- history(
@@ -268,7 +268,7 @@ case class Stack(name: String, workspace: Workspace):
       eventsPath <- eventLogsPath("destroy")
       r <- {
         val watchArgs: Seq[String] = Seq("--event-log=" + eventsPath)
-        val args: Seq[String] = Seq("destroy", "--yes", "--skip-preview") ++ sharedArgs ++ watchArgs
+        val args: Seq[String]      = Seq("destroy", "--yes", "--skip-preview") ++ sharedArgs ++ watchArgs
         pulumi(args)().left.map(AutoError("Destroy failed", _))
       }
       history <- history(
