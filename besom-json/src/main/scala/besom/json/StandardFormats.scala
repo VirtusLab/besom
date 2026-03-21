@@ -25,6 +25,15 @@ trait StandardFormats {
   this: AdditionalFormats =>
 
   private[json] type JF[T] = JsonFormat[T] // simple alias for reduced verbosity
+  private[json] type JR[T] = JsonReader[T] // as above so below
+
+  implicit def optionReader[T: JR]: JR[Option[T]] =
+    new JsonReader[Option[T]] {
+      def read(value: JsValue) = value match {
+        case JsNull => None
+        case x      => Some(x.convertTo[T])
+      }
+    }
 
   implicit def optionFormat[T: JF]: JF[Option[T]] = new OptionFormat[T]
 
@@ -40,6 +49,16 @@ trait StandardFormats {
     // allows reading the JSON as a Some (useful in container formats)
     def readSome(value: JsValue) = Some(value.convertTo[T])
   }
+
+  implicit def eitherReader[A: JR, B: JR]: JR[Either[A, B]] =
+    new JsonReader[Either[A, B]] {
+      def read(value: JsValue) = (value.convertTo(safeReader[A]), value.convertTo(safeReader[B])) match {
+        case (Right(a), _: Left[_, _])        => Left(a)
+        case (_: Left[_, _], Right(b))        => Right(b)
+        case (_: Right[_, _], _: Right[_, _]) => deserializationError("Ambiguous Either value: can be read as both, Left and Right, values")
+        case (Left(ea), Left(eb)) => deserializationError("Could not read Either value:\n" + ea + "---------- and ----------\n" + eb)
+      }
+    }
 
   implicit def eitherFormat[A: JF, B: JF]: JF[Either[A, B]] = new JF[Either[A, B]] {
     def write(either: Either[A, B]) = either match {
