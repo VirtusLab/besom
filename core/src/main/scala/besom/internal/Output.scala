@@ -332,24 +332,24 @@ object Output:
     })
 
   def empty(isSecret: Boolean = false): Output[Nothing] =
-    new Output(ctx => Result.pure(OutputData.empty[Nothing](isSecret = isSecret)))
+    new Output(_ => Result.pure(OutputData.empty[Nothing](isSecret = isSecret)))
 
   def eval[F[_]: Result.ToFuture, A](value: F[A]): Output[A] =
-    new Output[A](ctx => Result.eval[F, A](value).map(OutputData(_)))
+    new Output[A](_ => Result.eval[F, A](value).map(OutputData(_)))
 
-  def fail(t: Throwable): Output[Nothing] = new Output(ctx => Result.fail(t))
+  def fail(t: Throwable): Output[Nothing] = new Output(_ => Result.fail(t))
 
-  def ofResult[A](value: => Result[A]): Output[A] = new Output(ctx => value.map(OutputData(_)))
+  def ofResult[A](value: => Result[A]): Output[A] = new Output(_ => value.map(OutputData(_)))
 
-  def defer[A](value: => A): Output[A] = new Output(ctx => Result.defer(OutputData(value)))
+  def defer[A](value: => A): Output[A] = new Output(_ => Result.defer(OutputData(value)))
 
-  def pure[A](value: A): Output[A] = new Output(ctx => Result.pure(OutputData(value)))
+  def pure[A](value: A): Output[A] = new Output(_ => Result.pure(OutputData(value)))
 
-  def ofData[A](value: => Result[OutputData[A]]): Output[A] = new Output(ctx => value)
+  def ofData[A](value: => Result[OutputData[A]]): Output[A] = new Output(_ => value)
 
-  def ofData[A](data: OutputData[A]): Output[A] = new Output(ctx => Result.pure(data))
+  def ofData[A](data: OutputData[A]): Output[A] = new Output(_ => Result.pure(data))
 
-  def secret[A](value: A): Output[A] = new Output(ctx => Result.pure(OutputData(value, Set.empty, isSecret = true)))
+  def secret[A](value: A): Output[A] = new Output(_ => Result.pure(OutputData(value, Set.empty, isSecret = true)))
 
   def when[A](cond: => Input[Boolean])(
     a: => Input.Optional[A]

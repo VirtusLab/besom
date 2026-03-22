@@ -1,6 +1,12 @@
-//> using scala "3.3.1"
-//> using options "-java-output-version:11", "-Ysafe-init", "-Xmax-inlines:64"
-//> using options "-Werror", "-Wunused:all", "-deprecation", "-feature"
+//> using scala "3.3.7"
+//> using options "-java-output-version:11" "-Ysafe-init" "-Xmax-inlines:64"
+//> using options "-Werror" "-Wunused:all" "-deprecation" "-feature"
+// macro false positives in quoted patterns
+//> using options "-Wconf:src=internal/ResourceDecoder.scala&msg=unused (local definition|implicit parameter):s,src=internal/Update.scala&msg=unused (local definition|pattern variable):s"
+// public API: context bounds and implicit params that are forwarded or needed at call sites
+//> using options "-Wconf:src=internal/BesomSyntax.scala&msg=unused implicit parameter:s,src=internal/Config.scala&msg=unused implicit parameter:s,src=internal/ResourceMatcher.scala&msg=unused implicit parameter:s,src=internal/StackFactory.scala&msg=unused implicit parameter:s,src=internal/StackReferenceArgs.scala&msg=unused implicit parameter:s,src=internal/codecs.scala&msg=unused implicit parameter:s,src=internal/PropertiesSerializer.scala&msg=unused implicit parameter:s,src=internal/ResourceOps.scala&msg=unused explicit parameter:s"
+// tests: suppress unused params that are needed implicitly
+//> using options "-Wconf:src=test/.*&msg=unused (implicit|explicit) parameter:s"
 // -language:noAutoTupling // after https://github.com/VirtusLab/scala-cli/issues/2708
 
 //> using dep "org.virtuslab::besom-json:0.5.1-SNAPSHOT"

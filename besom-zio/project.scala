@@ -1,6 +1,6 @@
 //> using scala "3.3.1"
-//> using options "-java-output-version:11", "-Ykind-projector:underscores"
-//> using options "-deprecation", "-feature"
+//> using options "-java-output-version:11" "-Ykind-projector:underscores"
+//> using options "-deprecation" "-feature"
 
 //> using dep "org.virtuslab::besom-core:0.5.1-SNAPSHOT"
 //> using dep "dev.zio::zio:2.0.17"

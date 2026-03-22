@@ -1,7 +1,6 @@
 package besom.internal
 
 import besom.internal.Constants.{IdPropertyName, UrnPropertyName}
-import com.google.protobuf.struct.Value.Kind.*
 import com.google.protobuf.struct.Struct
 
 case class SerializationResult(

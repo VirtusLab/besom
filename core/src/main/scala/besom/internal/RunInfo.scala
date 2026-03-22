@@ -17,7 +17,6 @@ case class RunInfo(
 )
 
 object RunInfo:
-  import Env.*
 
   def fromEnv: Result[RunInfo] =
     Result

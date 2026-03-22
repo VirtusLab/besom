@@ -342,8 +342,6 @@ object logging:
   // scribe programmatic configuration follows
 
   import scribe.format.*
-  import scribe.Level
-  import scribe.LogRecord
   import scribe.output.{LogOutput, CompositeOutput, TextOutput, EmptyOutput}
   import scribe.file.*
   import scribe.writer.CacheWriter

@@ -64,7 +64,7 @@ object ResourceDecoder:
 
   end CustomPropertyExtractor
 
-  private[ResourceDecoder] def makeResourceAndResolver[A <: Resource](
+  private[internal] def makeResourceAndResolver[A <: Resource](
     fromProduct: Product => A,
     customPropertyExtractors: Vector[CustomPropertyExtractor[?]]
   )(using Context, BesomMDC[Label]): Result[(A, ResourceResolver[A])] =

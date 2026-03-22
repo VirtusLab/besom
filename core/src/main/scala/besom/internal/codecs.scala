@@ -620,7 +620,7 @@ trait DecoderHelpers:
     lazy val nameDecoderPairs = labels.map(NameMangler.unmanglePropertyName).zip(instances)
 
     inline m match
-      case s: Mirror.SumOf[A]     => decoderSum(s, nameDecoderPairs)
+      case _: Mirror.SumOf[A]     => decoderSum(nameDecoderPairs)
       case p: Mirror.ProductOf[A] => decoderProduct(p, nameDecoderPairs)
   end derived
 
@@ -676,7 +676,7 @@ trait DecoderHelpers:
   end nonDiscriminated
 
   // this is, effectively, Decoder[Enum]
-  def decoderSum[A](s: Mirror.SumOf[A], elems: => List[(String, Decoder[?])]): Decoder[A] =
+  def decoderSum[A](elems: => List[(String, Decoder[?])]): Decoder[A] =
     new Decoder[A]:
       private val enumNameToDecoder                   = elems.toMap
       private def getDecoder(key: String): Decoder[A] = enumNameToDecoder(key).asInstanceOf[Decoder[A]]
@@ -721,7 +721,7 @@ trait DecoderHelpers:
 
       override def mapping(value: Value, label: Label): Validated[DecodingError, A] = ???
 
-  def decodeAsPossibleSecretOrOutput(value: Value, label: Label)(using Context): ValidatedResult[DecodingError, OutputData[Value]] =
+  def decodeAsPossibleSecretOrOutput(value: Value, label: Label): ValidatedResult[DecodingError, OutputData[Value]] =
     value
       .withSpecialSignature {
         case (struct, SpecialSig.SecretSig) =>
@@ -836,7 +836,7 @@ object Encoder:
   import besom.json.*
 
   // noinspection ScalaWeakerAccess
-  def encoderSum[A](mirror: Mirror.SumOf[A], nameEncoderPairs: => List[(String, Encoder[?])]): Encoder[A] =
+  def encoderSum[A]: Encoder[A] =
     new Encoder[A]:
       // TODO We only serialize dumb enums!!
       // private val encoderMap                                    = nameEncoderPairs.toMap
@@ -873,7 +873,7 @@ object Encoder:
     lazy val instances        = CodecMacros.summonEncoders[m.MirroredElemTypes]
     lazy val nameEncoderPairs = labels.map(NameMangler.unmanglePropertyName).zip(instances)
     inline m match
-      case s: Mirror.SumOf[A]     => encoderSum(s, nameEncoderPairs)
+      case _: Mirror.SumOf[A]     => encoderSum[A]
       case _: Mirror.ProductOf[A] => encoderProduct(nameEncoderPairs)
 
   given customResourceEncoder[A <: CustomResource](using

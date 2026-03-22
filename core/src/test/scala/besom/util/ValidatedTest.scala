@@ -96,7 +96,7 @@ class ValidatedTest extends munit.FunSuite:
   }
 
   import besom.internal.RunResult.{given, *}
-  import Validated.*, ValidatedResult.*
+  import Validated.*
 
   test("validated result zip should aggregate errors") {
     val a = ValidatedResult.valid("a")

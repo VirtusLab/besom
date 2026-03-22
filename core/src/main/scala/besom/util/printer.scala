@@ -21,7 +21,7 @@ object printer
       defaultHeight = Int.MaxValue,
       defaultIndent = 2,
       additionalHandlers = {
-        case o: Output[?]            => Tree.Literal("Output(?)")
+        case _: Output[?]            => Tree.Literal("Output(?)")
         case s: String if s.nonEmpty => Tree.Literal(s"\"${escapeSpecialCharacters(s)}\"")
       }
     ):

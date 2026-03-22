@@ -26,7 +26,7 @@ trait LanguageRuntimeService extends LanguageRuntime:
   def installDependencies(request: InstallDependenciesRequest, responseObserver: StreamObserver[InstallDependenciesResponse]): Unit =
     unimplementedUnaryCall(LanguageRuntimeGrpc.METHOD_INSTALL_DEPENDENCIES, responseObserver)
 
-  def about(request: empty.Empty): Future[AboutResponse] =
+  def about(@scala.annotation.nowarn request: empty.Empty): Future[AboutResponse] =
     unimplementedUnaryCall(LanguageRuntimeGrpc.METHOD_ABOUT)
 
   def getProgramDependencies(request: GetProgramDependenciesRequest): Future[GetProgramDependenciesResponse] =

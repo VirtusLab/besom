@@ -124,8 +124,6 @@ object Validated:
 
   import besom.internal.Result
 
-  import Validated.*
-
   opaque type ValidatedResult[+E, +A] = Result[Validated[E, A]]
 
   extension [E, A](resultOfValidated: Result[Validated[E, A]]) def asValidatedResult: ValidatedResult[E, A] = resultOfValidated
