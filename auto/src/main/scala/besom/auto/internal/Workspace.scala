@@ -865,12 +865,25 @@ object OutputMap:
   // represents the CLI response for an output marked as "secret"
   private val SecretSentinel = "[secret]"
 
+  private def jsValueToScala(v: JsValue): Any = v match
+    case JsString(s)  => s
+    case JsNumber(n)  => n
+    case JsTrue       => true
+    case JsFalse      => false
+    case JsNull       => null
+    case JsArray(es)  => es.map(jsValueToScala).toList
+    case JsObject(fs) => fs.map { case (k, v) => k -> jsValueToScala(v) }
+
+  private def isSecretSentinel(v: JsValue): Boolean = v match
+    case JsString(s) => s == SecretSentinel
+    case _           => false
+
   private[auto] def fromJson(
     masked: String,
     plaintext: String
   ): Either[Exception, OutputMap] =
     for
-      m <- masked.parseJson[Map[String, String]].left.map(e => AutoError(s"Failed to parse masked output map", e))
-      p <- plaintext.parseJson[Map[String, String]].left.map(e => AutoError(s"Failed to parse plaintext output map", e))
-    yield for (k, v) <- p yield k -> OutputValue(v, m.get(k).contains(SecretSentinel))
+      m <- masked.parseJson[Map[String, JsValue]].left.map(e => AutoError(s"Failed to parse masked output map", e))
+      p <- plaintext.parseJson[Map[String, JsValue]].left.map(e => AutoError(s"Failed to parse plaintext output map", e))
+    yield for (k, v) <- p yield k -> OutputValue(jsValueToScala(v), m.get(k).exists(isSecretSentinel))
 end OutputMap
