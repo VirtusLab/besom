@@ -1,4 +1,4 @@
-//> using scala 3.3.1
+//> using scala 3.3.7
 //> using options -java-output-version:21
 
 //> using dep com.lihaoyi::os-lib:0.9.3

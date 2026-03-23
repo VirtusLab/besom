@@ -1,4 +1,4 @@
-//> using scala "3.3.1"
+//> using scala "3.3.7"
 //> using options "-java-output-version:11" "-Ykind-projector:underscores"
 //> using options "-deprecation" "-feature"
 

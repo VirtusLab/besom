@@ -1,6 +1,7 @@
-//> using scala "3.3.1"
+//> using scala "3.3.7"
 //> using options "-java-output-version:11"
 //> using options "-deprecation" "-feature" "-Werror" "-Wunused:all"
+//> using options "-Wconf:src=json/ProductFormats.scala&msg=unused local definition:s"
 
 //> using test.resourceDir src/test/resources
 

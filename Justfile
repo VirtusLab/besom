@@ -210,8 +210,8 @@ publish-local-json:
 	scala-cli --power publish {{no-bloop}} besom-json --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 	scala-cli --power publish local {{no-bloop}} besom-json --js --project-version {{besom-version}} --suppress-experimental-feature-warning
 	scala-cli --power publish {{no-bloop}} besom-json --js --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
-	scala-cli --power publish local {{no-bloop}} besom-json --native --native-version 0.5.7 --project-version {{besom-version}} --suppress-experimental-feature-warning
-	scala-cli --power publish {{no-bloop}} besom-json --native --native-version 0.5.7 --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
+	scala-cli --power publish local {{no-bloop}} besom-json --native --native-version 0.5.10 --project-version {{besom-version}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --native --native-version 0.5.10 --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 	scala-cli --power publish local {{no-bloop}} besom-json --native --native-version 0.4.17 --project-version {{besom-version}} --suppress-experimental-feature-warning
 	scala-cli --power publish {{no-bloop}} besom-json --native --native-version 0.4.17 --project-version {{besom-version}} --publish-repo "file://$HOME/.m2/repository" --suppress-experimental-feature-warning
 
@@ -219,7 +219,7 @@ publish-local-json:
 publish-maven-json:
 	scala-cli --power publish {{no-bloop}} besom-json --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 	scala-cli --power publish {{no-bloop}} besom-json --js --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
-	scala-cli --power publish {{no-bloop}} besom-json --native --native-version 0.5.7 --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
+	scala-cli --power publish {{no-bloop}} besom-json --native --native-version 0.5.10 --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 	scala-cli --power publish {{no-bloop}} besom-json --native --native-version 0.4.17 --project-version {{besom-version}} {{publish-maven-auth-options}} --suppress-experimental-feature-warning
 
 ####################

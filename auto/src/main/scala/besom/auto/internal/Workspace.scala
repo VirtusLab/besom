@@ -596,7 +596,7 @@ object ProjectConfigItemsType:
     @tailrec
     def construct(node: Node)(implicit settings: LoadSettings = LoadSettings.empty): Either[ConstructError, ProjectConfigItemsType] =
       node match
-        case n @ Node.MappingNode(m, _) =>
+        case Node.MappingNode(m, _) =>
           m.get(Node.ScalarNode("type")) match
             case Some(Node.ScalarNode("string", _))  => Right(StringType)
             case Some(Node.ScalarNode("boolean", _)) => Right(BooleanType)

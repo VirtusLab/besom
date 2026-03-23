@@ -1,7 +1,6 @@
 package besom.codegen
 
 import besom.codegen.metaschema.*
-import besom.codegen.scalameta.interpolator.*
 
 import scala.meta.*
 import scala.meta.dialects.Scala33

@@ -1,4 +1,4 @@
-//> using scala 3.3.1
+//> using scala 3.3.7
 //> using options -java-output-version:21 -deprecation -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
 //> using jvm 24
 

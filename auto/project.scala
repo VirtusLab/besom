@@ -1,6 +1,7 @@
-//> using scala 3.3.1
+//> using scala 3.3.7
 //> using options -java-output-version:11
 //> using options -deprecation -feature -Werror -Wunused:all
+//> using options "-Wconf:src=auto/internal/Stack.scala&msg=unused local definition:s"
 
 //> using dep org.virtuslab::besom-json:0.5.1-SNAPSHOT
 //> using dep org.virtuslab::besom-core:0.5.1-SNAPSHOT
