@@ -321,8 +321,7 @@ enum ConfigOption:
     */
   case Path
 
-  /** Use JSON format for set-all. Enables structured (object/array) config values.
-    * Mutually exclusive with [[Path]].
+  /** Use JSON format for set-all. Enables structured (object/array) config values. Mutually exclusive with [[Path]].
     */
   case Json
 

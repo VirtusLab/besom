@@ -262,7 +262,7 @@ trait LocalWorkspace extends Workspace:
           k -> JsObject("value" -> JsString(v.value), "secret" -> JsBoolean(v.secret))
         })
         val jsonString = jsonObj.compactPrint
-        val args = Seq("--stack", stackName, "config", "set-all", "--json", jsonString)
+        val args       = Seq("--stack", stackName, "config", "set-all", "--json", jsonString)
         pulumi(args)() match
           case Left(e)  => Left(e.withMessage(s"failed to set all configs for stack: '$stackName'"))
           case Right(_) => Right(())

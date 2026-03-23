@@ -51,7 +51,7 @@ class ConfigTest extends munit.FunSuite:
 
   test("ConfigValue deserialization handles non-string value as structured") {
     val json = JsObject(
-      "value"  -> JsArray(JsObject("name" -> JsString("a"))),
+      "value" -> JsArray(JsObject("name" -> JsString("a"))),
       "secret" -> JsFalse
     )
     val cv = json.convertTo[ConfigValue]
@@ -109,8 +109,8 @@ class ConfigTest extends munit.FunSuite:
       "proj:greeting" -> plain
     )
 
-    val json       = configMap.toJson.compactPrint
-    val parsed     = json.parseJson[ConfigMap]
+    val json        = configMap.toJson.compactPrint
+    val parsed      = json.parseJson[ConfigMap]
     val parsedRight = parsed.fold(e => fail(s"Failed to parse: ${e.getMessage}"), identity)
 
     // Plain value round-trips

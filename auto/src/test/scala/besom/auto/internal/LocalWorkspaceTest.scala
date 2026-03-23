@@ -116,7 +116,7 @@ class LocalWorkspaceTest extends munit.FunSuite:
       _ <- stack.setAllConfig(
         Map(
           "configtest:greeting" -> ConfigValue("hello"),
-          "configtest:count"    -> ConfigValue("42"),
+          "configtest:count" -> ConfigValue("42"),
           "configtest:password" -> ConfigValue("s3cret", secret = true)
         )
       )
@@ -165,7 +165,7 @@ class LocalWorkspaceTest extends munit.FunSuite:
         Map(
           "configtest:greeting" -> ConfigValue("hello"),
           "configtest:password" -> ConfigValue("s3cret", secret = true),
-          "configtest:data"     -> ConfigValue("""{"key":"value"}""")
+          "configtest:data" -> ConfigValue("""{"key":"value"}""")
         ),
         ConfigOption.Json
       )
