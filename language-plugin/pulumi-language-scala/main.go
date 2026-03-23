@@ -38,16 +38,17 @@ import (
 func main() {
 	var tracing string
 	var root string
+	// deprecated: binary and use-executor are now passed via ProgramInfo.Options in gRPC requests (Pulumi >= 3.209.0)
 	var binary string
 	flag.StringVar(&tracing, "tracing", "", "Emit tracing to a Zipkin-compatible tracing endpoint")
 	flag.StringVar(&root, "root", "", "Project root path to use")
-	flag.StringVar(&binary, "binary", "", "JAR file to execute")
+	flag.StringVar(&binary, "binary", "", "[deprecated] JAR file to execute, use runtime.options.binary in Pulumi.yaml instead")
 
 	// You can use the below flag to request that the language host load a specific executor instead of probing the
 	// PATH.  This can be used during testing to override the default location.
 	var useExecutor string
 	flag.StringVar(&useExecutor, "use-executor", "",
-		"Use the given program as the executor instead of looking for one on PATH")
+		"[deprecated] Use the given program as the executor instead of looking for one on PATH")
 
 	flag.Parse()
 	args := flag.Args()
@@ -134,6 +135,45 @@ func newLanguageHost(execOptions executors.ScalaExecutorOptions,
 	}
 }
 
+// execOptionsWithProgramInfo returns exec options with values from ProgramInfo.Options
+// taking precedence over the deprecated CLI flags.
+func (host *scalaLanguageHost) execOptionsWithProgramInfo(info *pulumirpc.ProgramInfo) executors.ScalaExecutorOptions {
+	opts := host.execOptions
+	if info == nil || info.Options == nil {
+		return opts
+	}
+	m := info.Options.AsMap()
+	if binary, ok := m["binary"]; ok {
+		if s, ok := binary.(string); ok && s != "" {
+			opts.Binary = s
+		}
+	}
+	if useExec, ok := m["use-executor"]; ok {
+		if s, ok := useExec.(string); ok && s != "" {
+			opts.UseExecutor = s
+		}
+	}
+	return opts
+}
+
+func (host *scalaLanguageHost) ExecutorWithInfo(info *pulumirpc.ProgramInfo) (*executors.ScalaExecutor, error) {
+	opts := host.execOptionsWithProgramInfo(info)
+	// Invalidate cached executor if options changed
+	if host.currentExecutor != nil && opts == host.execOptions {
+		return host.currentExecutor, nil
+	}
+	executor, err := executors.NewScalaExecutor(opts)
+	if err != nil {
+		return nil, err
+	}
+	err = executor.SetupProject()
+	if err != nil {
+		return nil, err
+	}
+	host.currentExecutor = executor
+	return executor, nil
+}
+
 func (host *scalaLanguageHost) Executor() (*executors.ScalaExecutor, error) {
 	if host.currentExecutor == nil {
 		executor, err := executors.NewScalaExecutor(host.execOptions)
@@ -157,6 +197,11 @@ func (host *scalaLanguageHost) GetRequiredPlugins(
 	req *pulumirpc.GetRequiredPluginsRequest,
 ) (*pulumirpc.GetRequiredPluginsResponse, error) {
 	logging.V(5).Infof("GetRequiredPlugins: program=%v", req.GetProgram())
+
+	// Resolve executor with runtime options from ProgramInfo (Pulumi >= 3.209.0)
+	if _, err := host.ExecutorWithInfo(req.GetInfo()); err != nil {
+		return nil, err
+	}
 
 	// now, introspect the user project to see which pulumi resource packages it references.
 	pulumiPackages, err := host.determinePulumiPackages(ctx)
@@ -305,7 +350,7 @@ func (host *scalaLanguageHost) Run(ctx context.Context, req *pulumirpc.RunReques
 		return nil, err
 	}
 
-	executor, err := host.Executor()
+	executor, err := host.ExecutorWithInfo(req.GetInfo())
 	if err != nil {
 		return nil, err
 	}
@@ -413,7 +458,7 @@ func (host *scalaLanguageHost) GetPluginInfo(_ context.Context, _ *pbempty.Empty
 func (host *scalaLanguageHost) InstallDependencies(req *pulumirpc.InstallDependenciesRequest,
 	server pulumirpc.LanguageRuntime_InstallDependenciesServer,
 ) error {
-	executor, err := host.Executor()
+	executor, err := host.ExecutorWithInfo(req.GetInfo())
 	if err != nil {
 		return err
 	}

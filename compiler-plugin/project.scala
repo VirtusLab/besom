@@ -1,4 +1,4 @@
-//> using scala "3.3.1"
+//> using scala 3.3.7
 
 //> using resourceDir "./src/main/resources"
 
