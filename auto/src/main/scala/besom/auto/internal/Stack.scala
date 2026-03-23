@@ -547,9 +547,7 @@ case class Stack(name: String, workspace: Workspace):
       val logsDir = os.temp.dir(prefix = s"automation-logs-$command-")
       val path    = logsDir / "eventlog.txt"
       os.write(path, "")
-      os.exists(path) match
-        case true  => println(os.proc("ls", "-la", path).call().out.text()) // FIXME: remove the println, use logger
-        case false => throw AutoError(s"Failed to create event log file: $path")
+      if !os.exists(path) then throw AutoError(s"Failed to create event log file: $path")
       path
     }.toEither.left.map(e => AutoError("Failed to create temporary directory for event logs", e))
   end eventLogsPath

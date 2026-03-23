@@ -33,7 +33,10 @@ def login(options: LoginOption*): Either[Exception, Unit] =
   val opts = LoginOptions.from(options.toList)
   val args: Seq[String] = Seq.empty[String]
     ++ opts.cloud.map("--cloud-url=" + _)
-    ++ opts.local.bimap("--local")("file://" + _)
+    ++ opts.local.map {
+      case NotProvided   => "--local"
+      case path: os.Path => s"file://$path"
+    }
     ++ opts.defaultOrg.map("--default-org=" + _)
     ++ Option.when(opts.allowInsecure)("--insecure")
   val sOpts = Seq.empty[shell.ShellOption.Env]
@@ -127,7 +130,7 @@ end LoginOption
   */
 case class LoginOptions(
   cloud: NotProvidedOr[String] = NotProvided,
-  local: NotProvidedOr[os.Path] = NotProvided,
+  local: Option[NotProvidedOr[os.Path]] = None,
   pulumiHome: NotProvidedOr[os.Path] = NotProvided,
   pulumiAccessToken: NotProvidedOr[String] = NotProvided,
   defaultOrg: NotProvidedOr[String] = NotProvided,
@@ -138,7 +141,7 @@ object LoginOptions:
   def from(options: List[LoginOption]): LoginOptions =
     options match
       case LoginOption.Cloud(url) :: tail               => from(tail*).copy(cloud = url)
-      case LoginOption.Local(path) :: tail              => from(tail*).copy(local = path)
+      case LoginOption.Local(path) :: tail              => from(tail*).copy(local = Some(path))
       case LoginOption.PulumiHome(path) :: tail         => from(tail*).copy(pulumiHome = path)
       case LoginOption.PulumiAccessToken(token) :: tail => from(tail*).copy(pulumiAccessToken = token)
       case LoginOption.DefaultOrg(org) :: tail          => from(tail*).copy(defaultOrg = org)

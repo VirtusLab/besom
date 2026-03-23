@@ -292,17 +292,38 @@ trait Workspace:
 end Workspace
 
 /** ConfigValue is a configuration value used by a Pulumi program. Allows differentiating between secret and plaintext values by setting the
-  * `Secret` property.
+  * `Secret` property. For structured (object/array) config values, use [[ConfigValue.structured]].
   */
-case class ConfigValue(value: String, secret: Boolean = false) derives JsonFormat
+case class ConfigValue(value: String, secret: Boolean = false, objectValue: Option[JsValue] = None)
 object ConfigValue:
   def fromJson(json: String): Either[Exception, ConfigValue] = json.parseJson[ConfigValue]
+
+  /** Create a ConfigValue holding a structured (object/array) value. */
+  def structured(value: JsValue, secret: Boolean = false): ConfigValue =
+    ConfigValue(value = value.compactPrint, secret = secret, objectValue = Some(value))
+
+  given JsonFormat[ConfigValue] with
+    def write(cv: ConfigValue): JsValue =
+      val v: JsValue = cv.objectValue.getOrElse(JsString(cv.value))
+      JsObject("value" -> v, "secret" -> JsBoolean(cv.secret))
+    def read(json: JsValue): ConfigValue = json match
+      case JsObject(fields) =>
+        val secret = fields.get("secret").collect { case JsBoolean(b) => b }.getOrElse(false)
+        fields.get("value") match
+          case Some(JsString(s)) => ConfigValue(s, secret)
+          case Some(other)       => ConfigValue(other.compactPrint, secret, objectValue = Some(other))
+          case None              => ConfigValue("", secret)
+      case _ => deserializationError("ConfigValue expected a JSON object")
 
 /** ConfigOptions is a configuration option used by a Pulumi program. */
 enum ConfigOption:
   /** Indicates that the key contains a path to a property in a map or list to get/set
     */
   case Path
+
+  /** Use JSON format for set-all. Enables structured (object/array) config values. Mutually exclusive with [[Path]].
+    */
+  case Json
 
 /** ConfigMap is a map of ConfigValue used by Pulumi programs. Allows differentiating between secret and plaintext values.
   */
@@ -844,12 +865,25 @@ object OutputMap:
   // represents the CLI response for an output marked as "secret"
   private val SecretSentinel = "[secret]"
 
+  private def jsValueToScala(v: JsValue): Any = v match
+    case JsString(s)  => s
+    case JsNumber(n)  => n
+    case JsTrue       => true
+    case JsFalse      => false
+    case JsNull       => null
+    case JsArray(es)  => es.map(jsValueToScala).toList
+    case JsObject(fs) => fs.map { case (k, v) => k -> jsValueToScala(v) }
+
+  private def isSecretSentinel(v: JsValue): Boolean = v match
+    case JsString(s) => s == SecretSentinel
+    case _           => false
+
   private[auto] def fromJson(
     masked: String,
     plaintext: String
   ): Either[Exception, OutputMap] =
     for
-      m <- masked.parseJson[Map[String, String]].left.map(e => AutoError(s"Failed to parse masked output map", e))
-      p <- plaintext.parseJson[Map[String, String]].left.map(e => AutoError(s"Failed to parse plaintext output map", e))
-    yield for (k, v) <- p yield k -> OutputValue(v, m.get(k).contains(SecretSentinel))
+      m <- masked.parseJson[Map[String, JsValue]].left.map(e => AutoError(s"Failed to parse masked output map", e))
+      p <- plaintext.parseJson[Map[String, JsValue]].left.map(e => AutoError(s"Failed to parse plaintext output map", e))
+    yield for (k, v) <- p yield k -> OutputValue(jsValueToScala(v), m.get(k).exists(isSecretSentinel))
 end OutputMap

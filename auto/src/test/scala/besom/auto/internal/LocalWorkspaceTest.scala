@@ -94,4 +94,100 @@ class LocalWorkspaceTest extends munit.FunSuite:
       }
     )
   }
+  FunFixture[FullyQualifiedStackName](
+    setup = t => fqsn(this.getClass, t),
+    teardown = _ => ()
+  ).test("setAllConfig plain values round-trip") { generatedStackName =>
+    val stackName     = FullyQualifiedStackName("configtest", generatedStackName.stack)
+    val pulumiHomeDir = os.temp.dir() / ".pulumi"
+    val workDir       = os.temp.dir()
+    loginLocal(pulumiHomeDir)
+
+    val res = for
+      stack <- createStackLocalSource(
+        stackName,
+        workDir,
+        LocalWorkspaceOption.Project(
+          Project(name = "configtest", runtime = "nodejs")
+        ),
+        LocalWorkspaceOption.PulumiHome(pulumiHomeDir),
+        LocalWorkspaceOption.EnvVars(shell.pulumi.env.PulumiConfigPassphraseEnv -> "test")
+      )
+      _ <- stack.setAllConfig(
+        Map(
+          "configtest:greeting" -> ConfigValue("hello"),
+          "configtest:count" -> ConfigValue("42"),
+          "configtest:password" -> ConfigValue("s3cret", secret = true)
+        )
+      )
+      config <- stack.getAllConfig
+    yield (stack, config)
+
+    res.fold(
+      e => fail(e.getMessage, e),
+      (_, config) => {
+        assertEquals(config("configtest:greeting").value, "hello")
+        assertEquals(config("configtest:greeting").secret, false)
+        assertEquals(config("configtest:count").value, "42")
+        assertEquals(config("configtest:password").value, "s3cret")
+        assertEquals(config("configtest:password").secret, true)
+      }
+    )
+  }
+
+  FunFixture[FullyQualifiedStackName](
+    setup = t => fqsn(this.getClass, t),
+    teardown = _ => ()
+  ).test("setAllConfig with ConfigOption.Json supports secrets") { generatedStackName =>
+    val versionStr = os.proc("pulumi", "version").call().out.text().trim.stripPrefix("v")
+    val parts      = versionStr.split('.').map(_.takeWhile(_.isDigit).toInt)
+    assume(
+      parts(0) > 3 || (parts(0) == 3 && parts(1) >= 202),
+      s"Pulumi >= 3.202.0 required for --json flag, got $versionStr"
+    )
+
+    val stackName     = FullyQualifiedStackName("configtest", generatedStackName.stack)
+    val pulumiHomeDir = os.temp.dir() / ".pulumi"
+    val workDir       = os.temp.dir()
+    loginLocal(pulumiHomeDir)
+
+    val res = for
+      stack <- createStackLocalSource(
+        stackName,
+        workDir,
+        LocalWorkspaceOption.Project(
+          Project(name = "configtest", runtime = "nodejs")
+        ),
+        LocalWorkspaceOption.PulumiHome(pulumiHomeDir),
+        LocalWorkspaceOption.EnvVars(shell.pulumi.env.PulumiConfigPassphraseEnv -> "test")
+      )
+      _ <- stack.setAllConfig(
+        Map(
+          "configtest:greeting" -> ConfigValue("hello"),
+          "configtest:password" -> ConfigValue("s3cret", secret = true),
+          "configtest:data" -> ConfigValue("""{"key":"value"}""")
+        ),
+        ConfigOption.Json
+      )
+      config <- stack.getAllConfig
+    yield (stack, config)
+
+    res.fold(
+      e => fail(e.getMessage, e),
+      (_, config) => {
+        // Plain value round-trips
+        assertEquals(config("configtest:greeting").value, "hello")
+        assertEquals(config("configtest:greeting").secret, false)
+
+        // Secret value round-trips with secret flag
+        assertEquals(config("configtest:password").value, "s3cret")
+        assertEquals(config("configtest:password").secret, true)
+
+        // JSON string value round-trips as a string
+        assertEquals(config("configtest:data").value, """{"key":"value"}""")
+        assertEquals(config("configtest:data").secret, false)
+      }
+    )
+  }
+
 end LocalWorkspaceTest
