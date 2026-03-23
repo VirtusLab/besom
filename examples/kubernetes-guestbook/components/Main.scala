@@ -13,7 +13,7 @@ import besom.api.kubernetes.core.v1.inputs.{
   PodTemplateSpecArgs,
   ResourceRequirementsArgs,
   ServicePortArgs,
-  ServiceSpecArgs,
+  ServiceSpecArgs
 }
 import besom.api.kubernetes.meta.v1.*
 import besom.api.kubernetes.meta.v1.inputs.*
