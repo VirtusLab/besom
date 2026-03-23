@@ -549,13 +549,29 @@ test-example example-name:
 	echo "----------------------------------------"
 	echo "Testing example {{example-name}}"
 	# TODO drop snapshots
-	scala-cli compile --server=false examples/{{example-name}} --repository=sonatype:snapshots {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+	if [ -f "examples/{{example-name}}/project.scala" ]; then
+		scala-cli compile --server=false examples/{{example-name}} --repository=sonatype:snapshots {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+	else
+		# Multi-module example: compile each submodule separately
+		for proj in $(find examples/{{example-name}} -name "project.scala" -maxdepth 2); do
+			dir=$(dirname "$proj")
+			echo "  Compiling submodule: $dir"
+			scala-cli compile --server=false "$dir" --repository=sonatype:snapshots {{ci-opts}} --suppress-experimental-feature-warning --suppress-directives-in-multiple-files-warning
+		done
+	fi
 
 # Cleans after an example test
 clean-test-example example-name:
-	@echo "----------------------------------------"
-	@echo "Cleaning example test for {{example-name}}"
-	scala-cli clean examples/{{example-name}}
+	#!/usr/bin/env bash
+	echo "----------------------------------------"
+	echo "Cleaning example test for {{example-name}}"
+	if [ -f "examples/{{example-name}}/project.scala" ]; then
+		scala-cli clean examples/{{example-name}}
+	else
+		for proj in $(find examples/{{example-name}} -name "project.scala" -maxdepth 2); do
+			scala-cli clean "$(dirname "$proj")"
+		done
+	fi
 
 # Runs all template tests
 test-examples:

@@ -4,7 +4,6 @@ import besom.api.kubernetes.core.v1.{Service, ServiceArgs}
 import besom.api.kubernetes.core.v1.inputs.*
 import besom.api.kubernetes.apps.v1.{Deployment, DeploymentArgs}
 import besom.api.kubernetes.apps.v1.inputs.*
-import besom.api.kubernetes.meta.v1.*
 import besom.api.kubernetes.meta.v1.inputs.*
 import besom.api.kubernetes.core.v1.enums.ServiceSpecType
 

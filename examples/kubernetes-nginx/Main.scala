@@ -1,6 +1,5 @@
 import besom.*
 import besom.api.kubernetes
-import besom.api.kubernetes.core.v1.*
 import besom.api.kubernetes.core.v1.inputs.*
 import besom.api.kubernetes.apps.v1.*
 import besom.api.kubernetes.apps.v1.inputs.*

@@ -25,7 +25,7 @@ import scala.util.Try
 
   val handler = endpoint.get
     .out(stringBody)
-    .handle { * =>
+    .handle { _ =>
       Try(upsert(pool)(redisKey)).toEither.left.map { e => println(s"Error: $e") }
     }
 
