@@ -2,7 +2,7 @@
 
 //> using options -java-output-version:21
 
-//> using dep com.lihaoyi::os-lib::0.9.3
+//> using dep com.lihaoyi::os-lib::0.11.8
 //> using dep org.virtuslab::besom-cfg:0.5.1-SNAPSHOT
 //> using dep org.virtuslab::besom-cfg-containers:0.5.1-SNAPSHOT
 //> using dep org.virtuslab::besom-kubernetes:4.22.1-core.0.5
@@ -12,8 +12,8 @@
 
 //> using test.resourceDir ./src/test/resources
 
-//> using test.dep com.lihaoyi::pprint:0.6.6
-//> using test.dep org.scalameta::munit:1.0.0-M11
+//> using test.dep com.lihaoyi::pprint:0.9.6
+//> using test.dep org.scalameta::munit:1.2.4
 
 //> using publish.name "besom-cfg-k8s"
 //> using publish.organization "org.virtuslab"

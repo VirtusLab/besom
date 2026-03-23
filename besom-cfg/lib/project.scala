@@ -6,7 +6,7 @@
 //> using dep org.virtuslab::besom-json:0.5.1-SNAPSHOT
 //> using dep io.github.classgraph:classgraph:4.8.172
 
-//> using test.dep org.scalameta::munit::1.0.0-M11
+//> using test.dep org.scalameta::munit::1.2.4
 
 //> using publish.name "besom-cfg"
 //> using publish.organization "org.virtuslab"

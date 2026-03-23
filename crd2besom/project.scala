@@ -3,9 +3,9 @@
 //> using options -deprecation -feature -Werror -Wunused:all
 
 //> using dep org.virtuslab::besom-codegen:0.5.1-SNAPSHOT
-//> using dep org.virtuslab::scala-yaml:0.1.0
+//> using dep org.virtuslab::scala-yaml:0.3.1
 
-//> using dep org.scalameta::munit:1.0.1
+//> using dep org.scalameta::munit:1.2.4
 
 //> using publish.name "besom-crd2besom"
 //> using publish.organization "org.virtuslab"

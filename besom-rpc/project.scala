@@ -4,8 +4,8 @@
 
 // TODO dependency bumps
 //> using dep "com.google.protobuf:protobuf-java-util:3.25.1"
-//> using dep "com.thesamet.scalapb::scalapb-runtime:0.11.15"
-//> using dep "com.thesamet.scalapb::scalapb-runtime-grpc:0.11.15"
+//> using dep "com.thesamet.scalapb::scalapb-runtime:0.11.20"
+//> using dep "com.thesamet.scalapb::scalapb-runtime-grpc:0.11.20"
 
 //> using publish.name "besom-rpc"
 //> using publish.organization "org.virtuslab"

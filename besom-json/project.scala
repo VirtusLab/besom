@@ -5,8 +5,8 @@
 
 //> using test.resourceDir src/test/resources
 
-//> using test.dep "org.scalameta::munit::1.0.0-M10"
-//> using test.dep "com.lihaoyi::os-lib:0.9.2"
+//> using test.dep "org.scalameta::munit::1.2.4"
+//> using test.dep "com.lihaoyi::os-lib:0.11.8"
 //> using test.dep "org.specs2::specs2-core:4.19.2"
 //> using test.dep "org.specs2::specs2-scalacheck:4.19.2"
 //> using test.dep "org.scalacheck::scalacheck:1.17.0"

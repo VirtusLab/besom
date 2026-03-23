@@ -2,11 +2,11 @@
 
 //> using options -java-output-version:21
 
-//> using dep com.lihaoyi::os-lib::0.9.3
+//> using dep com.lihaoyi::os-lib::0.11.8
 //> using dep org.virtuslab::besom-cfg:0.5.1-SNAPSHOT
 //> using dep org.virtuslab::besom-model:0.5.1-SNAPSHOT
 
-//> using test.dep org.scalameta::munit:1.0.0
+//> using test.dep org.scalameta::munit:1.2.4
 
 //> using publish.name "besom-cfg-containers"
 //> using publish.organization "org.virtuslab"
