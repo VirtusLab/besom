@@ -250,14 +250,29 @@ trait LocalWorkspace extends Workspace:
     config: ConfigMap,
     options: ConfigOption*
   ): Either[Exception, Unit] =
-    val maybePath = options.collectFirst { case ConfigOption.Path => "--path" }
-    val pairs: Seq[String] = config.flatMap { case (k, v) =>
-      Seq(if v.secret then "--secret" else "--plaintext", s"$k=${v.value}")
-    }.toSeq
-    val args = Seq("--stack", stackName, "config", "set-all") ++ maybePath ++ ("--" +: pairs)
-    pulumi(args)() match
-      case Left(e)  => Left(e.withMessage(s"failed to set all configs for stack: '$stackName'"))
-      case Right(_) => Right(())
+    val useJson = options.contains(ConfigOption.Json)
+    if useJson then
+      if options.contains(ConfigOption.Path) then Left(AutoError("ConfigOption.Json and ConfigOption.Path cannot be used together"))
+      else
+        // Pulumi's set-all --json expects value to always be a string.
+        // For structured ConfigValues, the JSON representation is stored as a string.
+        val jsonObj = JsObject(config.map { case (k, v) =>
+          k -> JsObject("value" -> JsString(v.value), "secret" -> JsBoolean(v.secret))
+        })
+        val jsonString = jsonObj.compactPrint
+        val args = Seq("--stack", stackName, "config", "set-all", "--json", jsonString)
+        pulumi(args)() match
+          case Left(e)  => Left(e.withMessage(s"failed to set all configs for stack: '$stackName'"))
+          case Right(_) => Right(())
+    else
+      val maybePath = options.collectFirst { case ConfigOption.Path => "--path" }
+      val pairs: Seq[String] = config.flatMap { case (k, v) =>
+        Seq(if v.secret then "--secret" else "--plaintext", s"$k=${v.value}")
+      }.toSeq
+      val args = Seq("--stack", stackName, "config", "set-all") ++ maybePath ++ pairs
+      pulumi(args)() match
+        case Left(e)  => Left(e.withMessage(s"failed to set all configs for stack: '$stackName'"))
+        case Right(_) => Right(())
   end setAllConfig
 
   /** Removes the specified key-value pair on the provided stack name. It will remove any matching values in the `Pulumi.[stack].yaml` file

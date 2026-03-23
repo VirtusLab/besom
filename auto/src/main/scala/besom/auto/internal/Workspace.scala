@@ -292,17 +292,39 @@ trait Workspace:
 end Workspace
 
 /** ConfigValue is a configuration value used by a Pulumi program. Allows differentiating between secret and plaintext values by setting the
-  * `Secret` property.
+  * `Secret` property. For structured (object/array) config values, use [[ConfigValue.structured]].
   */
-case class ConfigValue(value: String, secret: Boolean = false) derives JsonFormat
+case class ConfigValue(value: String, secret: Boolean = false, objectValue: Option[JsValue] = None)
 object ConfigValue:
   def fromJson(json: String): Either[Exception, ConfigValue] = json.parseJson[ConfigValue]
+
+  /** Create a ConfigValue holding a structured (object/array) value. */
+  def structured(value: JsValue, secret: Boolean = false): ConfigValue =
+    ConfigValue(value = value.compactPrint, secret = secret, objectValue = Some(value))
+
+  given JsonFormat[ConfigValue] with
+    def write(cv: ConfigValue): JsValue =
+      val v: JsValue = cv.objectValue.getOrElse(JsString(cv.value))
+      JsObject("value" -> v, "secret" -> JsBoolean(cv.secret))
+    def read(json: JsValue): ConfigValue = json match
+      case JsObject(fields) =>
+        val secret = fields.get("secret").collect { case JsBoolean(b) => b }.getOrElse(false)
+        fields.get("value") match
+          case Some(JsString(s)) => ConfigValue(s, secret)
+          case Some(other)       => ConfigValue(other.compactPrint, secret, objectValue = Some(other))
+          case None              => ConfigValue("", secret)
+      case _ => deserializationError("ConfigValue expected a JSON object")
 
 /** ConfigOptions is a configuration option used by a Pulumi program. */
 enum ConfigOption:
   /** Indicates that the key contains a path to a property in a map or list to get/set
     */
   case Path
+
+  /** Use JSON format for set-all. Enables structured (object/array) config values.
+    * Mutually exclusive with [[Path]].
+    */
+  case Json
 
 /** ConfigMap is a map of ConfigValue used by Pulumi programs. Allows differentiating between secret and plaintext values.
   */
