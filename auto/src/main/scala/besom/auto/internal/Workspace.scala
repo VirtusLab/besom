@@ -554,8 +554,8 @@ object ProjectConfigValue:
             case Some(Node.ScalarNode("boolean", _)) => summon[YamlDecoder[BooleanValue]].construct(node)
             case Some(Node.ScalarNode("integer", _)) => summon[YamlDecoder[IntegerValue]].construct(node)
             case Some(Node.ScalarNode("array", _))   => summon[YamlDecoder[ArrayValue]].construct(node)
-            case Some(t)                             => Left(ConstructError(s"ProjectConfigValue is invalid: $t"))
-            case None                                => Left(ConstructError(s"ProjectConfigValue is invalid, field 'type' is missing"))
+            case Some(t)                             => Left(ConstructError(s"ProjectConfigValue is invalid: $t", None, None))
+            case None                                => Left(ConstructError(s"ProjectConfigValue is invalid, field 'type' is missing", None, None))
         case _ => throw new Exception(s"ProjectConfigValue is invalid, expected object")
 end ProjectConfigValue
 
@@ -604,9 +604,9 @@ object ProjectConfigItemsType:
             case Some(Node.ScalarNode("array", _)) =>
               m.get(Node.ScalarNode("items")) match
                 case Some(it) => construct(it)
-                case None     => Left(ConstructError(s"ProjectConfigItemsType is invalid, field 'items' is missing"))
-            case Some(t) => Left(ConstructError(s"ProjectConfigItemsType is invalid: $t"))
-            case None    => Left(ConstructError(s"ProjectConfigItemsType is invalid, field 'type' is missing"))
+                case None     => Left(ConstructError(s"ProjectConfigItemsType is invalid, field 'items' is missing", None, None))
+            case Some(t) => Left(ConstructError(s"ProjectConfigItemsType is invalid: $t", None, None))
+            case None    => Left(ConstructError(s"ProjectConfigItemsType is invalid, field 'type' is missing", None, None))
         case _ => throw new Exception(s"ProjectConfigItemsType is invalid, field 'type' is missing")
 end ProjectConfigItemsType
 
