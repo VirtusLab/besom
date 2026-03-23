@@ -252,7 +252,9 @@ trait LocalWorkspace extends Workspace:
   ): Either[Exception, Unit] =
     val useJson = options.contains(ConfigOption.Json)
     if useJson then
-      if options.contains(ConfigOption.Path) then Left(AutoError("ConfigOption.Json and ConfigOption.Path cannot be used together"))
+      if pulumiVersion < model.SemanticVersion(3, 202, 0)
+      then Left(AutoError("ConfigOption.Json requires Pulumi version >= 3.202.0"))
+      else if options.contains(ConfigOption.Path) then Left(AutoError("ConfigOption.Json and ConfigOption.Path cannot be used together"))
       else
         // Pulumi's set-all --json expects value to always be a string.
         // For structured ConfigValues, the JSON representation is stored as a string.

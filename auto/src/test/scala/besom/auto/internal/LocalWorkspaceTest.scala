@@ -139,6 +139,13 @@ class LocalWorkspaceTest extends munit.FunSuite:
     setup = t => fqsn(this.getClass, t),
     teardown = _ => ()
   ).test("setAllConfig with ConfigOption.Json supports secrets") { generatedStackName =>
+    val versionStr = os.proc("pulumi", "version").call().out.text().trim.stripPrefix("v")
+    val parts      = versionStr.split('.').map(_.takeWhile(_.isDigit).toInt)
+    assume(
+      parts(0) > 3 || (parts(0) == 3 && parts(1) >= 202),
+      s"Pulumi >= 3.202.0 required for --json flag, got $versionStr"
+    )
+
     val stackName     = FullyQualifiedStackName("configtest", generatedStackName.stack)
     val pulumiHomeDir = os.temp.dir() / ".pulumi"
     val workDir       = os.temp.dir()
