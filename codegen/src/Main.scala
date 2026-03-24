@@ -1,6 +1,5 @@
 package besom.codegen
 
-import besom.codegen.UpickleApi.*
 import besom.codegen.{PackageVersion, SchemaFile}
 
 object Main {

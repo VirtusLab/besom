@@ -1,10 +1,10 @@
-//> using scala "3.3.1"
-//> using options "-java-output-version:11", "-Ykind-projector:underscores"
-//> using options "-deprecation", "-feature"
+//> using scala "3.3.7"
+//> using options "-java-output-version:11" "-Ykind-projector:underscores"
+//> using options "-deprecation" "-feature"
 
 //> using dep "org.virtuslab::besom-core:0.5.1-SNAPSHOT"
-//> using dep "dev.zio::zio:2.0.17"
-//> using test.dep "org.scalameta::munit:1.0.0-M10"
+//> using dep "dev.zio::zio:2.1.24"
+//> using test.dep "org.scalameta::munit:1.2.4"
 
 //> using publish.name "besom-zio"
 //> using publish.organization "org.virtuslab"

@@ -148,7 +148,5 @@ object WebService:
     }
 end WebService
 
-private def envValue(name: String, value: Input[String])(using
-  Context
-): awsx.ecs.inputs.TaskDefinitionKeyValuePairArgs =
+private def envValue(name: String, value: Input[String]): awsx.ecs.inputs.TaskDefinitionKeyValuePairArgs =
   awsx.ecs.inputs.TaskDefinitionKeyValuePairArgs(name = name, value = value)

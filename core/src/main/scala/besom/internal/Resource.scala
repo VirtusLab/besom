@@ -3,7 +3,6 @@ package besom.internal
 import besom.util.NonEmptyString
 import besom.types.{URN, ResourceId, ResourceType}
 import com.google.protobuf.struct.*
-import scala.deriving.Mirror
 import scala.annotation.implicitNotFound
 import besom.util.*
 
@@ -57,7 +56,14 @@ trait ProviderResource extends CustomResource:
       id  <- id.getValueOrElse(Constants.UnknownStringValue)
     yield s"${urn}::${id}"
 
-case class DependencyResource(urn: Output[URN]) extends Resource derives ResourceDecoder
+case class DependencyResource(urn: Output[URN]) extends Resource
+object DependencyResource:
+  given ResourceDecoder[DependencyResource] with
+    def makeResourceAndResolver(using Context, besom.internal.logging.BesomMDC[besom.types.Label]) =
+      ResourceDecoder.makeResourceAndResolver[DependencyResource](
+        fromProduct = p => DependencyResource(p.productElement(0).asInstanceOf[Output[URN]]),
+        customPropertyExtractors = Vector.empty
+      )
 
 case class StackResource()(using ComponentBase) extends ComponentResource
 object StackResource:
@@ -80,4 +86,11 @@ object StackResource:
     for given ComponentBase <- ctx.registerComponentResource(stackName(runInfo), RootPulumiStackTypeName, ComponentResourceOptions())
     yield StackResource()
 
-case class ComponentBase(urn: Output[URN]) extends Resource derives ResourceDecoder
+case class ComponentBase(urn: Output[URN]) extends Resource
+object ComponentBase:
+  given ResourceDecoder[ComponentBase] with
+    def makeResourceAndResolver(using Context, besom.internal.logging.BesomMDC[besom.types.Label]) =
+      ResourceDecoder.makeResourceAndResolver[ComponentBase](
+        fromProduct = p => ComponentBase(p.productElement(0).asInstanceOf[Output[URN]]),
+        customPropertyExtractors = Vector.empty
+      )

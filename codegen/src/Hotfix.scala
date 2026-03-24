@@ -146,11 +146,11 @@ object Hotfix:
         val updatedProvider = packageHotfixes.providerHotfixes.foldLeft(pulumiPackage.provider) { (provider, hotfix) =>
           val withoutRemovedMethods = hotfix.methodRemovals.foldLeft(provider) { case (provider, methodRemoval) =>
             logger.warn(s"Removing method ${methodRemoval.name} from provider $packageName:$version, fix in progress: $methodRemoval")
-            provider.copy(methods = provider.methods.filterNot { case (name, v) => name == methodRemoval.name })
+            provider.copy(methods = provider.methods.filterNot { case (name, _) => name == methodRemoval.name })
           }
 
           val withoutRemovedFields = hotfix.fieldRemovals.foldLeft(withoutRemovedMethods) { case (provider, fieldRemoval) =>
-            provider.copy(properties = provider.properties.filterNot { case (name, v) => name == fieldRemoval.name })
+            provider.copy(properties = provider.properties.filterNot { case (name, _) => name == fieldRemoval.name })
           }
 
           withoutRemovedFields

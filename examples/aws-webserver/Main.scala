@@ -124,7 +124,7 @@ import besom.api.tls
 import scala.io.Source
 import scala.util.Using
 
-def getExternalIp(using Context): Output[String] = {
+def getExternalIp: Output[String] = {
   val source = Source.fromURL("https://checkip.amazonaws.com")
   Using(source) { response => response.mkString.trim } match
     case scala.util.Success(ip) => Output(ip)

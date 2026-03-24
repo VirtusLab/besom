@@ -4,8 +4,7 @@ import scala.quoted.*
 import scala.deriving.*
 import scala.reflect.Typeable
 import scala.util.NotGiven
-import besom.types.{Archive, AssetOrArchive, PulumiEnum}
-import besom.types.Archive.*
+import besom.types.{AssetOrArchive, PulumiEnum}
 import besom.json.JsValue
 
 object Update extends UpdateLowPrioInstances1:

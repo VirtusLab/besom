@@ -3,7 +3,7 @@ package besom.internal
 import besom.internal.RunResult.{*, given}
 import besom.types.{Output as _, *}
 import besom.util.Validated
-import com.google.protobuf.struct.*
+import com.google.protobuf.struct.{Struct, Value}
 
 class ReSerializerTest extends munit.FunSuite:
 

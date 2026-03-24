@@ -13,9 +13,7 @@ import besom.api.kubernetes.core.v1.inputs.{
   PodTemplateSpecArgs,
   ResourceRequirementsArgs,
   ServicePortArgs,
-  ServiceSpecArgs,
-  VolumeArgs,
-  VolumeMountArgs
+  ServiceSpecArgs
 }
 import besom.api.kubernetes.meta.v1.*
 import besom.api.kubernetes.meta.v1.inputs.*
@@ -317,7 +315,7 @@ object Application:
     }
 end Application
 
-private def serviceFqdn(service: Output[Service], namespace: Output[Namespace])(using Context): Output[String] =
+private def serviceFqdn(service: Output[Service], namespace: Output[Namespace]): Output[String] =
   val serviceName   = service.metadata.name.getOrFail(Exception("expected service name to be defined"))
   val namespaceName = namespace.metadata.name.getOrFail(Exception("expected namespace name to be defined"))
   p"${serviceName}.${namespaceName}.svc.cluster.local"

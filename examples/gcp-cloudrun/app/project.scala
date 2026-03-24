@@ -1,4 +1,4 @@
-//> using scala 3.3.1
+//> using scala "3.3.7"
 //> using options -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
 //> using jvm "graalvm-java21:21.0.2"
 

@@ -303,7 +303,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
         childrenResult.flatMap { children =>
           val updatedAcc =
             current match
-              case dr: DependencyResource => // Dependency resources are added directly to the set, they don't have a state.
+              case _: DependencyResource => // Dependency resources are added directly to the set, they don't have a state.
                 Result.pure(acc + current)
               case _ =>
                 resources.getStateFor(current).map { rs =>
@@ -662,7 +662,7 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
       _                     <- log.debug(s"createResourceState")
       parentTransformations <- resolveParentTransformations(resourceOptions)
       opts = resourceOptions // TODO apply opts transformations
-      aliases       <- collapseAliases(opts) // todo add logging
+      _             <- collapseAliases(opts) // todo add logging
       providers     <- mergeProviders(typ, opts, ctx.resources)
       maybeProvider <- getProvider(typ, providers, opts)
     yield {
@@ -689,9 +689,9 @@ class ResourceOps(using ctx: Context, mdc: BesomMDC[Label]):
             ),
             pkg = typ.getPackage
           )
-        case compr: ComponentResource =>
+        case _: ComponentResource =>
           ComponentResourceState(common = commonRS)
-        case rcompr: RemoteComponentResource =>
+        case _: RemoteComponentResource =>
           ComponentResourceState(common = commonRS)
         case cr: CustomResource =>
           CustomResourceState(

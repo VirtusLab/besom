@@ -1,16 +1,16 @@
-//> using scala 3.3.1
+//> using scala 3.3.7
 //> using options -java-output-version:21 -deprecation -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
 //> using jvm 24
 
 //> using dep org.virtuslab::besom-model:0.5.1-SNAPSHOT
-//> using dep org.virtuslab::scala-yaml:0.1.0
-//> using dep org.scalameta:scalameta_2.13:4.8.15
+//> using dep org.virtuslab::scala-yaml:0.3.1
+//> using dep org.scalameta:scalameta_2.13:4.15.2
 //> using dep com.lihaoyi::upickle:3.1.4
-//> using dep com.lihaoyi::os-lib:0.9.3
-//> using dep com.lihaoyi::pprint:0.9.0
+//> using dep com.lihaoyi::os-lib:0.11.8
+//> using dep com.lihaoyi::pprint:0.9.6
 //> using dep com.softwaremill.ox::core:0.6.0
-//> using dep com.softwaremill.sttp.client4::core::4.0.8
-//> using test.dep org.scalameta::munit::1.0.0-M10
+//> using dep com.softwaremill.sttp.client4::core::4.0.19
+//> using test.dep org.scalameta::munit::1.2.4
 
 //> using exclude "resources/*"
 

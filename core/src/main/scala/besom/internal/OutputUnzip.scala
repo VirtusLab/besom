@@ -26,9 +26,9 @@ object OutputUnzip:
 
     val tupleType = TypeRepr.of[A]
     val tupleTypes = tupleType match
-      case AppliedType(tpe, types) if tpe =:= TypeRepr.of[scala.*:] => extractTypesFromTupleXXL(tupleType)
-      case AppliedType(tpe, types)                                  => types
-      case _ => report.errorAndAbort(s"Expected a tuple type, got: ${tupleType.show}")
+      case AppliedType(tpe, _) if tpe =:= TypeRepr.of[scala.*:] => extractTypesFromTupleXXL(tupleType)
+      case AppliedType(_, types)                                => types
+      case _                                                    => report.errorAndAbort(s"Expected a tuple type, got: ${tupleType.show}")
 
     val mapExprs = tupleTypes.zipWithIndex.map { (tpe, idx) =>
       val idxExpr = Expr(idx)

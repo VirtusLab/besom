@@ -1,7 +1,7 @@
-//> using scala 3.3.1
+//> using scala 3.3.7
 //> using options -java-output-version:11 -deprecation -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
 
-//> using test.dep org.scalameta::munit::1.0.0
+//> using test.dep org.scalameta::munit::1.2.4
 
 //> using exclude "resources/*"
 

@@ -2,7 +2,7 @@ import besom.*
 import besom.api.kubernetesingressnginx as nginx
 import besom.api.{kubernetes => k8s}
 
-case class NginxArgs()
+case class NginxArgs(namespace: String = "ingress-nginx")
 
 case class Nginx private (name: Output[String], namespace: Output[String])(using ComponentBase) extends ComponentResource
     derives RegistersOutputs
@@ -24,7 +24,7 @@ object Nginx:
       val nginxNamespace = k8s.core.v1.Namespace(
         name = namespace,
         k8s.core.v1.NamespaceArgs(
-          metadata = k8s.meta.v1.inputs.ObjectMetaArgs(name = namespace)
+          metadata = k8s.meta.v1.inputs.ObjectMetaArgs(name = args.namespace)
         )
       )
 

@@ -1,9 +1,6 @@
 package besom.auto.internal
 
 import besom.util.*
-import os.CommandResult
-
-import scala.io.Source
 
 object shell:
   case class Result private (

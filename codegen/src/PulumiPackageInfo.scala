@@ -29,8 +29,6 @@ case class PulumiPackageInfo(
   packageType: PackageType,
   typeRenames: Map[PulumiToken, String]
 ) {
-  import PulumiPackageInfo.*
-
   def asPackageMetadata: PackageMetadata = PackageMetadata(name, Some(version))
 
   def topLevelPackages: Set[String] = {

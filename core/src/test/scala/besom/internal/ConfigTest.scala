@@ -222,7 +222,7 @@ class ConfigTest extends munit.FunSuite {
     assertNoDiff(
       compileErrors("""config.getObject[Bar]("bar")"""),
       """|error:
-         |No given instance of type besom.internal.ConfigValueReader[ConfigTest.this.Bar] was found for an implicit parameter of method getObject in class Config.
+         |No given instance of type besom.internal.ConfigValueReader[ConfigTest.this.Bar] was found for a context parameter of method getObject in class Config.
          |I found:
          |
          |    besom.internal.ConfigValueReader.objectReader[ConfigTest.this.Bar](
@@ -242,7 +242,7 @@ class ConfigTest extends munit.FunSuite {
     assertNoDiff(
       compileErrors("""config.requireObject[Bar]("bar")"""),
       """|error:
-         |No given instance of type besom.internal.ConfigValueReader[ConfigTest.this.Bar] was found for an implicit parameter of method requireObject in class Config.
+         |No given instance of type besom.internal.ConfigValueReader[ConfigTest.this.Bar] was found for a context parameter of method requireObject in class Config.
          |I found:
          |
          |    besom.internal.ConfigValueReader.objectReader[ConfigTest.this.Bar](
