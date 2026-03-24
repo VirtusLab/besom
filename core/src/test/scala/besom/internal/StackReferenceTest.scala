@@ -118,6 +118,55 @@ class StackReferenceTest extends munit.FunSuite:
 
     assertEquals(obtainedTypedStackReference.outputs, expected)
   }
+  test("Output[String] field on read side with secret envelope preserves secrecy") {
+    given Context = DummyContext().unsafeRunSync()
+
+    case class Structured(a: Output[String], b: Double) derives JsonReader
+
+    val secretSigKey   = Constants.SpecialSig.Key
+    val secretSigValue = Constants.SpecialSig.SecretSig.asString
+
+    val outputs = Map(
+      "structured" -> JsObject(
+        "a" -> JsObject(secretSigKey -> JsString(secretSigValue), Constants.ValueName -> JsString("ABCDEF")),
+        "b" -> JsNumber(42.0)
+      )
+    )
+
+    case class Root(structured: Structured) derives JsonReader
+
+    val result = StackReference.requireObject[Root](Output(outputs), Output(Set.empty))
+    val od     = result.getData.unsafeRunSync()
+    val root   = od.getValueOrElse(fail("expected value").asInstanceOf[Root])
+    assertEquals(root.structured.b, 42.0)
+    assertEquals(root.structured.a.getData.unsafeRunSync().getValueOrElse("MISSING"), "ABCDEF")
+    // per-field secrecy is preserved — the Output[String] field is marked as secret
+    assertEquals(root.structured.a.getData.unsafeRunSync().secret, true)
+  }
+
+  test("Output[String] field on read side with plain value") {
+    given Context = DummyContext().unsafeRunSync()
+
+    case class Structured(a: Output[String], b: Double) derives JsonReader
+
+    val outputs = Map(
+      "structured" -> JsObject(
+        "a" -> JsString("plain-value"),
+        "b" -> JsNumber(42.0)
+      )
+    )
+
+    case class Root(structured: Structured) derives JsonReader
+
+    val result = StackReference.requireObject[Root](Output(outputs), Output(Set.empty))
+    val od     = result.getData.unsafeRunSync()
+    val root   = od.getValueOrElse(fail("expected value").asInstanceOf[Root])
+    assertEquals(root.structured.b, 42.0)
+    assertEquals(root.structured.a.getData.unsafeRunSync().getValueOrElse("MISSING"), "plain-value")
+    // plain value — not secret
+    assertEquals(root.structured.a.getData.unsafeRunSync().secret, false)
+  }
+
   test("typed export round-trip: serialize with Output fields, deserialize with unwrapped mirror case class") {
     given Context = DummyContext(
       featureSupport =
