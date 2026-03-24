@@ -28,6 +28,13 @@ object JsonReaderInstances:
                 }
                 .getOrElse(Output.fail(Exception("Invalid JSON")))
 
-            case _ => Output.fail(Exception("Invalid JSON"))
+            case _ =>
+              // Regular JsObject without envelope — read as plain value wrapped in Output
+              try Output.pure(jsonReader.read(json))
+              catch case e: Throwable => Output.fail(e)
 
-        case _ => Output.fail(Exception("Invalid JSON"))
+        // Plain value (not a JsObject) — read directly and wrap in Output.
+        // This handles values that have already been stripped of secret envelopes.
+        case _ =>
+          try Output.pure(jsonReader.read(json))
+          catch case e: Throwable => Output.fail(e)
