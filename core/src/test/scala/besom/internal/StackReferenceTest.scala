@@ -118,6 +118,132 @@ class StackReferenceTest extends munit.FunSuite:
 
     assertEquals(obtainedTypedStackReference.outputs, expected)
   }
+  test("unwrap secret envelopes in nested stack outputs") {
+    given Context = DummyContext().unsafeRunSync()
+
+    case class PostgreSQLOutputs(
+      host: String,
+      port: Int,
+      database: String,
+      username: String,
+      password: String
+    ) derives JsonReader
+
+    case class ServicesOutputs(postgresql: PostgreSQLOutputs) derives JsonReader
+
+    val secretSigKey   = Constants.SpecialSig.Key
+    val secretSigValue = Constants.SpecialSig.SecretSig.asString
+
+    def secretEnvelope(value: JsValue): JsObject =
+      JsObject(secretSigKey -> JsString(secretSigValue), Constants.ValueName -> value)
+
+    val outputs = Map(
+      "postgresql" -> JsObject(
+        "host" -> JsString("pg-host.svc.local"),
+        "port" -> JsNumber(5432),
+        "database" -> secretEnvelope(JsString("app")),
+        "username" -> secretEnvelope(JsString("app")),
+        "password" -> secretEnvelope(JsString("hunter2"))
+      )
+    )
+
+    val expected = ServicesOutputs(
+      PostgreSQLOutputs(
+        host = "pg-host.svc.local",
+        port = 5432,
+        database = "app",
+        username = "app",
+        password = "hunter2"
+      )
+    )
+
+    val result = StackReference.requireObject[ServicesOutputs](Output(outputs), Output(Set.empty))
+    val od     = result.getData.unsafeRunSync()
+    assertEquals(od, OutputData(expected, isSecret = true))
+  }
+
+  test("unwrap secret envelopes and combine with secretOutputNames") {
+    given Context = DummyContext().unsafeRunSync()
+
+    case class Test(s: String, i: Int) derives JsonReader
+
+    val secretSigKey   = Constants.SpecialSig.Key
+    val secretSigValue = Constants.SpecialSig.SecretSig.asString
+
+    val outputs = Map(
+      "s" -> JsObject(secretSigKey -> JsString(secretSigValue), Constants.ValueName -> JsString("secret-value")),
+      "i" -> JsNumber(42)
+    )
+
+    val result = StackReference.requireObject[Test](Output(outputs), Output(Set("s")))
+    val od     = result.getData.unsafeRunSync()
+    assertEquals(od, OutputData(Test("secret-value", 42), isSecret = true))
+  }
+
+  test("no secret envelopes, no secretOutputNames — result is not secret") {
+    given Context = DummyContext().unsafeRunSync()
+
+    case class Test(s: String, i: Int) derives JsonReader
+    val outputs = Map("s" -> JsString("plain"), "i" -> JsNumber(1))
+
+    val result = StackReference.requireObject[Test](Output(outputs), Output(Set.empty))
+    val od     = result.getData.unsafeRunSync()
+    assertEquals(od, OutputData(Test("plain", 1)))
+    assertEquals(od.secret, false)
+  }
+
+  test("unwrap output envelope with secret flag") {
+    given Context = DummyContext().unsafeRunSync()
+
+    case class Test(s: String) derives JsonReader
+
+    val outputSigValue = Constants.SpecialSig.OutputSig.asString
+    val sigKey         = Constants.SpecialSig.Key
+
+    val outputs = Map(
+      "s" -> JsObject(
+        sigKey -> JsString(outputSigValue),
+        Constants.ValueName -> JsString("output-val"),
+        Constants.SecretName -> JsTrue
+      )
+    )
+
+    val result = StackReference.requireObject[Test](Output(outputs), Output(Set.empty))
+    val od     = result.getData.unsafeRunSync()
+    assertEquals(od, OutputData(Test("output-val"), isSecret = true))
+  }
+
+  test("unwrap secret envelopes in arrays") {
+    given Context = DummyContext().unsafeRunSync()
+
+    case class Test(items: List[String]) derives JsonReader
+
+    val secretSigKey   = Constants.SpecialSig.Key
+    val secretSigValue = Constants.SpecialSig.SecretSig.asString
+
+    val outputs = Map(
+      "items" -> JsArray(
+        JsObject(secretSigKey -> JsString(secretSigValue), Constants.ValueName -> JsString("a")),
+        JsString("b"),
+        JsObject(secretSigKey -> JsString(secretSigValue), Constants.ValueName -> JsString("c"))
+      )
+    )
+
+    val result = StackReference.requireObject[Test](Output(outputs), Output(Set.empty))
+    val od     = result.getData.unsafeRunSync()
+    assertEquals(od, OutputData(Test(List("a", "b", "c")), isSecret = true))
+  }
+
+  test("stripSecretEnvelopes preserves non-envelope objects") {
+    val obj = JsObject(
+      "name" -> JsString("test"),
+      "nested" -> JsObject("a" -> JsNumber(1), "b" -> JsNumber(2))
+    )
+    val (stripped, hasSecrets) = StackReference.stripSecretEnvelopes(obj)
+    assertEquals(stripped, obj)
+    assertEquals(hasSecrets, false)
+  }
+
   test("typed export round-trip: serialize with Output fields, deserialize with unwrapped mirror case class") {
     given Context = DummyContext(
       featureSupport =
