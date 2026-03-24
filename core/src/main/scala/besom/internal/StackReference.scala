@@ -122,66 +122,13 @@ trait StackReferenceFactory:
     secretOutputNames: Output[Set[String]]
   ): Output[T] =
     Output.getContext.flatMap { ctx =>
-      new Output[T](_ =>
-        for
-          secretByNames <- secretOutputNames.map(_.nonEmpty).getValueOrElse(false)(using ctx)
-          od            <- outputs.getData(using ctx)
-        yield od match
-          case OutputData.Known(resources, _, Some(m)) =>
-            val (stripped, hasEnvelopeSecrets) = stripSecretEnvelopes(JsObject(m))
-            OutputData(stripped.convertTo[T], resources, isSecret = secretByNames || hasEnvelopeSecrets)
-          case OutputData.Known(resources, _, None) =>
-            OutputData.empty[T](resources, isSecret = secretByNames)
-          case OutputData.Unknown(resources, _) =>
-            OutputData.unknown(secretByNames, resources)
-      )
+      outputs
+        .map(JsObject(_).convertTo[T])
+        .withIsSecret(
+          secretOutputNames
+            .map(_.nonEmpty)
+            .getValueOrElse(false)(using ctx)
+        )
     }
-
-  /** Recursively strips Pulumi secret and output envelopes from a JsValue tree.
-    *
-    * The Pulumi engine wraps secret values in envelope objects with a magic sentinel key. When stack outputs contain nested secrets (e.g. a
-    * case class with secret fields), these envelopes appear inside the JsValue and must be unwrapped before the JsonReader can deserialize
-    * the value.
-    *
-    * @return
-    *   a tuple of (clean JsValue without envelopes, whether any secret envelopes were found)
-    */
-  private[internal] def stripSecretEnvelopes(json: JsValue): (JsValue, Boolean) =
-    import Constants.{SpecialSig, ValueName, SecretName}
-    json match
-      case obj: JsObject =>
-        obj.fields.get(SpecialSig.Key).flatMap {
-          case JsString(sig) => SpecialSig.fromString(sig)
-          case _             => None
-        } match
-          case Some(SpecialSig.SecretSig) =>
-            val inner         = obj.fields.getOrElse(ValueName, JsNull)
-            val (stripped, _) = stripSecretEnvelopes(inner)
-            (stripped, true)
-          case Some(SpecialSig.OutputSig) =>
-            val inner = obj.fields.getOrElse(ValueName, JsNull)
-            val isSecret = obj.fields.get(SecretName) match
-              case Some(JsTrue) => true
-              case _            => false
-            val (stripped, innerHasSecrets) = stripSecretEnvelopes(inner)
-            (stripped, isSecret || innerHasSecrets)
-          case _ =>
-            var hasSecrets = false
-            val newFields = obj.fields.map { case (k, v) =>
-              val (stripped, s) = stripSecretEnvelopes(v)
-              if s then hasSecrets = true
-              k -> stripped
-            }
-            (JsObject(newFields), hasSecrets)
-      case arr: JsArray =>
-        var hasSecrets = false
-        val newElements = arr.elements.map { v =>
-          val (stripped, s) = stripSecretEnvelopes(v)
-          if s then hasSecrets = true
-          stripped
-        }
-        (JsArray(newElements), hasSecrets)
-      case other => (other, false)
-  end stripSecretEnvelopes
 
 end StackReferenceFactory
