@@ -167,7 +167,6 @@ class StackReferenceTest extends munit.FunSuite:
     assertEquals(root.structured.a.getData.unsafeRunSync().secret, false)
   }
 
-
   test("typed export round-trip: serialize with Output fields, deserialize with unwrapped mirror case class") {
     given Context = DummyContext(
       featureSupport =

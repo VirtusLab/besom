@@ -10,7 +10,8 @@ case class DatabaseOutputs(
   database: Output[String],
   username: Output[String],
   password: Output[String]
-) derives JsonReader, Encoder
+) derives JsonReader,
+      Encoder
 
 case class InfraOutputs(
   vpcId: String,
@@ -60,7 +61,7 @@ case class InfraOutputs(
       for
         s <- sourceStack.secretOutputNames.getData
         // verify per-field secrecy on Output[String] fields
-        tokenSecret   <- sourceStack.outputs.secretToken.getData.map(_.secret)
+        tokenSecret    <- sourceStack.outputs.secretToken.getData.map(_.secret)
         usernameSecret <- sourceStack.outputs.db.username.getData.map(_.secret)
         passwordSecret <- sourceStack.outputs.db.password.getData.map(_.secret)
         hostSecret     <- sourceStack.outputs.db.host.getData.map(_.secret)
