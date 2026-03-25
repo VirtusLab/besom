@@ -3,8 +3,8 @@
 //> using options -java-output-version:21
 
 //> using dep com.lihaoyi::os-lib::0.11.8
-//> using dep org.virtuslab::besom-cfg:0.5.1-SNAPSHOT
-//> using dep org.virtuslab::besom-model:0.5.1-SNAPSHOT
+//> using dep org.virtuslab::besom-cfg:0.5.1
+//> using dep org.virtuslab::besom-model:0.5.1
 
 //> using test.dep org.scalameta::munit:1.2.4
 
@@ -18,4 +18,3 @@
 //> using publish.developer "prolativ|Michał Pałka|https://github.com/prolativ"
 //> using publish.developer "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban"
 //> using publish.developer "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
-//> using repository snapshots
