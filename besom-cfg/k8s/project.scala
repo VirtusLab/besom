@@ -5,7 +5,7 @@
 //> using dep com.lihaoyi::os-lib::0.11.8
 //> using dep org.virtuslab::besom-cfg:0.5.1
 //> using dep org.virtuslab::besom-cfg-containers:0.5.1
-//> using dep org.virtuslab::besom-kubernetes:4.22.1-core.0.5-SNAPSHOT
+//> using dep org.virtuslab::besom-kubernetes:4.22.1-core.0.5
 
 //> using dep com.lihaoyi::fansi::0.5.0
 //> using dep com.lihaoyi::fastparse:3.1.0
