@@ -2,7 +2,7 @@
 //> using options -java-output-version:21 -deprecation -Werror -Wunused:all -Wvalue-discard -Wnonunit-statement
 //> using jvm 24
 
-//> using dep org.virtuslab::besom-model:0.5.1-SNAPSHOT
+//> using dep org.virtuslab::besom-model:0.5.1
 //> using dep org.virtuslab::scala-yaml:0.3.1
 //> using dep org.scalameta:scalameta_2.13:4.15.2
 //> using dep com.lihaoyi::upickle:3.1.4
@@ -24,4 +24,3 @@
 //> using publish.developer "prolativ|Michał Pałka|https://github.com/prolativ"
 //> using publish.developer "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban"
 //> using publish.developer "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
-//> using repository snapshots

@@ -10,7 +10,7 @@
 //> using dep org.scoverage::scalac-scoverage-serializer:2.5.2
 //> using dep org.virtuslab::scala-yaml:0.3.1
 //> using dep io.get-coursier:coursier_2.13:2.1.24
-//> using dep org.virtuslab::besom-codegen:0.5.1-SNAPSHOT
+//> using dep org.virtuslab::besom-codegen:0.5.1
 //> using dep com.softwaremill.ox::core:1.0.4
 //> using test.dep org.scalameta::munit::1.2.4
 
@@ -24,4 +24,3 @@
 //> using publish.developer "prolativ|Michał Pałka|https://github.com/prolativ"
 //> using publish.developer "KacperFKorban|Kacper Korban|https://github.com/KacperFKorban"
 //> using publish.developer "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
-//> using repository snapshots

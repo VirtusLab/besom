@@ -629,10 +629,12 @@ upsert-gh-release:
 	if {{is-snapshot}}; then
 		gh release delete v{{besom-version}} --yes || echo "Nothing to delete"
 	else
-		echo "Not a snapshot version, refusing to delete a release"
-		exit 1
+		if gh release view v{{besom-version}} > /dev/null 2>&1; then
+			echo "Release v{{besom-version}} already exists, refusing to upsert a non-snapshot release"
+			exit 1
+		fi
 	fi
-	echo Creating release v{{besom-version}}
+	echo "Creating release v{{besom-version}}"
 	gh release create v{{besom-version}} --title v{{besom-version}} --notes "" --prerelease --draft
 
 ####################

@@ -3,9 +3,9 @@
 //> using options -deprecation -feature -Werror -Wunused:all
 //> using options "-Wconf:src=auto/internal/Stack.scala&msg=unused local definition:s"
 
-//> using dep org.virtuslab::besom-json:0.5.1-SNAPSHOT
-//> using dep org.virtuslab::besom-core:0.5.1-SNAPSHOT
-//> using dep org.virtuslab::besom-model:0.5.1-SNAPSHOT
+//> using dep org.virtuslab::besom-json:0.5.1
+//> using dep org.virtuslab::besom-core:0.5.1
+//> using dep org.virtuslab::besom-model:0.5.1
 //> using dep org.virtuslab::scala-yaml:0.3.1
 //> using dep com.lihaoyi::os-lib:0.11.8
 //> using dep com.lihaoyi::os-lib-watch:0.11.8
@@ -24,4 +24,3 @@
 //> using publish.repository "central"
 //> using publish.developer "lbialy|Łukasz Biały|https://github.com/lbialy"
 //> using publish.developer "pawelprazak|Paweł Prażak|https://github.com/pawelprazak"
-//> using repository snapshots
