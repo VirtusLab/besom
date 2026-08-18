@@ -123,14 +123,17 @@ object Hotfix:
 
         // The same token hotfixed from two matching ranges is ambiguous: one of them would have to win, and
         // silently picking one is exactly the failure mode this merge removes.
-        resourceHotfixes.groupBy(_.token).foreach { case (token, hotfixes) =>
-          if hotfixes.size > 1 then
-            throw GeneralCodegenException(
-              s"Conflicting hotfixes for '$token' in $packageName:$version from ${hotfixes.size} matching version ranges: " +
-                hotfixes.map(_.source).mkString(", ") +
-                ". Narrow the ranges so that only one applies to this version."
-            )
-        }
+        val conflicts = resourceHotfixes.groupBy(_.token).filter(_._2.size > 1).toSeq.sortBy(_._1)
+        if conflicts.nonEmpty then
+          throw GeneralCodegenException(
+            conflicts
+              .map { case (token, hotfixes) =>
+                s"Conflicting hotfixes for '$token' in $packageName:$version from ${hotfixes.size} matching version ranges: " +
+                  hotfixes.map(_.source).mkString(", ")
+              }
+              .mkString("; ") +
+              ". Narrow the ranges so that only one applies to this version."
+          )
 
         // provider hotfixes are removals, so overlapping ranges compose
         val providerHotfixes = loaded.flatMap { case (_, provider) => provider } match
