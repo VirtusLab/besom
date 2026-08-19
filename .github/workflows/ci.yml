@@ -64,7 +64,7 @@ jobs:
     - uses: VirtusLab/scala-cli-setup@v1.9.1
       with:
         jvm: graalvm-java24:24.0.2
-        apps: sbt
+        apps: 'sbt:1.11.7' # pinned: sbt 2.x breaks BesomPlugin.scala (see language-plugin/resources)
         power: true
     - uses: arduino/setup-protoc@v1
     - uses: actions/setup-go@v4
