@@ -31,13 +31,22 @@ class LanguagePluginTest extends munit.FunSuite {
         |//> using dep "org.virtuslab::besom-fake-external-resource:2.3.4-TEST"
         |""".stripMargin
 
+  // The two sbt lines besom supports. sbt compiles the meta-build (the `project` directory) with
+  // Scala 2.12 on the 1.x line and with Scala 3 on the 2.x line, so each needs its own flavour of
+  // BesomPlugin.scala - see language-plugin/resources. Both are exercised below to keep the
+  // language plugin honest about shipping a working variant for either line.
+  val sbt1Version = "1.11.7"
+  val sbt2Version = "2.0.6"
+
+  // Uses the slash syntax throughout - the sbt 0.13 `in` syntax is deprecated on sbt 1.x and gone on sbt 2.x.
   val sbtBuildFile =
     s"""|lazy val root = project
         |  .in(file("."))
         |  .settings(
         |    scalaVersion := "$scalaVersion",
+        |    resolvers += Resolver.mavenLocal,
         |    scalacOptions ++= Seq("-java-output-version", "$javaTargetVersion"),
-        |    javacOptions in (Compile, compile) ++= Seq("-source", "$javaVersion", "-target", "$javaTargetVersion"),
+        |    Compile / compile / javacOptions ++= Seq("-source", "$javaVersion", "-target", "$javaTargetVersion"),
         |    libraryDependencies ++= Seq(
         |      "org.virtuslab" %% "besom-core" % "$coreVersion",
         |      "org.virtuslab" %% "besom-fake-standard-resource" % "1.2.3-TEST",
@@ -45,6 +54,14 @@ class LanguagePluginTest extends munit.FunSuite {
         |    )
         |  )
         |""".stripMargin
+
+  // build.properties pins the sbt version per project, which is what decides whether the sbt 1.x or
+  // the sbt 2.x variant of BesomPlugin.scala gets compiled. Both runner scripts honour it, so a single
+  // installed sbt can drive both tests.
+  def sbtProjectFiles(sbtVersion: String) = Map(
+    "build.sbt" -> sbtBuildFile,
+    "project/build.properties" -> s"sbt.version=$sbtVersion\n"
+  )
 
   val gradleBuildFile =
     s"""|plugins {
@@ -279,11 +296,21 @@ class LanguagePluginTest extends munit.FunSuite {
 
   FunFixture[pulumi.FixtureContext](
     setup = pulumi.fixture.setup(
-      executorsDir / "sbt",
-      projectFiles = Map("build.sbt" -> sbtBuildFile)
+      executorsDir / "sbt1",
+      projectFiles = sbtProjectFiles(sbt1Version)
     ),
     teardown = pulumi.fixture.teardown
-  ).test("sbt") { ctx =>
+  ).test(s"sbt $sbt1Version") { ctx =>
+    testExecutor(ctx)
+  }
+
+  FunFixture[pulumi.FixtureContext](
+    setup = pulumi.fixture.setup(
+      executorsDir / "sbt2",
+      projectFiles = sbtProjectFiles(sbt2Version)
+    ),
+    teardown = pulumi.fixture.teardown
+  ).test(s"sbt $sbt2Version") { ctx =>
     testExecutor(ctx)
   }
 

@@ -178,9 +178,9 @@ object pulumi {
   object fixture {
     def setupProject(testDir: os.Path, projectFiles: Map[String, String] = Map("project.scala" -> defaultProjectFile)): Unit =
       projectFiles.foreach { case (name, content) =>
-        val file = testDir / name
+        val file = testDir / os.SubPath(name)
         println(s"Writing test file: ${file.relativeTo(os.pwd)}")
-        os.write.over(file, content)
+        os.write.over(file, content, createFolders = true)
       }
 
     def setup(
@@ -229,9 +229,9 @@ object pulumi {
 
       println(s"Test stack: $stackName")
       args.projectFiles.foreach { case (name, content) =>
-        val file = args.programDir / name
+        val file = args.programDir / os.SubPath(name)
         println(s"Writing test file: ${file.relativeTo(os.pwd)}")
-        os.write.over(file, content)
+        os.write.over(file, content, createFolders = true)
       }
       pulumi.stackInit(stackName).call(cwd = args.programDir, env = allEnv)
       ProgramContext(stackName, args.programDir, allEnv)

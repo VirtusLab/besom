@@ -112,8 +112,10 @@ func ResolveBootstrapLibJarPath(languagePluginHomeDir string) string {
   return filepath.Join(languagePluginHomeDir, "bootstrap.jar")
 }
 
-func SbtBesomPluginPath(languagePluginHomeDir string) string {
-  return filepath.Join(languagePluginHomeDir, "BesomPlugin.scala")
+// SbtBesomPluginPath locates the BesomPlugin.scala variant shipped for the given sbt line.
+// The variant is one of the subdirectories of the language plugin home dir, see sbtBesomPluginVariants.
+func SbtBesomPluginPath(languagePluginHomeDir string, variant string) string {
+  return filepath.Join(languagePluginHomeDir, variant, "BesomPlugin.scala")
 }
 
 func logDetectedExecutor(executor *ScalaExecutor) {
