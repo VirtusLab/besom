@@ -22,7 +22,10 @@ case class Config(
   packageType: PackageType = ScalaCliPackage,
   multiModuleSbtPackages: Set[String] = Config.MultiModuleSbtPackages,
   singleModuleSbtPackages: Set[String] = Config.SingleModuleSbtBasedPackages,
-  tracing: Boolean = false
+  tracing: Boolean = false,
+  // fail generation when a hotfix no longer applies to the schema it targets, instead of warning;
+  // meant for CI, so overlays cannot silently stop being applied as upstream schemas evolve
+  strictHotfixes: Boolean = false
 ):
   val coreShortVersion: String = SemanticVersion
     .parseTolerant(besomVersion)
