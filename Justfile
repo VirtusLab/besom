@@ -283,7 +283,7 @@ install-language-plugin: build-language-plugin
 	mkdir -p $output_dir
 	cp {{language-plugin-output-dir}}/bootstrap.jar $output_dir/
 	cp {{language-plugin-output-dir}}/pulumi-language-scala $output_dir/
-	cp {{language-plugin-resources-dir}}/* $output_dir/
+	cp -R {{language-plugin-resources-dir}}/* $output_dir/
 	pulumi --non-interactive --logtostderr plugin rm language scala -y
 	pulumi --non-interactive --logtostderr plugin install language scala {{besom-version}} --file {{language-plugin-output-dir}}/local
 
@@ -300,7 +300,7 @@ package-language-plugin $GOOS $GOARCH:
 		binary_name="pulumi-language-scala.exe"
 	fi
 	cp {{language-plugin-output-dir}}/$binary_name $output_dir/
-	cp {{language-plugin-resources-dir}}/* $output_dir/
+	cp -R {{language-plugin-resources-dir}}/* $output_dir/
 	cd $output_dir
 	tar czvf pulumi-language-scala-v{{besom-version}}-{{GOOS}}-{{GOARCH}}.tar.gz *
 
