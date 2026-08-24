@@ -22,15 +22,15 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 24
-          cache: yarn
-          cache-dependency-path: '**/package-lock.json'
+          cache: npm
+          cache-dependency-path: website/package-lock.json
       - uses: coursier/cache-action@v6
       - uses: coursier/setup-action@v1
         with:
           apps: mdoc
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: npm ci
       - name: Test build website
-        run: yarn build
+        run: npm run build
       - name: Run mdoc
         run: just test-markdown
