@@ -97,9 +97,9 @@ but are **not recommended** due to slower iteration speed.
 Use of `sbt`, `gradle` or `mvn` support is suggested for situations where managed infrastructure
 is being added to an already existing project that uses sbt as the main build tool.
 
-Both the sbt 1.x and the sbt 2.x line are supported. Besom drops its sbt plugin into
-`project/src/main/scala-2.12` and `project/src/main/scala-3` of your project, and sbt compiles
-whichever one matches the version declared in your `project/build.properties`.
+Both the sbt 1.x and the sbt 2.x line are supported. Besom drops its sbt plugin into your project's
+`project/src/main/scala-2.12` and `project/src/main/scala-3` directories, and sbt compiles whichever
+one matches the version declared in your `project/build.properties`, ignoring the other.
 
 IDE setup for `sbt`, `gradle` or `mvn` works automatically with both Intellij IDEA and Metals.
 

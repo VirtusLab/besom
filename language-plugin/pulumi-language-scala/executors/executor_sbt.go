@@ -55,20 +55,24 @@ func (sbt) isSbtProject(opts ScalaExecutorOptions) (bool, error) {
 	return false, nil
 }
 
-// sbtBesomPluginVariants describes where each shipped BesomPlugin.scala has to land in the
-// user's project. sbt builds its meta-build (the `project` directory) with Scala 2.12 on the
-// sbt 1.x line and with Scala 3 on the sbt 2.x line, and only reads the cross-version source
-// directory matching that binary version. Dropping both variants therefore lets a single
-// language plugin release serve both sbt lines without having to detect the sbt version:
-// whichever sbt the user runs compiles exactly one of them and ignores the other.
-var sbtBesomPluginVariants = []struct {
-	// Subdirectory of the language plugin home dir holding the variant.
+// sbtBesomPluginFiles describes where each shipped source file has to land in the user's project.
+// sbt builds its meta-build (the `project` directory) with Scala 2.12 on the sbt 1.x line and with
+// Scala 3 on the sbt 2.x line, and only reads the cross-version source directory matching that
+// binary version. Dropping both variants therefore lets a single language plugin release serve both
+// sbt lines without having to detect the sbt version: whichever sbt the user runs compiles exactly
+// one of them and ignores the other. The shared base goes to the plain `scala` directory, which both
+// lines compile.
+var sbtBesomPluginFiles = []struct {
+	// Subdirectory of the language plugin home dir holding the file.
 	variant string
-	// Cross-version source directory of the sbt meta-build the variant is written to.
+	// File name, the same on both sides of the copy.
+	fileName string
+	// Source directory under project/src/main the file is written to.
 	scalaSourceDir string
 }{
-	{variant: "sbt1", scalaSourceDir: "scala-2.12"},
-	{variant: "sbt2", scalaSourceDir: "scala-3"},
+	{variant: "shared", fileName: "BesomPluginBase.scala", scalaSourceDir: "scala"},
+	{variant: "sbt1", fileName: "BesomPlugin.scala", scalaSourceDir: "scala-2.12"},
+	{variant: "sbt2", fileName: "BesomPlugin.scala", scalaSourceDir: "scala-3"},
 }
 
 // besomPluginGeneratedMarker appears in the header of every BesomPlugin.scala besom writes out.
@@ -92,9 +96,9 @@ func (sbt) newSbtExecutor(cmd string, projectRoot fsys.ParentFS, languagePluginH
 			if err := removeLegacyBesomPlugin(projectRoot); err != nil {
 				return err
 			}
-			for _, v := range sbtBesomPluginVariants {
-				srcPath := SbtBesomPluginPath(languagePluginHomeDir, v.variant)
-				destPath := filepath.Join(projectRoot.Path(), "project", "src", "main", v.scalaSourceDir, "BesomPlugin.scala")
+			for _, f := range sbtBesomPluginFiles {
+				srcPath := SbtBesomPluginPath(languagePluginHomeDir, f.variant, f.fileName)
+				destPath := filepath.Join(projectRoot.Path(), "project", "src", "main", f.scalaSourceDir, f.fileName)
 				if err := copyFileIfNotPresent(srcPath, destPath); err != nil {
 					return err
 				}
