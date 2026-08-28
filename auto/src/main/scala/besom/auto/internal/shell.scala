@@ -2,6 +2,8 @@ package besom.auto.internal
 
 import besom.util.*
 
+import scala.util.control.NonFatal
+
 object shell:
   case class Result private (
     command: Seq[String],
@@ -24,21 +26,46 @@ object shell:
       if res.exitCode == 0 then Right(res) else Left(res.asError)
   end Result
 
+  /** Runs a command to completion.
+    *
+    * This is a faithful transcription of os-lib's `os.proc(...).call(...)` - which is itself `spawn` + collect + `join` - with one
+    * addition: [[ShellOptions.onStart]] is handed a [[ChildProcess]] right after the subprocess is spawned, which is what makes
+    * cancellation possible. The handler runs on the calling thread before the process is joined, so it must not block - stash the handle
+    * and return. Exceptions it throws are swallowed; the command still runs to completion.
+    */
   def apply(command: os.Shellable*)(opts: ShellOption*): Either[ShellAutoError, Result] =
     val options = ShellOptions.from(opts*)
-    val result = os
-      .proc(command*)
-      .call(
-        cwd = options.cwd.asOption.orNull,
-        env = options.env,
-        stdin = options.stdin,
-        stdout = options.stdout,
-        stderr = options.stderr,
-        mergeErrIntoOut = options.mergeErrIntoOut,
-        timeout = options.timeout,
-        check = options.check,
-        propagateEnv = options.propagateEnv
-      )
+
+    val chunks = new java.util.concurrent.ConcurrentLinkedQueue[Either[geny.Bytes, geny.Bytes]]
+
+    val p = os.proc(command*)
+    val sub = p.spawn(
+      cwd = options.cwd.asOption.orNull,
+      env = options.env,
+      stdin = options.stdin,
+      // a caller supplied ProcessOutput wins, exactly as in os-lib - we only collect when the stream is left at os.Pipe
+      stdout =
+        if options.stdout ne os.Pipe then options.stdout
+        else os.ProcessOutput.ReadBytes((buf, n) => chunks.add(Left(new geny.Bytes(java.util.Arrays.copyOf(buf, n))))),
+      stderr =
+        if options.stderr ne os.Pipe then options.stderr
+        else os.ProcessOutput.ReadBytes((buf, n) => chunks.add(Right(new geny.Bytes(java.util.Arrays.copyOf(buf, n))))),
+      mergeErrIntoOut = options.mergeErrIntoOut,
+      propagateEnv = options.propagateEnv
+    )
+
+    // a broken consumer must neither leak the process it was handed nor kill it - skipping the join below would leave a live
+    // `pulumi up` running until JVM exit, and destroying it would leave the stack locked with a pending operation. Same contract
+    // as the OnEvent handlers: a consumer's exception cannot break the command it is observing.
+    try options.onStart.foreach(_(ChildProcess(sub)))
+    catch case NonFatal(_) => ()
+
+    sub.join(timeout = options.timeout, timeoutGracePeriod = 100)
+
+    import scala.jdk.CollectionConverters.*
+    val result = os.CommandResult(p.commandChunks, sub.exitCode(), chunks.iterator.asScala.toIndexedSeq)
+    if result.exitCode != 0 && options.check then throw os.SubprocessException(result)
+
     Result.from(result, options.env)
   end apply
 
@@ -78,6 +105,15 @@ object shell:
       */
     case object DontPropagateEnv extends ShellOption
 
+    /** A handler receiving a [[ChildProcess]] handle to the spawned subprocess, for callers that want to be able to cancel it.
+      *
+      * The handler runs on the calling thread right after the subprocess is spawned and before it is joined, so it must not block - stash
+      * the handle and return. Exceptions it throws are swallowed: the command it was handed still runs to completion, the caller simply
+      * ends up without a handle.
+      */
+    case class OnStart(handler: ChildProcess => Unit) extends ShellOption
+  end ShellOption
+
   /** Options for the subprocess execution.
     * @param cwd
     *   the working directory of the subprocess
@@ -97,6 +133,8 @@ object shell:
     *   whether to check the subprocess exit code and throw an exception if it is non-zero
     * @param propagateEnv
     *   whether to propagate the current environment variables to the subprocess
+    * @param onStart
+    *   an optional handler receiving a handle to the spawned subprocess, invoked on the calling thread before the process is joined
     */
   case class ShellOptions(
     cwd: NotProvidedOr[os.Path] = NotProvided,
@@ -107,7 +145,8 @@ object shell:
     mergeErrIntoOut: Boolean = false,
     timeout: Long = -1,
     check: Boolean = false, // in contrast to os lib we default to false, because we use our own error handling
-    propagateEnv: Boolean = true
+    propagateEnv: Boolean = true,
+    onStart: Option[ChildProcess => Unit] = None
   )
 
   object ShellOptions:
@@ -122,6 +161,7 @@ object shell:
         case ShellOption.Timeout(timeout) :: tail => from(tail).copy(timeout = timeout)
         case ShellOption.Check :: tail            => from(tail).copy(check = true)
         case ShellOption.DontPropagateEnv :: tail => from(tail).copy(propagateEnv = false)
+        case ShellOption.OnStart(handler) :: tail => from(tail).copy(onStart = Some(handler))
         case ShellOption.Env(env) :: tail => {
           val old = from(tail*)
           old.copy(env = old.env ++ env)
@@ -170,22 +210,20 @@ object shell:
 
   end pulumi
 
-  import ma.chinespirit.tailf.Tail
+  import ma.chinespirit.tailf.{Follower, Tail}
 
-  // FIXME probably requires a redesign?
-  def tail(path: os.Path): Either[Exception, Iterator[String] & AutoCloseable] =
-    Tail
-      .follow(path.toIO)
-      .left
-      .map(e => Exception(s"Failed to open $path for tailing", e))
-      .map { is =>
-        new Iterator[String] with AutoCloseable:
-          val src = scala.io.Source.fromInputStream(is)
-          val it  = src.getLines()
-
-          def hasNext: Boolean = it.hasNext
-          def next(): String   = it.next()
-          def close(): Unit    = src.close()
-      }
+  /** Opens a file for tailing, in the `tail -f` sense - the returned [[Follower]] is an `InputStream` that blocks at the end of the file
+    * instead of signalling EOF.
+    *
+    * The [[Follower]] itself is handed back rather than an iterator so that callers get `stop()`, which drains what is already written and
+    * only then signals EOF, in addition to the abrupt `close()`.
+    *
+    * @param path
+    *   the file to tail, which must already exist
+    * @return
+    *   the follower or an error if the file could not be opened
+    */
+  def tail(path: os.Path): Either[Exception, Follower] =
+    Tail.follow(path.toIO).left.map(e => Exception(s"Failed to open $path for tailing", e))
 
 end shell
