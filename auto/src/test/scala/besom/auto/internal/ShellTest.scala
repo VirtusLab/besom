@@ -99,8 +99,10 @@ class ShellTest extends munit.FunSuite:
     @volatile var handle: Option[ChildProcess] = None
     val started                                = new java.util.concurrent.CountDownLatch(1)
 
+    // `sleep` is spawned directly, not via `sh -c`: a shell is a separate process that ignores SIGINT while it waits on a
+    // foreground child, and on Linux `/bin/sh` (dash) does not exec, so the signal would reach the shell and never the sleep
     val runner = new Thread(() =>
-      shell("sh", "-c", "sleep 30")(ShellOption.OnStart { p =>
+      shell("sleep", "30")(ShellOption.OnStart { p =>
         handle = Some(p)
         started.countDown()
       })

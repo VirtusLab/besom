@@ -19,6 +19,10 @@ final class ChildProcess private[auto] (val underlying: os.SubProcess):
     *
     * The JDK exposes no signal API, so on Unix this shells out to `kill -INT`; on Windows, where there is no equivalent, it falls back to
     * [[terminate]].
+    *
+    * The signal goes to the process besom-auto spawned, not to its descendants. That is exactly right for `pulumi`, which is always spawned
+    * directly and unwinds its own children - but it does mean a caller that interposes a shell (`sh -c "pulumi ..."`) would break
+    * cancellation, since the shell would receive the signal, ignore it while waiting on its foreground child, and never pass it on.
     */
   def interrupt(): Unit =
     if isWindows then terminate()
