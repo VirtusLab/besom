@@ -137,17 +137,30 @@ case class LoginOptions(
   allowInsecure: Boolean = false
 )
 object LoginOptions:
+  /** Creates a [[LoginOptions]] from a list of [[LoginOption]]s, merging them so that the last specified value wins.
+    * @param options
+    *   the list of [[LoginOption]]s
+    * @return
+    *   a [[LoginOptions]]
+    */
   def from(options: LoginOption*): LoginOptions = from(options.toList)
+
+  /** Creates a [[LoginOptions]] from a list of [[LoginOption]]s, merging them so that the last specified value wins.
+    * @param options
+    *   the list of [[LoginOption]]s
+    * @return
+    *   a [[LoginOptions]]
+    */
   def from(options: List[LoginOption]): LoginOptions =
-    options match
-      case LoginOption.Cloud(url) :: tail               => from(tail*).copy(cloud = url)
-      case LoginOption.Local(path) :: tail              => from(tail*).copy(local = Some(path))
-      case LoginOption.PulumiHome(path) :: tail         => from(tail*).copy(pulumiHome = path)
-      case LoginOption.PulumiAccessToken(token) :: tail => from(tail*).copy(pulumiAccessToken = token)
-      case LoginOption.DefaultOrg(org) :: tail          => from(tail*).copy(defaultOrg = org)
-      case LoginOption.AllowInsecure :: tail            => from(tail*).copy(allowInsecure = true)
-      case Nil                                          => LoginOptions()
-      case o                                            => throw AutoError(s"Unknown login option: $o")
+    options.foldLeft(LoginOptions()) { (acc, opt) =>
+      opt match
+        case LoginOption.Cloud(url)               => acc.copy(cloud = url)
+        case LoginOption.Local(path)              => acc.copy(local = Some(path))
+        case LoginOption.PulumiHome(path)         => acc.copy(pulumiHome = path)
+        case LoginOption.PulumiAccessToken(token) => acc.copy(pulumiAccessToken = token)
+        case LoginOption.DefaultOrg(org)          => acc.copy(defaultOrg = org)
+        case LoginOption.AllowInsecure            => acc.copy(allowInsecure = true)
+    }
   end from
 
 /** Log out of the Pulumi backend.
@@ -213,7 +226,7 @@ case class LogoutOptions(
   pulumiHome: NotProvidedOr[os.Path] = NotProvided
 )
 object LogoutOptions:
-  /** Creates a [[LogoutOptions]] from a list of [[LogoutOption]]s.
+  /** Creates a [[LogoutOptions]] from a list of [[LogoutOption]]s, merging them so that the last specified value wins.
     * @param options
     *   the list of [[LogoutOption]]s
     * @return
@@ -221,20 +234,20 @@ object LogoutOptions:
     */
   def from(options: LogoutOption*): LogoutOptions = from(options.toList)
 
-  /** Creates a [[LogoutOptions]] from a list of [[LogoutOption]]s.
+  /** Creates a [[LogoutOptions]] from a list of [[LogoutOption]]s, merging them so that the last specified value wins.
     * @param options
     *   the list of [[LogoutOption]]s
     * @return
     *   a [[LogoutOptions]]
     */
   def from(options: List[LogoutOption]): LogoutOptions =
-    options match
-      case LogoutOption.All :: tail              => from(tail*).copy(all = true)
-      case LogoutOption.Local(path) :: tail      => from(tail*).copy(local = path)
-      case LogoutOption.Cloud(url) :: tail       => from(tail*).copy(cloud = url)
-      case LogoutOption.PulumiHome(path) :: tail => from(tail*).copy(pulumiHome = path)
-      case Nil                                   => LogoutOptions()
-      case o                                     => throw AutoError(s"Unknown logout option: $o")
+    options.foldLeft(LogoutOptions()) { (acc, opt) =>
+      opt match
+        case LogoutOption.All              => acc.copy(all = true)
+        case LogoutOption.Local(path)      => acc.copy(local = path)
+        case LogoutOption.Cloud(url)       => acc.copy(cloud = url)
+        case LogoutOption.PulumiHome(path) => acc.copy(pulumiHome = path)
+    }
   end from
 end LogoutOptions
 
@@ -268,7 +281,8 @@ def createStackLocalSource(
   options: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
   for
-    ws <- localWorkspace(WorkDir(workDir) +: options*)
+    // appended, not prepended: options are last-wins, so the explicit workDir argument beats a WorkDir option in options
+    ws <- localWorkspace((options :+ WorkDir(workDir))*)
     s  <- Stack.create(stackName, ws)
   yield s
 
@@ -291,7 +305,8 @@ def upsertStackLocalSource(
   opts: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
   for
-    ws <- localWorkspace(WorkDir(workDir) +: opts*)
+    // appended, not prepended: options are last-wins, so the explicit workDir argument beats a WorkDir option in opts
+    ws <- localWorkspace((opts :+ WorkDir(workDir))*)
     s  <- Stack.upsert(stackName, ws)
   yield s
 
@@ -313,7 +328,8 @@ def selectStackLocalSource(
   opts: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
   for
-    ws <- localWorkspace(WorkDir(workDir) +: opts*)
+    // appended, not prepended: options are last-wins, so the explicit workDir argument beats a WorkDir option in opts
+    ws <- localWorkspace((opts :+ WorkDir(workDir))*)
     s  <- Stack.select(stackName, ws)
   yield s
 
@@ -337,7 +353,8 @@ def createStackRemoteSource(
   opts: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
   for
-    ws <- localWorkspace(Repo(repo) +: opts*)
+    // appended, not prepended: options are last-wins, so the explicit repo argument beats a Repo option in opts
+    ws <- localWorkspace((opts :+ Repo(repo))*)
     s  <- Stack.create(stackName, ws)
   yield s
 
@@ -360,7 +377,8 @@ def upsertStackRemoteSource(
   opts: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
   for
-    ws <- localWorkspace(Repo(repo) +: opts*)
+    // appended, not prepended: options are last-wins, so the explicit repo argument beats a Repo option in opts
+    ws <- localWorkspace((opts :+ Repo(repo))*)
     s  <- Stack.upsert(stackName, ws)
   yield s
 
@@ -383,7 +401,8 @@ def selectStackRemoteSource(
   opts: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
   for
-    ws <- localWorkspace(Repo(repo) +: opts*)
+    // appended, not prepended: options are last-wins, so the explicit repo argument beats a Repo option in opts
+    ws <- localWorkspace((opts :+ Repo(repo))*)
     s  <- Stack.select(stackName, ws)
   yield s
 
@@ -408,11 +427,12 @@ def createStackInlineSource(
   program: RunFunc,
   opts: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
-  val optsWithProgram = Program(program) +: opts
+  // appended rather than prepended: options are last-wins, so the explicit program argument beats a Program option in opts
+  val optsWithProgram = opts :+ Program(program)
   val allOpts: Either[AutoError, Seq[LocalWorkspaceOption]] =
     getProjectSettings(projectName, optsWithProgram) match
       case Left(e)     => Left(AutoError(s"Failed to create stack '$stackName': ${e.getMessage}", e))
-      case Right(proj) => Right(Project(proj) +: opts)
+      case Right(proj) => Right(Project(proj) +: optsWithProgram)
   for
     allOpts <- allOpts
     ws      <- localWorkspace(allOpts*)
@@ -442,11 +462,12 @@ def upsertStackInlineSource(
   program: RunFunc,
   opts: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
-  val optsWithProgram = Program(program) +: opts
+  // appended rather than prepended: options are last-wins, so the explicit program argument beats a Program option in opts
+  val optsWithProgram = opts :+ Program(program)
   val allOpts: Either[AutoError, Seq[LocalWorkspaceOption]] =
     getProjectSettings(projectName, optsWithProgram) match
       case Left(e)     => Left(AutoError(s"Failed to upsert stack '$stackName': ${e.getMessage}", e))
-      case Right(proj) => Right(Project(proj) +: opts)
+      case Right(proj) => Right(Project(proj) +: optsWithProgram)
   for
     allOpts <- allOpts
     ws      <- localWorkspace(allOpts*)
@@ -474,11 +495,12 @@ def selectStackInlineSource(
   program: RunFunc,
   opts: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
-  val optsWithProgram = Program(program) +: opts
+  // appended rather than prepended: options are last-wins, so the explicit program argument beats a Program option in opts
+  val optsWithProgram = opts :+ Program(program)
   val allOpts: Either[AutoError, Seq[LocalWorkspaceOption]] =
     getProjectSettings(projectName, optsWithProgram) match
       case Left(e)     => Left(AutoError(s"Failed to select stack '$stackName': ${e.getMessage}", e))
-      case Right(proj) => Right(Project(proj) +: opts)
+      case Right(proj) => Right(Project(proj) +: optsWithProgram)
   for
     allOpts <- allOpts
     ws      <- localWorkspace(allOpts*)

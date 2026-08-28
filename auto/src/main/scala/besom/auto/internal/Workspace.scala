@@ -93,13 +93,15 @@ trait Workspace:
 
   protected[auto] def pulumi(additional: os.Shellable*)(opts: shell.ShellOption*): Either[ShellAutoError, shell.Result] =
     val allArgs = additional
-    val allOpts = opts ++ List(
-      shell.ShellOption.Cwd(workDir)
-    ) ++ List(
+    // ShellOptions.from is last-wins, so the list is ordered least to most authoritative: the workspace's generic env bag first, then the
+    // settings it was configured with through dedicated options (PULUMI_HOME), then the caller's own options, which always win.
+    val allOpts = List(
+      shell.ShellOption.Cwd(workDir),
       shell.ShellOption.Env(getEnvVars),
       shell.ShellOption.Env(shell.pulumi.env.PulumiDebugCommandsEnv -> "true")
     ) ++ pulumiHome.map(path => shell.ShellOption.Env(shell.pulumi.env.PulumiHomeEnv, path.toString))
       ++ Option.when(remote)(shell.ShellOption.Env(shell.pulumi.env.PulumiExperimentalEnv -> "true"))
+      ++ opts
     shell.pulumi(allArgs)(allOpts*)
   end pulumi
 

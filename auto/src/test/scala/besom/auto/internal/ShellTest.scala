@@ -29,6 +29,14 @@ class ShellTest extends munit.FunSuite:
     assertEquals(options.onStart, None)
   }
 
+  test("ShellOptions.from - a repeated env key resolves to the last occurrence") {
+    val options = ShellOptions.from(
+      ShellOption.Env("FOO" -> "first", "ONLY_FIRST" -> "1"),
+      ShellOption.Env("FOO" -> "second", "ONLY_SECOND" -> "2")
+    )
+    assertEquals(options.env, Map("FOO" -> "second", "ONLY_FIRST" -> "1", "ONLY_SECOND" -> "2"))
+  }
+
   test("ShellOptions.from OnStart") {
     val handler: ChildProcess => Unit = _ => ()
     assertEquals(ShellOptions.from(ShellOption.OnStart(handler)).onStart, Some(handler))
