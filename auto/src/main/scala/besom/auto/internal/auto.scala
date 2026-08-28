@@ -281,7 +281,8 @@ def createStackLocalSource(
   options: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
   for
-    ws <- localWorkspace(WorkDir(workDir) +: options*)
+    // appended, not prepended: options are last-wins, so the explicit workDir argument beats a WorkDir option in options
+    ws <- localWorkspace((options :+ WorkDir(workDir))*)
     s  <- Stack.create(stackName, ws)
   yield s
 
@@ -304,7 +305,8 @@ def upsertStackLocalSource(
   opts: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
   for
-    ws <- localWorkspace(WorkDir(workDir) +: opts*)
+    // appended, not prepended: options are last-wins, so the explicit workDir argument beats a WorkDir option in opts
+    ws <- localWorkspace((opts :+ WorkDir(workDir))*)
     s  <- Stack.upsert(stackName, ws)
   yield s
 
@@ -326,7 +328,8 @@ def selectStackLocalSource(
   opts: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
   for
-    ws <- localWorkspace(WorkDir(workDir) +: opts*)
+    // appended, not prepended: options are last-wins, so the explicit workDir argument beats a WorkDir option in opts
+    ws <- localWorkspace((opts :+ WorkDir(workDir))*)
     s  <- Stack.select(stackName, ws)
   yield s
 
@@ -350,7 +353,8 @@ def createStackRemoteSource(
   opts: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
   for
-    ws <- localWorkspace(Repo(repo) +: opts*)
+    // appended, not prepended: options are last-wins, so the explicit repo argument beats a Repo option in opts
+    ws <- localWorkspace((opts :+ Repo(repo))*)
     s  <- Stack.create(stackName, ws)
   yield s
 
@@ -373,7 +377,8 @@ def upsertStackRemoteSource(
   opts: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
   for
-    ws <- localWorkspace(Repo(repo) +: opts*)
+    // appended, not prepended: options are last-wins, so the explicit repo argument beats a Repo option in opts
+    ws <- localWorkspace((opts :+ Repo(repo))*)
     s  <- Stack.upsert(stackName, ws)
   yield s
 
@@ -396,7 +401,8 @@ def selectStackRemoteSource(
   opts: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
   for
-    ws <- localWorkspace(Repo(repo) +: opts*)
+    // appended, not prepended: options are last-wins, so the explicit repo argument beats a Repo option in opts
+    ws <- localWorkspace((opts :+ Repo(repo))*)
     s  <- Stack.select(stackName, ws)
   yield s
 
