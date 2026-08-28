@@ -15,6 +15,46 @@ object AutoError:
   def apply(message: String, cause: Throwable) = new AutoError(Some(message), Some(cause))
   def apply(cause: Throwable)                  = new AutoError(None, Some(cause))
 
+/** Raised when a `pulumi` lifecycle operation (up/preview/refresh/destroy) fails.
+  *
+  * The engine event log is parsed best-effort even on the failure path, so [[diagnostics]] and [[failures]] - the data that explains *why*
+  * the operation failed - stay available. The bulky stdout/stderr dump lives on the [[ShellAutoError]] in [[cause]]; the copies here are
+  * for programmatic access.
+  *
+  * @param operation
+  *   the lifecycle operation that failed, one of `preview`, `up`, `refresh`, `destroy`
+  * @param exitCode
+  *   the exit code of the `pulumi` process
+  * @param stdout
+  *   the standard output of the `pulumi` process
+  * @param stderr
+  *   the standard error of the `pulumi` process
+  * @param resourcePreEvents
+  *   the resource operations the engine started before it gave up
+  * @param resourceOperations
+  *   the resource operations that completed before the engine gave up
+  * @param failures
+  *   the resource operations that failed
+  * @param diagnostics
+  *   the diagnostic messages emitted by the engine and the providers
+  * @param parseErrors
+  *   the event log lines that could not be decoded
+  */
+@SerialVersionUID(1L)
+case class OperationFailedError(
+  message: Option[String],
+  cause: Option[Throwable],
+  operation: String,
+  exitCode: Int,
+  stdout: String,
+  stderr: String,
+  resourcePreEvents: List[ResourcePreEvent],
+  resourceOperations: List[ResOutputsEvent],
+  failures: List[ResOpFailedEvent],
+  diagnostics: List[DiagnosticEvent],
+  parseErrors: List[EventLogParseError]
+) extends BaseAutoError(message, cause)
+
 @SerialVersionUID(1L)
 case class ShellAutoError(
   message: Option[String],

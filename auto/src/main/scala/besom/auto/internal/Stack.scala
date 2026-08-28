@@ -87,52 +87,52 @@ case class Stack(name: String, workspace: Workspace):
         Seq(s"--exec-kind=${ExecKind.AutoInline}", s"--client=$address")
       else Seq(s"--exec-kind=${ExecKind.AutoLocal}")
 
+    val shellOpts: Seq[shell.ShellOption] = opts.onProcessStart.map(shell.ShellOption.OnStart(_)).toSeq
+
     for
-      eventsPath <- eventLogsPath("preview")
-      r <- {
+      eventsPath <- eventLogsPath("preview", opts.eventLog)
+      r <- EventLogs.around(eventsPath, opts.onEvent) {
         val watchArgs: Seq[String] = Seq("--event-log=" + eventsPath)
         val args: Seq[String]      = Seq("preview") ++ sharedArgs ++ kindArgs ++ watchArgs
-        pulumi(args)().left.map(AutoError("Preview failed", _)) // after this line pulumi cli is no longer running
+        pulumi(args)(shellOpts*).left.map(operationFailed("preview", eventsPath)) // after this line pulumi cli is no longer running
       }
-      events  <- parseEventLog(eventsPath)
-      summary <- extractSummary(events)
+      parsed  <- EventLogs.parse(eventsPath)
+      summary <- EventLogs.summary(parsed.events, parsed.parseErrors)
     yield PreviewResult(
       stdout = r.out,
       stderr = r.err,
       summary = summary.resourceChanges,
-      resourceChanges = extractResourcePreEvents(events),
-      diagnostics = extractDiagnostics(events)
+      resourceChanges = EventLogs.resourcePreEvents(parsed.events),
+      diagnostics = EventLogs.diagnostics(parsed.events),
+      parseErrors = parsed.parseErrors
     )
   end preview
 
-  private def parseEventLog(path: os.Path): Either[Exception, List[EngineEvent]] =
-    val lines  = os.read.lines(path).filter(_.nonEmpty)
-    val parsed = lines.map(EngineEvent.fromJson(_))
-    val errors = parsed.collect { case Left(e) => e }
-    if errors.nonEmpty then
-      val err = errors.foldLeft(AutoError(s"Failed to parse ${errors.size} engine events")) { case (acc, e) =>
-        acc.addSuppressed(e)
-        acc
-      }
-      Left(err)
-    else Right(parsed.collect { case Right(e) => e }.toList)
-
-  private def extractSummary(events: List[EngineEvent]): Either[Exception, SummaryEvent] =
-    events
-      .collectFirst { case e if e.summaryEvent.isDefined => e.summaryEvent.get }
-      .toRight(AutoError("No summary event found in event log"))
-
-  private def extractResourcePreEvents(events: List[EngineEvent]): List[ResourcePreEvent] =
-    events.flatMap(_.resourcePreEvent)
-
-  private def extractDiagnostics(events: List[EngineEvent]): List[DiagnosticEvent] =
-    events.flatMap(_.diagnosticEvent)
-
-  private def extractFailures(events: List[EngineEvent]): List[ResOpFailedEvent] =
-    events.flatMap(_.resOpFailedEvent)
-
-  private def extractResourceOutputs(events: List[EngineEvent]): List[ResOutputsEvent] =
-    events.flatMap(_.resOutputsEvent)
+  /** Turns a failed `pulumi` invocation into an error that still carries whatever the engine managed to report before giving up.
+    *
+    * The event log is parsed best-effort here because the operation short-circuits on a non-zero exit code, which is exactly when the
+    * diagnostics and resource failures matter most.
+    */
+  private def operationFailed(operation: String, eventsPath: os.Path)(error: ShellAutoError | AutoError): Exception =
+    error match
+      case err: ShellAutoError =>
+        val parsed = EventLogs.parse(eventsPath).getOrElse(ParsedEventLog.empty)
+        OperationFailedError(
+          message = Some(s"${operation.capitalize} failed"),
+          cause = Some(err),
+          operation = operation,
+          exitCode = err.exitCode,
+          stdout = err.stdout,
+          stderr = err.stderr,
+          resourcePreEvents = EventLogs.resourcePreEvents(parsed.events),
+          resourceOperations = EventLogs.resourceOutputs(parsed.events),
+          failures = EventLogs.failures(parsed.events),
+          diagnostics = EventLogs.diagnostics(parsed.events),
+          parseErrors = parsed.parseErrors
+        )
+      // the remote workspace pre/post command callbacks - no pulumi process, no event log
+      case err: AutoError => AutoError(s"${operation.capitalize} failed", err)
+  end operationFailed
 
   /** Create or update the resources in a stack by executing the program in the Workspace. Update updates the resources in a stack by
     * executing the program in the Workspace associated with this stack, if one is provided.
@@ -167,16 +167,15 @@ case class Stack(name: String, workspace: Workspace):
         Seq(s"--exec-kind=${ExecKind.AutoInline}", s"--client=$address")
       else Seq(s"--exec-kind=${ExecKind.AutoLocal}")
 
+    val shellOpts: Seq[shell.ShellOption] = opts.onProcessStart.map(shell.ShellOption.OnStart(_)).toSeq
+
     for
-      eventsPath <- eventLogsPath("up")
-      r <- {
+      eventsPath <- eventLogsPath("up", opts.eventLog)
+      r <- EventLogs.around(eventsPath, opts.onEvent) {
         val watchArgs: Seq[String] = Seq("--event-log=" + eventsPath)
         val args: Seq[String]      = Seq("up", "--yes", "--skip-preview") ++ sharedArgs ++ kindArgs ++ watchArgs
-        pulumi(args)(
-// FIXME: missing streams, implement progressStreams and errorProgressStreams
-//      shell.Option.Stdout(opts.progressStreams),
-//      shell.Option.Stderr(opts.errorProgressStreams)
-        ).left.map(AutoError("Up failed", _))
+        // FIXME: missing streams, implement progressStreams and errorProgressStreams
+        pulumi(args)(shellOpts*).left.map(operationFailed("up", eventsPath))
       }
       outputs <- outputs
       history <- history(
@@ -185,15 +184,17 @@ case class Stack(name: String, workspace: Workspace):
         /* If it's a remote workspace, don't set ShowSecrets to prevent attempting to load the project file. */
         Option.when(opts.showSecrets && !isRemote)(HistoryOption.ShowSecrets).toSeq*
       ).flatMap(_.headOption.toRight(AutoError("Failed to get history, result was empty")))
-      events <- parseEventLog(eventsPath)
+      parsed <- EventLogs.parse(eventsPath)
     yield UpResult(
       stdout = r.out,
       stderr = r.err,
       outputs = outputs,
       summary = history,
-      resourceOperations = extractResourceOutputs(events),
-      failures = extractFailures(events),
-      diagnostics = extractDiagnostics(events)
+      resourceOperations = EventLogs.resourceOutputs(parsed.events),
+      failures = EventLogs.failures(parsed.events),
+      diagnostics = EventLogs.diagnostics(parsed.events),
+      resourcePreEvents = EventLogs.resourcePreEvents(parsed.events),
+      parseErrors = parsed.parseErrors
     )
   end up
 
@@ -220,12 +221,14 @@ case class Stack(name: String, workspace: Workspace):
       ++ (if workspace.program.isDefined then Seq(s"--exec-kind=${ExecKind.AutoInline}") else Seq(s"--exec-kind=${ExecKind.AutoLocal}"))
       ++ remoteArgs // Apply the remote args, if needed
 
+    val shellOpts: Seq[shell.ShellOption] = opts.onProcessStart.map(shell.ShellOption.OnStart(_)).toSeq
+
     for
-      eventsPath <- eventLogsPath("refresh")
-      r <- {
+      eventsPath <- eventLogsPath("refresh", opts.eventLog)
+      r <- EventLogs.around(eventsPath, opts.onEvent) {
         val watchArgs: Seq[String] = Seq("--event-log=" + eventsPath)
         val args: Seq[String]      = Seq("refresh", "--yes", "--skip-preview") ++ sharedArgs ++ watchArgs
-        pulumi(args)().left.map(AutoError("Refresh failed", _))
+        pulumi(args)(shellOpts*).left.map(operationFailed("refresh", eventsPath))
       }
       history <- history(
         pageSize = 1,
@@ -233,12 +236,16 @@ case class Stack(name: String, workspace: Workspace):
         /* If it's a remote workspace, don't set ShowSecrets to prevent attempting to load the project file. */
         Option.when(opts.showSecrets && !isRemote)(HistoryOption.ShowSecrets).toSeq*
       ).flatMap(_.headOption.toRight(AutoError("Failed to get history, result was empty")))
-      events <- parseEventLog(eventsPath)
+      parsed <- EventLogs.parse(eventsPath)
     yield RefreshResult(
       stdout = r.out,
       stderr = r.err,
       summary = history,
-      diagnostics = extractDiagnostics(events)
+      diagnostics = EventLogs.diagnostics(parsed.events),
+      resourcePreEvents = EventLogs.resourcePreEvents(parsed.events),
+      resourceOperations = EventLogs.resourceOutputs(parsed.events),
+      failures = EventLogs.failures(parsed.events),
+      parseErrors = parsed.parseErrors
     )
   end refresh
 
@@ -264,12 +271,14 @@ case class Stack(name: String, workspace: Workspace):
       ++ (if workspace.program.isDefined then Seq(s"--exec-kind=${ExecKind.AutoInline}") else Seq(s"--exec-kind=${ExecKind.AutoLocal}"))
       ++ remoteArgs // Apply the remote args, if needed
 
+    val shellOpts: Seq[shell.ShellOption] = opts.onProcessStart.map(shell.ShellOption.OnStart(_)).toSeq
+
     for
-      eventsPath <- eventLogsPath("destroy")
-      r <- {
+      eventsPath <- eventLogsPath("destroy", opts.eventLog)
+      r <- EventLogs.around(eventsPath, opts.onEvent) {
         val watchArgs: Seq[String] = Seq("--event-log=" + eventsPath)
         val args: Seq[String]      = Seq("destroy", "--yes", "--skip-preview") ++ sharedArgs ++ watchArgs
-        pulumi(args)().left.map(AutoError("Destroy failed", _))
+        pulumi(args)(shellOpts*).left.map(operationFailed("destroy", eventsPath))
       }
       history <- history(
         pageSize = 1,
@@ -277,13 +286,16 @@ case class Stack(name: String, workspace: Workspace):
         /* If it's a remote workspace, don't set ShowSecrets to prevent attempting to load the project file. */
         Option.when(opts.showSecrets && !isRemote)(HistoryOption.ShowSecrets).toSeq*
       ).flatMap(_.headOption.toRight(AutoError("Failed to get history, result was empty")))
-      events <- parseEventLog(eventsPath)
+      parsed <- EventLogs.parse(eventsPath)
     yield DestroyResult(
       stdout = r.out,
       stderr = r.err,
       summary = history,
-      failures = extractFailures(events),
-      diagnostics = extractDiagnostics(events)
+      failures = EventLogs.failures(parsed.events),
+      diagnostics = EventLogs.diagnostics(parsed.events),
+      resourcePreEvents = EventLogs.resourcePreEvents(parsed.events),
+      resourceOperations = EventLogs.resourceOutputs(parsed.events),
+      parseErrors = parsed.parseErrors
     )
   end destroy
 
@@ -542,14 +554,30 @@ case class Stack(name: String, workspace: Workspace):
       case _    => throw AutoError(s"Unknown workspace type: ${workspace.getClass.getTypeName}")
   end remoteArgs
 
-  private def eventLogsPath(command: String): Either[Exception, os.Path] =
+  /** Creates the file `pulumi --event-log` will write to.
+    *
+    * The file has to exist before `pulumi` starts so that a follower can be attached to it without racing the engine.
+    *
+    * @param command
+    *   the lifecycle operation the log belongs to, used to name the temporary directory
+    * @param requested
+    *   a caller supplied path, which is truncated if it already exists; when not provided a fresh temporary directory is used
+    */
+  private def eventLogsPath(command: String, requested: NotProvidedOr[os.Path]): Either[Exception, os.Path] =
     Try {
-      val logsDir = os.temp.dir(prefix = s"automation-logs-$command-")
-      val path    = logsDir / "eventlog.txt"
-      os.write(path, "")
+      val path = requested.asOption match
+        case Some(p) =>
+          os.makeDir.all(p / os.up)
+          os.write.over(p, "") // os.write throws if the file already exists
+          p
+        case None =>
+          val logsDir = os.temp.dir(prefix = s"automation-logs-$command-")
+          val p       = logsDir / "eventlog.txt"
+          os.write(p, "")
+          p
       if !os.exists(path) then throw AutoError(s"Failed to create event log file: $path")
       path
-    }.toEither.left.map(e => AutoError("Failed to create temporary directory for event logs", e))
+    }.toEither.left.map(e => AutoError(s"Failed to create event log file for $command", e))
   end eventLogsPath
 
   private def startLanguageRuntimeServer(): String =
@@ -673,9 +701,28 @@ object PreviewOption:
     */
 //  case class ErrorProgressStreams(writers: os.ProcessOutput*) extends PreviewOption
 
-  /** Allows specifying one or more channels to receive the Pulumi event stream
+  /** Delivers every engine event to `handler` as the operation produces it, rather than only once it has finished.
+    *
+    * The handler is invoked on a besom-auto owned daemon thread that tails the engine event log, so it must be thread safe; exceptions it
+    * throws are swallowed so that a broken consumer cannot end the stream. Consumers should also stay idempotent per URN - the only way an
+    * event can be seen twice is a truncated log, which nothing does mid-run, but the tailing reader would restart from the beginning if it
+    * happened.
     */
-//  case class EventStreams(channels: EngineEvent*) extends PreviewOption
+  case class OnEvent(handler: EngineEvent => Unit) extends PreviewOption
+
+  /** Writes the engine event log to the given path instead of a temporary directory, so that it survives the operation.
+    *
+    * The file is created, or truncated if it already exists, before `pulumi` starts.
+    */
+  case class EventLog(path: os.Path) extends PreviewOption
+
+  /** Hands `handler` a [[ChildProcess]] handle to the `pulumi` process so that the operation can be cancelled - see
+    * [[ChildProcess.interrupt]] for the graceful, Ctrl-C equivalent.
+    *
+    * The handler runs on the calling thread right after the process is spawned and before it is waited on, so it must not block - stash the
+    * handle and return.
+    */
+  case class OnProcessStart(handler: ChildProcess => Unit) extends PreviewOption
 
   /** Specifies the agent responsible for the update, stored in backends as "environment.exec.agent"
     */
@@ -724,8 +771,12 @@ end PreviewOption
   *   allows specifying one or more io.Writers to redirect incremental preview stdout
   * @param errorProgressStreams
   *   allows specifying one or more io.Writers to redirect incremental preview stderr
-  * @param eventStreams
-  *   allows specifying one or more channels to receive the Pulumi event stream
+  * @param onEvent
+  *   receives every engine event as the operation produces it
+  * @param eventLog
+  *   writes the engine event log to the given path instead of a temporary directory
+  * @param onProcessStart
+  *   receives a handle to the `pulumi` process, so that the operation can be cancelled
   * @param userAgent
   *   the agent responsible for the update, stored in backends as "environment.exec.agent"
   * @param color
@@ -748,7 +799,9 @@ private[auto] case class PreviewOptions(
   debugLogOpts: LoggingOptions = LoggingOptions(),
 //  progressStreams: List[os.ProcessOutput] = List.empty, // TODO: implement multiple writers
 //  errorProgressStreams: List[os.ProcessOutput] = List.empty, // TODO: implement multiple writers
-//  eventStreams: List[EngineEvent] = List.empty,  // TODO: implement EngineEvent
+  onEvent: Option[EngineEvent => Unit] = None,
+  eventLog: NotProvidedOr[os.Path] = NotProvided,
+  onProcessStart: Option[ChildProcess => Unit] = None,
   userAgent: NotProvidedOr[String] = NotProvided,
   color: NotProvidedOr[Color] = NotProvided,
   plan: NotProvidedOr[os.Path] = NotProvided,
@@ -775,7 +828,9 @@ object PreviewOptions:
 // TODO: missing streams
 //      case PreviewOption.ProgressStreams(writers) :: tail      => from(tail*).copy(progressStreams = writers)
 //      case PreviewOption.ErrorProgressStreams(writers) :: tail => from(tail*).copy(errorProgressStreams = writers)
-//      case PreviewOption.EventStreams(channels) :: tail        => from(tail*).copy(eventStreams = channels)
+      case PreviewOption.OnEvent(handler) :: tail          => from(tail*).copy(onEvent = Some(handler))
+      case PreviewOption.EventLog(path) :: tail            => from(tail*).copy(eventLog = path)
+      case PreviewOption.OnProcessStart(handler) :: tail   => from(tail*).copy(onProcessStart = Some(handler))
       case PreviewOption.UserAgent(agent) :: tail          => from(tail*).copy(userAgent = agent)
       case PreviewOption.Color(color) :: tail              => from(tail*).copy(color = color)
       case PreviewOption.Plan(path) :: tail                => from(tail*).copy(plan = path)
@@ -834,9 +889,29 @@ object UpOption:
   /** Allows specifying one or more io.Writers to redirect incremental update stderr
     */
 //  case class ErrorProgressStreams(writers: os.ProcessOutput*) extends UpOption
-  /** Allows specifying one or more channels to receive the Pulumi event stream
+
+  /** Delivers every engine event to `handler` as the operation produces it, rather than only once it has finished.
+    *
+    * The handler is invoked on a besom-auto owned daemon thread that tails the engine event log, so it must be thread safe; exceptions it
+    * throws are swallowed so that a broken consumer cannot end the stream. Consumers should also stay idempotent per URN - the only way an
+    * event can be seen twice is a truncated log, which nothing does mid-run, but the tailing reader would restart from the beginning if it
+    * happened.
     */
-// case class EventStreams(channels: EngineEvent*) extends UpOption
+  case class OnEvent(handler: EngineEvent => Unit) extends UpOption
+
+  /** Writes the engine event log to the given path instead of a temporary directory, so that it survives the operation.
+    *
+    * The file is created, or truncated if it already exists, before `pulumi` starts.
+    */
+  case class EventLog(path: os.Path) extends UpOption
+
+  /** Hands `handler` a [[ChildProcess]] handle to the `pulumi` process so that the operation can be cancelled - see
+    * [[ChildProcess.interrupt]] for the graceful, Ctrl-C equivalent.
+    *
+    * The handler runs on the calling thread right after the process is spawned and before it is waited on, so it must not block - stash the
+    * handle and return.
+    */
+  case class OnProcessStart(handler: ChildProcess => Unit) extends UpOption
 
   /** Specifies the agent responsible for the update, stored in backends as "environment.exec.agent"
     */
@@ -889,8 +964,12 @@ end UpOption
   *   allows specifying one or more io.Writers to redirect incremental preview stdout
   * @param errorProgressStreams
   *   allows specifying one or more io.Writers to redirect incremental preview stderr
-  * @param eventStreams
-  *   allows specifying one or more channels to receive the Pulumi event stream
+  * @param onEvent
+  *   receives every engine event as the operation produces it
+  * @param eventLog
+  *   writes the engine event log to the given path instead of a temporary directory
+  * @param onProcessStart
+  *   receives a handle to the `pulumi` process, so that the operation can be cancelled
   * @param userAgent
   *   specifies the agent responsible for the update, stored in backends as "environment.exec.agent"
   * @param color
@@ -915,7 +994,9 @@ case class UpOptions(
   debugLogOpts: LoggingOptions = LoggingOptions(),
 //  progressStreams: List[os.ProcessOutput] = List.empty, // TODO: implement multiple writers
 //  errorProgressStreams: List[os.ProcessOutput] = List.empty, // TODO: implement multiple writers
-//  eventStreams: List[EngineEvent] = List.empty,  // TODO: implement EngineEvent
+  onEvent: Option[EngineEvent => Unit] = None,
+  eventLog: NotProvidedOr[os.Path] = NotProvided,
+  onProcessStart: Option[ChildProcess => Unit] = None,
   userAgent: NotProvidedOr[String] = NotProvided,
   color: NotProvidedOr[Color] = NotProvided,
   plan: NotProvidedOr[os.Path] = NotProvided,
@@ -938,7 +1019,9 @@ object UpOptions:
 // TODO: missing streams
 //      case UpOption.ProgressStreams(writers) :: tail      => from(tail*).copy(progressStreams = writers)
 //      case UpOption.ErrorProgressStreams(writers) :: tail => from(tail*).copy(errorProgressStreams = writers)
-//      case UpOption.EventStreams(channels) :: tail        => from(tail*).copy(eventStreams = channels)
+      case UpOption.OnEvent(handler) :: tail          => from(tail*).copy(onEvent = Some(handler))
+      case UpOption.EventLog(path) :: tail            => from(tail*).copy(eventLog = path)
+      case UpOption.OnProcessStart(handler) :: tail   => from(tail*).copy(onProcessStart = Some(handler))
       case UpOption.UserAgent(agent) :: tail          => from(tail*).copy(userAgent = agent)
       case UpOption.Color(color) :: tail              => from(tail*).copy(color = color)
       case UpOption.Plan(path) :: tail                => from(tail*).copy(plan = path)
@@ -982,9 +1065,29 @@ object RefreshOption:
   /** Allows specifying one or more io.Writers to redirect incremental refresh stderr
     */
 //  case class ErrorProgressStreams(writers: os.ProcessOutput*) extends RefreshOption
-  /** Allows specifying one or more channels to receive the Pulumi event stream
+
+  /** Delivers every engine event to `handler` as the operation produces it, rather than only once it has finished.
+    *
+    * The handler is invoked on a besom-auto owned daemon thread that tails the engine event log, so it must be thread safe; exceptions it
+    * throws are swallowed so that a broken consumer cannot end the stream. Consumers should also stay idempotent per URN - the only way an
+    * event can be seen twice is a truncated log, which nothing does mid-run, but the tailing reader would restart from the beginning if it
+    * happened.
     */
-// case class EventStreams(channels: EngineEvent*) extends RefreshOption
+  case class OnEvent(handler: EngineEvent => Unit) extends RefreshOption
+
+  /** Writes the engine event log to the given path instead of a temporary directory, so that it survives the operation.
+    *
+    * The file is created, or truncated if it already exists, before `pulumi` starts.
+    */
+  case class EventLog(path: os.Path) extends RefreshOption
+
+  /** Hands `handler` a [[ChildProcess]] handle to the `pulumi` process so that the operation can be cancelled - see
+    * [[ChildProcess.interrupt]] for the graceful, Ctrl-C equivalent.
+    *
+    * The handler runs on the calling thread right after the process is spawned and before it is waited on, so it must not block - stash the
+    * handle and return.
+    */
+  case class OnProcessStart(handler: ChildProcess => Unit) extends RefreshOption
 
   /** Specifies additional settings for debug logging
     */
@@ -1024,8 +1127,12 @@ end RefreshOption
   *   allows specifying one or more io.Writers to redirect incremental refresh stdout
   * @param errorProgressStreams
   *   allows specifying one or more io.Writers to redirect incremental refresh stderr
-  * @param eventStreams
-  *   allows specifying one or more channels to receive the Pulumi event stream
+  * @param onEvent
+  *   receives every engine event as the operation produces it
+  * @param eventLog
+  *   writes the engine event log to the given path instead of a temporary directory
+  * @param onProcessStart
+  *   receives a handle to the `pulumi` process, so that the operation can be cancelled
   * @param userAgent
   *   specifies the agent responsible for the refresh, stored in backends as "environment.exec.agent"
   * @param color
@@ -1041,7 +1148,9 @@ case class RefreshOptions(
   debugLogOpts: LoggingOptions = LoggingOptions(),
 //    progressStreams: List[os.ProcessOutput] = List.empty, // TODO: implement multiple writers
 //    errorProgressStreams: List[os.ProcessOutput] = List.empty, // TODO: implement multiple writers
-//    eventStreams: List[EngineEvent] = List.empty,  // TODO: implement EngineEvent
+  onEvent: Option[EngineEvent => Unit] = None,
+  eventLog: NotProvidedOr[os.Path] = NotProvided,
+  onProcessStart: Option[ChildProcess => Unit] = None,
   userAgent: NotProvidedOr[String] = NotProvided,
   color: NotProvidedOr[Color] = NotProvided,
   showSecrets: Boolean = false
@@ -1058,12 +1167,14 @@ object RefreshOptions:
 // TODO: missing streams
 //      case RefreshOption.ProgressStreams(writers) :: tail      => from(tail*).copy(progressStreams = writers)
 //      case RefreshOption.ErrorProgressStreams(writers) :: tail => from(tail*).copy(errorProgressStreams = writers)
-//      case RefreshOption.EventStreams(channels) :: tail        => from(tail*).copy(eventStreams = channels)
-      case RefreshOption.UserAgent(agent) :: tail => from(tail*).copy(userAgent = agent)
-      case RefreshOption.Color(color) :: tail     => from(tail*).copy(color = color)
-      case RefreshOption.ShowSecrets :: tail      => from(tail*).copy(showSecrets = true)
-      case Nil                                    => RefreshOptions()
-      case o                                      => throw AutoError(s"Unknown refresh option: $o")
+      case RefreshOption.OnEvent(handler) :: tail        => from(tail*).copy(onEvent = Some(handler))
+      case RefreshOption.EventLog(path) :: tail          => from(tail*).copy(eventLog = path)
+      case RefreshOption.OnProcessStart(handler) :: tail => from(tail*).copy(onProcessStart = Some(handler))
+      case RefreshOption.UserAgent(agent) :: tail        => from(tail*).copy(userAgent = agent)
+      case RefreshOption.Color(color) :: tail            => from(tail*).copy(color = color)
+      case RefreshOption.ShowSecrets :: tail             => from(tail*).copy(showSecrets = true)
+      case Nil                                           => RefreshOptions()
+      case o                                             => throw AutoError(s"Unknown refresh option: $o")
 
 end RefreshOptions
 
@@ -1097,9 +1208,29 @@ object DestroyOption:
   /** Allows specifying one or more io.Writers to redirect incremental destroy stderr
     */
 //  case class ErrorProgressStreams(writers: os.ProcessOutput*) extends DestroyOption
-  /** Allows specifying one or more channels to receive the Pulumi event stream
+
+  /** Delivers every engine event to `handler` as the operation produces it, rather than only once it has finished.
+    *
+    * The handler is invoked on a besom-auto owned daemon thread that tails the engine event log, so it must be thread safe; exceptions it
+    * throws are swallowed so that a broken consumer cannot end the stream. Consumers should also stay idempotent per URN - the only way an
+    * event can be seen twice is a truncated log, which nothing does mid-run, but the tailing reader would restart from the beginning if it
+    * happened.
     */
-// case class EventStreams(channels: EngineEvent*) extends DestroyOption
+  case class OnEvent(handler: EngineEvent => Unit) extends DestroyOption
+
+  /** Writes the engine event log to the given path instead of a temporary directory, so that it survives the operation.
+    *
+    * The file is created, or truncated if it already exists, before `pulumi` starts.
+    */
+  case class EventLog(path: os.Path) extends DestroyOption
+
+  /** Hands `handler` a [[ChildProcess]] handle to the `pulumi` process so that the operation can be cancelled - see
+    * [[ChildProcess.interrupt]] for the graceful, Ctrl-C equivalent.
+    *
+    * The handler runs on the calling thread right after the process is spawned and before it is waited on, so it must not block - stash the
+    * handle and return.
+    */
+  case class OnProcessStart(handler: ChildProcess => Unit) extends DestroyOption
 
   /** Specifies additional settings for debug logging
     */
@@ -1139,8 +1270,12 @@ end DestroyOption
   *   allows specifying one or more io.Writers to redirect incremental destroy stdout
   * @param errorProgressStreams
   *   allows specifying one or more io.Writers to redirect incremental destroy stderr
-  * @param eventStreams
-  *   allows specifying one or more channels to receive the Pulumi event stream
+  * @param onEvent
+  *   receives every engine event as the operation produces it
+  * @param eventLog
+  *   writes the engine event log to the given path instead of a temporary directory
+  * @param onProcessStart
+  *   receives a handle to the `pulumi` process, so that the operation can be cancelled
   * @param userAgent
   *   specifies the agent responsible for the destroy, stored in backends as "environment.exec.agent"
   * @param color
@@ -1156,7 +1291,9 @@ case class DestroyOptions(
   debugLogOpts: LoggingOptions = LoggingOptions(),
 //    progressStreams: List[os.ProcessOutput] = List.empty, // TODO: implement multiple writers
 //    errorProgressStreams: List[os.ProcessOutput] = List.empty, // TODO: implement multiple writers
-//    eventStreams: List[EngineEvent] = List.empty,  // TODO: implement EngineEvent
+  onEvent: Option[EngineEvent => Unit] = None,
+  eventLog: NotProvidedOr[os.Path] = NotProvided,
+  onProcessStart: Option[ChildProcess => Unit] = None,
   userAgent: NotProvidedOr[String] = NotProvided,
   color: NotProvidedOr[Color] = NotProvided,
   showSecrets: Boolean = false
@@ -1172,12 +1309,14 @@ object DestroyOptions:
       case DestroyOption.DebugLogging(debugOpts) :: tail => from(tail*).copy(debugLogOpts = debugOpts)
 //      case DestroyOption.ProgressStreams(writers) :: tail      => from(tail*).copy(progressStreams = writers)
 //      case DestroyOption.ErrorProgressStreams(writers) :: tail => from(tail*).copy(errorProgressStreams = writers)
-//      case DestroyOption.EventStreams(channels) :: tail        => from(tail*).copy(eventStreams = channels)
-      case DestroyOption.UserAgent(agent) :: tail => from(tail*).copy(userAgent = agent)
-      case DestroyOption.Color(color) :: tail     => from(tail*).copy(color = color)
-      case DestroyOption.ShowSecrets :: tail      => from(tail*).copy(showSecrets = true)
-      case Nil                                    => DestroyOptions()
-      case o                                      => throw AutoError(s"Unknown destroy option: $o")
+      case DestroyOption.OnEvent(handler) :: tail        => from(tail*).copy(onEvent = Some(handler))
+      case DestroyOption.EventLog(path) :: tail          => from(tail*).copy(eventLog = path)
+      case DestroyOption.OnProcessStart(handler) :: tail => from(tail*).copy(onProcessStart = Some(handler))
+      case DestroyOption.UserAgent(agent) :: tail        => from(tail*).copy(userAgent = agent)
+      case DestroyOption.Color(color) :: tail            => from(tail*).copy(color = color)
+      case DestroyOption.ShowSecrets :: tail             => from(tail*).copy(showSecrets = true)
+      case Nil                                           => DestroyOptions()
+      case o                                             => throw AutoError(s"Unknown destroy option: $o")
 
 end DestroyOptions
 
@@ -1277,13 +1416,21 @@ end Color
   *   standard error
   * @param summary
   *   the expected changes
+  * @param resourceChanges
+  *   the resource operations the engine would perform
+  * @param diagnostics
+  *   the diagnostic messages emitted by the engine and the providers
+  * @param parseErrors
+  *   the engine event log lines that could not be decoded - non-empty means the operation still succeeded but some of the data above may be
+  *   incomplete
   */
 case class PreviewResult(
   stdout: String,
   stderr: String,
   summary: Map[OpType, Int],
   resourceChanges: List[ResourcePreEvent] = Nil,
-  diagnostics: List[DiagnosticEvent] = Nil
+  diagnostics: List[DiagnosticEvent] = Nil,
+  parseErrors: List[EventLogParseError] = Nil
 ):
   def permalink: Either[Exception, String] = ??? // TODO: implement GetPermalink
 end PreviewResult
@@ -1298,6 +1445,17 @@ end PreviewResult
   *   the stack outputs
   * @param summary
   *   the deployed changes
+  * @param resourceOperations
+  *   the resource operations that completed, with their outputs
+  * @param failures
+  *   the resource operations that failed
+  * @param diagnostics
+  *   the diagnostic messages emitted by the engine and the providers
+  * @param resourcePreEvents
+  *   the start of each resource operation, emitted before the operation was performed
+  * @param parseErrors
+  *   the engine event log lines that could not be decoded - non-empty means the operation still succeeded but some of the data above may be
+  *   incomplete
   */
 case class UpResult(
   stdout: String,
@@ -1306,7 +1464,9 @@ case class UpResult(
   summary: UpdateSummary,
   resourceOperations: List[ResOutputsEvent] = Nil,
   failures: List[ResOpFailedEvent] = Nil,
-  diagnostics: List[DiagnosticEvent] = Nil
+  diagnostics: List[DiagnosticEvent] = Nil,
+  resourcePreEvents: List[ResourcePreEvent] = Nil,
+  parseErrors: List[EventLogParseError] = Nil
 ):
   def permalink: Either[Exception, String] = ??? // TODO: implement GetPermalink
 end UpResult
@@ -1319,12 +1479,27 @@ end UpResult
   *   standard error
   * @param summary
   *   the deployed changes
+  * @param diagnostics
+  *   the diagnostic messages emitted by the engine and the providers
+  * @param resourcePreEvents
+  *   the start of each resource operation, emitted before the operation was performed
+  * @param resourceOperations
+  *   the resource operations that completed, with their outputs
+  * @param failures
+  *   the resource operations that failed
+  * @param parseErrors
+  *   the engine event log lines that could not be decoded - non-empty means the operation still succeeded but some of the data above may be
+  *   incomplete
   */
 case class RefreshResult(
   stdout: String,
   stderr: String,
   summary: UpdateSummary,
-  diagnostics: List[DiagnosticEvent] = Nil
+  diagnostics: List[DiagnosticEvent] = Nil,
+  resourcePreEvents: List[ResourcePreEvent] = Nil,
+  resourceOperations: List[ResOutputsEvent] = Nil,
+  failures: List[ResOpFailedEvent] = Nil,
+  parseErrors: List[EventLogParseError] = Nil
 ):
   def permalink: Either[Exception, String] = ??? // TODO: implement GetPermalink
 end RefreshResult
@@ -1337,13 +1512,27 @@ end RefreshResult
   *   standard error
   * @param summary
   *   the deployed changes
+  * @param failures
+  *   the resource operations that failed
+  * @param diagnostics
+  *   the diagnostic messages emitted by the engine and the providers
+  * @param resourcePreEvents
+  *   the start of each resource operation, emitted before the operation was performed
+  * @param resourceOperations
+  *   the resource operations that completed, with their outputs
+  * @param parseErrors
+  *   the engine event log lines that could not be decoded - non-empty means the operation still succeeded but some of the data above may be
+  *   incomplete
   */
 case class DestroyResult(
   stdout: String,
   stderr: String,
   summary: UpdateSummary,
   failures: List[ResOpFailedEvent] = Nil,
-  diagnostics: List[DiagnosticEvent] = Nil
+  diagnostics: List[DiagnosticEvent] = Nil,
+  resourcePreEvents: List[ResourcePreEvent] = Nil,
+  resourceOperations: List[ResOutputsEvent] = Nil,
+  parseErrors: List[EventLogParseError] = Nil
 ):
   def permalink: Either[Exception, String] = ??? // TODO: implement GetPermalink
 end DestroyResult
@@ -1502,7 +1691,7 @@ end SummaryEvent
 
 /** OpType describes the type of operation performed to a resource managed by Pulumi. Should generally mirror `deploy.StepOp` in the engine.
   */
-enum OpType(value: String):
+enum OpType(val value: String):
   override def toString: String = value
 
   /** Indicates no change was made. */
@@ -1549,39 +1738,45 @@ enum OpType(value: String):
 
   /** Indicates replacement of an existing resource with an imported resource. */
   case ImportReplacement extends OpType("import-replacement")
+
+  /** An operation type emitted by the engine that this version of besom-auto does not know about.
+    *
+    * Kept so that a newer Pulumi CLI can not fail decoding of an otherwise valid event log - notably a single unknown key in
+    * [[SummaryEvent.resourceChanges]] would otherwise sink the whole summary event.
+    */
+  case Other(unknownValue: String) extends OpType(unknownValue)
 end OpType
 object OpType:
   implicit object OpTypeFormat extends RootJsonFormat[OpType] {
-    def write(e: OpType): JsObject = JsObject(
-      "value" -> JsString(e.toString)
-    )
+    // has to be a JsString - OpType is used as a Map key in SummaryEvent.resourceChanges and besom-json's
+    // mapFormat throws a SerializationException unless the key format writes one
+    def write(e: OpType): JsValue = JsString(e.value)
 
     def read(value: JsValue): OpType = {
       value match {
-        case JsString(value) =>
-          OpType.from(value).left.map(DeserializationException("OpType expected", _)).fold(throw _, identity)
-        case n => throw DeserializationException(s"OpType expected, got: $n")
+        case JsString(value) => OpType.from(value)
+        case n               => throw DeserializationException(s"OpType expected, got: $n")
       }
     }
   }
 
-  def from(value: String): Either[Exception, OpType] =
+  def from(value: String): OpType =
     value match
-      case "same"                   => Right(Same)
-      case "create"                 => Right(Create)
-      case "update"                 => Right(Update)
-      case "delete"                 => Right(Delete)
-      case "replace"                => Right(Replace)
-      case "create-replacement"     => Right(CreateReplacement)
-      case "delete-replaced"        => Right(DeleteReplaced)
-      case "read"                   => Right(Read)
-      case "read-replacement"       => Right(ReadReplacement)
-      case "refresh"                => Right(Refresh)
-      case "discard"                => Right(ReadDiscard)
-      case "discard-replaced"       => Right(DiscardReplaced)
-      case "remove-pending-replace" => Right(RemovePendingReplace)
-      case "import"                 => Right(Import)
-      case "import-replacement"     => Right(ImportReplacement)
-      case _                        => Left(Exception(s"Unknown OpType: $value"))
+      case "same"                   => Same
+      case "create"                 => Create
+      case "update"                 => Update
+      case "delete"                 => Delete
+      case "replace"                => Replace
+      case "create-replacement"     => CreateReplacement
+      case "delete-replaced"        => DeleteReplaced
+      case "read"                   => Read
+      case "read-replacement"       => ReadReplacement
+      case "refresh"                => Refresh
+      case "discard"                => ReadDiscard
+      case "discard-replaced"       => DiscardReplaced
+      case "remove-pending-replace" => RemovePendingReplace
+      case "import"                 => Import
+      case "import-replacement"     => ImportReplacement
+      case other                    => Other(other)
   end from
 end OpType

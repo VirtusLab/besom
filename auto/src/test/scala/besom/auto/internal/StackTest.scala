@@ -381,4 +381,49 @@ class EngineEventJSONTest extends munit.FunSuite {
     assertEquals(ProgressType.from("plugin-download"), ProgressType.PluginDownload)
     assertEquals(ProgressType.from("plugin-install"), ProgressType.PluginInstall)
   }
+
+  // ── Forward compatibility ───────────────────────────────────────────
+
+  test("unknown DiffKind decodes to Other instead of failing") {
+    assertEquals(DiffKind.from("teleport"), DiffKind.Other("teleport"))
+    assertEquals(JsString("teleport").convertTo[DiffKind], DiffKind.Other("teleport"))
+    // the value is preserved, so the -replace convention keeps working for kinds we have never seen
+    assert(DiffKind.Other("teleport-replace").forcesReplacement)
+    assert(!DiffKind.Other("teleport").forcesReplacement)
+
+    val json =
+      """{"op":"create","urn":"urn:pulumi:dev::proj::pulumi:pulumi:Stack::proj-dev","type":"pulumi:pulumi:Stack","provider":"","old":null,"new":null,"detailedDiff":{"foo":{"diffKind":"teleport","inputDiff":true}}}"""
+    val meta = json.parseJson[StepEventMetadata].getOrElse(fail("Failed to parse"))
+    assertEquals(meta.detailedDiff.flatMap(_.get("foo")).map(_.diffKind), Some(DiffKind.Other("teleport")))
+  }
+
+  test("unknown ProgressType decodes to Other instead of failing") {
+    assertEquals(ProgressType.from("plugin-teleport"), ProgressType.Other("plugin-teleport"))
+
+    val json =
+      """{"sequence":7,"timestamp":1700000000,"progressEvent":{"type":"plugin-teleport","id":"aws","message":"beaming","received":1,"total":2,"done":false}}"""
+    val event = EngineEvent.fromJson(json).getOrElse(fail("Failed to parse"))
+    assertEquals(event.progressEvent.map(_.`type`), Some(ProgressType.Other("plugin-teleport")))
+  }
+
+  test("unknown OpType decodes to Other instead of failing") {
+    assertEquals(OpType.from("teleport"), OpType.Other("teleport"))
+    assertEquals(JsString("teleport").convertTo[OpType], OpType.Other("teleport"))
+    assertEquals(OpType.Other("teleport").value, "teleport")
+  }
+
+  test("OpType round-trips as a Map key") {
+    // besom-json's mapFormat requires the key format to write a JsString, otherwise SummaryEvent serialization blows up
+    val changes: Map[OpType, Int] = Map(OpType.Create -> 1, OpType.Same -> 2, OpType.Other("teleport") -> 3)
+    assertEquals(changes.toJson, JsObject("create" -> JsNumber(1), "same" -> JsNumber(2), "teleport" -> JsNumber(3)))
+    assertEquals(changes.toJson.convertTo[Map[OpType, Int]], changes)
+  }
+
+  test("SummaryEvent with an unknown op in resourceChanges still parses") {
+    val json =
+      """{"sequence":42,"timestamp":1700000000,"summaryEvent":{"maybeCorrupt":false,"durationSeconds":3,"resourceChanges":{"create":1,"teleport":2},"PolicyPacks":{}}}"""
+    val event   = EngineEvent.fromJson(json).getOrElse(fail("Failed to parse"))
+    val summary = event.summaryEvent.getOrElse(fail("Expected a summary event"))
+    assertEquals(summary.resourceChanges, Map[OpType, Int](OpType.Create -> 1, OpType.Other("teleport") -> 2))
+  }
 }

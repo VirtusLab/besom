@@ -4,7 +4,33 @@ import besom.model.FullyQualifiedStackName
 import besom.test.*
 import besom.util.eitherOps
 
+import scala.concurrent.duration.*
+
 class LocalWorkspaceTest extends munit.FunSuite:
+
+  // these shell out to git, go and pulumi and download plugins, which does not fit in munit's 30s default
+  override def munitTimeout: Duration = 5.minutes
+
+  /** Collects the engine events delivered by `OnEvent`, keeping enough timing to tell live delivery from a post-hoc dump. */
+  private class EventRecorder:
+    private val events                         = scala.collection.mutable.ListBuffer.empty[EngineEvent]
+    @volatile private var firstEventAt: Long   = -1L
+    @volatile private var callReturnedAt: Long = -1L
+
+    val record: EngineEvent => Unit = e =>
+      events.synchronized {
+        if firstEventAt < 0 then firstEventAt = System.nanoTime()
+        events += e
+      }
+
+    def markCallReturned(): Unit          = callReturnedAt = System.nanoTime()
+    def all: List[EngineEvent]            = events.synchronized(events.toList)
+    def preEvents: List[ResourcePreEvent] = all.flatMap(_.resourcePreEvent)
+    def firstArrivedBeforeReturn: Boolean = firstEventAt > 0 && callReturnedAt > 0 && firstEventAt < callReturnedAt
+  end EventRecorder
+
+  /** The explicit parent URN of a step, empty for the root stack resource. */
+  private def parentOf(meta: StepEventMetadata): Option[String] = meta.`new`.orElse(meta.old).map(_.parent)
 
   FunFixture[FullyQualifiedStackName](
     setup = t => fqsn(this.getClass, t),
@@ -22,6 +48,9 @@ class LocalWorkspaceTest extends munit.FunSuite:
         _ => ()
       )
     }
+
+    val upEvents      = EventRecorder()
+    val upAgainEvents = EventRecorder()
 
     val res = for
       stack <- createStackRemoteSource(
@@ -43,13 +72,17 @@ class LocalWorkspaceTest extends munit.FunSuite:
         LocalWorkspaceOption.PulumiHome(pulumiHomeDir),
         LocalWorkspaceOption.EnvVars(shell.pulumi.env.PulumiConfigPassphraseEnv -> "test")
       )
-      prevRes    <- stack.preview()
-      upRes      <- stack.up()
+      prevRes <- stack.preview()
+      upRes   <- stack.up(UpOption.OnEvent(upEvents.record))
+      _ = upEvents.markCallReturned()
+      // a second, no-op up is the only way to observe `same` steps, which the "full tree" premise depends on
+      upAgainRes <- stack.up(UpOption.OnEvent(upAgainEvents.record))
+      _ = upAgainEvents.markCallReturned()
       destroyRes <- stack.destroy()
-    yield (prevRes, upRes, destroyRes)
+    yield (prevRes, upRes, upAgainRes, destroyRes)
     res.fold(
       e => fail(e.getMessage, e),
-      (prevRes, upRes, destroyRes) => {
+      (prevRes, upRes, upAgainRes, destroyRes) => {
         // Preview: summary (backward compat)
         assertEquals(prevRes.summary, Map(OpType.Create -> 1))
 
@@ -87,13 +120,153 @@ class LocalWorkspaceTest extends munit.FunSuite:
         assert(upRes.resourceOperations.nonEmpty, s"Expected non-empty resourceOperations, got: ${upRes.resourceOperations}")
         assert(upRes.failures.isEmpty, s"Expected no failures, got: ${upRes.failures}")
 
+        // Up: resourcePreEvents restores the *start* of each operation
+        assert(upRes.resourcePreEvents.nonEmpty, s"Expected non-empty resourcePreEvents, got: ${upRes.resourcePreEvents}")
+        assertEquals(upRes.parseErrors, Nil)
+
         // Destroy: should succeed without failures
         assertEquals(destroyRes.summary.result, Some("succeeded"))
         assert(destroyRes.failures.isEmpty, s"Expected no failures on destroy, got: ${destroyRes.failures}")
         assert(destroyRes.diagnostics != null)
+        assert(destroyRes.resourcePreEvents.nonEmpty, s"Expected non-empty resourcePreEvents on destroy")
+        assertEquals(destroyRes.parseErrors, Nil)
+
+        // ── live event delivery ─────────────────────────────────────────
+        val live = upEvents.all
+        assert(live.nonEmpty, "no engine events were delivered live")
+
+        // (a) liveness - the first event has to arrive while up is still running
+        assert(upEvents.firstArrivedBeforeReturn, "the first engine event did not arrive before up returned")
+
+        // the live stream must agree with the post-hoc parse, that is what makes it a drop-in replacement
+        assertEquals(live.flatMap(_.resOutputsEvent).map(_.metadata.urn), upRes.resourceOperations.map(_.metadata.urn))
+        assertEquals(upEvents.preEvents.map(_.metadata.urn), upRes.resourcePreEvents.map(_.metadata.urn))
+
+        // (b) `same` steps are present in the log - it precedes Pulumi's display filter
+        val sameSteps = upAgainEvents.preEvents.filter(_.metadata.op == OpType.Same)
+        assertEquals(upAgainRes.summary.result, Some("succeeded"))
+        assert(
+          sameSteps.nonEmpty,
+          s"Expected `same` steps in a no-op up, got ops: ${upAgainEvents.preEvents.map(_.metadata.op)}"
+        )
+
+        // (c) the root stack resource carries an explicit, empty parent
+        // (this program has no other resources - the nested case is covered by the resource tree test below)
+        val roots = upEvents.preEvents.filter(_.metadata.`type` == "pulumi:pulumi:Stack")
+        assert(roots.nonEmpty, "no pulumi:pulumi:Stack ResourcePreEvent")
+        assertEquals(roots.flatMap(e => parentOf(e.metadata)).distinct, List(""))
       }
     )
   }
+  FunFixture[FullyQualifiedStackName](
+    setup = t => fqsn(this.getClass, t),
+    teardown = _ => ()
+  ).test("engine events describe the full resource tree") { generatedStackName =>
+    val stackName     = FullyQualifiedStackName("goproj", generatedStackName.stack)
+    val pulumiHomeDir = os.temp.dir() / ".pulumi"
+    loginLocal(pulumiHomeDir)
+
+    // component resources need no provider plugin, so a three level tree costs nothing beyond the SDK the fixture already vendors
+    val program =
+      """|package main
+         |
+         |import "github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+         |
+         |type Group struct{ pulumi.ResourceState }
+         |
+         |func main() {
+         |	pulumi.Run(func(ctx *pulumi.Context) error {
+         |		parent := &Group{}
+         |		if err := ctx.RegisterComponentResource("besom:test:Group", "parent", parent); err != nil {
+         |			return err
+         |		}
+         |		child := &Group{}
+         |		if err := ctx.RegisterComponentResource("besom:test:Group", "child", child, pulumi.Parent(parent)); err != nil {
+         |			return err
+         |		}
+         |		grandchild := &Group{}
+         |		if err := ctx.RegisterComponentResource("besom:test:Group", "grandchild", grandchild, pulumi.Parent(child)); err != nil {
+         |			return err
+         |		}
+         |		return nil
+         |	})
+         |}
+         |""".stripMargin
+
+    val binName = "treeBinary"
+    val bin     = if System.getProperty("os.name").startsWith("Windows") then binName + ".exe" else binName
+    val binaryBuilder = (ws: Workspace) => {
+      os.write.over(ws.workDir / "main.go", program)
+      shell("go", "build", "-o", bin, "main.go")(shell.ShellOption.Cwd(ws.workDir)).bimap(
+        e => e.withMessage("go build failed"),
+        _ => ()
+      )
+    }
+
+    val upEvents = EventRecorder()
+
+    val res = for
+      stack <- createStackRemoteSource(
+        stackName,
+        GitRepo(
+          url = "https://github.com/pulumi/test-repo.git",
+          projectPath = "goproj",
+          setup = binaryBuilder
+        ),
+        LocalWorkspaceOption.Project(
+          Project(
+            name = "goproj",
+            runtime = ProjectRuntimeInfo(name = "go", options = Map("binary" -> binName))
+          )
+        ),
+        LocalWorkspaceOption.PulumiHome(pulumiHomeDir),
+        LocalWorkspaceOption.EnvVars(shell.pulumi.env.PulumiConfigPassphraseEnv -> "test")
+      )
+      upRes <- stack.up(UpOption.OnEvent(upEvents.record))
+      _ = upEvents.markCallReturned()
+      _ <- stack.destroy()
+    yield upRes
+
+    res.fold(
+      e => fail(e.getMessage, e),
+      upRes => {
+        assertEquals(upRes.summary.result, Some("succeeded"))
+        assertEquals(upRes.parseErrors, Nil)
+        assert(upEvents.firstArrivedBeforeReturn, "the first engine event did not arrive before up returned")
+
+        val pre = upEvents.preEvents
+        assertEquals(pre.map(_.metadata.urn), upRes.resourcePreEvents.map(_.metadata.urn))
+
+        def urnOf(name: String) = pre.map(_.metadata.urn).find(_.endsWith(s"::$name")).getOrElse(fail(s"no pre event for $name"))
+        val (parentUrn, childUrn, grandchildUrn) = (urnOf("parent"), urnOf("child"), urnOf("grandchild"))
+        val byUrn                                = pre.map(e => e.metadata.urn -> e.metadata).toMap
+
+        // (c) the explicit parent URN is populated - empty for the root stack, set for everything nested under it
+        val (roots, nested) = pre.partition(_.metadata.`type` == "pulumi:pulumi:Stack")
+        assert(roots.nonEmpty, "no pulumi:pulumi:Stack ResourcePreEvent")
+        assertEquals(roots.flatMap(e => parentOf(e.metadata)).distinct, List(""))
+        val rootUrn = roots.head.metadata.urn
+
+        assertEquals(nested.size, 3, s"expected the three components, got: ${nested.map(_.metadata.urn)}")
+        assert(
+          nested.forall(e => parentOf(e.metadata).exists(_.nonEmpty)),
+          s"Expected every nested resource to carry a parent, got: ${nested.map(e => e.metadata.urn -> parentOf(e.metadata))}"
+        )
+        // and the parent URNs reconstruct exactly the tree the program declared
+        assertEquals(parentOf(byUrn(parentUrn)), Some(rootUrn))
+        assertEquals(parentOf(byUrn(childUrn)), Some(parentUrn))
+        assertEquals(parentOf(byUrn(grandchildUrn)), Some(childUrn))
+
+        // (d) ordering - a parent's ResourcePreEvent always precedes its children's, so a renderer needs no orphan buffering
+        val order = pre.map(_.metadata.urn).zipWithIndex.toMap
+        val orphans = pre.filter { e =>
+          parentOf(e.metadata).filter(_.nonEmpty).exists(parent => !order.get(parent).exists(_ < order(e.metadata.urn)))
+        }
+        assertEquals(orphans.map(_.metadata.urn), Nil, "a child ResourcePreEvent preceded its parent's")
+      }
+    )
+  }
+
   FunFixture[FullyQualifiedStackName](
     setup = t => fqsn(this.getClass, t),
     teardown = _ => ()

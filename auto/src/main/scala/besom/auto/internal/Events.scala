@@ -13,6 +13,12 @@ enum DiffKind(val value: String):
   case Update extends DiffKind("update")
   case UpdateReplace extends DiffKind("update-replace")
 
+  /** A diff kind emitted by the engine that this version of besom-auto does not know about.
+    *
+    * Kept so that a newer Pulumi CLI can not fail decoding of an otherwise valid event log.
+    */
+  case Other(unknownValue: String) extends DiffKind(unknownValue)
+
   def forcesReplacement: Boolean = value.endsWith("-replace")
 end DiffKind
 object DiffKind:
@@ -23,7 +29,7 @@ object DiffKind:
     case "delete-replace" => DiffKind.DeleteReplace
     case "update"         => DiffKind.Update
     case "update-replace" => DiffKind.UpdateReplace
-    case other            => throw DeserializationException(s"Unknown DiffKind: $other")
+    case other            => DiffKind.Other(other)
 
   given RootJsonFormat[DiffKind] with
     def write(obj: DiffKind): JsValue = JsString(obj.value)
@@ -36,12 +42,18 @@ end DiffKind
 enum ProgressType(val value: String):
   case PluginDownload extends ProgressType("plugin-download")
   case PluginInstall extends ProgressType("plugin-install")
+
+  /** A progress type emitted by the engine that this version of besom-auto does not know about.
+    *
+    * Kept so that a newer Pulumi CLI can not fail decoding of an otherwise valid event log.
+    */
+  case Other(unknownValue: String) extends ProgressType(unknownValue)
 end ProgressType
 object ProgressType:
   def from(value: String): ProgressType = value match
     case "plugin-download" => ProgressType.PluginDownload
     case "plugin-install"  => ProgressType.PluginInstall
-    case other             => throw DeserializationException(s"Unknown ProgressType: $other")
+    case other             => ProgressType.Other(other)
 
   given RootJsonFormat[ProgressType] with
     def write(obj: ProgressType): JsValue = JsString(obj.value)

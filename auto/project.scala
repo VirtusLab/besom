@@ -7,14 +7,15 @@
 //> using dep org.virtuslab::besom-core:0.5.2-SNAPSHOT
 //> using dep org.virtuslab::besom-model:0.5.2-SNAPSHOT
 //> using dep org.virtuslab::scala-yaml:0.3.1
+//> using dep com.lihaoyi::geny:1.1.1
 //> using dep com.lihaoyi::os-lib:0.11.8
 //> using dep com.lihaoyi::os-lib-watch:0.11.8
 //> using dep org.eclipse.jgit:org.eclipse.jgit:6.8.0.202311291450-r
 //> using dep org.eclipse.jgit:org.eclipse.jgit.ssh.jsch:6.8.0.202311291450-r
-//> using dep org.slf4j:slf4j-nop:2.0.17 // TODO library should not have bindings for slf4j
-//> using dep ma.chinespirit::tailf:0.1.0
+//> using dep ma.chinespirit::tailf:0.2.0
 
 //> using test.dep org.scalameta::munit:1.2.4
+//> using test.dep org.slf4j:slf4j-nop:2.0.17
 
 //> using publish.name "besom-auto"
 //> using publish.organization "org.virtuslab"
