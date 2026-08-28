@@ -421,11 +421,12 @@ def createStackInlineSource(
   program: RunFunc,
   opts: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
-  val optsWithProgram = Program(program) +: opts
+  // appended rather than prepended: options are last-wins, so the explicit program argument beats a Program option in opts
+  val optsWithProgram = opts :+ Program(program)
   val allOpts: Either[AutoError, Seq[LocalWorkspaceOption]] =
     getProjectSettings(projectName, optsWithProgram) match
       case Left(e)     => Left(AutoError(s"Failed to create stack '$stackName': ${e.getMessage}", e))
-      case Right(proj) => Right(Project(proj) +: opts)
+      case Right(proj) => Right(Project(proj) +: optsWithProgram)
   for
     allOpts <- allOpts
     ws      <- localWorkspace(allOpts*)
@@ -455,11 +456,12 @@ def upsertStackInlineSource(
   program: RunFunc,
   opts: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
-  val optsWithProgram = Program(program) +: opts
+  // appended rather than prepended: options are last-wins, so the explicit program argument beats a Program option in opts
+  val optsWithProgram = opts :+ Program(program)
   val allOpts: Either[AutoError, Seq[LocalWorkspaceOption]] =
     getProjectSettings(projectName, optsWithProgram) match
       case Left(e)     => Left(AutoError(s"Failed to upsert stack '$stackName': ${e.getMessage}", e))
-      case Right(proj) => Right(Project(proj) +: opts)
+      case Right(proj) => Right(Project(proj) +: optsWithProgram)
   for
     allOpts <- allOpts
     ws      <- localWorkspace(allOpts*)
@@ -487,11 +489,12 @@ def selectStackInlineSource(
   program: RunFunc,
   opts: LocalWorkspaceOption*
 ): Either[Exception, Stack] =
-  val optsWithProgram = Program(program) +: opts
+  // appended rather than prepended: options are last-wins, so the explicit program argument beats a Program option in opts
+  val optsWithProgram = opts :+ Program(program)
   val allOpts: Either[AutoError, Seq[LocalWorkspaceOption]] =
     getProjectSettings(projectName, optsWithProgram) match
       case Left(e)     => Left(AutoError(s"Failed to select stack '$stackName': ${e.getMessage}", e))
-      case Right(proj) => Right(Project(proj) +: opts)
+      case Right(proj) => Right(Project(proj) +: optsWithProgram)
   for
     allOpts <- allOpts
     ws      <- localWorkspace(allOpts*)

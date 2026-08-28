@@ -950,12 +950,7 @@ object LocalWorkspaceOption:
     * @param program
     *   the Pulumi program to execute
     */
-  // not a case class because function won't be useful in equality checks - the hand-rolled unapply below is not irrefutable to the
-  // compiler, so LocalWorkspaceOptions.from has to match this one by type to stay exhaustive
-  class Program(val program: RunFunc) extends LocalWorkspaceOption
-  object Program:
-    def apply(program: RunFunc): Program     = new Program(program)
-    def unapply(p: Program): Option[RunFunc] = Some(p.program)
+  case class Program(program: RunFunc) extends LocalWorkspaceOption
 
   /** The path to the Pulumi home directory.
     *
@@ -1062,7 +1057,7 @@ object LocalWorkspaceOptions:
     opts.foldLeft(LocalWorkspaceOptions()) { (acc, opt) =>
       opt match
         case LocalWorkspaceOption.WorkDir(path)                 => acc.copy(workDir = path)
-        case p: LocalWorkspaceOption.Program                    => acc.copy(program = p.program)
+        case LocalWorkspaceOption.Program(program)              => acc.copy(program = program)
         case LocalWorkspaceOption.PulumiHome(path)              => acc.copy(pulumiHome = path)
         case LocalWorkspaceOption.Project(project)              => acc.copy(project = project)
         case LocalWorkspaceOption.Stacks(stacks)                => acc.copy(stacks = stacks)
