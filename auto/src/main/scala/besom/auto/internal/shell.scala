@@ -2,6 +2,8 @@ package besom.auto.internal
 
 import besom.util.*
 
+import scala.util.control.NonFatal
+
 object shell:
   case class Result private (
     command: Seq[String],
@@ -29,7 +31,7 @@ object shell:
     * This is a faithful transcription of os-lib's `os.proc(...).call(...)` - which is itself `spawn` + collect + `join` - with one
     * addition: [[ShellOptions.onStart]] is handed a [[ChildProcess]] right after the subprocess is spawned, which is what makes
     * cancellation possible. The handler runs on the calling thread before the process is joined, so it must not block - stash the handle
-    * and return.
+    * and return. Exceptions it throws are swallowed; the command still runs to completion.
     */
   def apply(command: os.Shellable*)(opts: ShellOption*): Either[ShellAutoError, Result] =
     val options = ShellOptions.from(opts*)
@@ -52,7 +54,11 @@ object shell:
       propagateEnv = options.propagateEnv
     )
 
-    options.onStart.foreach(_(ChildProcess(sub)))
+    // a broken consumer must neither leak the process it was handed nor kill it - skipping the join below would leave a live
+    // `pulumi up` running until JVM exit, and destroying it would leave the stack locked with a pending operation. Same contract
+    // as the OnEvent handlers: a consumer's exception cannot break the command it is observing.
+    try options.onStart.foreach(_(ChildProcess(sub)))
+    catch case NonFatal(_) => ()
 
     sub.join(timeout = options.timeout, timeoutGracePeriod = 100)
 
@@ -102,7 +108,8 @@ object shell:
     /** A handler receiving a [[ChildProcess]] handle to the spawned subprocess, for callers that want to be able to cancel it.
       *
       * The handler runs on the calling thread right after the subprocess is spawned and before it is joined, so it must not block - stash
-      * the handle and return.
+      * the handle and return. Exceptions it throws are swallowed: the command it was handed still runs to completion, the caller simply
+      * ends up without a handle.
       */
     case class OnStart(handler: ChildProcess => Unit) extends ShellOption
   end ShellOption

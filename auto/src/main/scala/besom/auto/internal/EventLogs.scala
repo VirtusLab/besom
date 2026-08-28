@@ -90,6 +90,10 @@ private[auto] object EventLogs:
     * Undecodable lines are dropped here - [[parse]] accounts for them post-hoc in `parseErrors`. Exceptions thrown by `handler` are
     * swallowed so that a single misbehaving consumer cannot end the stream.
     *
+    * Every event is delivered before this returns. `stop()` takes effect at EOF and the reader re-checks it after each `rereadSleep`
+    * (100ms), so the wait is short - but it is unbounded, which means a `handler` that never returns blocks the operation from returning.
+    * That is the reason handlers must not block.
+    *
     * Caveat: `tailf`'s follower treats a file that got shorter than the current read position as rotated and restarts from offset 0.
     * Nothing truncates a Pulumi event log mid-run, but it is the only path that could replay events, so consumers should stay idempotent
     * per URN.
@@ -133,13 +137,11 @@ private[auto] object EventLogs:
 
           try body
           finally
-            try
-              follower.stop() // drain what is already written, then EOF
-              reader.join(5000) // a reader parked in waitNewInput wakes within one rereadSleep
-            catch case NonFatal(_) => ()
+            follower.stop() // takes effect at EOF, so the reader drains what is already written and then ends
+            try reader.join() // no deadline: cutting the reader short here would silently drop events it still holds
             finally
               try follower.close()
-              catch case NonFatal(_) => ()
+              catch case NonFatal(_) => () // releasing the fd must not mask the operation's own outcome
         }
   end around
 

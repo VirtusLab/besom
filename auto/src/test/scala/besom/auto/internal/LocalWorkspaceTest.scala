@@ -23,7 +23,11 @@ class LocalWorkspaceTest extends munit.FunSuite:
         events += e
       }
 
-    def markCallReturned(): Unit          = callReturnedAt = System.nanoTime()
+    /** Runs `call`, stamping the moment it returned - on the failure path too, so liveness stays checkable there. */
+    def timing[A](call: => A): A =
+      try call
+      finally callReturnedAt = System.nanoTime()
+
     def all: List[EngineEvent]            = events.synchronized(events.toList)
     def preEvents: List[ResourcePreEvent] = all.flatMap(_.resourcePreEvent)
     def firstArrivedBeforeReturn: Boolean = firstEventAt > 0 && callReturnedAt > 0 && firstEventAt < callReturnedAt
@@ -73,11 +77,9 @@ class LocalWorkspaceTest extends munit.FunSuite:
         LocalWorkspaceOption.EnvVars(shell.pulumi.env.PulumiConfigPassphraseEnv -> "test")
       )
       prevRes <- stack.preview()
-      upRes   <- stack.up(UpOption.OnEvent(upEvents.record))
-      _ = upEvents.markCallReturned()
+      upRes   <- upEvents.timing(stack.up(UpOption.OnEvent(upEvents.record)))
       // a second, no-op up is the only way to observe `same` steps, which the "full tree" premise depends on
-      upAgainRes <- stack.up(UpOption.OnEvent(upAgainEvents.record))
-      _ = upAgainEvents.markCallReturned()
+      upAgainRes <- upAgainEvents.timing(stack.up(UpOption.OnEvent(upAgainEvents.record)))
       destroyRes <- stack.destroy()
     yield (prevRes, upRes, upAgainRes, destroyRes)
     res.fold(
@@ -222,9 +224,8 @@ class LocalWorkspaceTest extends munit.FunSuite:
         LocalWorkspaceOption.PulumiHome(pulumiHomeDir),
         LocalWorkspaceOption.EnvVars(shell.pulumi.env.PulumiConfigPassphraseEnv -> "test")
       )
-      upRes <- stack.up(UpOption.OnEvent(upEvents.record))
-      _ = upEvents.markCallReturned()
-      _ <- stack.destroy()
+      upRes <- upEvents.timing(stack.up(UpOption.OnEvent(upEvents.record)))
+      _     <- stack.destroy()
     yield upRes
 
     res.fold(
@@ -265,6 +266,93 @@ class LocalWorkspaceTest extends munit.FunSuite:
         assertEquals(orphans.map(_.metadata.urn), Nil, "a child ResourcePreEvent preceded its parent's")
       }
     )
+  }
+
+  FunFixture[FullyQualifiedStackName](
+    setup = t => fqsn(this.getClass, t),
+    teardown = _ => ()
+  ).test("a failed up reports OperationFailedError carrying the engine events") { generatedStackName =>
+    val stackName     = FullyQualifiedStackName("goproj", generatedStackName.stack)
+    val pulumiHomeDir = os.temp.dir() / ".pulumi"
+    loginLocal(pulumiHomeDir)
+
+    // registers one component, then fails the program - enough to produce pre-events and a diagnostic before the non-zero exit
+    val program =
+      """|package main
+         |
+         |import (
+         |	"fmt"
+         |
+         |	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+         |)
+         |
+         |type Group struct{ pulumi.ResourceState }
+         |
+         |func main() {
+         |	pulumi.Run(func(ctx *pulumi.Context) error {
+         |		group := &Group{}
+         |		if err := ctx.RegisterComponentResource("besom:test:Group", "doomed", group); err != nil {
+         |			return err
+         |		}
+         |		return fmt.Errorf("deliberate failure from the test program")
+         |	})
+         |}
+         |""".stripMargin
+
+    val binName = "failingBinary"
+    val binaryBuilder = (ws: Workspace) => {
+      os.write.over(ws.workDir / "main.go", program)
+      shell("go", "build", "-o", binName, "main.go")(shell.ShellOption.Cwd(ws.workDir)).bimap(
+        e => e.withMessage("go build failed"),
+        _ => ()
+      )
+    }
+
+    val upEvents = EventRecorder()
+
+    val res = for
+      stack <- createStackRemoteSource(
+        stackName,
+        GitRepo(url = "https://github.com/pulumi/test-repo.git", projectPath = "goproj", setup = binaryBuilder),
+        LocalWorkspaceOption.Project(
+          Project(name = "goproj", runtime = ProjectRuntimeInfo(name = "go", options = Map("binary" -> binName)))
+        ),
+        LocalWorkspaceOption.PulumiHome(pulumiHomeDir),
+        LocalWorkspaceOption.EnvVars(shell.pulumi.env.PulumiConfigPassphraseEnv -> "test")
+      )
+      upRes <- upEvents.timing(stack.up(UpOption.OnEvent(upEvents.record), UpOption.Color(Color.Never)))
+    yield upRes
+
+    res match
+      case Right(up) => fail(s"expected the up to fail, got: ${up.summary.result}")
+      case Left(e: OperationFailedError) =>
+        assertEquals(e.operation, "up")
+        assertNotEquals(e.exitCode, 0)
+        assert(e.getMessage.startsWith("Up failed"), s"unexpected message: ${e.getMessage}")
+
+        // the bulky dump stays on the ShellAutoError cause
+        assert(e.cause.exists(_.isInstanceOf[ShellAutoError]), s"expected a ShellAutoError cause, got: ${e.cause}")
+
+        // ── the point of the type: the log is parsed on the failure path, so this data is not lost ──
+        assert(e.resourcePreEvents.nonEmpty, "expected resourcePreEvents to survive the failure")
+        assert(
+          e.resourcePreEvents.exists(_.metadata.urn.endsWith("::doomed")),
+          s"expected the component's pre-event, got: ${e.resourcePreEvents.map(_.metadata.urn)}"
+        )
+        assert(e.diagnostics.nonEmpty, "expected diagnostics to survive the failure")
+        assert(
+          e.diagnostics.exists(_.message.contains("deliberate failure from the test program")),
+          s"expected the program's error among the diagnostics, got: ${e.diagnostics.map(_.message)}"
+        )
+        assertEquals(e.parseErrors, Nil)
+        assert(e.stdout.nonEmpty || e.stderr.nonEmpty, "expected the process output to be carried")
+
+        // live delivery keeps working on the failure path too
+        assert(upEvents.preEvents.nonEmpty, "no engine events were delivered live before the failure")
+        assert(upEvents.firstArrivedBeforeReturn, "the first engine event did not arrive before up returned")
+        assertEquals(upEvents.preEvents.map(_.metadata.urn), e.resourcePreEvents.map(_.metadata.urn))
+
+      case Left(other) => fail(s"expected an OperationFailedError, got ${other.getClass.getName}: ${other.getMessage.take(300)}")
   }
 
   FunFixture[FullyQualifiedStackName](

@@ -720,7 +720,8 @@ object PreviewOption:
     * [[ChildProcess.interrupt]] for the graceful, Ctrl-C equivalent.
     *
     * The handler runs on the calling thread right after the process is spawned and before it is waited on, so it must not block - stash the
-    * handle and return.
+    * handle and return. Exceptions it throws are swallowed: the operation still runs to completion, the caller simply ends up without a
+    * handle.
     */
   case class OnProcessStart(handler: ChildProcess => Unit) extends PreviewOption
 
@@ -909,7 +910,8 @@ object UpOption:
     * [[ChildProcess.interrupt]] for the graceful, Ctrl-C equivalent.
     *
     * The handler runs on the calling thread right after the process is spawned and before it is waited on, so it must not block - stash the
-    * handle and return.
+    * handle and return. Exceptions it throws are swallowed: the operation still runs to completion, the caller simply ends up without a
+    * handle.
     */
   case class OnProcessStart(handler: ChildProcess => Unit) extends UpOption
 
@@ -1085,7 +1087,8 @@ object RefreshOption:
     * [[ChildProcess.interrupt]] for the graceful, Ctrl-C equivalent.
     *
     * The handler runs on the calling thread right after the process is spawned and before it is waited on, so it must not block - stash the
-    * handle and return.
+    * handle and return. Exceptions it throws are swallowed: the operation still runs to completion, the caller simply ends up without a
+    * handle.
     */
   case class OnProcessStart(handler: ChildProcess => Unit) extends RefreshOption
 
@@ -1228,7 +1231,8 @@ object DestroyOption:
     * [[ChildProcess.interrupt]] for the graceful, Ctrl-C equivalent.
     *
     * The handler runs on the calling thread right after the process is spawned and before it is waited on, so it must not block - stash the
-    * handle and return.
+    * handle and return. Exceptions it throws are swallowed: the operation still runs to completion, the caller simply ends up without a
+    * handle.
     */
   case class OnProcessStart(handler: ChildProcess => Unit) extends DestroyOption
 

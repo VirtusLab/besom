@@ -135,6 +135,30 @@ class EventLogsTest extends munit.FunSuite:
     assertEquals(received.synchronized(received.toList), List(2, 99))
   }
 
+  test("around drains a slow handler completely before returning") {
+    val path = os.temp.dir() / "eventlog.txt"
+    os.write(path, "")
+
+    val received = mutable.ListBuffer.empty[Int]
+    val total    = 12
+
+    // the handler is slow enough that it is certainly still draining when the body returns and stop() is called,
+    // so returning early would lose events - the wait after stop() is deliberately unbounded
+    val result = EventLogs.around(
+      path,
+      Some { e =>
+        Thread.sleep(150)
+        received.synchronized(received += e.sequence)
+      }
+    ) {
+      os.write.append(path, (1 to total).map(event(_)).mkString("", "\n", "\n"))
+      Right(())
+    }
+
+    assertEquals(result, Right(()))
+    assertEquals(received.synchronized(received.toList), (1 to total).toList)
+  }
+
   test("around drops undecodable lines rather than failing the operation") {
     val path = os.temp.dir() / "eventlog.txt"
     os.write(path, "")

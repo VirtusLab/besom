@@ -81,6 +81,20 @@ class ShellTest extends munit.FunSuite:
     assert(!p.isAlive, "the process should be done by the time the call returned")
   }
 
+  test("a throwing OnStart handler neither leaks nor kills the process") {
+    @volatile var handle: Option[ChildProcess] = None
+
+    // skipping the join would leave the child running; destroying it would lose the output
+    val res = shell("sh", "-c", "echo hello")(ShellOption.OnStart { p =>
+      handle = Some(p)
+      throw new RuntimeException("boom")
+    }).getOrElse(fail("a broken OnStart handler must not fail the command"))
+
+    assertEquals(res.exitCode, 0)
+    assertEquals(res.out.trim, "hello")
+    assert(!handle.getOrElse(fail("OnStart was never invoked")).isAlive, "the process was left running")
+  }
+
   test("OnStart handle can interrupt a running process") {
     @volatile var handle: Option[ChildProcess] = None
     val started                                = new java.util.concurrent.CountDownLatch(1)
