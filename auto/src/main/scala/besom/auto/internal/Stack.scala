@@ -789,7 +789,7 @@ end PreviewOption
   * @param policyPackConfigs
   *   path to JSON file containing the config for the policy pack of the corresponding "--policy-pack" flag
   */
-private[auto] case class PreviewOptions(
+case class PreviewOptions(
   parallel: NotProvidedOr[Int] = NotProvided,
   message: NotProvidedOr[String] = NotProvided,
   expectNoChanges: Boolean = false,
@@ -817,28 +817,28 @@ object PreviewOptions:
     */
   def from(options: PreviewOption*): PreviewOptions = from(options.toList)
   def from(options: List[PreviewOption]): PreviewOptions =
-    options match
-      case PreviewOption.Parallel(n) :: tail             => from(tail*).copy(parallel = n)
-      case PreviewOption.Message(m) :: tail              => from(tail*).copy(message = m)
-      case PreviewOption.ExpectNoChanges :: tail         => from(tail*).copy(expectNoChanges = true)
-      case PreviewOption.Diff :: tail                    => from(tail*).copy(diff = true)
-      case PreviewOption.Replace(urns*) :: tail          => from(tail*).copy(replace = urns.toList)
-      case PreviewOption.Target(urns*) :: tail           => from(tail*).copy(target = urns.toList)
-      case PreviewOption.TargetDependents :: tail        => from(tail*).copy(targetDependents = true)
-      case PreviewOption.DebugLogging(debugOpts) :: tail => from(tail*).copy(debugLogOpts = debugOpts)
+    options.foldLeft(PreviewOptions()) { (acc, opt) =>
+      opt match
+        case PreviewOption.Parallel(n)             => acc.copy(parallel = n)
+        case PreviewOption.Message(m)              => acc.copy(message = m)
+        case PreviewOption.ExpectNoChanges         => acc.copy(expectNoChanges = true)
+        case PreviewOption.Diff                    => acc.copy(diff = true)
+        case PreviewOption.Replace(urns*)          => acc.copy(replace = urns.toList)
+        case PreviewOption.Target(urns*)           => acc.copy(target = urns.toList)
+        case PreviewOption.TargetDependents        => acc.copy(targetDependents = true)
+        case PreviewOption.DebugLogging(debugOpts) => acc.copy(debugLogOpts = debugOpts)
 // TODO: missing streams
-//      case PreviewOption.ProgressStreams(writers) :: tail      => from(tail*).copy(progressStreams = writers)
-//      case PreviewOption.ErrorProgressStreams(writers) :: tail => from(tail*).copy(errorProgressStreams = writers)
-      case PreviewOption.OnEvent(handler) :: tail          => from(tail*).copy(onEvent = Some(handler))
-      case PreviewOption.EventLog(path) :: tail            => from(tail*).copy(eventLog = path)
-      case PreviewOption.OnProcessStart(handler) :: tail   => from(tail*).copy(onProcessStart = Some(handler))
-      case PreviewOption.UserAgent(agent) :: tail          => from(tail*).copy(userAgent = agent)
-      case PreviewOption.Color(color) :: tail              => from(tail*).copy(color = color)
-      case PreviewOption.Plan(path) :: tail                => from(tail*).copy(plan = path)
-      case PreviewOption.PolicyPacks(packs*) :: tail       => from(tail*).copy(policyPacks = packs.toList)
-      case PreviewOption.PolicyPackConfigs(paths*) :: tail => from(tail*).copy(policyPackConfigs = paths.toList)
-      case Nil                                             => PreviewOptions()
-      case o                                               => throw AutoError(s"Unknown preview option: $o")
+//      case PreviewOption.ProgressStreams(writers)      => acc.copy(progressStreams = writers)
+//      case PreviewOption.ErrorProgressStreams(writers) => acc.copy(errorProgressStreams = writers)
+        case PreviewOption.OnEvent(handler)          => acc.copy(onEvent = Some(handler))
+        case PreviewOption.EventLog(path)            => acc.copy(eventLog = path)
+        case PreviewOption.OnProcessStart(handler)   => acc.copy(onProcessStart = Some(handler))
+        case PreviewOption.UserAgent(agent)          => acc.copy(userAgent = agent)
+        case PreviewOption.Color(color)              => acc.copy(color = color)
+        case PreviewOption.Plan(path)                => acc.copy(plan = path)
+        case PreviewOption.PolicyPacks(packs*)       => acc.copy(policyPacks = packs.toList)
+        case PreviewOption.PolicyPackConfigs(paths*) => acc.copy(policyPackConfigs = paths.toList)
+    }
 
 end PreviewOptions
 
@@ -1007,31 +1007,36 @@ case class UpOptions(
   showSecrets: Boolean = false
 )
 object UpOptions:
+  /** Merge options, last specified value wins
+    *
+    * @return
+    *   a new [[UpOptions]]
+    */
   def from(options: UpOption*): UpOptions = from(options.toList)
   def from(options: List[UpOption]): UpOptions =
-    options match
-      case UpOption.Parallel(n) :: tail             => from(tail*).copy(parallel = n)
-      case UpOption.Message(m) :: tail              => from(tail*).copy(message = m)
-      case UpOption.ExpectNoChanges :: tail         => from(tail*).copy(expectNoChanges = true)
-      case UpOption.Diff :: tail                    => from(tail*).copy(diff = true)
-      case UpOption.Replace(urns*) :: tail          => from(tail*).copy(replace = urns.toList)
-      case UpOption.Target(urns*) :: tail           => from(tail*).copy(target = urns.toList)
-      case UpOption.TargetDependents :: tail        => from(tail*).copy(targetDependents = true)
-      case UpOption.DebugLogging(debugOpts) :: tail => from(tail*).copy(debugLogOpts = debugOpts)
+    options.foldLeft(UpOptions()) { (acc, opt) =>
+      opt match
+        case UpOption.Parallel(n)             => acc.copy(parallel = n)
+        case UpOption.Message(m)              => acc.copy(message = m)
+        case UpOption.ExpectNoChanges         => acc.copy(expectNoChanges = true)
+        case UpOption.Diff                    => acc.copy(diff = true)
+        case UpOption.Replace(urns*)          => acc.copy(replace = urns.toList)
+        case UpOption.Target(urns*)           => acc.copy(target = urns.toList)
+        case UpOption.TargetDependents        => acc.copy(targetDependents = true)
+        case UpOption.DebugLogging(debugOpts) => acc.copy(debugLogOpts = debugOpts)
 // TODO: missing streams
-//      case UpOption.ProgressStreams(writers) :: tail      => from(tail*).copy(progressStreams = writers)
-//      case UpOption.ErrorProgressStreams(writers) :: tail => from(tail*).copy(errorProgressStreams = writers)
-      case UpOption.OnEvent(handler) :: tail          => from(tail*).copy(onEvent = Some(handler))
-      case UpOption.EventLog(path) :: tail            => from(tail*).copy(eventLog = path)
-      case UpOption.OnProcessStart(handler) :: tail   => from(tail*).copy(onProcessStart = Some(handler))
-      case UpOption.UserAgent(agent) :: tail          => from(tail*).copy(userAgent = agent)
-      case UpOption.Color(color) :: tail              => from(tail*).copy(color = color)
-      case UpOption.Plan(path) :: tail                => from(tail*).copy(plan = path)
-      case UpOption.PolicyPacks(packs*) :: tail       => from(tail*).copy(policyPacks = packs.toList)
-      case UpOption.PolicyPackConfigs(paths*) :: tail => from(tail*).copy(policyPackConfigs = paths.toList)
-      case UpOption.ShowSecrets :: tail               => from(tail*).copy(showSecrets = true)
-      case Nil                                        => UpOptions()
-      case o                                          => throw AutoError(s"Unknown up option: $o")
+//      case UpOption.ProgressStreams(writers)      => acc.copy(progressStreams = writers)
+//      case UpOption.ErrorProgressStreams(writers) => acc.copy(errorProgressStreams = writers)
+        case UpOption.OnEvent(handler)          => acc.copy(onEvent = Some(handler))
+        case UpOption.EventLog(path)            => acc.copy(eventLog = path)
+        case UpOption.OnProcessStart(handler)   => acc.copy(onProcessStart = Some(handler))
+        case UpOption.UserAgent(agent)          => acc.copy(userAgent = agent)
+        case UpOption.Color(color)              => acc.copy(color = color)
+        case UpOption.Plan(path)                => acc.copy(plan = path)
+        case UpOption.PolicyPacks(packs*)       => acc.copy(policyPacks = packs.toList)
+        case UpOption.PolicyPackConfigs(paths*) => acc.copy(policyPackConfigs = paths.toList)
+        case UpOption.ShowSecrets               => acc.copy(showSecrets = true)
+    }
 
 end UpOptions
 
@@ -1159,25 +1164,30 @@ case class RefreshOptions(
   showSecrets: Boolean = false
 )
 object RefreshOptions:
+  /** Merge options, last specified value wins
+    *
+    * @return
+    *   a new [[RefreshOptions]]
+    */
   def from(options: RefreshOption*): RefreshOptions = from(options.toList)
   def from(options: List[RefreshOption]): RefreshOptions =
-    options match
-      case RefreshOption.Parallel(n) :: tail             => from(tail*).copy(parallel = n)
-      case RefreshOption.Message(m) :: tail              => from(tail*).copy(message = m)
-      case RefreshOption.ExpectNoChanges :: tail         => from(tail*).copy(expectNoChanges = true)
-      case RefreshOption.Target(urns*) :: tail           => from(tail*).copy(target = urns.toList)
-      case RefreshOption.DebugLogging(debugOpts) :: tail => from(tail*).copy(debugLogOpts = debugOpts)
+    options.foldLeft(RefreshOptions()) { (acc, opt) =>
+      opt match
+        case RefreshOption.Parallel(n)             => acc.copy(parallel = n)
+        case RefreshOption.Message(m)              => acc.copy(message = m)
+        case RefreshOption.ExpectNoChanges         => acc.copy(expectNoChanges = true)
+        case RefreshOption.Target(urns*)           => acc.copy(target = urns.toList)
+        case RefreshOption.DebugLogging(debugOpts) => acc.copy(debugLogOpts = debugOpts)
 // TODO: missing streams
-//      case RefreshOption.ProgressStreams(writers) :: tail      => from(tail*).copy(progressStreams = writers)
-//      case RefreshOption.ErrorProgressStreams(writers) :: tail => from(tail*).copy(errorProgressStreams = writers)
-      case RefreshOption.OnEvent(handler) :: tail        => from(tail*).copy(onEvent = Some(handler))
-      case RefreshOption.EventLog(path) :: tail          => from(tail*).copy(eventLog = path)
-      case RefreshOption.OnProcessStart(handler) :: tail => from(tail*).copy(onProcessStart = Some(handler))
-      case RefreshOption.UserAgent(agent) :: tail        => from(tail*).copy(userAgent = agent)
-      case RefreshOption.Color(color) :: tail            => from(tail*).copy(color = color)
-      case RefreshOption.ShowSecrets :: tail             => from(tail*).copy(showSecrets = true)
-      case Nil                                           => RefreshOptions()
-      case o                                             => throw AutoError(s"Unknown refresh option: $o")
+//      case RefreshOption.ProgressStreams(writers)      => acc.copy(progressStreams = writers)
+//      case RefreshOption.ErrorProgressStreams(writers) => acc.copy(errorProgressStreams = writers)
+        case RefreshOption.OnEvent(handler)        => acc.copy(onEvent = Some(handler))
+        case RefreshOption.EventLog(path)          => acc.copy(eventLog = path)
+        case RefreshOption.OnProcessStart(handler) => acc.copy(onProcessStart = Some(handler))
+        case RefreshOption.UserAgent(agent)        => acc.copy(userAgent = agent)
+        case RefreshOption.Color(color)            => acc.copy(color = color)
+        case RefreshOption.ShowSecrets             => acc.copy(showSecrets = true)
+    }
 
 end RefreshOptions
 
@@ -1303,24 +1313,30 @@ case class DestroyOptions(
   showSecrets: Boolean = false
 )
 object DestroyOptions:
+  /** Merge options, last specified value wins
+    *
+    * @return
+    *   a new [[DestroyOptions]]
+    */
   def from(options: DestroyOption*): DestroyOptions = from(options.toList)
   def from(options: List[DestroyOption]): DestroyOptions =
-    options match
-      case DestroyOption.Parallel(n) :: tail             => from(tail*).copy(parallel = n)
-      case DestroyOption.Message(m) :: tail              => from(tail*).copy(message = m)
-      case DestroyOption.Target(urns*) :: tail           => from(tail*).copy(target = urns.toList)
-      case DestroyOption.TargetDependents :: tail        => from(tail*).copy(targetDependents = true)
-      case DestroyOption.DebugLogging(debugOpts) :: tail => from(tail*).copy(debugLogOpts = debugOpts)
-//      case DestroyOption.ProgressStreams(writers) :: tail      => from(tail*).copy(progressStreams = writers)
-//      case DestroyOption.ErrorProgressStreams(writers) :: tail => from(tail*).copy(errorProgressStreams = writers)
-      case DestroyOption.OnEvent(handler) :: tail        => from(tail*).copy(onEvent = Some(handler))
-      case DestroyOption.EventLog(path) :: tail          => from(tail*).copy(eventLog = path)
-      case DestroyOption.OnProcessStart(handler) :: tail => from(tail*).copy(onProcessStart = Some(handler))
-      case DestroyOption.UserAgent(agent) :: tail        => from(tail*).copy(userAgent = agent)
-      case DestroyOption.Color(color) :: tail            => from(tail*).copy(color = color)
-      case DestroyOption.ShowSecrets :: tail             => from(tail*).copy(showSecrets = true)
-      case Nil                                           => DestroyOptions()
-      case o                                             => throw AutoError(s"Unknown destroy option: $o")
+    options.foldLeft(DestroyOptions()) { (acc, opt) =>
+      opt match
+        case DestroyOption.Parallel(n)             => acc.copy(parallel = n)
+        case DestroyOption.Message(m)              => acc.copy(message = m)
+        case DestroyOption.Target(urns*)           => acc.copy(target = urns.toList)
+        case DestroyOption.TargetDependents        => acc.copy(targetDependents = true)
+        case DestroyOption.DebugLogging(debugOpts) => acc.copy(debugLogOpts = debugOpts)
+// TODO: missing streams
+//      case DestroyOption.ProgressStreams(writers)      => acc.copy(progressStreams = writers)
+//      case DestroyOption.ErrorProgressStreams(writers) => acc.copy(errorProgressStreams = writers)
+        case DestroyOption.OnEvent(handler)        => acc.copy(onEvent = Some(handler))
+        case DestroyOption.EventLog(path)          => acc.copy(eventLog = path)
+        case DestroyOption.OnProcessStart(handler) => acc.copy(onProcessStart = Some(handler))
+        case DestroyOption.UserAgent(agent)        => acc.copy(userAgent = agent)
+        case DestroyOption.Color(color)            => acc.copy(color = color)
+        case DestroyOption.ShowSecrets             => acc.copy(showSecrets = true)
+    }
 
 end DestroyOptions
 
@@ -1350,12 +1366,17 @@ case class HistoryOptions(
   showSecrets: Boolean = false
 )
 object HistoryOptions:
+  /** Merge options, last specified value wins
+    *
+    * @return
+    *   a new [[HistoryOptions]]
+    */
   def from(options: HistoryOption*): HistoryOptions = from(options.toList)
   def from(options: List[HistoryOption]): HistoryOptions =
-    options match
-      case HistoryOption.ShowSecrets :: tail => from(tail*).copy(showSecrets = true)
-      case Nil                               => HistoryOptions()
-      case null                              => throw AutoError(s"Unexpected null history option")
+    options.foldLeft(HistoryOptions()) { (acc, opt) =>
+      opt match
+        case HistoryOption.ShowSecrets => acc.copy(showSecrets = true)
+    }
 
 end HistoryOptions
 
