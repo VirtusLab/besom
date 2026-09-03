@@ -1,11 +1,11 @@
 package besom.internal
 
-opaque type Input[+A] >: A | Output[A] = A | Output[A]
+opaque type Input[+A] >: Output[A] | A = Output[A] | A
 import scala.collection.immutable.Iterable
 
 object Input:
-  opaque type Optional[+A] >: Input[A | Option[A]]                      = Input[A | Option[A]]
-  opaque type OneOrIterable[+A] >: Input[A] | Input[Iterable[Input[A]]] = Input[A] | Input[Iterable[Input[A]]]
+  opaque type Optional[+A] >: Input[Option[A] | A]                      = Input[Option[A] | A]
+  opaque type OneOrIterable[+A] >: Input[Iterable[Input[A]]] | Input[A] = Input[Iterable[Input[A]]] | Input[A]
 
   extension [A](optional: A | Option[A])
     private def asOption: Option[A] =
