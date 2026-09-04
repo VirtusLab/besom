@@ -1,7 +1,8 @@
 import besom.*
 import besom.api.tls
 
-case class SomeTlsResources(x: Output[String], y: Output[String])(using ComponentBase) extends ComponentResource derives RegistersOutputs
+case class SomeTlsResources(x: Output[Option[String]], y: Output[String])(using ComponentBase) extends ComponentResource
+    derives RegistersOutputs
 
 object SomeTlsResources:
   def apply(name: NonEmptyString, sshKey: Output[tls.PrivateKey])(using Context): Output[SomeTlsResources] =
