@@ -149,25 +149,26 @@ object shell:
     onStart: Option[ChildProcess => Unit] = None
   )
 
+  /** Merge options, last specified value wins.
+    *
+    * [[ShellOption.Env]] is the exception: entries accumulate across occurrences and only a repeated key resolves to the last occurrence.
+    */
   object ShellOptions:
     def from(opts: ShellOption*): ShellOptions = from(opts.toList)
     def from(opts: List[ShellOption]): ShellOptions =
-      opts match
-        case ShellOption.Cwd(path) :: tail        => from(tail).copy(cwd = path)
-        case ShellOption.Stdin(input) :: tail     => from(tail).copy(stdin = input)
-        case ShellOption.Stdout(output) :: tail   => from(tail).copy(stdout = output)
-        case ShellOption.Stderr(output) :: tail   => from(tail).copy(stderr = output)
-        case ShellOption.MergeErrIntoOut :: tail  => from(tail).copy(mergeErrIntoOut = true)
-        case ShellOption.Timeout(timeout) :: tail => from(tail).copy(timeout = timeout)
-        case ShellOption.Check :: tail            => from(tail).copy(check = true)
-        case ShellOption.DontPropagateEnv :: tail => from(tail).copy(propagateEnv = false)
-        case ShellOption.OnStart(handler) :: tail => from(tail).copy(onStart = Some(handler))
-        case ShellOption.Env(env) :: tail => {
-          val old = from(tail*)
-          old.copy(env = old.env ++ env)
-        }
-        case Nil => ShellOptions()
-        case o   => throw AutoError(s"Unknown shell option: $o")
+      opts.foldLeft(ShellOptions()) { (acc, opt) =>
+        opt match
+          case ShellOption.Cwd(path)        => acc.copy(cwd = path)
+          case ShellOption.Env(env)         => acc.copy(env = acc.env ++ env)
+          case ShellOption.Stdin(input)     => acc.copy(stdin = input)
+          case ShellOption.Stdout(output)   => acc.copy(stdout = output)
+          case ShellOption.Stderr(output)   => acc.copy(stderr = output)
+          case ShellOption.MergeErrIntoOut  => acc.copy(mergeErrIntoOut = true)
+          case ShellOption.Timeout(timeout) => acc.copy(timeout = timeout)
+          case ShellOption.Check            => acc.copy(check = true)
+          case ShellOption.DontPropagateEnv => acc.copy(propagateEnv = false)
+          case ShellOption.OnStart(handler) => acc.copy(onStart = Some(handler))
+      }
 
   def env(name: String): Either[Exception, String] =
     sys.env.get(name) match

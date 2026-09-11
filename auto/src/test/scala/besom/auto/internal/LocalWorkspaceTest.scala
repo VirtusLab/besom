@@ -39,6 +39,63 @@ class LocalWorkspaceTest extends munit.FunSuite:
   FunFixture[FullyQualifiedStackName](
     setup = t => fqsn(this.getClass, t),
     teardown = _ => ()
+  ).test("local source workDir argument beats a WorkDir option") { generatedStackName =>
+    val pulumiHomeDir = os.temp.dir() / ".pulumi"
+    loginLocal(pulumiHomeDir)
+
+    val workDir = os.temp.dir(prefix = "argument")
+    val decoy   = os.temp.dir(prefix = "decoy")
+
+    val res = createStackLocalSource(
+      FullyQualifiedStackName("localproj", generatedStackName.stack),
+      workDir,
+      // options are last-wins, but the positional workDir is the argument the caller was required to supply - it must win
+      LocalWorkspaceOption.WorkDir(decoy),
+      LocalWorkspaceOption.Project(Project(name = "localproj", runtime = ProjectRuntimeInfo(name = "go"))),
+      LocalWorkspaceOption.PulumiHome(pulumiHomeDir),
+      LocalWorkspaceOption.EnvVars(shell.pulumi.env.PulumiConfigPassphraseEnv -> "test")
+    )
+
+    res.fold(
+      e => fail(e.getMessage, e),
+      stack => {
+        assertEquals(stack.workspace.workDir, workDir)
+        assert(os.exists(workDir / "Pulumi.yaml"), "project settings should have been written to the argument dir")
+        assert(!os.exists(decoy / "Pulumi.yaml"), "nothing should have been written to the decoy dir")
+      }
+    )
+  }
+
+  FunFixture[FullyQualifiedStackName](
+    setup = t => fqsn(this.getClass, t),
+    teardown = _ => ()
+  ).test("inline source carries its program to the workspace") { generatedStackName =>
+    val pulumiHomeDir = os.temp.dir() / ".pulumi"
+    loginLocal(pulumiHomeDir)
+
+    // never executed - nothing in besom-auto runs an inline program, the workspace only carries it
+    val program: RunFunc    = _ => ???
+    val ignoredOpt: RunFunc = _ => ???
+
+    val res = createStackInlineSource(
+      FullyQualifiedStackName("inlineproj", generatedStackName.stack),
+      "inlineproj",
+      program,
+      // a Program in opts must lose to the explicit program argument, whichever order the options are merged in
+      LocalWorkspaceOption.Program(ignoredOpt),
+      LocalWorkspaceOption.PulumiHome(pulumiHomeDir),
+      LocalWorkspaceOption.EnvVars(shell.pulumi.env.PulumiConfigPassphraseEnv -> "test")
+    )
+
+    res.fold(
+      e => fail(e.getMessage, e),
+      stack => assertEquals(stack.workspace.program, Some(program))
+    )
+  }
+
+  FunFixture[FullyQualifiedStackName](
+    setup = t => fqsn(this.getClass, t),
+    teardown = _ => ()
   ).test("new stack remote source with setup") { generatedStackName =>
     val stackName     = FullyQualifiedStackName("goproj", generatedStackName.stack)
     val pulumiHomeDir = os.temp.dir() / ".pulumi"

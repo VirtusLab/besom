@@ -950,11 +950,7 @@ object LocalWorkspaceOption:
     * @param program
     *   the Pulumi program to execute
     */
-  // not a case class because function won't be useful in equality checks
-  class Program(val program: RunFunc) extends LocalWorkspaceOption
-  object Program:
-    def apply(program: RunFunc): Program     = new Program(program)
-    def unapply(p: Program): Option[RunFunc] = Some(p.program)
+  case class Program(program: RunFunc) extends LocalWorkspaceOption
 
   /** The path to the Pulumi home directory.
     *
@@ -1048,30 +1044,31 @@ case class LocalWorkspaceOptions(
   remoteSkipInstallDependencies: Boolean = false
 )
 object LocalWorkspaceOptions:
-  /** Merge options, last specified value wins
+  /** Merge options, last specified value wins.
+    *
+    * [[LocalWorkspaceOption.EnvVars]] is the exception: entries accumulate across occurrences and only a repeated key resolves to the last
+    * occurrence.
+    *
     * @return
     *   a new [[LocalWorkspaceOptions]]
     */
   def from(opts: LocalWorkspaceOption*): LocalWorkspaceOptions = from(opts.toList)
   def from(opts: List[LocalWorkspaceOption]): LocalWorkspaceOptions =
-    opts match
-      case LocalWorkspaceOption.WorkDir(path) :: tail                 => from(tail).copy(workDir = path)
-      case LocalWorkspaceOption.Program(program) :: tail              => from(tail).copy(program = program)
-      case LocalWorkspaceOption.PulumiHome(path) :: tail              => from(tail).copy(pulumiHome = path)
-      case LocalWorkspaceOption.Project(project) :: tail              => from(tail).copy(project = project)
-      case LocalWorkspaceOption.Stacks(stacks) :: tail                => from(tail).copy(stacks = stacks)
-      case LocalWorkspaceOption.Repo(repo) :: tail                    => from(tail).copy(repo = repo)
-      case LocalWorkspaceOption.SecretsProvider(provider) :: tail     => from(tail).copy(secretsProvider = provider)
-      case LocalWorkspaceOption.Remote :: tail                        => from(tail).copy(remote = true)
-      case LocalWorkspaceOption.RemoteEnvVars(envVars) :: tail        => from(tail).copy(remoteEnvVars = envVars)
-      case LocalWorkspaceOption.PreRunCommands(commands) :: tail      => from(tail).copy(preRunCommands = commands)
-      case LocalWorkspaceOption.RemoteSkipInstallDependencies :: tail => from(tail).copy(remoteSkipInstallDependencies = true)
-      case LocalWorkspaceOption.EnvVars(env) :: tail => {
-        val old = from(tail*)
-        old.copy(envVars = old.envVars ++ env)
-      }
-      case Nil => LocalWorkspaceOptions()
-      case o   => throw AutoError(s"Unknown LocalWorkspaceOption: $o")
+    opts.foldLeft(LocalWorkspaceOptions()) { (acc, opt) =>
+      opt match
+        case LocalWorkspaceOption.WorkDir(path)                 => acc.copy(workDir = path)
+        case LocalWorkspaceOption.Program(program)              => acc.copy(program = program)
+        case LocalWorkspaceOption.PulumiHome(path)              => acc.copy(pulumiHome = path)
+        case LocalWorkspaceOption.Project(project)              => acc.copy(project = project)
+        case LocalWorkspaceOption.Stacks(stacks)                => acc.copy(stacks = stacks)
+        case LocalWorkspaceOption.Repo(repo)                    => acc.copy(repo = repo)
+        case LocalWorkspaceOption.SecretsProvider(provider)     => acc.copy(secretsProvider = provider)
+        case LocalWorkspaceOption.EnvVars(env)                  => acc.copy(envVars = acc.envVars ++ env)
+        case LocalWorkspaceOption.Remote                        => acc.copy(remote = true)
+        case LocalWorkspaceOption.RemoteEnvVars(envVars)        => acc.copy(remoteEnvVars = envVars)
+        case LocalWorkspaceOption.PreRunCommands(commands)      => acc.copy(preRunCommands = commands)
+        case LocalWorkspaceOption.RemoteSkipInstallDependencies => acc.copy(remoteSkipInstallDependencies = true)
+    }
 
 /** GitRepo contains info to acquire and setup a Pulumi program from a git repository.
   *
