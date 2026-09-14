@@ -51,11 +51,11 @@ class TypeMapperTest extends munit.FunSuite {
       Expectations("String")
     ),
     Data(
-      NamedType("#/types/aws-native:index%2Fregion:Region"),
-      metadata = PackageMetadata("aws-native", "0.84.0"),
+      NamedType("#/types/aws-native:index:Region"),
+      metadata = PackageMetadata("aws-native", "1.79.0"),
       tags = Set(munit.Slow)
     )(
-      Expectations("besom.api.awsnative.region.enums.Region")
+      Expectations("besom.api.awsnative.enums.Region")
     ),
     Data(
       NamedType("/kubernetes/v3.7.0/schema.json#/provider"),
