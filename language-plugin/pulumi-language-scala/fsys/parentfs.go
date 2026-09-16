@@ -27,4 +27,8 @@ type ParentFS interface {
 	// Like LookPath from os/exec but local executable paths are
 	// interpreted relative to current FS.
 	LookPath(string) (string, error)
+
+	// The operating system executables are looked up for, in runtime.GOOS
+	// terms. Decides which wrapper scripts apply.
+	GOOS() string
 }

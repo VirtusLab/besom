@@ -24,11 +24,13 @@ func (s sbt) NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, error)
 	if !ok {
 		return nil, nil
 	}
-	probePaths := []string{opts.UseExecutor}
-	if opts.UseExecutor == "" {
-		probePaths = []string{"./sbt", "sbt"}
+	var cmd string
+	if opts.UseExecutor != "" {
+		cmd, err = fsys.LookPath(opts.WD, opts.UseExecutor)
+	} else {
+		// sbt-extras recommends checking its runner script into the project as ./sbt.
+		cmd, err = fsys.LookWrapperOrPath(opts.WD, "sbt", "sbt")
 	}
-	cmd, err := fsys.LookPath(opts.WD, probePaths...)
 	if err != nil {
 		return nil, err
 	}
