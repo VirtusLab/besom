@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -54,8 +55,15 @@ func (o osDirFS) Parent() ParentFS {
 }
 
 func (o osDirFS) LookPath(exe string) (string, error) {
+	if filepath.IsAbs(exe) {
+		return exec.LookPath(exe)
+	}
 	if strings.Contains(exe, "/") {
 		return exec.LookPath(filepath.Join(o.dir, exe))
 	}
 	return exec.LookPath(exe)
+}
+
+func (o osDirFS) GOOS() string {
+	return runtime.GOOS
 }

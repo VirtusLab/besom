@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"testing/fstest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -51,6 +52,18 @@ func TestLookWrapperOrPathFailsOnNonExecutableWrapper(t *testing.T) {
 	_, err := LookWrapperOrPath(DirFS(projectDir), "toolw", "tool")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "found toolw in "+projectDir+" but cannot execute it")
+}
+
+// The wrapper that was found is the one resolved, even when Windows would pick another one of the
+// wrapper's files through PATHEXT.
+func TestLookWrapperOrPathResolvesTheWrapperFileFound(t *testing.T) {
+	dir := TestFSOnOS("windows", ".", map[string]string{"tool": "/usr/bin/tool"}, fstest.MapFS{
+		"toolw.bat": {},
+		"toolw.cmd": {},
+	})
+	cmd, err := LookWrapperOrPath(dir, "toolw", "tool")
+	require.NoError(t, err)
+	assert.Equal(t, "./toolw.bat", cmd)
 }
 
 // The batch file is for Windows only and must not shadow the tool on the $PATH elsewhere.

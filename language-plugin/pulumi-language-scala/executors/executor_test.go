@@ -220,6 +220,28 @@ func TestSBTExecutor(t *testing.T) {
 	assert.Equal(t, []string{"-batch", "run"}, exec.RunArgs)
 }
 
+func TestWrappersOnWindows(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		files    fstest.MapFS
+		expected string
+	}{
+		{"gradle", fstest.MapFS{"settings.gradle": {}, "gradlew": {}, "gradlew.bat": {}}, "./gradlew.bat"},
+		{"maven", fstest.MapFS{"pom.xml": {}, "mvnw": {}, "mvnw.cmd": {}}, "./mvnw.cmd"},
+		// sbt-extras ships a shell script only, which Windows cannot run.
+		{"sbt", fstest.MapFS{"build.sbt": {}, "sbt": {}}, "/usr/bin/sbt"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fs := fsys.TestFSOnOS("windows", ".",
+				map[string]string{"gradle": "/usr/bin/gradle", "mvn": "/usr/bin/mvn", "sbt": "/usr/bin/sbt"},
+				tc.files)
+			exec, err := NewScalaExecutor(ScalaExecutorOptions{WD: fs})
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expected, exec.Cmd)
+		})
+	}
+}
+
 func TestSBTExtrasWrapper(t *testing.T) {
 	fs := fsys.TestFS(".",
 		map[string]string{"sbt": "/usr/bin/sbt"},

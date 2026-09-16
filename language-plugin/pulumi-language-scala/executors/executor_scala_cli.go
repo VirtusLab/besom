@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -54,18 +55,18 @@ func (s scalacli) NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, e
 // build tool executors this one never picks a command up from the project directory.
 func (scalacli) resolveCommand(opts ScalaExecutorOptions) (string, error) {
 	if opts.UseExecutor != "" {
-		return fsys.LookPath(opts.WD, opts.UseExecutor)
+		return resolveChosenCommand(opts.WD, opts.UseExecutor)
 	}
 	if chosen := os.Getenv(ScalaCliCommandEnvVar); chosen != "" {
-		return fsys.LookPath(opts.WD, chosen)
+		return resolveChosenCommand(opts.WD, chosen)
 	}
 
 	scalaCliCmd, scalaCliErr := fsys.LookPath(opts.WD, "scala-cli")
 	scalaCmd, scalaErr := fsys.LookPath(opts.WD, "scala")
 	if scalaErr == nil {
-		if err := probeScalaLauncher(scalaCmd); err != nil {
-			logging.V(5).Infof("Ignoring %s as it is not the Scala CLI based launcher of Scala 3.5+: %s", scalaCmd, err)
-			scalaErr = fmt.Errorf("%s is not the Scala CLI based launcher of Scala 3.5+: %w", scalaCmd, err)
+		if err := checkScalaLauncher(scalaCmd); err != nil {
+			logging.V(5).Infof("Ignoring %s: %s", scalaCmd, err)
+			scalaErr = err
 		}
 	}
 
@@ -83,6 +84,35 @@ func (scalacli) resolveCommand(opts ScalaExecutorOptions) (string, error) {
 	default:
 		return "", fmt.Errorf("could not find scala-cli nor the scala launcher of Scala 3.5+: %w; %w", scalaCliErr, scalaErr)
 	}
+}
+
+// resolveChosenCommand resolves a command the user picked explicitly. A `scala` command, by name or by
+// path, still has to be the Scala CLI based launcher: the legacy runner would only fail later, on the first
+// scala-cli subcommand, with an error that does not point at the cause.
+func resolveChosenCommand(wd fsys.ParentFS, chosen string) (string, error) {
+	cmd, err := fsys.LookPath(wd, chosen)
+	if err != nil {
+		return "", err
+	}
+	if isScalaCommand(cmd) {
+		if err := checkScalaLauncher(cmd); err != nil {
+			return "", fmt.Errorf("%w; use scala-cli or the scala command of Scala 3.5+ instead", err)
+		}
+	}
+	return cmd, nil
+}
+
+// isScalaCommand tells whether cmd names a `scala` command, e.g. /usr/bin/scala or scala.bat.
+func isScalaCommand(cmd string) bool {
+	name := strings.ToLower(filepath.Base(cmd))
+	return strings.TrimSuffix(name, filepath.Ext(name)) == "scala"
+}
+
+func checkScalaLauncher(cmd string) error {
+	if err := probeScalaLauncher(cmd); err != nil {
+		return fmt.Errorf("%s is not the Scala CLI based launcher of Scala 3.5+: %w", cmd, err)
+	}
+	return nil
 }
 
 func (scalacli) newScalaCliExecutor(cmd string, bootstrapLibJarPath string, pluginDiscovererOutputPath string) (*ScalaExecutor, error) {

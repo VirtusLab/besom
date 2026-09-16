@@ -19,19 +19,33 @@ import (
 // in-memory filesystem
 //
 // globalPath maps short executable names to full paths to emulate
-// PATH resolution in LookPath.
+// PATH resolution in LookPath. Absolute paths are resolved through it too.
+//
+// The file system reports linux as its OS, see TestFSOnOS.
 func TestFS(
 	workdir string,
 	globalPath map[string]string,
 	files fstest.MapFS,
 ) ParentFS {
-	return &testFS{workdir, globalPath, files}
+	return TestFSOnOS("linux", workdir, globalPath, files)
+}
+
+// TestFSOnOS is TestFS reporting goos as its OS, so that OS dependent
+// lookups can be tested on any host. Paths stay unix-y regardless.
+func TestFSOnOS(
+	goos string,
+	workdir string,
+	globalPath map[string]string,
+	files fstest.MapFS,
+) ParentFS {
+	return &testFS{workdir, globalPath, files, goos}
 }
 
 type testFS struct {
 	path  string
 	exes  map[string]string
 	mapfs fstest.MapFS
+	goos  string
 }
 
 var _ ParentFS = &testFS{}
@@ -65,11 +79,11 @@ func (t testFS) HasParent() bool {
 }
 
 func (t testFS) Parent() ParentFS {
-	return testFS{path.Dir(t.path), t.exes, t.mapfs}
+	return testFS{path.Dir(t.path), t.exes, t.mapfs, t.goos}
 }
 
 func (t testFS) LookPath(exe string) (string, error) {
-	if strings.Contains(exe, "/") {
+	if strings.Contains(exe, "/") && !path.IsAbs(exe) {
 		ok, err := FileExists(t.fs(), path.Join(".", exe))
 		if err != nil {
 			return "", err
@@ -82,4 +96,8 @@ func (t testFS) LookPath(exe string) (string, error) {
 		return found, nil
 	}
 	return "", fmt.Errorf("Not found: %v", exe)
+}
+
+func (t testFS) GOOS() string {
+	return t.goos
 }

@@ -91,6 +91,14 @@ func TestLegacyScalaRunnerNextToScalaCliIsIgnored(t *testing.T) {
 	assert.Equal(t, "/usr/bin/scala-cli", exec.Cmd)
 }
 
+// Only a chosen scala command is checked, scala-cli is Scala CLI by definition.
+func expectedProbes(chosen string) []string {
+	if chosen == "scala" {
+		return []string{bothScalaCommands["scala"]}
+	}
+	return []string{}
+}
+
 func TestBothScalaCommandsChosenByEnvVar(t *testing.T) {
 	for _, chosen := range []string{"scala", "scala-cli"} {
 		t.Run(chosen, func(t *testing.T) {
@@ -99,7 +107,7 @@ func TestBothScalaCommandsChosenByEnvVar(t *testing.T) {
 			exec, err := NewScalaExecutor(ScalaExecutorOptions{WD: scalaCliProject(bothScalaCommands)})
 			require.NoError(t, err)
 			assert.Equal(t, bothScalaCommands[chosen], exec.Cmd)
-			assert.Empty(t, *probed)
+			assert.Equal(t, expectedProbes(chosen), *probed)
 		})
 	}
 }
@@ -111,8 +119,44 @@ func TestBothScalaCommandsChosenByUseExecutor(t *testing.T) {
 			exec, err := NewScalaExecutor(ScalaExecutorOptions{WD: scalaCliProject(bothScalaCommands), UseExecutor: chosen})
 			require.NoError(t, err)
 			assert.Equal(t, bothScalaCommands[chosen], exec.Cmd)
-			assert.Empty(t, *probed)
+			assert.Equal(t, expectedProbes(chosen), *probed)
 		})
+	}
+}
+
+// An explicit choice cannot make a legacy runner work, so it fails right away instead of on the first
+// scala-cli subcommand.
+func TestLegacyScalaRunnerChosenExplicitlyFails(t *testing.T) {
+	legacyScala := map[string]string{"/opt/scala-2.13/bin/scala": "/opt/scala-2.13/bin/scala", "scala": "/usr/bin/scala"}
+	for name, chosen := range map[string]ScalaExecutorOptions{
+		"use-executor by name": {UseExecutor: "scala"},
+		"use-executor by path": {UseExecutor: "/opt/scala-2.13/bin/scala"},
+		"env var":              {},
+	} {
+		t.Run(name, func(t *testing.T) {
+			scalaCliEnv(t, true)
+			if chosen.UseExecutor == "" {
+				t.Setenv(ScalaCliCommandEnvVar, "scala")
+			}
+			chosen.WD = scalaCliProject(legacyScala)
+			_, err := NewScalaExecutor(chosen)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "is not the Scala CLI based launcher of Scala 3.5+")
+		})
+	}
+}
+
+func TestIsScalaCommand(t *testing.T) {
+	for cmd, expected := range map[string]bool{
+		"/usr/bin/scala":      true,
+		"./scala":             true,
+		"scala.bat":           true,
+		"Scala.exe":           true,
+		"/usr/bin/scala-cli":  false,
+		"/opt/scala/bin/java": false,
+		"scalac":              false,
+	} {
+		assert.Equal(t, expected, isScalaCommand(cmd), cmd)
 	}
 }
 
