@@ -60,7 +60,8 @@ your [`Pulumi.yaml`](https://www.pulumi.com/docs/concepts/projects/project-file/
 with [runtime options](https://www.pulumi.com/docs/concepts/projects/project-file/#runtime-options) being:
 
 - `binary` - a path to pre-built executable JAR
-- `use-executor` - force a specific executor path instead of probing the project directory and `PATH`
+- `use-executor` - force a specific command, given by name or by path, instead of the lookup described
+  in [executors](#executors)
 
 A minimal Besom `Pulumi.yaml` project file:
 
@@ -68,6 +69,37 @@ A minimal Besom `Pulumi.yaml` project file:
 name: Example Besom project file with only required attributes
 runtime: scala
 ```
+
+#### Executors
+
+Besom builds and runs your program with one of the executors below. The first one that fits the project
+wins, and `use-executor` overrides the choice:
+
+| Executor  | Chosen when                                                 | Command                                                  |
+|-----------|-------------------------------------------------------------|----------------------------------------------------------|
+| jar       | `binary` points at a `.jar`                                  | `java` from the `PATH`                                    |
+| sbt       | there is a `build.sbt` or a `project/build.properties`       | `./sbt` from the project directory, else `sbt` from the `PATH`     |
+| Gradle    | there is a `settings.gradle[.kts]` or a `build.gradle`       | `./gradlew` from the Gradle root directory, else `gradle` from the `PATH` |
+| Maven     | there is a `pom.xml`                                         | `./mvnw` from the project directory, else `mvn` from the `PATH`    |
+| Scala CLI | nothing above matched                                        | `scala-cli` or `scala` from the `PATH`                    |
+
+A command is taken from the project directory only where the build tool has a wrapper convention, which is
+why the Scala CLI commands are looked up on the `PATH` alone. On Windows the wrappers are `gradlew.bat`,
+`mvnw.cmd` and `sbt.bat`. A wrapper that is present but cannot be executed - typically one committed
+without its executable bit - is reported as an error instead of being silently replaced by the `PATH`
+command, which would run a different version of the build tool than the one your project pins.
+
+The Scala CLI executor accepts either the `scala-cli` command or the `scala` command of Scala 3.5+, which
+is Scala CLI under another name. If both are installed, Besom refuses to guess and asks you to pick one,
+either for the project with `use-executor: scala-cli` (or `scala`) in `Pulumi.yaml` or for your machine
+with the `BESOM_LANGHOST_SCALA_CLI_COMMAND` environment variable. `use-executor` takes precedence. The
+`scala` runner of Scala 2 and of Scala 3 releases before 3.5 is not Scala CLI based and is ignored.
+
+:::warning
+Since Besom 0.5.2 a `scala-cli` script in the project directory is no longer picked up automatically.
+If your project relied on a local `./scala-cli` script, point Besom at it explicitly by setting
+`BESOM_LANGHOST_SCALA_CLI_COMMAND=./scala-cli`, which is resolved relative to the project directory.
+:::
 
 ### Programs
 

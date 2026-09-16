@@ -219,3 +219,15 @@ func TestSBTExecutor(t *testing.T) {
 	assert.Equal(t, "/usr/bin/sbt", exec.Cmd)
 	assert.Equal(t, []string{"-batch", "run"}, exec.RunArgs)
 }
+
+func TestSBTExtrasWrapper(t *testing.T) {
+	fs := fsys.TestFS(".",
+		map[string]string{"sbt": "/usr/bin/sbt"},
+		fstest.MapFS{
+			"build.sbt": {},
+			"sbt":       {},
+		})
+	exec, err := NewScalaExecutor(ScalaExecutorOptions{WD: fs})
+	assert.NoError(t, err)
+	assert.Equal(t, "./sbt", exec.Cmd)
+}

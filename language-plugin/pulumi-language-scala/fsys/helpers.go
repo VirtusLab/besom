@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"runtime"
 	"strings"
 )
 
@@ -30,4 +31,39 @@ func LookPath(dir ParentFS, files ...string) (string, error) {
 	}
 	return "", fmt.Errorf("could not find %s on the $PATH: %w",
 		strings.Join(files, ", "), lastError)
+}
+
+// LookWrapperOrPath resolves the wrapper script of a build tool, such as gradlew, when dir holds one and
+// the command on the $PATH otherwise. Only build tools with an established wrapper convention should use
+// it; every other command is looked up on the $PATH alone.
+//
+// A wrapper that is present but cannot be executed is an error rather than a reason to fall back to the
+// $PATH, which likely holds a different version of the tool than the one the project pins.
+func LookWrapperOrPath(dir ParentFS, wrapper string, command string) (string, error) {
+	for _, file := range wrapperFiles(wrapper) {
+		present, err := FileExists(dir, file)
+		if err != nil {
+			return "", err
+		}
+		if !present {
+			continue
+		}
+		pathExec, err := dir.LookPath("./" + wrapper)
+		if err != nil {
+			return "", fmt.Errorf("found %s in %s but cannot execute it, make it executable "+
+				"or remove it to use %s from the $PATH: %w", file, dir.Path(), command, err)
+		}
+		return pathExec, nil
+	}
+	return LookPath(dir, command)
+}
+
+// wrapperFiles lists the files that make up a wrapper on the current OS. Build tools ship a shell script
+// for Unix and a batch file for Windows side by side; LookPath on Windows finds the latter through
+// PATHEXT, while the shell script is of no use there.
+func wrapperFiles(wrapper string) []string {
+	if runtime.GOOS == "windows" {
+		return []string{wrapper + ".bat", wrapper + ".cmd"}
+	}
+	return []string{wrapper}
 }

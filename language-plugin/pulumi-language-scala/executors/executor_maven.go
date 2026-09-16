@@ -20,11 +20,12 @@ func (m maven) NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, erro
 	if !ok {
 		return nil, nil
 	}
-	probePaths := []string{opts.UseExecutor}
-	if opts.UseExecutor == "" {
-		probePaths = []string{"./mvnw", "mvn"}
+	var cmd string
+	if opts.UseExecutor != "" {
+		cmd, err = fsys.LookPath(opts.WD, opts.UseExecutor)
+	} else {
+		cmd, err = fsys.LookWrapperOrPath(opts.WD, "mvnw", "mvn")
 	}
-	cmd, err := fsys.LookPath(opts.WD, probePaths...)
 	if err != nil {
 		return nil, err
 	}

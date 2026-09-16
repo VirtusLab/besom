@@ -22,15 +22,16 @@ func (g gradle) NewScalaExecutor(opts ScalaExecutorOptions) (*ScalaExecutor, err
 	if !ok {
 		return nil, nil
 	}
-	probePaths := []string{opts.UseExecutor}
-	if opts.UseExecutor == "" {
-		probePaths = []string{"./gradlew", "gradle"}
-	}
 	gradleRoot, subproject, err := g.findGradleRoot(opts.WD)
 	if err != nil {
 		return nil, err
 	}
-	cmd, err := fsys.LookPath(gradleRoot, probePaths...)
+	var cmd string
+	if opts.UseExecutor != "" {
+		cmd, err = fsys.LookPath(gradleRoot, opts.UseExecutor)
+	} else {
+		cmd, err = fsys.LookWrapperOrPath(gradleRoot, "gradlew", "gradle")
+	}
 	if err != nil {
 		return nil, err
 	}
