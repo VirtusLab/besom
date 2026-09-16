@@ -40,3 +40,17 @@ func TestDirFSLookPathRelativeToProject(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, tool, cmd)
 }
+
+// Run from a directory other than the project's, so that resolving against the working directory fails.
+func TestDirFSLookPathRelativeWithBackslashOnWindows(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("backslash is a path separator on Windows only")
+	}
+	project := t.TempDir()
+	tool := filepath.Join(project, "tool.bat")
+	require.NoError(t, os.WriteFile(tool, []byte("@echo off\n"), 0644))
+
+	cmd, err := DirFS(project).LookPath(`.\tool`)
+	require.NoError(t, err)
+	assert.Equal(t, tool, cmd)
+}

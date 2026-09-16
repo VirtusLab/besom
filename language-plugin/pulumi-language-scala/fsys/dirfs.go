@@ -58,7 +58,8 @@ func (o osDirFS) LookPath(exe string) (string, error) {
 	if filepath.IsAbs(exe) {
 		return exec.LookPath(exe)
 	}
-	if strings.Contains(exe, "/") {
+	// Windows users write relative paths with either separator.
+	if strings.ContainsAny(exe, "/"+string(filepath.Separator)) {
 		return exec.LookPath(filepath.Join(o.dir, exe))
 	}
 	return exec.LookPath(exe)

@@ -61,8 +61,8 @@ with [runtime options](https://www.pulumi.com/docs/concepts/projects/project-fil
 
 - `binary` - a path to pre-built executable JAR
 - `use-executor` - the command to run instead of the one Besom looks up, given by name or by path; relative
-  paths are resolved against the project directory. It replaces the command, not the executor, see
-  [executors](#executors)
+  paths are resolved against the project directory, or against the Gradle root directory for Gradle projects.
+  It replaces the command, not the executor, see [executors](#executors)
 
 A minimal Besom `Pulumi.yaml` project file:
 

@@ -17,6 +17,7 @@ import (
 func scalaCliEnv(t *testing.T, legacyScala bool) *[]string {
 	t.Helper()
 	t.Setenv(ScalaCliCommandEnvVar, "")
+	t.Setenv("BESOM_LANGHOST_SCALA_CLI_OPTS", "")
 	probed := &[]string{}
 	original := probeScalaLauncher
 	probeScalaLauncher = func(cmd string) error {
