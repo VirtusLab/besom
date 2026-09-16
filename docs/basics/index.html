@@ -7,8 +7,8 @@
 <link rel="alternate" type="application/atom+xml" href="/besom/blog/atom.xml" title="Besom, Scala SDK for Pulumi blog Atom Feed">
 <link rel="alternate" type="application/json" href="/besom/blog/feed.json" title="Besom, Scala SDK for Pulumi blog JSON Feed">
 <script src="https://plausible.io/js/script.js" defer="defer" data-domain="virtuslab.github.io/besom"></script><link rel="stylesheet" href="/besom/assets/css/styles.46c85403.css">
-<script src="/besom/assets/js/runtime~main.d5174bf6.js" defer="defer"></script>
-<script src="/besom/assets/js/main.b9e1815b.js" defer="defer"></script>
+<script src="/besom/assets/js/runtime~main.87b07909.js" defer="defer"></script>
+<script src="/besom/assets/js/main.91ad853a.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -53,10 +53,33 @@ your <a href="https://www.pulumi.com/docs/concepts/projects/project-file/" targe
 with <a href="https://www.pulumi.com/docs/concepts/projects/project-file/#runtime-options" target="_blank" rel="noopener noreferrer">runtime options</a> being:</p>
 <ul>
 <li><code>binary</code> - a path to pre-built executable JAR</li>
-<li><code>use-executor</code> - force a specific executor path instead of probing the project directory and <code>PATH</code></li>
+<li><code>use-executor</code> - the command to run instead of the one Besom looks up, given by name or by path; relative
+paths are resolved against the project directory, or against the Gradle root directory for Gradle projects.
+It replaces the command, not the executor, see <a href="#executors">executors</a></li>
 </ul>
 <p>A minimal Besom <code>Pulumi.yaml</code> project file:</p>
 <div class="language-yaml codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-yaml codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token key atrule" style="color:#00a4db">name</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"> Example Besom project file with only required attributes</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token key atrule" style="color:#00a4db">runtime</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"> scala</span><br></span></code></pre></div></div>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="executors">Executors<a href="#executors" class="hash-link" aria-label="Direct link to Executors" title="Direct link to Executors" translate="no">​</a></h4>
+<p>Besom builds and runs your program with the first executor below that fits the project:</p>
+<table><thead><tr><th>Executor</th><th>Chosen when</th><th>Command</th></tr></thead><tbody><tr><td>jar</td><td><code>binary</code> points at a <code>.jar</code></td><td><code>java</code> from the <code>PATH</code></td></tr><tr><td>sbt</td><td>there is a <code>build.sbt</code> or a <code>project/build.properties</code>, or <code>use-executor</code> contains <code>sbt</code></td><td><code>./sbt</code> from the project directory, else <code>sbt</code> from the <code>PATH</code></td></tr><tr><td>Gradle</td><td>there is a <code>settings.gradle[.kts]</code> or a <code>build.gradle</code>, or <code>use-executor</code> contains <code>gradle</code></td><td><code>./gradlew</code> from the Gradle root directory, else <code>gradle</code> from the <code>PATH</code></td></tr><tr><td>Maven</td><td>there is a <code>pom.xml</code>, or <code>use-executor</code> contains <code>mvn</code></td><td><code>./mvnw</code> from the project directory, else <code>mvn</code> from the <code>PATH</code></td></tr><tr><td>Scala CLI</td><td>nothing above matched</td><td><code>scala-cli</code> or <code>scala</code> from the <code>PATH</code></td></tr></tbody></table>
+<p><code>use-executor</code> replaces the command in the last column, but it does not pick the executor, which decides
+the arguments the command is run with. Apart from the substrings listed above, the executor is chosen by the
+project&#x27;s files alone: <code>use-executor: scala-cli</code> in a project with a <code>build.sbt</code> still runs the sbt
+executor, and a <code>.jar</code> in <code>binary</code> always runs the jar executor, which ignores <code>use-executor</code>.</p>
+<p>A command is taken from the project directory only where the build tool has a wrapper convention, which is
+why the Scala CLI commands are looked up on the <code>PATH</code> alone. On Windows the wrappers are <code>gradlew.bat</code>,
+<code>mvnw.cmd</code> and <code>sbt.bat</code>. A wrapper that is present but cannot be executed - typically one committed
+without its executable bit - is reported as an error instead of being silently replaced by the <code>PATH</code>
+command, which would run a different version of the build tool than the one your project pins.</p>
+<p>The Scala CLI executor accepts either the <code>scala-cli</code> command or the <code>scala</code> command of Scala 3.5+, which
+is Scala CLI under another name. If both are installed, Besom refuses to guess and asks you to pick one,
+either for the project with <code>use-executor: scala-cli</code> (or <code>scala</code>) in <code>Pulumi.yaml</code> or for your machine
+with the <code>BESOM_LANGHOST_SCALA_CLI_COMMAND</code> environment variable. <code>use-executor</code> takes precedence. Both
+accept a command name or a path. The <code>scala</code> runner of Scala 2 and of Scala 3 releases before 3.5 is not
+Scala CLI based: Besom skips it when looking commands up, and reports an error when it is chosen explicitly.</p>
+<div class="theme-admonition theme-admonition-warning admonition_xJq3 alert alert--warning"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8.893 1.5c-.183-.31-.52-.5-.887-.5s-.703.19-.886.5L.138 13.499a.98.98 0 0 0 0 1.001c.193.31.53.501.886.501h13.964c.367 0 .704-.19.877-.5a1.03 1.03 0 0 0 .01-1.002L8.893 1.5zm.133 11.497H6.987v-2.003h2.039v2.003zm0-3.004H6.987V5.987h2.039v4.006z"></path></svg></span>warning</div><div class="admonitionContent_BuS1"><p>Since Besom 0.5.2 a <code>scala-cli</code> script in the project directory is no longer picked up automatically.
+If your project relied on a local <code>./scala-cli</code> script, point Besom at it explicitly by setting
+<code>BESOM_LANGHOST_SCALA_CLI_COMMAND=./scala-cli</code>, which is resolved relative to the project directory.</p></div></div>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="programs">Programs<a href="#programs" class="hash-link" aria-label="Direct link to Programs" title="Direct link to Programs" translate="no">​</a></h3>
 <p>A Pulumi program, written in a general-purpose programming language, is a collection of <a href="#resources">resources</a>
 that are deployed to form a <a href="#stacks">stack</a>.</p>
