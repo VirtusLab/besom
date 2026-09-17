@@ -117,9 +117,9 @@ A minimal Besom program consists of:
 * `project.scala` - the program dependencies (here we
   use [Scala-CLI directives](https://scala-cli.virtuslab.org/docs/guides/using-directives/))
     ```scala
-    //> using scala "3.3.6"
-    //> using plugin "org.virtuslab::besom-compiler-plugin:0.5.0"
-    //> using dep "org.virtuslab::besom-core:0.5.0"
+    //> using scala "3.3.7"
+    //> using plugin "org.virtuslab::besom-compiler-plugin:@BESOM_VERSION@"
+    //> using dep "org.virtuslab::besom-core:@BESOM_VERSION@"
     ```
 * `Main.scala` - the actual program written in Scala
     ```scala

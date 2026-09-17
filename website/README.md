@@ -1,6 +1,6 @@
 # Website
 
-This website is built using [Docusaurus 2](https://docusaurus.io/docs/2.x), a modern static website generator.
+This website is built using [Docusaurus 3](https://docusaurus.io/docs), a modern static website generator.
 
 ### Installation
 

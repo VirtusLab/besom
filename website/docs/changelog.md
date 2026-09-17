@@ -2,7 +2,35 @@
 title: Changelog
 ---
 
+0.5.2 (17-09-2026)
+---
+
+* Fixed codegen hotfixes that silently stopped applying: hotfix features are now validated separately and all matching version ranges are merged, with conflicting tokens reported as an error (@lbialy in [623](https://github.com/VirtusLab/besom/pull/623))
+* Added support for sbt 2.x, Besom's sbt plugin now works with both sbt 1.x and sbt 2.x builds (@lbialy in [624](https://github.com/VirtusLab/besom/pull/624))
+* Automation API now delivers Pulumi engine events as they happen via new `OnEvent`, `EventLog` and `OnProcessStart` options of preview, up, refresh and destroy operations, allows graceful cancellation of a running operation with `ChildProcess.interrupt()` and no longer fails on unknown engine event values (@lbialy in [626](https://github.com/VirtusLab/besom/pull/626))
+* Fixed subtle inference bug of `Input` types that led to a `ClassCastException` at runtime for some argument shapes, e.g. when a method call returning an `Output` was passed directly to `Output.when` (@lbialy in [628](https://github.com/VirtusLab/besom/pull/628))
+* Fixed `*Options.from` in Automation API resolving repeated options to the first occurrence instead of the last one, as documented. As a consequence `LocalWorkspaceOption.PulumiHome` now takes precedence over `PULUMI_HOME` passed via `LocalWorkspaceOption.EnvVars` (@lbialy in [627](https://github.com/VirtusLab/besom/pull/627))
+* Added support for the `scala` command of Scala 3.5+ as an alternative to `scala-cli` in the language plugin, see [Executors](basics.md#executors). If both commands are installed, select one with `use-executor` in `Pulumi.yaml` or with the `BESOM_LANGHOST_SCALA_CLI_COMMAND` environment variable. Build tool wrappers (`./sbt`, `./gradlew`, `./mvnw`) that cannot be executed are now reported as an error instead of being silently replaced by the command from `PATH`. **Breaking:** a `./scala-cli` script in the project directory is no longer picked up automatically, set `BESOM_LANGHOST_SCALA_CLI_COMMAND=./scala-cli` to keep using it (@lbialy in [631](https://github.com/VirtusLab/besom/pull/631))
+
+**Full Changelog**: https://github.com/VirtusLab/besom/compare/v0.5.1...v0.5.2
+
+0.5.1 (26-03-2026)
+---
+
+* Fixed codegen crash (`MatchError`) on provider schemas that set the `type` field to non-standard values like `"ref"` alongside `$ref` (@lbialy in [588](https://github.com/VirtusLab/besom/pull/588))
+* Fixed inverted `is-snapshot` guard in release tooling that could delete published GitHub releases (@lbialy in [594](https://github.com/VirtusLab/besom/pull/594))
+* sbt plugin now fails fast with an actionable error when used on a non-Besom project and suggests setting `BESOM_SBT_MODULE` in multi-project builds (@lbialy in [589](https://github.com/VirtusLab/besom/pull/589))
+* Added complete Pulumi engine event parsing to Automation API, all engine event types are now parsed and exposed on operation results, and up, refresh and destroy operations capture the event log too (@lbialy in [595](https://github.com/VirtusLab/besom/pull/595))
+* Added `JsonReader` instances for `Option` and `Either` to `besom-json` and dropped the unnecessary `Context` requirement from the `Output` reader used by StackReferences (@lbialy in [597](https://github.com/VirtusLab/besom/pull/597))
+* Added typed stack exports, `Stack.exports` now accepts a case class with `Output` fields that derives `Encoder`, complementing typed StackReferences (@lbialy in [598](https://github.com/VirtusLab/besom/pull/598))
+* Fixed `setAllConfig` in Automation API passing a broken `--` separator to Pulumi CLI, added `ConfigOption.Json` (requires Pulumi CLI 3.202.0+) and structured `ConfigValue` support (@lbialy in [601](https://github.com/VirtusLab/besom/pull/601))
+* Bumped Scala to 3.3.7 and updated dependencies (@lbialy in [600](https://github.com/VirtusLab/besom/pull/600))
+* Fixed secret packaging in typed StackReferences (@lbialy in [602](https://github.com/VirtusLab/besom/pull/602))
+
+**Full Changelog**: https://github.com/VirtusLab/besom/compare/v0.5.0...v0.5.1
+
 0.5.0 (01-10-2025)
+---
 
 Besom is no longer in beta. 0.5.0 is considered stable-candidate and will be the last version before 1.0.0.
 
