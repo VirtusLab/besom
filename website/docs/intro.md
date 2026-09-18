@@ -12,7 +12,7 @@ allowing you to use [Scala](https://scala-lang.org/) for all your infrastructure
 Both Pulumi and Besom are **free and open source** projects.
 
 :::info
-Besom 0.5.0 is considered the final release before 1.0 and is therefore at a release-candidate level of stability.
+Besom 0.5.x series is considered the final release before 1.0 and is therefore at a release-candidate level of stability.
 It offers near-complete parity with the upstream Pulumi SDKs.
 Besom can also be used with Pulumi Cloud and other related services that form the Pulumi's proprietary offering.
 :::

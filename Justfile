@@ -1,7 +1,7 @@
 # Big idea behind using a Justfile is so that we can have modules like in sbt.
 
 besom-version := `cat version.txt`
-besom-short-version := `version=$(cat version.txt) && if [[ $version == *"-SNAPSHOT" ]]; then echo "${version%.*}-SNAPSHOT"; else echo "${version%.*}"; fi`
+besom-short-version := replace_regex(besom-version, '^(\d+\.\d+)\.\d+(-SNAPSHOT)?$', '${1}${2}')
 is-snapshot := if "{{besom-version}}" =~ '.*-SNAPSHOT' { "true" } else { "false" }
 no-bloop := if env_var_or_default('BESOM_BUILD_NO_BLOOP', "") == "true" { "--server=false" } else { "" }
 
@@ -588,7 +588,7 @@ clean-test-examples:
 # Runs tests for website and docs
 test-markdown:
 	cs launch org.scalameta:mdoc_2.12:2.3.8 -- --in ./README.md ./CONTRIBUTING.md --out target/mdoc-readme --site.version=$(cat version.txt)
-	cs launch org.scalameta:mdoc_2.12:2.3.8 -- --in ./website --out target/mdoc-website --exclude node_modules --site.version=$(cat version.txt)
+	cs launch org.scalameta:mdoc_2.12:2.3.8 -- --in ./website --out target/mdoc-website --exclude node_modules --site.version=$(cat version.txt) --site.BESOM_VERSION=$(cat version.txt)
 
 # Cleans after website and docs tests
 clean-test-markdown:

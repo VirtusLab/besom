@@ -41,7 +41,7 @@ object Config {
 
   val SingleModuleSbtBasedPackages: Set[String] = Set()
   val MultiModuleSbtPackages: Set[String]       = Set()
-  val LowerFidelitySchemas: Set[String]         = Set("azure-native")
+  val LowerFidelitySchemas: Set[String]         = Set("azure-native", "google-native")
 
   val DefaultJavaVersion       = "23"
   val DefaultJavaTargetVersion = "11"

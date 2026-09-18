@@ -143,9 +143,9 @@ object Version:
     packageVersion: String => Option[String] = _ => None
   )(using config: Config): String =
     lazy val coreShortVersion = SemanticVersion
-      .parseTolerant(config.besomVersion)
+      .parseTolerant(newBesomVersion)
       .fold(
-        e => throw Exception(s"Invalid besom version: ${config.besomVersion}", e),
+        e => throw Exception(s"Invalid besom version: $newBesomVersion", e),
         _.copy(patch = 0).toShortString
       )
     version match

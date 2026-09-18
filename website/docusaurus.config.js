@@ -2,6 +2,7 @@
 // Note: type annotations allow type checking and IDEs autocompletion
 
 const fs = require('fs');
+const path = require('path');
 
 import { themes as prismThemes } from 'prism-react-renderer'
 
@@ -13,7 +14,8 @@ const codeblockVersion = require('./src/remark/codeblockVersion').default;
 const organizationName = 'virtuslab';
 const projectName = 'besom';
 
-const besomVersion = fs.readFileSync('../version.txt').toString().trim()
+const besomVersionFile = path.resolve(__dirname, '../version.txt')
+const besomVersion = fs.readFileSync(besomVersionFile).toString().trim()
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -79,6 +81,13 @@ const config = {
   ],
 
   plugins: [
+    () => ({
+      name: 'besom-version-cache',
+      configureWebpack(config) {
+        if (config.cache?.type !== 'filesystem') return {}
+        return { cache: { buildDependencies: { besomVersion: [besomVersionFile] } } }
+      },
+    }),
     [
       "./plugins/blog-plugin",
       {
